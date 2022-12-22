@@ -32,8 +32,11 @@ require_once dirname( dirname( __FILE__ ) ) . '/vendor/yoast/phpunit-polyfills/p
  */
 function _manually_load_plugin() {
 	$friends_plugin = dirname( dirname( dirname( __FILE__ ) ) ) . '/friends/friends.php';
+	$alternate_friends_plugin = dirname( dirname( __FILE__ ) ) . '/friends/friends.php';
 	if ( file_exists( $friends_plugin ) ) {
 		require $friends_plugin;
+	} elseif ( file_exists( $alternate_friends_plugin ) ) {
+		require $alternate_friends_plugin;
 	}
 
 	require dirname( dirname( __FILE__ ) ) . '/friends-mastodon-api.php';
