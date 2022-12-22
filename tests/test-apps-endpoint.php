@@ -15,10 +15,12 @@ namespace Friends;
 class AppsEndpoint_Test extends \WP_Test_REST_Controller_Testcase {
 	public function set_up() {
 		parent::set_up();
-		$this->administrator = $this->factory->user->create( array(
-			'role' => 'administrator',
-		) );
-		$this->endpoint = new Mastodon_API( Friends::get_instance());
+		$this->administrator = $this->factory->user->create(
+			array(
+				'role' => 'administrator',
+			)
+		);
+		$this->endpoint = new Mastodon_API( Friends::get_instance() );
 	}
 
 	public function test_apps() {

@@ -1,28 +1,28 @@
 <?php
 /**
-* Friends Mastodon API
-*
-* This contains the REST API handlers.
-*
-* @package Friends_Mastodon_API
-*/
+ * Friends Mastodon API
+ *
+ * This contains the REST API handlers.
+ *
+ * @package Friends_Mastodon_API
+ */
 
 namespace Friends;
 
 /**
-* This is the class that implements the Mastodon API endpoints.
-*
-* @since 0.1
-*
-* @package Friends_Mastodon_API
-* @author Alex Kirk
-*/
+ * This is the class that implements the Mastodon API endpoints.
+ *
+ * @since 0.1
+ *
+ * @package Friends_Mastodon_API
+ * @author Alex Kirk
+ */
 class Mastodon_API {
 	/**
-	* Contains a reference to the Friends class.
-	*
-	* @var Friends
-	*/
+	 * Contains a reference to the Friends class.
+	 *
+	 * @var Friends
+	 */
 	private $friends;
 
 	const PREFIX = 'friends-mastodon-api';
@@ -32,10 +32,10 @@ class Mastodon_API {
 	);
 
 	/**
-	* Constructor
-	*
-	* @param Friends $friends A reference to the Friends object.
-	*/
+	 * Constructor
+	 *
+	 * @param Friends $friends A reference to the Friends object.
+	 */
 	public function __construct( Friends $friends ) {
 		$this->friends = $friends;
 		$this->register_hooks();
@@ -64,7 +64,7 @@ class Mastodon_API {
 		$needs_flush = false;
 
 		foreach ( $this->rewrite_rules as $rule ) {
-			if ( ! isset( $rules[$rule] ) ) {
+			if ( ! isset( $rules[ $rule ] ) ) {
 				add_rewrite_rule( $rule, 'index.php?rest_route=/' . self::PREFIX . '/' . $rule, 'top' );
 			}
 		}
@@ -76,6 +76,6 @@ class Mastodon_API {
 	}
 
 	function api_apps() {
-		return array('ok'=>true);
+		return array( 'ok' => true );
 	}
 }

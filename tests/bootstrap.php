@@ -46,7 +46,7 @@ ob_start();
 // Start up the WP testing environment.
 require $_tests_dir . '/includes/bootstrap.php';
 if ( class_exists( 'Friends\Friends' ) ) {
-    Friends\Friends::activate_plugin();
+	Friends\Friends::activate_plugin();
 }
 ob_end_clean();
 
