@@ -18,10 +18,12 @@ define( 'FRIENDS_MASTODON_API_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
 require_once __DIR__ . '/vendor/autoload.php';
 
+require_once __DIR__ . '/includes/oauth2/access-token-storage.php';
 require_once __DIR__ . '/includes/oauth2/authenticate-handler.php';
 require_once __DIR__ . '/includes/oauth2/authorization-code-storage.php';
 require_once __DIR__ . '/includes/oauth2/authorize-handler.php';
 require_once __DIR__ . '/includes/oauth2/mastodon-app-storage.php';
+require_once __DIR__ . '/includes/oauth2/token-handler.php';
 require_once __DIR__ . '/includes/class-mastodon-oauth.php';
 
 require_once __DIR__ . '/includes/class-mastodon-api.php';
@@ -43,5 +45,6 @@ add_action(
     'friends_loaded',
     function( $friends ) {
         new Friends\Mastodon_API( $friends );
+
     }
 );

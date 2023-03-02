@@ -5,7 +5,7 @@ namespace Friends\OAuth2;
 use OAuth2\Storage\AuthorizationCodeInterface;
 
 class AuthorizationCodeStorage implements AuthorizationCodeInterface {
-	const META_KEY_PREFIX = 'friends-oauth2';
+	const META_KEY_PREFIX = 'friends_oa2_auth_code';
 
 	private static array $authorization_code_data = array(
 		'client_id'    => 'string', // client identifier.
@@ -85,7 +85,6 @@ class AuthorizationCodeStorage implements AuthorizationCodeInterface {
 	}
 
 	public function expireAuthorizationCode( $code ) {
-		return;
 		$user_id = $this->getUserIdByCode( $code );
 		if ( empty( $user_id ) ) {
 			return null;

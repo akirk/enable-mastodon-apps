@@ -52,6 +52,7 @@ class Mastodon_Oauth {
 
 		$this->server = new Server( new Oauth2\AuthorizationCodeStorage(), $config );
 		$this->server->addStorage( new Oauth2\MastodonAppStorage(), 'client_credentials' );
+		$this->server->addStorage( new Oauth2\AccessTokenStorage(), 'access_token' );
 
 		add_action( 'template_redirect', array( $this, 'handle_oauth' ) );
 		add_action( 'login_form_mastodon-api-authenticate', array( $this, 'authenticate_handler' ) );
@@ -61,14 +62,23 @@ class Mastodon_Oauth {
 		$handler = null;
 		switch( strtok( $_SERVER['REQUEST_URI'], '?' ) ) {
 			case '/oauth/authorize':
-
-				$handler = new Oauth2\AuthorizeHandler( $this->server );
+				$handler = new OAuth2\AuthorizeHandler( $this->server );
 				break;
 			case '/oauth/token':
-				// $this->handle_oauth_token();
+				header( 'Access-Control-Allow-Methods: POST' );
+				header( 'Access-Control-Allow-Headers: content-type' );
+				header( 'Access-Control-Allow-Credentials: true' );
+				if ( $_SERVER['REQUEST_METHOD']  === 'OPTIONS' ) {
+					header( 'Access-Control-Allow-Origin: *', true, 204 );
+					exit;
+				}
+				header( 'Access-Control-Allow-Origin: ' . $_SERVER['HTTP_ORIGIN'] );
+				$handler = new OAuth2\TokenHandler( $this->server );
 				break;
 			case '/oauth/revoke':
 				// $this->handle_oauth_revoke();
+				break;
+			default:
 				break;
 		}
 
@@ -81,6 +91,16 @@ class Mastodon_Oauth {
 		$response = $handler->handle( $request, $response );
 		$response->send();
 		exit;
+	}
+
+	function authenticate() {
+		$request  = Request::createFromGlobals();
+		if ( !$this->server->verifyResourceRequest( $request ) ) {
+			$this->server->getResponse()->send();
+			exit;
+		}
+		$token = $this->server->getAccessTokenData( $request );
+		wp_set_current_user( $token['user_id'] );
 	}
 
 	function authenticate_handler() {

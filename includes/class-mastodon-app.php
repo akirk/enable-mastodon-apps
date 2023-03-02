@@ -83,9 +83,9 @@ class Mastodon_App {
 	}
 
 	public function check_scopes( $requested_scopes ) {
-		$allowed_scopes = $this->get_scopes();
+		$allowed_scopes = explode( ' ', $this->get_scopes() );
 
-		foreach ( $requested_scopes as $s ) {
+		foreach (  explode( ' ', $requested_scopes ) as $s ) {
 			if ( ! in_array( $s, $allowed_scopes, true ) ) {
 				return false;
 			}

@@ -25,6 +25,7 @@ class Mastodon_API {
 	 * @var Friends
 	 */
 	private $friends;
+	private $oauth;
 
 	const PREFIX = 'friends-mastodon-api';
 	const APP_TAXONOMY = 'mastodon-app';
@@ -32,7 +33,7 @@ class Mastodon_API {
 	private $rewrite_rules = array(
 		'api/v1/apps',
 		'api/v1/instance',
-		'api/v1/instance',
+		'api/v1/accounts/verify_credentials',
 	);
 
 	/**
@@ -42,21 +43,47 @@ class Mastodon_API {
 	 */
 	public function __construct( Friends $friends ) {
 		$this->friends = $friends;
-		new Mastodon_Oauth( $friends );
+		$this->oauth = new Mastodon_Oauth( $friends );
 		$this->register_hooks();
 	}
 
 	function register_hooks() {
 		add_action( 'wp_loaded', array( $this, 'rewrite_rules' ) );
 		add_action( 'rest_api_init', array( $this, 'add_rest_routes' ) );
+		add_action( 'template_redirect', array( $this, 'log_http_api_response' ), 1 );
 		add_filter( 'rest_pre_serve_request', array( $this, 'log_rest_api_response' ), 9999, 4 );
+		$this->allow_cors();
 	}
 
+	function allow_cors() {
+		header( 'Access-Control-Allow-Origin: *' );
+		header( 'Access-Control-Allow-Methods: GET, POST, OPTIONS' );
+		header( 'Access-Control-Allow-Headers: content-type, authorization' );
+		header( 'Access-Control-Allow-Credentials: true' );
+		if ( $_SERVER['REQUEST_METHOD']  === 'OPTIONS' ) {
+			header( 'Access-Control-Allow-Origin: *', true, 204 );
+			exit;
+		}
+	}
 
-	function log_rest_api_response( $served, $result, $request, $rest_server ) {
-		$log_entry = add_query_arg( $request->get_query_params(), $request->get_route() ) . ' params: ' . print_r( $request->get_json_params(), true );
+	function log_http_api_response() {
+		$log_entry = $_SERVER['REQUEST_URI'] . ' params: ' . print_r( $_SERVER, true );
 		error_log($log_entry);
-		error_log(print_r($result->get_data(),true));
+	}
+	function log_rest_api_response( $served, $result, $request, $rest_server ) {
+		if ( $_SERVER['REQUEST_METHOD']  === 'OPTIONS' ) {
+			header( 'Access-Control-Allow-Origin: *', true, 204 );
+			header( 'Access-Control-Allow-Methods: GET, POST, OPTIONS' );
+			header( 'Access-Control-Allow-Headers: content-type, authorization' );
+			header( 'Access-Control-Allow-Credentials: true' );
+			$log_entry = $_SERVER['REQUEST_URI'] . ' params: ' . print_r( $_SERVER, true );
+			error_log( $log_entry );
+			exit;
+		}
+
+		$log_entry = add_query_arg( $request->get_query_params(), $request->get_route() ) . ' params: ' . print_r( $request->get_json_params(), true );
+		error_log( $log_entry );
+		error_log( print_r( $result->get_data(), true ) );
 		return $served;
 	}
 
@@ -67,7 +94,7 @@ class Mastodon_API {
 			array(
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'api_apps' ),
-				'permission_callback' => '__return_true',
+				'permission_callback' => array( $this, 'public_api_permission' ),
 			)
 		);
 		register_rest_route(
@@ -76,7 +103,7 @@ class Mastodon_API {
 			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'api_instance' ),
-				'permission_callback' => '__return_true',
+				'permission_callback' => array( $this, 'public_api_permission' ),
 			)
 		);
 
@@ -84,7 +111,7 @@ class Mastodon_API {
 			self::PREFIX,
 			'api/v1/accounts/verify_credentials',
 			array(
-				'methods'             => 'GET',
+				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_accounts_verify_credentials' ),
 				'permission_callback' => array( $this, 'api_accounts_verify_credentials_permission' ),
 			)
@@ -99,14 +126,19 @@ class Mastodon_API {
 		foreach ( $this->rewrite_rules as $rule ) {
 			if ( empty( $rules[ $rule ] ) ) {
 				// Add a specific rewrite rule so that we can also catch requests without our prefix.
-				add_rewrite_rule( $rule, 'index.php?rest_route=/' . self::PREFIX . '/' . $rule, 'top' );
 				$needs_flush = true;
 			}
+			add_rewrite_rule( $rule, 'index.php?rest_route=/' . self::PREFIX . '/' . $rule, 'top' );
 		}
 		if ( $needs_flush ) {
 			global $wp_rewrite;
 			$wp_rewrite->flush_rules();
 		}
+	}
+
+	public function public_api_permission() {
+		$this->allow_cors();
+		return true;
 	}
 
 	public function api_apps( $request ) {
@@ -138,7 +170,9 @@ class Mastodon_API {
 		);
 	}
 
-	public function api_accounts_verify_credentials_permission( $request ) {
+	public function api_accounts_verify_credentials_permission() {
+		$this->oauth->authenticate();
+		$this->allow_cors();
 		return is_user_logged_in();
 	}
 
