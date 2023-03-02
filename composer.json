@@ -32,5 +32,8 @@
         "test": [
             "@php ./vendor/phpunit/phpunit/phpunit --no-coverage"
         ]
+    },
+    "require": {
+        "bshaffer/oauth2-server-php": "^1.13"
     }
 }

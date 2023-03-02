@@ -25,6 +25,7 @@ class AppsEndpoint_Test extends \WP_Test_REST_Controller_Testcase {
 
 	public function test_apps() {
 		global $wp_rest_server;
+		echo '/' . Mastodon_API::PREFIX . '/api/v1/apps' ;
 		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/apps' );
 		$response = $wp_rest_server->dispatch( $request );
 		$this->assertEquals( 200, $response->get_status() );
