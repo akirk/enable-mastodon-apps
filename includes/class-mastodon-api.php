@@ -239,14 +239,34 @@ class Mastodon_API {
 		if ( $limit < 1 ) {
 			$limit = 1;
 		}
+		$limit = $request->get_param( 'limit' );
+		if ( $limit < 1 ) {
+			$limit = 1;
+		}
+
+		// get posts with a post->ID larger than the given $max_id.
+		$max_id = $request->get_param( 'max_id' );
+		if ( $max_id ) {
+			$filter_handler = function( $where ) use ( $max_id ) {
+			    global $wpdb;
+			    return $where . $wpdb->prepare( " AND {$wpdb->posts}.ID < %d", $max_id );
+			};
+			add_filter( 'posts_where', $filter_handler );
+		}
+
 		$posts = get_posts(
 			array(
 				'posts_per_page' => $limit,
 				'post_type' => Friends::get_frontend_post_types(),
 				'tax_query' => $tax_query,
-
+				'suppress_filters' => false
 			)
 		);
+
+		if ( $max_id ) {
+			remove_filter( 'posts_where', $filter_handler );
+		}
+
 		$ret = array();
 		foreach ( $posts as $post ) {
 			$ret[] = $this->get_status( $post );
