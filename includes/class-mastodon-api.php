@@ -79,7 +79,42 @@ class Mastodon_API {
 				'permission_callback' => array( $this, 'public_api_permission' ),
 			)
 		);
-
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/announcements',
+			array(
+				'methods'             => 'GET',
+				'callback'            => '__return_empty_array',
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/filters',
+			array(
+				'methods'             => 'GET',
+				'callback'            => '__return_empty_array',
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/lists',
+			array(
+				'methods'             => 'GET',
+				'callback'            => '__return_empty_array',
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/custom_emojis',
+			array(
+				'methods'             => 'GET',
+				'callback'            => '__return_empty_array',
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
 		register_rest_route(
 			self::PREFIX,
 			'api/v1/accounts/verify_credentials',
@@ -142,15 +177,19 @@ class Mastodon_API {
 		$needs_flush = false;
 
 		$generic = array(
-			'api/v1/apps',
-			'api/v1/instance',
-			'api/v1/accounts/verify_credentials',
 			'api/v1/accounts/relationships',
+			'api/v1/accounts/verify_credentials',
+			'api/v1/announcements',
+			'api/v1/apps',
+			'api/v1/custom_emojis',
+			'api/v1/filters',
+			'api/v1/instance',
+			'api/v1/lists',
 		);
 		$parametrized = array(
-			'api/v1/timelines/(home)' => 'api/v1/timelines/$matches[1]',
 			'api/v1/accounts/([0-9]+)' => 'api/v1/accounts/$matches[1]',
 			'api/v1/accounts/([0-9]+)/statuses' => 'api/v1/accounts/$matches[1]/statuses',
+			'api/v1/timelines/(home)' => 'api/v1/timelines/$matches[1]',
 		);
 
 		foreach ( $generic as $rule ) {
