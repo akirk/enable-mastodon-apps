@@ -30,12 +30,6 @@ class Mastodon_API {
 	const PREFIX = 'friends-mastodon-api';
 	const APP_TAXONOMY = 'mastodon-app';
 
-	private $rewrite_rules = array(
-		'api/v1/apps',
-		'api/v1/instance',
-		'api/v1/accounts/verify_credentials',
-	);
-
 	/**
 	 * Constructor
 	 *
@@ -49,6 +43,7 @@ class Mastodon_API {
 
 	function register_hooks() {
 		add_action( 'wp_loaded', array( $this, 'rewrite_rules' ) );
+		add_action( 'query_vars', array( $this, 'query_vars' ) );
 		add_action( 'rest_api_init', array( $this, 'add_rest_routes' ) );
 		add_filter( 'rest_pre_serve_request', array( $this, 'allow_cors' ), 10, 4 );
 		$this->allow_cors(); // TODO: Remove
@@ -91,22 +86,55 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_accounts_verify_credentials' ),
-				'permission_callback' => array( $this, 'api_accounts_verify_credentials_permission' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/timelines/(home)',
+			array(
+				'methods'             => array( 'GET', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_timelines' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
 
 	}
 
+	public function query_vars( $query_vars ) {
+		$query_vars[] = 'mastodon-api';
+		return $query_vars;
+	}
+
 	public function rewrite_rules() {
-		$rules = get_option( 'rewrite_rules' );
+		$existing_rules = get_option( 'rewrite_rules' );
 		$needs_flush = false;
 
-		foreach ( $this->rewrite_rules as $rule ) {
-			if ( empty( $rules[ $rule ] ) ) {
+		$generic = array(
+			'api/v1/apps',
+			'api/v1/instance',
+			'api/v1/accounts/verify_credentials',
+			'api/v1/timelines/home',
+		);
+		$parametrized = array(
+			'api/v1/timelines/(home)' => '?mastodon-api=$matches[1]',
+		);
+
+		foreach ( $generic as $rule ) {
+			if ( empty( $existing_rules[ $rule ] ) ) {
 				// Add a specific rewrite rule so that we can also catch requests without our prefix.
 				$needs_flush = true;
 			}
 			add_rewrite_rule( $rule, 'index.php?rest_route=/' . self::PREFIX . '/' . $rule, 'top' );
+		}
+
+		foreach ( $parametrized as $rule => $append ) {
+			if ( empty( $existing_rules[ $rule ] ) ) {
+				// Add a specific rewrite rule so that we can also catch requests without our prefix.
+				$needs_flush = true;
+			}
+			add_rewrite_rule( $rule, 'index.php?rest_route=/' . self::PREFIX . '/' . $rule . $append, 'top' );
 		}
 		if ( $needs_flush ) {
 			global $wp_rewrite;
@@ -148,7 +176,7 @@ class Mastodon_API {
 		);
 	}
 
-	public function api_accounts_verify_credentials_permission() {
+	public function logged_in_permission() {
 		$this->oauth->authenticate();
 		$this->allow_cors();
 		return is_user_logged_in();
@@ -203,8 +231,99 @@ class Mastodon_API {
 				'is_moved' => false,
 			),
 		);
-
 	}
+
+	public function api_timelines( $request ) {
+		$posts = get_posts(
+			array(
+				'posts_per_page' => 20,
+			)
+		);
+		$ret = array();
+		foreach ( $posts as $post ) {
+			$ret[] = $this->get_status( $post );
+		}
+		return $ret;
+	}
+
+	public function get_status( $post ) {
+		$user = get_user_by( 'id', $post->post_author );
+		$avatar = get_avatar_url( $user->ID );
+		$avatar = str_replace( 'http://', 'https://', $avatar );
+		return array(
+			'id'                => $post->ID,
+			'uri'               => home_url( '/?p=' . $post->ID ),
+			'url'               => home_url( '/?p=' . $post->ID ),
+			'account'           => array(
+				'id'                => $user->ID,
+				'username'          => $user->user_login,
+				'acct'              => $user->user_login,
+				'display_name'      => $user->display_name,
+				'locked'            => false,
+				'created_at'        => mysql2date( 'c', $user->user_registered, false ),
+				'followers_count'   => 0,
+				'following_count'   => 0,
+				'statuses_count'    => 0,
+				'note'              => '',
+				'url'               => home_url( '/author/' . $user->user_login ),
+				'avatar'            => $avatar,
+				'avatar_static'     => $avatar,
+				'header'            => '',
+				'header_static'     => '',
+				'emojis'            => array(),
+				'fields'            => array(),
+				'bot'               => false,
+				'last_status_at'    => null,
+				'source'            => array(
+					'privacy'       => 'public',
+					'sensitive'     => false,
+					'language'      => 'en',
+				),
+				'pleroma'           => array(
+					'background_image' => null,
+					'confirmation_pending' => false,
+					'fields' => array(),
+					'follow_requests_count' => 0,
+					'hide_favorites' => false,
+					'hide_followers' => false,
+					'hide_follows' => false,
+					'hide_followers_count' => false,
+					'hide_follows_count' => false,
+					'invited_by' => null,
+					'is_admin' => false,
+					'is_confirmed' => true,
+					'is_moderator' => false,
+					'is_moved' => false,
+				),
+			),
+			'in_reply_to_id'    => null,
+			'in_reply_to_account_id' => null,
+			'reblog'            => null,
+			'content'           => $post->post_content,
+			'created_at'        => mysql2date( 'c', $post->post_date, false ),
+			'emojis'            => array(),
+			'favourites_count'  => 0,
+			'reblogged'         => false,
+			'reblogged_by'      => array(),
+			'muted'             => false,
+			'sensitive'         => false,
+			'spoiler_text'      => '',
+			'visibility'        => 'public',
+			'media_attachments' => array(),
+			'mentions'          => array(),
+			'tags'              => array(),
+			'application'       => array(
+				'name' => 'WordPress',
+				'website' => home_url(),
+			),
+			'language'          => 'en',
+			'pinned'            => false,
+			'card'              => null,
+			'poll'              => null,
+		);
+	}
+
+
 
 	public function api_instance() {
 		$ret = array(
