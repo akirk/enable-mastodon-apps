@@ -109,12 +109,23 @@ class Mastodon_API {
 				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
+
 		register_rest_route(
 			self::PREFIX,
 			'api/v1/accounts/(?P<user_id>[0-9]+)/statuses',
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_account_statuses' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/accounts/relationships',
+			array(
+				'methods'             => array( 'GET', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_account_relationships' ),
 				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
@@ -134,6 +145,7 @@ class Mastodon_API {
 			'api/v1/apps',
 			'api/v1/instance',
 			'api/v1/accounts/verify_credentials',
+			'api/v1/accounts/relationships',
 		);
 		$parametrized = array(
 			'api/v1/timelines/(home)' => 'api/v1/timelines/$matches[1]',
@@ -237,7 +249,7 @@ class Mastodon_API {
 		);
 
 		if ( class_exists( '\ActivityPub\ActivityPub' ) ) {
-			$data['followers_count'] = \ActivityPub\ActivityPub::get_follower_count( $user->ID );
+			$data['followers_count'] = \ActivityPub\count_followers( $user->ID );
 		}
 
 		return $data;
@@ -285,39 +297,13 @@ class Mastodon_API {
 	}
 
 	private function get_status_array( $post ) {
-		$user = get_user_by( 'id', $post->post_author );
-		$avatar = get_avatar_url( $user->ID );
-		$avatar = str_replace( 'http://', 'https://', $avatar );
+		$account_data = $this->get_friend_account_data( $post->post_author );
+
 		return array(
 			'id'                => $post->ID,
-			'uri'               => home_url( '/?p=' . $post->ID ),
-			'url'               => home_url( '/?p=' . $post->ID ),
-			'account'           => array(
-				'id'                => $user->ID,
-				'username'          => $user->user_login,
-				'acct'              => $user->user_login,
-				'display_name'      => $user->display_name,
-				'locked'            => false,
-				'created_at'        => mysql2date( 'c', $user->user_registered, false ),
-				'followers_count'   => 0,
-				'following_count'   => 0,
-				'statuses_count'    => 0,
-				'note'              => '',
-				'url'               => home_url( '/author/' . $user->user_login ),
-				'avatar'            => $avatar,
-				'avatar_static'     => $avatar,
-				'header'            => '',
-				'header_static'     => '',
-				'emojis'            => array(),
-				'fields'            => array(),
-				'bot'               => false,
-				'last_status_at'    => null,
-				'source'            => array(
-					'privacy'       => 'public',
-					'sensitive'     => false,
-					'language'      => 'en',
-				),
-			),
+			'uri'               => $post->guid,
+			'url'               => $post->guid,
+			'account'           => $account_data,
 			'in_reply_to_id'    => null,
 			'in_reply_to_account_id' => null,
 			'reblog'            => null,
@@ -360,24 +346,34 @@ class Mastodon_API {
 		return $this->get_posts( $args );
 	}
 
+	public function api_account_relationships( $request ) {
+		$user_id = $request->get_param( 'id' );
+		$friend_user = User::get_user_by_id( $id );
+
+		return array();
+	}
+
 	public function api_account( $request ) {
-		$user_id = $request->get_param( 'user_id' );
-		$user = User::get_user_by_id( $user_id );
-		$avatar = get_avatar_url( $user->ID );
-		$posts = $user->get_post_count_by_post_format();
+		return $this->get_friend_account_data( $request->get_param( 'user_id' ) );
+	}
+
+	private function get_friend_account_data( $user_id ) {
+		$friend_user = User::get_user_by_id( $user_id );
+		$avatar = get_avatar_url( $friend_user->ID );
+		$posts = $friend_user->get_post_count_by_post_format();
 
 		$data = array(
-			'id'                => $user->ID,
-			'username'          => $user->user_login,
-			'acct'              => $user->user_login,
-			'display_name'      => $user->display_name,
+			'id'                => $friend_user->ID,
+			'username'          => $friend_user->user_login,
+			'acct'              => $friend_user->user_login,
+			'display_name'      => $friend_user->display_name,
 			'locked'            => false,
-			'created_at'        => mysql2date( 'c', $user->user_registered, false ),
+			'created_at'        => mysql2date( 'c', $friend_user->user_registered, false ),
 			'followers_count'   => 0,
 			'following_count'   => 0,
 			'statuses_count'    => isset( $posts['status'] ) ? $posts['status'] : 0,
 			'note'              => '',
-			'url'               => home_url( '/author/' . $user->user_login ),
+			'url'               => home_url( '/author/' . $friend_user->user_login ),
 			'avatar'            => $avatar,
 			'avatar_static'     => $avatar,
 			'header'            => null,
@@ -394,7 +390,7 @@ class Mastodon_API {
 		);
 
 		if ( class_exists( __NAMESPACE__ . '\Feed_Parser_ActivityPub' ) ) {
-			foreach ( $user->get_feeds() as $feed ) {
+			foreach ( $friend_user->get_feeds() as $feed ) {
 				if ( Feed_Parser_ActivityPub::SLUG === $feed->get_parser() ) {
 					$meta = Feed_Parser_ActivityPub::get_metadata( $feed->get_url() );
 					if ( $meta && ! is_wp_error( $meta ) ) {
