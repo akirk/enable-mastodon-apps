@@ -137,16 +137,6 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
-			'api/v1/accounts/(?P<user_id>[0-9]+)',
-			array(
-				'methods'             => array( 'GET', 'OPTIONS' ),
-				'callback'            => array( $this, 'api_account' ),
-				'permission_callback' => array( $this, 'logged_in_permission' ),
-			)
-		);
-
-		register_rest_route(
-			self::PREFIX,
 			'api/v1/accounts/(?P<user_id>[0-9]+)/statuses',
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
@@ -154,6 +144,17 @@ class Mastodon_API {
 				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/accounts/(?P<user_id>[0-9]+)$',
+			array(
+				'methods'             => array( 'GET', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_account' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
 
 		register_rest_route(
 			self::PREFIX,
@@ -187,8 +188,8 @@ class Mastodon_API {
 			'api/v1/lists',
 		);
 		$parametrized = array(
-			'api/v1/accounts/([0-9]+)' => 'api/v1/accounts/$matches[1]',
 			'api/v1/accounts/([0-9]+)/statuses' => 'api/v1/accounts/$matches[1]/statuses',
+			'api/v1/accounts/([0-9]+)' => 'api/v1/accounts/$matches[1]',
 			'api/v1/timelines/(home)' => 'api/v1/timelines/$matches[1]',
 		);
 
