@@ -85,7 +85,7 @@ class Mastodon_API {
 			'api/v1/accounts/verify_credentials',
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
-				'callback'            => array( $this, 'api_accounts_verify_credentials' ),
+				'callback'            => array( $this, 'api_verify_credentials' ),
 				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
@@ -96,6 +96,25 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_timelines' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/accounts/(?P<user_id>[0-9]+)',
+			array(
+				'methods'             => array( 'GET', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_account' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/accounts/(?P<user_id>[0-9]+)/statuses',
+			array(
+				'methods'             => array( 'GET', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_account_statuses' ),
 				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
@@ -115,10 +134,11 @@ class Mastodon_API {
 			'api/v1/apps',
 			'api/v1/instance',
 			'api/v1/accounts/verify_credentials',
-			'api/v1/timelines/home',
 		);
 		$parametrized = array(
-			'api/v1/timelines/(home)' => '?mastodon-api=$matches[1]',
+			'api/v1/timelines/(home)' => 'api/v1/timelines/$matches[1]',
+			'api/v1/accounts/([0-9]+)' => 'api/v1/accounts/$matches[1]',
+			'api/v1/accounts/([0-9]+)/statuses' => 'api/v1/accounts/$matches[1]/statuses',
 		);
 
 		foreach ( $generic as $rule ) {
@@ -129,13 +149,14 @@ class Mastodon_API {
 			add_rewrite_rule( $rule, 'index.php?rest_route=/' . self::PREFIX . '/' . $rule, 'top' );
 		}
 
-		foreach ( $parametrized as $rule => $append ) {
+		foreach ( $parametrized as $rule => $rewrite ) {
 			if ( empty( $existing_rules[ $rule ] ) ) {
 				// Add a specific rewrite rule so that we can also catch requests without our prefix.
 				$needs_flush = true;
 			}
-			add_rewrite_rule( $rule, 'index.php?rest_route=/' . self::PREFIX . '/' . $rule . $append, 'top' );
+			add_rewrite_rule( $rule, 'index.php?rest_route=/' . self::PREFIX . '/' . $rewrite, 'top' );
 		}
+
 		if ( $needs_flush ) {
 			global $wp_rewrite;
 			$wp_rewrite->flush_rules();
@@ -182,14 +203,13 @@ class Mastodon_API {
 		return is_user_logged_in();
 	}
 
-	public function api_accounts_verify_credentials( $request ) {
+	public function api_verify_credentials( $request ) {
 		$user = wp_get_current_user();
 		if ( ! $user->exists() ) {
 			return new \WP_Error( 'not_logged_in', 'Not logged in', array( 'status' => 401 ) );
 		}
 		$avatar = get_avatar_url( $user->ID );
-		$avatar = str_replace( 'http://', 'https://', $avatar );
-		return array(
+		$data = array(
 			'id'                => $user->ID,
 			'username'          => $user->user_login,
 			'acct'              => $user->user_login,
@@ -214,27 +234,17 @@ class Mastodon_API {
 				'sensitive'     => false,
 				'language'      => 'en',
 			),
-			'pleroma'           => array(
-				'background_image' => null,
-				'confirmation_pending' => false,
-				'fields' => array(),
-				'follow_requests_count' => 0,
-				'hide_favorites' => false,
-				'hide_followers' => false,
-				'hide_follows' => false,
-				'hide_followers_count' => false,
-				'hide_follows_count' => false,
-				'invited_by' => null,
-				'is_admin' => false,
-				'is_confirmed' => true,
-				'is_moderator' => false,
-				'is_moved' => false,
-			),
 		);
+
+		if ( class_exists( '\ActivityPub\ActivityPub' ) ) {
+			$data['followers_count'] = \ActivityPub\ActivityPub::get_follower_count( $user->ID );
+		}
+
+		return $data;
 	}
 
-	public function api_timelines( $request ) {
-		$tax_query = $this->friends->wp_query_get_post_format_tax_query( array(), 'status' );
+	private function get_posts_query_args( $request ) {
+		$tax_query = $this->friends->wp_query_get_post_format_tax_query( array(), apply_filters( 'friends_mastodon_api_post_format', 'status' ) );
 		$limit = $request->get_param( 'limit' );
 		if ( $limit < 1 ) {
 			$limit = 1;
@@ -244,8 +254,16 @@ class Mastodon_API {
 			$limit = 1;
 		}
 
-		// get posts with a post->ID larger than the given $max_id.
-		$max_id = $request->get_param( 'max_id' );
+		$args = array(
+			'posts_per_page' => $limit,
+			'post_type' => Friends::get_frontend_post_types(),
+			'tax_query' => $tax_query,
+			'suppress_filters' => false
+		);
+		return $args;
+	}
+
+	private function get_posts( $args, $max_id = null ) {
 		if ( $max_id ) {
 			$filter_handler = function( $where ) use ( $max_id ) {
 			    global $wpdb;
@@ -254,27 +272,19 @@ class Mastodon_API {
 			add_filter( 'posts_where', $filter_handler );
 		}
 
-		$posts = get_posts(
-			array(
-				'posts_per_page' => $limit,
-				'post_type' => Friends::get_frontend_post_types(),
-				'tax_query' => $tax_query,
-				'suppress_filters' => false
-			)
-		);
+		$posts = get_posts( $args );
 
 		if ( $max_id ) {
 			remove_filter( 'posts_where', $filter_handler );
 		}
-
 		$ret = array();
 		foreach ( $posts as $post ) {
-			$ret[] = $this->get_status( $post );
+			$ret[] = $this->get_status_array( $post );
 		}
 		return $ret;
 	}
 
-	public function get_status( $post ) {
+	private function get_status_array( $post ) {
 		$user = get_user_by( 'id', $post->post_author );
 		$avatar = get_avatar_url( $user->ID );
 		$avatar = str_replace( 'http://', 'https://', $avatar );
@@ -307,22 +317,6 @@ class Mastodon_API {
 					'sensitive'     => false,
 					'language'      => 'en',
 				),
-				'pleroma'           => array(
-					'background_image' => null,
-					'confirmation_pending' => false,
-					'fields' => array(),
-					'follow_requests_count' => 0,
-					'hide_favorites' => false,
-					'hide_followers' => false,
-					'hide_follows' => false,
-					'hide_followers_count' => false,
-					'hide_follows_count' => false,
-					'invited_by' => null,
-					'is_admin' => false,
-					'is_confirmed' => true,
-					'is_moderator' => false,
-					'is_moved' => false,
-				),
 			),
 			'in_reply_to_id'    => null,
 			'in_reply_to_account_id' => null,
@@ -341,7 +335,7 @@ class Mastodon_API {
 			'mentions'          => array(),
 			'tags'              => array(),
 			'application'       => array(
-				'name' => 'WordPress',
+				'name' => 'WordPress/' . $GLOBALS['wp_version'] . ' Friends/' . FRIENDS_VERSION,
 				'website' => home_url(),
 			),
 			'language'          => 'en',
@@ -350,8 +344,73 @@ class Mastodon_API {
 			'poll'              => null,
 		);
 	}
+	public function api_timelines( $request ) {
+		$args = $this->get_posts_query_args( $request );
+		$args = apply_filters( 'friends_mastodon_api_timelines_args', $args, $request );
 
+		return $this->get_posts( $args, $request->get_param( 'max_id' ) );
+	}
 
+	public function api_account_statuses( $request ) {
+		$args = $this->get_posts_query_args( $request );
+		$args['post_author'] = $request->get_param( 'user_id' );
+
+		$args = apply_filters( 'friends_mastodon_api_account_statuses_args', $args, $request );
+
+		return $this->get_posts( $args );
+	}
+
+	public function api_account( $request ) {
+		$user_id = $request->get_param( 'user_id' );
+		$user = User::get_user_by_id( $user_id );
+		$avatar = get_avatar_url( $user->ID );
+		$posts = $user->get_post_count_by_post_format();
+
+		$data = array(
+			'id'                => $user->ID,
+			'username'          => $user->user_login,
+			'acct'              => $user->user_login,
+			'display_name'      => $user->display_name,
+			'locked'            => false,
+			'created_at'        => mysql2date( 'c', $user->user_registered, false ),
+			'followers_count'   => 0,
+			'following_count'   => 0,
+			'statuses_count'    => isset( $posts['status'] ) ? $posts['status'] : 0,
+			'note'              => '',
+			'url'               => home_url( '/author/' . $user->user_login ),
+			'avatar'            => $avatar,
+			'avatar_static'     => $avatar,
+			'header'            => null,
+			'header_static'     => null,
+			'emojis'            => array(),
+			'fields'            => array(),
+			'bot'               => false,
+			'last_status_at'    => null,
+			'source'            => array(
+				'privacy'       => 'public',
+				'sensitive'     => false,
+				'language'      => 'en',
+			),
+		);
+
+		if ( class_exists( __NAMESPACE__ . '\Feed_Parser_ActivityPub' ) ) {
+			foreach ( $user->get_feeds() as $feed ) {
+				if ( Feed_Parser_ActivityPub::SLUG === $feed->get_parser() ) {
+					$meta = Feed_Parser_ActivityPub::get_metadata( $feed->get_url() );
+					if ( $meta && ! is_wp_error( $meta ) ) {
+						$data['header'] = $meta['image']['url'];
+						$data['header_static'] = $meta['image']['url'];
+						$data['note'] = $meta['summary'];
+						$data['acct'] = $meta['id'];
+						if ( preg_match( '#^https://([^/]+)/@([^/]+)$#', $meta['url'], $m ) ) {
+							$data['acct'] = $m[2] . '@' . $m[1];
+						}
+					}
+				}
+			}
+		}
+		return $data;
+	}
 
 	public function api_instance() {
 		$ret = array(
