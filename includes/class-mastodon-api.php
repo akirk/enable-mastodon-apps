@@ -250,11 +250,11 @@ class Mastodon_API {
 	}
 
 	public function logged_in_permission() {
-		$this->oauth->authenticate();
+		$this->allow_cors();
 		if ( apply_filters( 'friends_mastodon_api_skip_login_check', false ) ) {
 			return true;
 		}
-		$this->allow_cors();
+		$this->oauth->authenticate();
 		return is_user_logged_in();
 	}
 
