@@ -251,6 +251,9 @@ class Mastodon_API {
 
 	public function logged_in_permission() {
 		$this->oauth->authenticate();
+		if ( apply_filters( 'friends_mastodon_api_skip_login_check', false ) ) {
+			return true;
+		}
 		$this->allow_cors();
 		return is_user_logged_in();
 	}
@@ -434,8 +437,10 @@ class Mastodon_API {
 				if ( Feed_Parser_ActivityPub::SLUG === $feed->get_parser() ) {
 					$meta = Feed_Parser_ActivityPub::get_metadata( $feed->get_url() );
 					if ( $meta && ! is_wp_error( $meta ) ) {
-						$data['header'] = $meta['image']['url'];
-						$data['header_static'] = $meta['image']['url'];
+						if ( ! empty( $meta['image']['url'] ) ) {
+							$data['header'] = $meta['image']['url'];
+							$data['header_static'] = $meta['image']['url'];
+						}
 						$data['note'] = $meta['summary'];
 						$data['acct'] = $meta['id'];
 						if ( preg_match( '#^https://([^/]+)/@([^/]+)$#', $meta['url'], $m ) ) {
