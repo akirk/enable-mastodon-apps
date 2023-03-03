@@ -5,7 +5,7 @@
  * Plugin URI: https://github.com/akirk/friends-mastodon-api
  * Version: 0.1
  *
- * Description: Implements the Mastodon API so that you can use apps that support it.
+ * Description: Allow accessing the Friends plugin with Mastodon clients. Just enter your own blog URL as your instance.
  *
  * License: GPL2
  * Text Domain: friends
@@ -45,6 +45,5 @@ add_action(
     'friends_loaded',
     function( $friends ) {
         new Friends\Mastodon_API( $friends );
-
     }
 );

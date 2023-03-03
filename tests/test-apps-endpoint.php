@@ -23,13 +23,12 @@ class AppsEndpoint_Test extends \WP_Test_REST_Controller_Testcase {
 		$this->endpoint = new Mastodon_API( Friends::get_instance() );
 	}
 
-	public function test_apps() {
+	public function test_apps_instance() {
 		global $wp_rest_server;
-		echo '/' . Mastodon_API::PREFIX . '/api/v1/apps' ;
-		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/apps' );
+		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/instance' );
 		$response = $wp_rest_server->dispatch( $request );
 		$this->assertEquals( 200, $response->get_status() );
-		$this->assertArrayHasKey( 'ok', $response->get_data() );
+		$this->assertArrayHasKey( 'version', $response->get_data() );
 	}
 
 	public function test_register_routes() {
@@ -38,20 +37,36 @@ class AppsEndpoint_Test extends \WP_Test_REST_Controller_Testcase {
 		$this->assertArrayHasKey( '/' . Mastodon_API::PREFIX . '/api/v1/apps', $routes );
 	}
 
-	public function test_context_param() {}
+	public function test_context_param() {
+		$this->markTestSkipped( 'Not implemented yet.' );
+	}
 
-	public function test_get_items() {}
+	public function test_get_items() {
+		$this->markTestSkipped( 'Not implemented yet.' );
+	}
 
-	public function test_get_item() {}
+	public function test_get_item() {
+		$this->markTestSkipped( 'Not implemented yet.' );
+	}
 
-	public function test_create_item() {}
+	public function test_create_item() {
+		$this->markTestSkipped( 'Not implemented yet.' );
+	}
 
-	public function test_update_item() {}
+	public function test_update_item() {
+		$this->markTestSkipped( 'Not implemented yet.' );
+	}
 
-	public function test_delete_item() {}
+	public function test_delete_item() {
+		$this->markTestSkipped( 'Not implemented yet.' );
+	}
 
-	public function test_prepare_item() {}
+	public function test_prepare_item() {
+		$this->markTestSkipped( 'Not implemented yet.' );
+	}
 
-	public function test_get_item_schema() {}
+	public function test_get_item_schema() {
+		$this->markTestSkipped( 'Not implemented yet.' );
+	}
 
 }
