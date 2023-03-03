@@ -234,9 +234,17 @@ class Mastodon_API {
 	}
 
 	public function api_timelines( $request ) {
+		$tax_query = $this->friends->wp_query_get_post_format_tax_query( array(), 'status' );
+		$limit = $request->get_param( 'limit' );
+		if ( $limit < 1 ) {
+			$limit = 1;
+		}
 		$posts = get_posts(
 			array(
-				'posts_per_page' => 20,
+				'posts_per_page' => $limit,
+				'post_type' => Friends::get_frontend_post_types(),
+				'tax_query' => $tax_query,
+
 			)
 		);
 		$ret = array();
