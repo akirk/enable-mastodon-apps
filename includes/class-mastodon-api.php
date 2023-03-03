@@ -379,7 +379,7 @@ class Mastodon_API {
 
 	public function api_account_statuses( $request ) {
 		$args = $this->get_posts_query_args( $request );
-		$args['post_author'] = $request->get_param( 'user_id' );
+		$args['author'] = $request->get_param( 'user_id' );
 
 		$args = apply_filters( 'friends_mastodon_api_account_statuses_args', $args, $request );
 
