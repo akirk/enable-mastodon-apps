@@ -50,9 +50,8 @@ class Mastodon_API {
 	function register_hooks() {
 		add_action( 'wp_loaded', array( $this, 'rewrite_rules' ) );
 		add_action( 'rest_api_init', array( $this, 'add_rest_routes' ) );
-		add_action( 'template_redirect', array( $this, 'log_http_api_response' ), 1 );
-		add_filter( 'rest_pre_serve_request', array( $this, 'log_rest_api_response' ), 9999, 4 );
-		$this->allow_cors();
+		add_filter( 'rest_pre_serve_request', array( $this, 'allow_cors' ), 10, 4 );
+		$this->allow_cors(); // TODO: Remove
 	}
 
 	function allow_cors() {
@@ -64,27 +63,6 @@ class Mastodon_API {
 			header( 'Access-Control-Allow-Origin: *', true, 204 );
 			exit;
 		}
-	}
-
-	function log_http_api_response() {
-		$log_entry = $_SERVER['REQUEST_URI'] . ' params: ' . print_r( $_SERVER, true );
-		error_log($log_entry);
-	}
-	function log_rest_api_response( $served, $result, $request, $rest_server ) {
-		if ( $_SERVER['REQUEST_METHOD']  === 'OPTIONS' ) {
-			header( 'Access-Control-Allow-Origin: *', true, 204 );
-			header( 'Access-Control-Allow-Methods: GET, POST, OPTIONS' );
-			header( 'Access-Control-Allow-Headers: content-type, authorization' );
-			header( 'Access-Control-Allow-Credentials: true' );
-			$log_entry = $_SERVER['REQUEST_URI'] . ' params: ' . print_r( $_SERVER, true );
-			error_log( $log_entry );
-			exit;
-		}
-
-		$log_entry = add_query_arg( $request->get_query_params(), $request->get_route() ) . ' params: ' . print_r( $request->get_json_params(), true );
-		error_log( $log_entry );
-		error_log( print_r( $result->get_data(), true ) );
-		return $served;
 	}
 
 	public function add_rest_routes() {

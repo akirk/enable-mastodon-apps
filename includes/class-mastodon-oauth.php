@@ -72,7 +72,7 @@ class Mastodon_Oauth {
 					header( 'Access-Control-Allow-Origin: *', true, 204 );
 					exit;
 				}
-				header( 'Access-Control-Allow-Origin: ' . $_SERVER['HTTP_ORIGIN'] );
+				header( 'Access-Control-Allow-Origin: *' );
 				$handler = new OAuth2\TokenHandler( $this->server );
 				break;
 			case '/oauth/revoke':
