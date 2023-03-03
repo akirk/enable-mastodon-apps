@@ -342,7 +342,7 @@ class Mastodon_API {
 	private function get_status_array( $post ) {
 		$account_data = $this->get_friend_account_data( $post->post_author );
 
-		return array(
+		$data = array(
 			'id'                => $post->ID,
 			'uri'               => $post->guid,
 			'url'               => $post->guid,
@@ -372,6 +372,35 @@ class Mastodon_API {
 			'card'              => null,
 			'poll'              => null,
 		);
+
+		$p = strpos( $data['content'], '<!-- wp:image' );
+		while ( ( $p = strpos( $data['content'], '<!-- wp:image' ) ) !== false ) {
+			$e = strpos( $data['content'], '<!-- /wp:image -->', $p );
+			if ( ! $e ) {
+				break;
+			}
+			$img = substr( $data['content'], $p, $e - $p + 19 );
+			if ( preg_match( '#<img src="(?P<url>[^"]+)" width="(\d+)" height="(\d+)" class="size-full"#', $img, $attachment )) {
+				$data['media_attachments'][] =array(
+					'type' => 'image',
+					'url' => $attachment['url'],
+					'preview_url' => $attachment['url'],
+					'text_url' => $attachment['url'],
+				);
+			}
+			$data['content'] = substr( $data['content'], 0, $p ) . substr( $data['content'], $e + 19 );
+		}
+
+		$author_name = $data['account']['display_name'];
+		$override_author_name = get_post_meta( $post->ID, 'author', true );
+		if ( $override_author_name !== $author_name ) {
+			// This is a reblog.
+			$data['reblog'] = $data;
+			$data['reblog']['account']['display_name'] = $override_author_name;
+
+		}
+
+		return $data;
 	}
 	public function api_timelines( $request ) {
 		$args = $this->get_posts_query_args( $request );
