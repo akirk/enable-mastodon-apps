@@ -48,6 +48,7 @@ class Mastodon_Oauth {
 		$config = array(
 		    'issuer'                => home_url( '/' ),
 		    'enforce_state'         => false,
+		    'access_lifetime'       => YEAR_IN_SECONDS * 2,
 		);
 
 		$this->server = new Server( new Oauth2\AuthorizationCodeStorage(), $config );
