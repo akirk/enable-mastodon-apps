@@ -77,8 +77,11 @@ class Mastodon_Oauth {
 				$handler = new OAuth2\TokenHandler( $this->server );
 				break;
 			case '/oauth/revoke':
-				// $this->handle_oauth_revoke();
-				break;
+				$request  = Request::createFromGlobals();
+				$response = new Response();
+				$response = $this->server->handleRevokeRequest( $request, $response );
+				$response->send();
+				exit;
 			default:
 				break;
 		}
