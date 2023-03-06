@@ -9,7 +9,7 @@ use OAuth2\Response;
 use OAuth2\Server as OAuth2Server;
 
 class AuthorizeHandler {
-	private OAuth2Server $server;
+	private $server;
 
 	public function __construct( OAuth2Server $server ) {
 		$this->server = $server;

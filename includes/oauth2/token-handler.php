@@ -8,7 +8,7 @@ use OAuth2\Server as OAuth2Server;
 use OpenIDConnectServer\Http\RequestHandler;
 
 class TokenHandler {
-	private OAuth2Server $server;
+	private $server;
 
 	public function __construct( OAuth2Server $server ) {
 		$this->server = $server;

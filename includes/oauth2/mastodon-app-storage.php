@@ -6,7 +6,7 @@ use Friends\Mastodon_App;
 use OAuth2\Storage\ClientCredentialsInterface;
 
 class MastodonAppStorage implements ClientCredentialsInterface {
-	private array $clients;
+	private $clients;
 
 	public function __construct() {
 	}
