@@ -127,8 +127,6 @@ class AccessTokenStorage implements AccessTokenInterface {
         if ( empty( $oauth_token ) ) {
             return;
         }
-        $expires = time() + 86400;
-
         $user = get_user_by( 'login', $user_id ); // We have chosen WordPress' user_login as the user identifier for OIDC context.
 
         if ( $user ) {
