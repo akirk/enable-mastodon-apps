@@ -149,7 +149,7 @@ class Mastodon_App {
 				foreach ( $value as $url ) {
 					if ( Mastodon_Oauth::OOB_REDIRECT_URI === $url ) {
 						$urls[] = $url;
-					} elseif ( preg_match( '#[a-z0-9-]+://[a-z0-9-]+#i', $url ) ) {
+					} elseif ( preg_match( '#[a-z0-9.-]+://[a-z0-9.-]+#i', $url ) ) {
 						// custom protocols are ok.
 						$urls[] = $url;
 					}
