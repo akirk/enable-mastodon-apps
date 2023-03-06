@@ -14,7 +14,7 @@ class TokenHandler {
 		$this->server = $server;
 	}
 
-	public function handle( Request $request, Response $response ): Response {
+	public function handle( Request $request, Response $response ) {
 		return $this->server->handleTokenRequest( $request );
 	}
 }

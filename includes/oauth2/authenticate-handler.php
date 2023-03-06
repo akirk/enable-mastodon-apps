@@ -7,7 +7,7 @@ use OAuth2\Request;
 use OAuth2\Response;
 
 class AuthenticateHandler {
-	public function handle( Request $request, Response $response ) : Response {
+	public function handle( Request $request, Response $response ) {
 		if ( ! is_user_logged_in() ) {
 			auth_redirect();
 		}
@@ -152,7 +152,7 @@ class AuthenticateHandler {
 	/**
 	 * TODO: Remove this function in favour of ClientCredentialsStorage?
 	 */
-	private function get_client_name( Request $request ): string {
+	private function get_client_name( Request $request ) {
 		$client_id = $request->query( 'client_id' );
 
 		if ( ! isset( $this->clients[ $client_id ] ) ) {
