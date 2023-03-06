@@ -13,7 +13,7 @@ use PO;
 class AccessTokenStorage implements AccessTokenInterface {
     const META_KEY_PREFIX = 'friends_oa2_access_token';
 
-    private static array $access_token_data = array(
+    private static $access_token_data = array(
         'client_id'    => 'string', // client identifier.
         'expires'      => 'int',    // expires as unix timestamp.
         'scope'        => 'string', // scope as space-separated string.

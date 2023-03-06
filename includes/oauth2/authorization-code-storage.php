@@ -7,7 +7,7 @@ use OAuth2\Storage\AuthorizationCodeInterface;
 class AuthorizationCodeStorage implements AuthorizationCodeInterface {
 	const META_KEY_PREFIX = 'friends_oa2_auth_code';
 
-	private static array $authorization_code_data = array(
+	private static $authorization_code_data = array(
 		'client_id'    => 'string', // client identifier.
 		'redirect_uri' => 'string', // redirect URI.
 		'expires'      => 'int',    // expires as unix timestamp.
