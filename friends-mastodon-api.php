@@ -16,7 +16,6 @@
 defined( 'ABSPATH' ) || exit;
 define( 'FRIENDS_MASTODON_API_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
-// require_once __DIR__ . '/vendor/autoload.php';
 require __DIR__ . '/vendor/bshaffer/oauth2-server-php/src/OAuth2/Autoloader.php';
 OAuth2\Autoloader::register();
 

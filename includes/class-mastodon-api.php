@@ -268,7 +268,7 @@ class Mastodon_API {
 		$data = array(
 			'id'                => $user->ID,
 			'username'          => $user->user_login,
-			'acct'              => $user->user_login,
+			'acct'              => $this->get_user_acct( $user ),
 			'display_name'      => $user->display_name,
 			'locked'            => false,
 			'created_at'        => mysql2date( 'c', $user->user_registered, false ),
@@ -341,7 +341,8 @@ class Mastodon_API {
 	}
 
 	private function get_status_array( $post ) {
-		$account_data = $this->get_friend_account_data( $post->post_author );
+		$meta = get_post_meta( $post->ID, 'activitypub', true );
+		$account_data = $this->get_friend_account_data( $post->post_author, $meta );
 
 		$data = array(
 			'id'                => $post->ID,
@@ -395,7 +396,6 @@ class Mastodon_API {
 		$author_name = $data['account']['display_name'];
 		$override_author_name = get_post_meta( $post->ID, 'author', true );
 
-		$meta = get_post_meta( $post->ID, 'activitypub', true );
 		if ( isset( $meta['reblog'] ) && $meta['reblog'] ) {
 			$data['reblog'] = $data;
 			if ( ! empty( $meta['attributedTo']['icon'] ) ) {
@@ -404,6 +404,8 @@ class Mastodon_API {
 			if ( ! empty( $meta['attributedTo']['preferredUsername'] ) ) {
 				$data['reblog']['account']['display_name'] = $meta['attributedTo']['preferredUsername'];
 			}
+			$data['reblog']['account']['acct'] = $this->get_acct( $meta['attributedTo']['id'] );
+			$data['reblog']['account']['username'] = $this->get_acct( $meta['attributedTo']['id'] );
 			if ( ! empty( $meta['attributedTo']['summary'] ) ) {
 				$data['reblog']['account']['note'] = $meta['attributedTo']['summary'];
 			}
@@ -431,7 +433,7 @@ class Mastodon_API {
 
 	public function api_account_relationships( $request ) {
 		$user_id = $request->get_param( 'id' );
-		$friend_user = User::get_user_by_id( $id );
+		$friend_user = User::get_user_by_id( $user_id );
 
 		return array();
 	}
@@ -440,7 +442,7 @@ class Mastodon_API {
 		return $this->get_friend_account_data( $request->get_param( 'user_id' ) );
 	}
 
-	private function get_friend_account_data( $user_id ) {
+	private function get_friend_account_data( $user_id, $meta = array() ) {
 		$friend_user = User::get_user_by_id( $user_id );
 		$avatar = get_avatar_url( $friend_user->ID );
 		$posts = $friend_user->get_post_count_by_post_format();
@@ -448,7 +450,7 @@ class Mastodon_API {
 		$data = array(
 			'id'                => $friend_user->ID,
 			'username'          => $friend_user->user_login,
-			'acct'              => $friend_user->user_login,
+			'acct'              => isset( ['attributedTo']['id'] ) ? $this->get_acct( $meta['attributedTo']['id'] ) : $this->get_user_acct( $friend_user ),
 			'display_name'      => $friend_user->display_name,
 			'locked'            => false,
 			'created_at'        => mysql2date( 'c', $friend_user->user_registered, false ),
@@ -483,15 +485,91 @@ class Mastodon_API {
 						}
 						$data['url'] = $meta['url'];
 						$data['note'] = $meta['summary'];
-						$data['acct'] = $meta['id'];
-						if ( preg_match( '#^https://([^/]+)/@([^/]+)$#', $meta['url'], $m ) ) {
-							$data['acct'] = $m[2] . '@' . $m[1];
-						}
+						$data['acct'] = $this->get_acct( $meta['id'] );
 					}
 				}
 			}
 		}
 		return $data;
+	}
+
+	public function get_user_acct( $user ) {
+		if ( class_exists( '\\' . __NAMESPACE__ . '\Feed_Parser_ActivityPub' ) && ! $user instanceof User ) {
+			return \Webfinger::get_user_resource( $user );
+		}
+		return $this->get_acct( $user->get_url() );
+	}
+
+	public function get_acct( $id ) {
+		$backup_id = $id;
+		if ( preg_match( '#^https://([^/]+)/@([^/]+)$#', $id, $m ) ) {
+			$backup_id = $m[2] . '@' . $m[1];
+		}
+
+		if ( class_exists( __NAMESPACE__ . '\Feed_Parser_ActivityPub' ) ) {
+			if ( preg_match( '/^@?' . Feed_Parser_ActivityPub::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $id ) ) {
+				return \Webfinger::get_user_resource( $id );
+			}
+		}
+
+		if ( ! Friends::check_url( $id ) ) {
+			return $backup_id;
+		}
+
+		// We have a URL.
+
+		$transient_key = 'mastodon-api_webfinger_' . md5( $id );
+
+		$subject = \get_transient( $transient_key );
+		if ( $subject ) {
+			if ( is_wp_error( $subject ) ) {
+				return $backup_id;
+			}
+			return $subject;
+		}
+
+		$host = parse_url( $id, PHP_URL_HOST );
+
+		$url = \add_query_arg( 'resource', $id, 'https://' . $host . '/.well-known/webfinger' );
+		if ( ! Friends::check_url( $url ) ) {
+			$response = new \WP_Error( 'invalid_webfinger_url', null, $url );
+			\set_transient( $transient_key, $response, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
+			return $backup_id;
+		}
+
+		// try to access author URL
+		$response = \wp_remote_get(
+			$url,
+			array(
+				'headers' => array( 'Accept' => 'application/activity+json' ),
+				'redirection' => 0,
+				'timeout' => 2,
+			)
+		);
+
+		if ( \is_wp_error( $response ) ) {
+			$subject = new \WP_Error( 'webfinger_url_not_accessible', null, $url );
+			\set_transient( $transient_key, $subject, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
+			return $backup_id;
+		}
+
+		$body = \wp_remote_retrieve_body( $response );
+		$body = \json_decode( $body, true );
+
+		if ( empty( $body['subject'] ) ) {
+			$subject = new \WP_Error( 'webfinger_url_invalid_response', null, $url );
+			\set_transient( $transient_key, $subject, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
+			return $backup_id;
+		}
+
+		$subject = $body['subject'];
+
+		if ( strpos( $subject, 'acct:' ) === 0 ) {
+			$subject = substr( $subject, 5 );
+		}
+
+		\set_transient( $transient_key, $subject, WEEK_IN_SECONDS );
+		return $subject;
 	}
 
 	public function api_instance() {
