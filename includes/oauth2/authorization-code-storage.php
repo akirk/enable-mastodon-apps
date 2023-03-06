@@ -152,7 +152,7 @@ class AuthorizationCodeStorage implements AuthorizationCodeInterface {
 		$data = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT user_id, meta_key FROM $wpdb->usermeta WHERE meta_key LIKE %s",
-				self::META_KEY_PREFIX . '_expires_%',
+				self::META_KEY_PREFIX . '_expires_%'
 			)
 		);
 		if ( empty( $data ) ) {
