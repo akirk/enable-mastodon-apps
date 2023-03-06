@@ -147,7 +147,7 @@ class Mastodon_App {
 				}
 				$urls = array();
 				foreach ( $value as $url ) {
-					if ( Mastodon_Oauth::OOB_REDIRECT_URI !== $url ) {
+					if ( Mastodon_Oauth::OOB_REDIRECT_URI === $url ) {
 						$urls[] = $url;
 					} elseif ( Friends::check_url( $url ) ) {
 						$urls[] = $url;
