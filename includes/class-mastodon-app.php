@@ -67,6 +67,14 @@ class Mastodon_App {
 		return get_term_meta( $this->term->term_id, 'website', true );
 	}
 
+	public function get_creation_date() {
+		$date = get_term_meta( $this->term->term_id, 'creation_date', true );
+		if ( ! $date ) {
+			return null;
+		}
+		return date( 'r', $date );
+	}
+
 	public function check_redirect_uri( $redirect_uri ) {
 		$redirect_uris = $this->get_redirect_uris();
 		if ( ! is_array( $redirect_uris ) ) {
@@ -94,7 +102,17 @@ class Mastodon_App {
 		return false;
 	}
 
+	public static function get_all() {
+		$apps = array();
+		foreach ( get_terms( array(
+			'taxonomy' => self::TAXONOMY,
+			'hide_empty' => false,
+		) ) as $term ) {
+			$apps[] = new Mastodon_App( $term );
+		}
 
+		return $apps;
+	}
 
 	public static function register_taxonomy() {
 		$args = array(
@@ -182,6 +200,18 @@ class Mastodon_App {
 				return $value;
 			},
 		) );
+
+		register_term_meta( self::TAXONOMY, 'creation_date', array(
+			'show_in_rest' => false,
+			'single'       => true,
+			'type'         => 'int',
+			'sanitize_callback' => function( $value ) {
+				if ( ! is_int( $value ) ) {
+					$value = time();
+				}
+				return $value;
+			},
+		) );
 	}
 
 	/**
@@ -231,6 +261,7 @@ class Mastodon_App {
 				add_metadata( 'term', $term_id, $key, $value, true );
 			}
 		}
+		add_metadata( 'term', $term_id, 'creation_date', time(), true );
 
 		$term = get_term( $term['term_id'] );
 		if ( is_wp_error( $term ) ) {

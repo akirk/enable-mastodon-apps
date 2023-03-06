@@ -39,6 +39,7 @@ class Mastodon_API {
 		$this->friends = $friends;
 		$this->oauth = new Mastodon_Oauth( $friends );
 		$this->register_hooks();
+		new Mastodon_Admin(	$friends );
 	}
 
 	function register_hooks() {
@@ -393,15 +394,25 @@ class Mastodon_API {
 
 		$author_name = $data['account']['display_name'];
 		$override_author_name = get_post_meta( $post->ID, 'author', true );
-		if ( $override_author_name !== $author_name ) {
-			// This is a reblog.
+
+		$meta = get_post_meta( $post->ID, 'activitypub', true );
+		if ( isset( $meta['reblog'] ) && $meta['reblog'] ) {
 			$data['reblog'] = $data;
-			$data['reblog']['account']['display_name'] = $override_author_name;
-
+			if ( ! empty( $meta['attributedTo']['icon'] ) ) {
+				$data['reblog']['account']['avatar'] = $meta['attributedTo']['icon'];
+			}
+			if ( ! empty( $meta['attributedTo']['preferredUsername'] ) ) {
+				$data['reblog']['account']['display_name'] = $meta['attributedTo']['preferredUsername'];
+			}
+			if ( ! empty( $meta['attributedTo']['summary'] ) ) {
+				$data['reblog']['account']['note'] = $meta['attributedTo']['summary'];
+			}
+		} elseif ( $author_name !== $override_author_name ) {
+			$data['account_data']['display_name'] = $override_author_name;
 		}
-
 		return $data;
 	}
+
 	public function api_timelines( $request ) {
 		$args = $this->get_posts_query_args( $request );
 		$args = apply_filters( 'friends_mastodon_api_timelines_args', $args, $request );
@@ -445,7 +456,7 @@ class Mastodon_API {
 			'following_count'   => 0,
 			'statuses_count'    => isset( $posts['status'] ) ? $posts['status'] : 0,
 			'note'              => '',
-			'url'               => home_url( '/author/' . $friend_user->user_login ),
+			'url'               => $friend_user->get_url(),
 			'avatar'            => $avatar,
 			'avatar_static'     => $avatar,
 			'header'            => null,
@@ -470,6 +481,7 @@ class Mastodon_API {
 							$data['header'] = $meta['image']['url'];
 							$data['header_static'] = $meta['image']['url'];
 						}
+						$data['url'] = $meta['url'];
 						$data['note'] = $meta['summary'];
 						$data['acct'] = $meta['id'];
 						if ( preg_match( '#^https://([^/]+)/@([^/]+)$#', $meta['url'], $m ) ) {

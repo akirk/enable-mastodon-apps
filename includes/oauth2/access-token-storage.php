@@ -8,6 +8,7 @@
 namespace Friends\OAuth2;
 
 use OAuth2\Storage\AccessTokenInterface;
+use PO;
 
 class AccessTokenStorage implements AccessTokenInterface {
     const META_KEY_PREFIX = 'friends_oa2_access_token';
@@ -20,6 +21,29 @@ class AccessTokenStorage implements AccessTokenInterface {
 
     public function __construct() {
         add_action( 'oidc_cron_hook', array( $this, 'cleanupOldCodes' ) );
+    }
+
+    public static function getAll() {
+        $tokens = array();
+
+        foreach ( get_user_meta( get_current_user_id() ) as $key => $value ) {
+            if ( 0 !== strpos( $key, self::META_KEY_PREFIX ) ) {
+                continue;
+            }
+            $key_parts = explode( '_', substr( $key, strlen( self::META_KEY_PREFIX ) + 1 ) );
+            $token = array_pop( $key_parts );
+            $key = implode( '_', $key_parts );
+            $value = $value[0];
+
+            if ( 'expires' === $key ) {
+                $tokens[$token]['expired'] = time() > $value;
+                $value = date( 'r', $value ) ;
+            }
+
+            $tokens[$token][$key] = $value;
+        }
+
+        return $tokens;
     }
 
     private function getUserIdByToken( $oauth_token ) {

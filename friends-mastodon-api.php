@@ -16,7 +16,9 @@
 defined( 'ABSPATH' ) || exit;
 define( 'FRIENDS_MASTODON_API_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
-require_once __DIR__ . '/vendor/autoload.php';
+// require_once __DIR__ . '/vendor/autoload.php';
+require __DIR__ . '/vendor/bshaffer/oauth2-server-php/src/OAuth2/Autoloader.php';
+OAuth2\Autoloader::register();
 
 require_once __DIR__ . '/includes/oauth2/access-token-storage.php';
 require_once __DIR__ . '/includes/oauth2/authenticate-handler.php';
@@ -26,10 +28,9 @@ require_once __DIR__ . '/includes/oauth2/mastodon-app-storage.php';
 require_once __DIR__ . '/includes/oauth2/token-handler.php';
 require_once __DIR__ . '/includes/class-mastodon-oauth.php';
 
+require_once __DIR__ . '/includes/class-mastodon-admin.php';
 require_once __DIR__ . '/includes/class-mastodon-api.php';
 require_once __DIR__ . '/includes/class-mastodon-app.php';
-
-
 
 if ( apply_filters( 'friends_debug', false ) ) {
     add_filter( 'friends_host_is_valid', function( $result, $host ) {
