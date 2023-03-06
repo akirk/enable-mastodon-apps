@@ -246,15 +246,14 @@ class Mastodon_API {
 			'client_id'     => $app->get_client_id(),
 			'client_secret' => $app->get_client_secret(),
 			'redirect_uris' => $app->get_redirect_uris(),
+			'name'          => $app->get_client_name(),
+			'website'       => $app->get_website(),
 
 		);
 	}
 
 	public function logged_in_permission() {
 		$this->allow_cors();
-		if ( apply_filters( 'friends_mastodon_api_skip_login_check', false ) ) {
-			return true;
-		}
 		$this->oauth->authenticate();
 		return is_user_logged_in();
 	}
@@ -384,6 +383,7 @@ class Mastodon_API {
 			$img = substr( $data['content'], $p, $e - $p + 19 );
 			if ( preg_match( '#<img src="(?P<url>[^"]+)" width="(\d+)" height="(\d+)" class="size-full"#', $img, $attachment )) {
 				$data['media_attachments'][] =array(
+					'id' => crc32( $attachment['url'] ),
 					'type' => 'image',
 					'url' => $attachment['url'],
 					'preview_url' => $attachment['url'],
@@ -462,8 +462,8 @@ class Mastodon_API {
 			'url'               => $friend_user->get_url(),
 			'avatar'            => $avatar,
 			'avatar_static'     => $avatar,
-			'header'            => null,
-			'header_static'     => null,
+			'header'            => '',
+			'header_static'     => '',
 			'emojis'            => array(),
 			'fields'            => array(),
 			'bot'               => false,
@@ -495,13 +495,14 @@ class Mastodon_API {
 	}
 
 	public function get_user_acct( $user ) {
-		if ( class_exists( '\\' . __NAMESPACE__ . '\Feed_Parser_ActivityPub' ) && ! $user instanceof User ) {
-			return \Webfinger::get_user_resource( $user );
-		}
-		return $this->get_acct( $user->get_url() );
+		return $this->get_acct( get_author_posts_url( $user->ID ) );
 	}
 
 	public function get_acct( $id ) {
+		if ( strpos( $id, 'acct:' ) === 0 ) {
+			$id = substr( $id, 5 );
+		}
+
 		$backup_id = $id;
 		if ( preg_match( '#^https://([^/]+)/@([^/]+)$#', $id, $m ) ) {
 			$backup_id = $m[2] . '@' . $m[1];
@@ -509,7 +510,7 @@ class Mastodon_API {
 
 		if ( class_exists( __NAMESPACE__ . '\Feed_Parser_ActivityPub' ) ) {
 			if ( preg_match( '/^@?' . Feed_Parser_ActivityPub::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $id ) ) {
-				return \Webfinger::get_user_resource( $id );
+				return \Webfinger::resolve( $id );
 			}
 		}
 
@@ -579,6 +580,7 @@ class Mastodon_API {
 			'account_domain'    => \wp_parse_url( \home_url(), \PHP_URL_HOST ),
 			'title'             => get_bloginfo( 'name' ),
 			'description'       => get_bloginfo( 'description' ),
+			'email'             => 'not@public.example',
 			'version'           => self::VERSION,
 			'registrations'     => false,
 			'approval_required' => false,
