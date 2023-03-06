@@ -406,6 +406,7 @@ class Mastodon_API {
 			}
 			$data['reblog']['account']['acct'] = $this->get_acct( $meta['attributedTo']['id'] );
 			$data['reblog']['account']['username'] = $this->get_acct( $meta['attributedTo']['id'] );
+			$data['reblog']['account']['id'] = $this->get_acct( $meta['attributedTo']['id'] );
 			if ( ! empty( $meta['attributedTo']['summary'] ) ) {
 				$data['reblog']['account']['note'] = $meta['attributedTo']['summary'];
 			}
