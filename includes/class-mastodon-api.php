@@ -445,6 +445,11 @@ class Mastodon_API {
 
 	private function get_friend_account_data( $user_id, $meta = array() ) {
 		$friend_user = User::get_user_by_id( $user_id );
+		if ( ! $friend_user || is_wp_error( $friend_user ) ) {
+			return array(
+				'error' => 'User not found',
+			);
+		}
 		$avatar = get_avatar_url( $friend_user->ID );
 		$posts = $friend_user->get_post_count_by_post_format();
 
