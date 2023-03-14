@@ -133,6 +133,16 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
+			'api/v1/statuses',
+			array(
+				'methods'             => array( 'POST', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_post_status' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
 			'api/v1/timelines/(home)',
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
@@ -192,6 +202,7 @@ class Mastodon_API {
 			'api/v1/filters',
 			'api/v1/instance',
 			'api/v1/lists',
+			'api/v1/statuses',
 		);
 		$parametrized = array(
 			'api/v1/accounts/([0-9]+)/statuses' => 'api/v1/accounts/$matches[1]/statuses',
@@ -326,7 +337,7 @@ class Mastodon_API {
 
 		$args = array(
 			'posts_per_page' => $limit,
-			'post_type' => Friends::get_frontend_post_types(),
+			'post_type' => array_merge( array( 'post' ), Friends::get_frontend_post_types() ),
 			'tax_query' => $tax_query,
 			'suppress_filters' => false
 		);
@@ -349,7 +360,10 @@ class Mastodon_API {
 		}
 		$ret = array();
 		foreach ( $posts as $post ) {
-			$ret[] = $this->get_status_array( $post );
+			$status = $this->get_status_array( $post );
+			if ( $status ) {
+				$ret[] = $status;
+			}
 		}
 		return $ret;
 	}
@@ -357,6 +371,9 @@ class Mastodon_API {
 	private function get_status_array( $post ) {
 		$meta = get_post_meta( $post->ID, 'activitypub', true );
 		$account_data = $this->get_friend_account_data( $post->post_author, $meta );
+		if ( is_wp_error( $account_data ) ) {
+			return null;
+		}
 
 		$data = array(
 			'id'                => $post->ID,
@@ -431,6 +448,35 @@ class Mastodon_API {
 		return $data;
 	}
 
+	public function api_post_status( $request ) {
+		$status = $request->get_param( 'status' );
+		if ( empty( $status ) ) {
+			return new \WP_Error( 'mastodon_api_post_status', 'Status is empty', array( 'status' => 400 ) );
+		}
+
+		$visibility = $request->get_param( 'visibility' );
+		if ( empty( $visibility ) ) {
+			$visibility = 'public';
+		}
+		$post_data = array(
+			'post_content' => $status,
+			'post_status' => 'public' === $visibility ? 'publish' : 'private',
+			'post_type' => 'post',
+			'post_title' => '',
+		);
+		$post_id = wp_insert_post( $post_data );
+		if ( is_wp_error( $post_id ) ) {
+			return $post_id;
+		}
+
+		set_post_format( $post_id, $post_format );
+
+		return array(
+			'status' => 'success',
+		);
+
+	}
+
 	public function api_timelines( $request ) {
 		$args = $this->get_posts_query_args( $request );
 		if ( empty( $args ) ) {
@@ -483,25 +529,36 @@ class Mastodon_API {
 
 
 	private function get_friend_account_data( $user_id, $meta = array() ) {
-		$friend_user = \Friends\User::get_user_by_id( $user_id );
-		if ( ! $friend_user || is_wp_error( $friend_user ) ) {
-			return new \WP_Error( 'user-not-found', __( 'User not found.', 'mastodon_api' ), array( 'status' => 403 ) );
+		$user = \Friends\User::get_user_by_id( $user_id );
+		if ( ! $user || is_wp_error( $user ) ) {
+			$user = new \WP_User( $user_id );
+			if ( ! $user || is_wp_error( $user ) ) {
+				return new \WP_Error( 'user-not-found', __( 'User not found.', 'mastodon_api' ), array( 'status' => 403 ) );
+			}
 		}
-		$avatar = get_avatar_url( $friend_user->ID );
-		$posts = $friend_user->get_post_count_by_post_format();
+		$avatar = get_avatar_url( $user->ID );
+		if ( $user instanceof \Friends\User ) {
+			$posts = $user->get_post_count_by_post_format();
+		} else {
+			// Get post count for the post format status for the user.
+			$posts = array(
+				'status' => count_user_posts( $user->ID, 'post', true ),
+			);
+		}
+
 
 		$data = array(
-			'id'                => $friend_user->ID,
-			'username'          => $friend_user->user_login,
-			'acct'              => isset( ['attributedTo']['id'] ) ? $this->get_acct( $meta['attributedTo']['id'] ) : $this->get_user_acct( $friend_user ),
-			'display_name'      => $friend_user->display_name,
+			'id'                => $user->ID,
+			'username'          => $user->user_login,
+			'acct'              => isset( ['attributedTo']['id'] ) ? $this->get_acct( $meta['attributedTo']['id'] ) : $this->get_user_acct( $user ),
+			'display_name'      => $user->display_name,
 			'locked'            => false,
-			'created_at'        => mysql2date( 'c', $friend_user->user_registered, false ),
+			'created_at'        => mysql2date( 'c', $user->user_registered, false ),
 			'followers_count'   => 0,
 			'following_count'   => 0,
 			'statuses_count'    => isset( $posts['status'] ) ? $posts['status'] : 0,
 			'note'              => '',
-			'url'               => $friend_user->get_url(),
+			'url'               => $user->get_url(),
 			'avatar'            => $avatar,
 			'avatar_static'     => $avatar,
 			'header'            => '',
@@ -518,7 +575,7 @@ class Mastodon_API {
 		);
 
 		if ( class_exists( __NAMESPACE__ . '\Feed_Parser_ActivityPub' ) ) {
-			foreach ( $friend_user->get_feeds() as $feed ) {
+			foreach ( $user->get_feeds() as $feed ) {
 				if ( Feed_Parser_ActivityPub::SLUG === $feed->get_parser() ) {
 					$meta = Feed_Parser_ActivityPub::get_metadata( $feed->get_url() );
 					if ( $meta && ! is_wp_error( $meta ) ) {
