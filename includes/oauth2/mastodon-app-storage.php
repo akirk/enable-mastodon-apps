@@ -73,7 +73,7 @@ class MastodonAppStorage implements ClientCredentialsInterface {
 		return Mastodon_App::get_by_client_id( $client_id );
 	}
 
-	private function has( $client_id ): bool {
+	private function has( $client_id ) {
 		$client = $this->get( $client_id );
 		return ! is_wp_error( $client );
 	}
