@@ -183,7 +183,7 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
-			'api/v1/accounts/(?P<user_id>[0-9]+)/statuses',
+			'api/v1/accounts/(?P<user_id>[^/]+)/statuses',
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_account_statuses' ),
@@ -193,7 +193,7 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
-			'api/v1/accounts/(?P<user_id>[0-9]+)$',
+			'api/v1/accounts/(?P<user_id>[^/]+)$',
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_account' ),
@@ -235,11 +235,11 @@ class Mastodon_API {
 			'api/v2/media',
 		);
 		$parametrized = array(
-			'api/v1/accounts/([0-9]+)/statuses' => 'api/v1/accounts/$matches[1]/statuses',
+			'api/v1/accounts/(.+)/statuses' => 'api/v1/accounts/$matches[1]/statuses',
 			'api/v1/statuses/([0-9]+)/context' => 'api/v1/statuses/$matches[1]/context',
 			'api/v1/statuses/([0-9]+)' => 'api/v1/statuses/$matches[1]',
 			'api/v1/statuses' => 'api/v1/statuses',
-			'api/v1/accounts/([0-9]+)' => 'api/v1/accounts/$matches[1]',
+			'api/v1/accounts/(.+)' => 'api/v1/accounts/$matches[1]',
 			'api/v1/timelines/(home)' => 'api/v1/timelines/$matches[1]',
 		);
 
@@ -662,6 +662,15 @@ class Mastodon_API {
 							'descendants' => array(),
 						)
 					);
+				} else {
+					foreach ( $context as $key => $posts ) {
+						foreach ( $posts as $index => $post ) {
+							if ( false === strpos( $post['account']['acct'], '@' ) ) {
+								$post['account']['acct'] .= '@' . $domain;
+							}
+							$context[ $key ][ $index ]['account']['id'] = $post['account']['acct'];
+						}
+					}
 				}
 
 				set_transient( $transient_key, $context, HOUR_IN_SECONDS );
