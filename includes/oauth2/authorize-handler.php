@@ -28,7 +28,7 @@ class AuthorizeHandler {
 		}
 
 		// The initial OIDC request will come without a nonce, thus unauthenticated.
-		if ( ! is_user_logged_in() || ! current_user_can( \Friends\Friends::REQUIRED_ROLE ) || ! isset( $_POST['authorize'] ) ) {
+		if ( ! is_user_logged_in() || ! current_user_can( 'edit_private_posts' ) || ! isset( $_POST['authorize'] ) ) {
 			// This is handled by a hook in wp-login.php which will display a form asking the user to consent.
 			// TODO: Redirect with $response->setRedirect().
 			wp_safe_redirect( add_query_arg( array_map( 'rawurlencode', array_merge( $request->getAllQueryParameters(), array( 'action' => 'mastodon-api-authenticate' ) ) ), wp_login_url() ) );
