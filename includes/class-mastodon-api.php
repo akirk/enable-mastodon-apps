@@ -133,11 +133,41 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
+			'api/v2/media',
+			array(
+				'methods'             => array( 'POST', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_post_media' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
 			'api/v1/statuses',
 			array(
 				'methods'             => array( 'POST', 'OPTIONS' ),
-				'callback'            => array( $this, 'api_post_status' ),
+				'callback'            => array( $this, 'api_submit_post' ),
 				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/statuses/(?P<post_id>[0-9]+)/context',
+			array(
+				'methods'             => array( 'GET', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_get_post_context' ),
+				'permission_callback' => array( $this, 'logged_in_for_private_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/statuses/(?P<post_id>[0-9]+)',
+			array(
+				'methods'             => array( 'GET', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_get_post' ),
+				'permission_callback' => array( $this, 'logged_in_for_private_permission' ),
 			)
 		);
 
@@ -202,10 +232,13 @@ class Mastodon_API {
 			'api/v1/filters',
 			'api/v1/instance',
 			'api/v1/lists',
-			'api/v1/statuses',
+			'api/v2/media',
 		);
 		$parametrized = array(
 			'api/v1/accounts/([0-9]+)/statuses' => 'api/v1/accounts/$matches[1]/statuses',
+			'api/v1/statuses/([0-9]+)/context' => 'api/v1/statuses/$matches[1]/context',
+			'api/v1/statuses/([0-9]+)' => 'api/v1/statuses/$matches[1]',
+			'api/v1/statuses' => 'api/v1/statuses',
 			'api/v1/accounts/([0-9]+)' => 'api/v1/accounts/$matches[1]',
 			'api/v1/timelines/(home)' => 'api/v1/timelines/$matches[1]',
 		);
@@ -280,6 +313,19 @@ class Mastodon_API {
 		return is_user_logged_in();
 	}
 
+	public function logged_in_for_private_permission( $request ) {
+		$post_id = $request->get_param( 'post_id' );
+		if ( ! $post_id ) {
+			return false;
+		}
+
+		if ( get_post_status( $post_id ) !== 'publish' ) {
+			return $this->logged_in_permission();
+		}
+
+		return true;
+	}
+
 	public function api_verify_credentials( $request ) {
 		$user = wp_get_current_user();
 		if ( ! $user->exists() ) {
@@ -339,8 +385,15 @@ class Mastodon_API {
 			'posts_per_page' => $limit,
 			'post_type' => array_merge( array( 'post' ), Friends::get_frontend_post_types() ),
 			'tax_query' => $tax_query,
-			'suppress_filters' => false
+			'suppress_filters' => false,
+			'post_status' => array( 'publish', 'private' ),
 		);
+
+		$post_id = $request->get_param( 'post_id' );
+		if ( $post_id ) {
+			$args['p'] = $post_id;
+		}
+
 		return $args;
 	}
 
@@ -392,7 +445,7 @@ class Mastodon_API {
 			'muted'             => false,
 			'sensitive'         => false,
 			'spoiler_text'      => '',
-			'visibility'        => 'public',
+			'visibility'        => 'publish' === $post->post_status ? 'public' : 'unlisted',
 			'media_attachments' => array(),
 			'mentions'          => array(),
 			'tags'              => array(),
@@ -406,20 +459,31 @@ class Mastodon_API {
 			'poll'              => null,
 		);
 
+		// get the attachments for the post.
+		$attachments = get_attached_media( '', $post->ID );
 		$p = strpos( $data['content'], '<!-- wp:image' );
 		while ( ( $p = strpos( $data['content'], '<!-- wp:image' ) ) !== false ) {
-			$e = strpos( $data['content'], '<!-- /wp:image -->', $p );
+			$e = strpos( $data['content'], '<!-- /wp:image', $p );
 			if ( ! $e ) {
 				break;
 			}
 			$img = substr( $data['content'], $p, $e - $p + 19 );
-			if ( preg_match( '#<img src="(?P<url>[^"]+)" width="(\d+)" height="(\d+)" class="size-full"#', $img, $attachment )) {
+			if ( preg_match( '#<img(?:\s+src="(?P<url>[^"]+)"|\s+width="(?P<width>\d+)"|\s+height="(?P<height>\d+)"|\s+class="(?P<class>[^"]+))+"#', $img, $img_tag )) {
+				$media_id = crc32( $img_tag['url'] );
+				foreach ( $attachments as $attachment_id => $attachment ) {
+					if ( $attachment->guid === $img_tag['url'] ) {
+						$media_id = $attachment_id;
+						break;
+					}
+				}
 				$data['media_attachments'][] =array(
-					'id' => crc32( $attachment['url'] ),
+					'id' => $media_id,
 					'type' => 'image',
-					'url' => $attachment['url'],
-					'preview_url' => $attachment['url'],
-					'text_url' => $attachment['url'],
+					'url' => $img_tag['url'],
+					'preview_url' => $img_tag['url'],
+					'text_url' => $img_tag['url'],
+					'width' => $img_tag['width'],
+					'height' => $img_tag['height'],
 				);
 			}
 			$data['content'] = substr( $data['content'], 0, $p ) . substr( $data['content'], $e + 19 );
@@ -445,13 +509,14 @@ class Mastodon_API {
 		} elseif ( $author_name !== $override_author_name ) {
 			$data['account_data']['display_name'] = $override_author_name;
 		}
+
 		return $data;
 	}
 
-	public function api_post_status( $request ) {
+	public function api_submit_post( $request ) {
 		$status = $request->get_param( 'status' );
 		if ( empty( $status ) ) {
-			return new \WP_Error( 'mastodon_api_post_status', 'Status is empty', array( 'status' => 400 ) );
+			return new \WP_Error( 'mastodon_api_submit_post', 'Status is empty', array( 'status' => 400 ) );
 		}
 
 		$visibility = $request->get_param( 'visibility' );
@@ -464,17 +529,80 @@ class Mastodon_API {
 			'post_type' => 'post',
 			'post_title' => '',
 		);
+
+		$scheduled_at = $request->get_param( 'scheduled_at' );
+		if ( $scheduled_at ) {
+			$post_data['post_status'] = 'future';
+			$post_data['post_date'] = $scheduled_at;
+		}
+
+		$media_ids = $request->get_param( 'media_ids' );
+		if ( ! empty( $media_ids ) ) {
+			foreach ( $media_ids as $media_id ) {
+				$media = get_post( $media_id );
+				if ( ! $media ) {
+					return new \WP_Error( 'mastodon_api_submit_post', 'Media not found', array( 'status' => 400 ) );
+				}
+				if ( 'attachment' !== $media->post_type ) {
+					return new \WP_Error( 'mastodon_api_submit_post', 'Media not found', array( 'status' => 400 ) );
+				}
+				$attachment = \wp_get_attachment_metadata( $media_id );
+				$post_data['post_content'] .= PHP_EOL;
+				$post_data['post_content'] .= '<!-- wp:image -->';
+				$post_data['post_content'] .= '<p><img src="' . esc_url( wp_get_attachment_url( $media_id ) ) . '" width="' . esc_attr( $attachment['width'] ) . '"  height="' . esc_attr( $attachment['height'] ) . '" class="size-full" /></p>';
+				$post_data['post_content'] .= '<!-- /wp:image -->';
+			}
+		}
+
 		$post_id = wp_insert_post( $post_data );
 		if ( is_wp_error( $post_id ) ) {
 			return $post_id;
 		}
 
+		$post_format = apply_filters( 'mastodon_api_new_post_format', 'status' );
 		set_post_format( $post_id, $post_format );
+		if ( ! empty( $media_ids ) ) {
+			foreach ( $media_ids as $media_id ) {
+				wp_update_post( array(
+					'ID' => $media_id,
+					'post_parent' => $post_id,
+				) );
+			}
+		}
+
+		if ( $scheduled_at ) {
+			return array(
+				'id' => $post_id,
+				'scheduled_at' => $scheduled_at,
+				'params' => array(
+					'text' => $status,
+					'visibility' => $visibility,
+					'scheduled_at' => $scheduled_at,
+				),
+			);
+		}
+		return $this->get_status_array( get_post( $post_id ) );
+	}
+
+	public function api_post_media( $request ) {
+		$media = $request->get_file_params();
+		if ( empty( $media ) ) {
+			return new \WP_Error( 'mastodon_api_post_media', 'Media is empty', array( 'status' => 400 ) );
+		}
+
+		require_once( ABSPATH . 'wp-admin/includes/media.php' );
+		require_once( ABSPATH . 'wp-admin/includes/file.php' );
+		require_once( ABSPATH . 'wp-admin/includes/image.php' );
+
+		$attachment_id = \media_handle_sideload( $media['file'] );
 
 		return array(
-			'status' => 'success',
+			'id' => $attachment_id,
+			'type' => 'image',
+			'url' => \wp_get_attachment_url( $attachment_id ),
+			'preview_url' => \wp_get_attachment_url( $attachment_id ),
+			'text_url' => \wp_get_attachment_url( $attachment_id ),
 		);
-
 	}
 
 	public function api_timelines( $request ) {
@@ -485,6 +613,60 @@ class Mastodon_API {
 		$args = apply_filters( 'mastodon_api_timelines_args', $args, $request );
 
 		return $this->get_posts( $args, $request->get_param( 'max_id' ) );
+	}
+
+	public function api_get_post_context( $request ) {
+		$post_id = $request->get_param( 'post_id' );
+		if ( ! $post_id ) {
+			return false;
+		}
+		$context = array(
+			'ancestors' => array(),
+			'descendants' => array(),
+		);
+
+		if ( ! class_exists( '\Friends\Friends' ) || \Friends\Friends::CPT !== get_post_type( $post_id ) ) {
+			return $context;
+		}
+
+
+		$meta = get_post_meta( $post_id, 'activitypub', true );
+		if ( $meta ) {
+			$transient_key = 'mastodon_api_get_post_context_' . $post_id;
+			$saved_context = get_transient( $transient_key );
+			if ( $saved_context ) {
+				return $saved_context;
+			}
+
+			$post = get_post( $post_id );
+			if ( preg_match( '#^https://([^/]+)/(?:users/)?[^/]+(?:/statuses)?/(.+)$#', $post->guid, $matches ) ) {
+				$domain = $matches[1];
+				$id = $matches[2];
+				$context_api_url = 'https://' . $domain . '/api/v1/statuses/' . $id . '/context';
+				$response = wp_safe_remote_get(
+					$context_api_url,
+					array(
+						'timeout'     => apply_filters( 'friends_http_timeout', 20 ),
+						'redirection' => 1,
+					)
+				);
+				if ( ! is_wp_error( $response ) ) {
+					$context = json_decode( wp_remote_retrieve_body( $response ), true );
+				}
+
+				set_transient( $transient_key, $context, HOUR_IN_SECONDS );
+			}
+		}
+		return $context;
+	}
+
+	public function api_get_post( $request ) {
+		$post_id = $request->get_param( 'post_id' );
+		if ( ! $post_id ) {
+			return false;
+		}
+
+		return $this->get_status_array( get_post( $post_id ) );
 	}
 
 	public function api_account_statuses( $request ) {
