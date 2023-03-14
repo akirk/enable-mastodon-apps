@@ -235,7 +235,7 @@ class Mastodon_API {
 			'api/v2/media',
 		);
 		$parametrized = array(
-			'api/v1/accounts/(.+)/statuses' => 'api/v1/accounts/$matches[1]/statuses',
+			'api/v1/accounts/([^/+])/statuses' => 'api/v1/accounts/$matches[1]/statuses',
 			'api/v1/statuses/([0-9]+)/context' => 'api/v1/statuses/$matches[1]/context',
 			'api/v1/statuses/([0-9]+)' => 'api/v1/statuses/$matches[1]',
 			'api/v1/statuses' => 'api/v1/statuses',
@@ -689,11 +689,61 @@ class Mastodon_API {
 	}
 
 	public function api_account_statuses( $request ) {
+		$user_id = $request->get_param( 'user_id' );
+		if ( class_exists( '\Friends\Feed_Parser_ActivityPub' ) ) {
+			if ( preg_match( '/^@?' . \Friends\Feed_Parser_ActivityPub::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id ) ) {
+				$url = $this->get_acct( $user_id );
+				if ( ! $url ) {
+					return array();
+				}
+				$meta = \Friends\Feed_Parser_ActivityPub::get_metadata( $url );
+				if ( is_wp_error( $meta ) || ! isset( $meta['outbox'] ) ) {
+					return array();
+				}
+
+				$response = \Activitypub\safe_remote_get( $meta['outbox'], get_current_user_id() );
+				if ( is_wp_error( $response ) || 200 !== wp_remote_retrieve_response_code( $response ) ) {
+					return new \WP_Error( 'activitypub_could_not_get_outbox_meta', null, compact( 'meta', 'url' ) );
+				}
+
+				$outbox = json_decode( wp_remote_retrieve_body( $response ), true );
+				if ( ! isset( $outbox['first'] ) ) {
+					return new \WP_Error( 'activitypub_could_not_find_outbox_first_page', null, compact( 'url', 'meta', 'outbox' ) );
+				}
+
+				$response = \Activitypub\safe_remote_get( $outbox['first'], get_current_user_id() );
+				if ( is_wp_error( $response ) || 200 !== wp_remote_retrieve_response_code( $response ) ) {
+					return new \WP_Error(
+						'activitypub_could_not_get_outbox',
+						null,
+						array(
+							'meta' => $outbox,
+							$url   => $outbox['first'],
+						)
+					);
+				}
+
+				$outbox_page = json_decode( wp_remote_retrieve_body( $response ), true );
+
+				if ( ! isset( $outbox_page['type'] ) || 'OrderedCollectionPage' !== $outbox_page['type'] ) {
+					return new \WP_Error(
+						'activitypub_outbox_page_invalid_type',
+						null,
+						array(
+							'outbox_page' => $outbox_page,
+							$url          => $outbox['first'],
+						)
+					);
+				}
+				return $outbox_page['orderedItems'];
+			}
+		}
+
 		$args = $this->get_posts_query_args( $request );
 		if ( empty( $args ) ) {
 			return array();
 		}
-		$args['author'] = $request->get_param( 'user_id' );
+		$args['author'] = $user_id;
 
 		$args = apply_filters( 'mastodon_api_account_statuses_args', $args, $request );
 
@@ -730,6 +780,16 @@ class Mastodon_API {
 
 
 	private function get_friend_account_data( $user_id, $meta = array() ) {
+		if ( class_exists( '\Friends\Feed_Parser_ActivityPub' ) ) {
+			if ( preg_match( '/^@?' . \Friends\Feed_Parser_ActivityPub::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id ) ) {
+				$url = $this->get_acct( $user_id );
+				if ( ! $url ) {
+					return array();
+				}
+				return \Friends\Feed_Parser_ActivityPub::get_metadata( $url );
+			}
+		}
+
 		$user = \Friends\User::get_user_by_id( $user_id );
 		if ( ! $user || is_wp_error( $user ) ) {
 			$user = new \WP_User( $user_id );
@@ -775,10 +835,10 @@ class Mastodon_API {
 			),
 		);
 
-		if ( class_exists( __NAMESPACE__ . '\Feed_Parser_ActivityPub' ) ) {
+		if ( class_exists( '\Friends\Feed_Parser_ActivityPub' ) ) {
 			foreach ( $user->get_feeds() as $feed ) {
-				if ( Feed_Parser_ActivityPub::SLUG === $feed->get_parser() ) {
-					$meta = Feed_Parser_ActivityPub::get_metadata( $feed->get_url() );
+				if ( \Friends\Feed_Parser_ActivityPub::SLUG === $feed->get_parser() ) {
+					$meta = \Friends\Feed_Parser_ActivityPub::get_metadata( $feed->get_url() );
 					if ( $meta && ! is_wp_error( $meta ) ) {
 						if ( ! empty( $meta['image']['url'] ) ) {
 							$data['header'] = $meta['image']['url'];
@@ -808,9 +868,9 @@ class Mastodon_API {
 			$backup_id = $m[2] . '@' . $m[1];
 		}
 
-		if ( class_exists( __NAMESPACE__ . '\Feed_Parser_ActivityPub' ) ) {
-			if ( preg_match( '/^@?' . Feed_Parser_ActivityPub::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $id ) ) {
-				return \Webfinger::resolve( $id );
+		if ( class_exists( '\Friends\Feed_Parser_ActivityPub' ) ) {
+			if ( preg_match( '/^@?' . \Friends\Feed_Parser_ActivityPub::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $id ) ) {
+				return \ActivityPub\Webfinger::resolve( $id );
 			}
 		}
 
