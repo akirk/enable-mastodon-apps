@@ -1,13 +1,13 @@
 <?php
 /**
- * Friends Mastodon OAuth
+ * Mastodon OAuth
  *
  * This contains the OAuth handlers.
  *
- * @package Friends_Mastodon_API
+ * @package Mastodon_API
  */
 
-namespace Friends;
+namespace Mastodon_API;
 
 use OAuth2\Server;
 use OAuth2\Request;
@@ -18,18 +18,11 @@ use OAuth2\Response;
  *
  * @since 0.1
  *
- * @package Friends_Mastodon_API
+ * @package Mastodon_API
  * @author Alex Kirk
  */
-class Mastodon_Oauth {
+class Mastodon_OAuth {
 	const OOB_REDIRECT_URI = 'urn:ietf:wg:oauth:2.0:oob';
-
-	/**
-	 * Contains a reference to the Friends class.
-	 *
-	 * @var Friends
-	 */
-	private $friends;
 
 	/**
 	 * Contains a reference to the OAuth2 Server class.
@@ -40,11 +33,8 @@ class Mastodon_Oauth {
 
 	/**
 	 * Constructor
-	 *
-	 * @param Friends $friends A reference to the Friends object.
 	 */
-	public function __construct( Friends $friends ) {
-		$this->friends = $friends;
+	public function __construct() {
 		$config = array(
 		    'issuer'                => home_url( '/' ),
 		    'enforce_state'         => false,
@@ -63,6 +53,9 @@ class Mastodon_Oauth {
 		$handler = null;
 		switch( strtok( $_SERVER['REQUEST_URI'], '?' ) ) {
 			case '/oauth/authorize':
+				if ( get_option( 'mastodon_api_disable_logins' ) ) {
+					return;
+				}
 				$handler = new OAuth2\AuthorizeHandler( $this->server );
 				break;
 			case '/oauth/token':
@@ -97,7 +90,7 @@ class Mastodon_Oauth {
 		exit;
 	}
 
-	function authenticate() {
+	public function authenticate() {
 		$request  = Request::createFromGlobals();
 		if ( !$this->server->verifyResourceRequest( $request ) ) {
 			$this->server->getResponse()->send();
@@ -107,7 +100,7 @@ class Mastodon_Oauth {
 		wp_set_current_user( $token['user_id'] );
 	}
 
-	function authenticate_handler() {
+	public function authenticate_handler() {
 		$request  = Request::createFromGlobals();
 		$response = new Response();
 
@@ -116,5 +109,11 @@ class Mastodon_Oauth {
 		exit;
 	}
 
+	public function get_code_storage() {
+		return $this->server->getStorage( 'authorization_code' );
+	}
 
+	public function get_token_storage() {
+		return $this->server->getStorage( 'access_token' );
+	}
 }

@@ -1,16 +1,11 @@
 <?php
 
-namespace Friends\OAuth2;
+namespace Mastodon_API\OAuth2;
 
-use Friends\Mastodon_App;
+use Mastodon_API\Mastodon_App;
 use OAuth2\Storage\ClientCredentialsInterface;
 
 class MastodonAppStorage implements ClientCredentialsInterface {
-	private $clients;
-
-	public function __construct() {
-	}
-
 	public function getClientDetails( $client_id ) {
 		if ( ! $this->has( $client_id ) ) {
 			return false;

@@ -1,11 +1,10 @@
 <?php
 
-namespace Friends\OAuth2;
+namespace Mastodon_API\OAuth2;
 
 use OAuth2\Request;
 use OAuth2\Response;
 use OAuth2\Server as OAuth2Server;
-use OpenIDConnectServer\Http\RequestHandler;
 
 class TokenHandler {
 	private $server;

@@ -1,11 +1,11 @@
 <?php
 
-namespace Friends\OAuth2;
+namespace Mastodon_API\OAuth2;
 
 use OAuth2\Storage\AuthorizationCodeInterface;
 
 class AuthorizationCodeStorage implements AuthorizationCodeInterface {
-	const META_KEY_PREFIX = 'friends_oa2_auth_code';
+	const META_KEY_PREFIX = 'mastodon_api_oa2_auth_code';
 
 	private static $authorization_code_data = array(
 		'client_id'    => 'string', // client identifier.
@@ -15,7 +15,7 @@ class AuthorizationCodeStorage implements AuthorizationCodeInterface {
 	);
 
 	public function __construct() {
-		add_action( 'oidc_cron_hook', array( $this, 'cleanupOldCodes' ) );
+		add_action( 'mastodon_api_cron_hook', array( $this, 'cleanupOldCodes' ) );
 	}
 
     public static function getAll() {
@@ -120,7 +120,7 @@ class AuthorizationCodeStorage implements AuthorizationCodeInterface {
 	/**
 	 * This function cleans up auth codes that are sitting in the database because of interrupted/abandoned OAuth flows.
 	 */
-	public function cleanupOldCodes() {
+	public static function cleanupOldCodes() {
 		global $wpdb;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching

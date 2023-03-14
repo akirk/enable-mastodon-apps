@@ -1,20 +1,21 @@
 <?php
 /**
- * Plugin name: Friends Mastodon API
+ * Plugin name: Mastodon API
  * Plugin author: Alex Kirk
- * Plugin URI: https://github.com/akirk/friends-mastodon-api
- * Version: 0.1
+ * Plugin URI: https://github.com/akirk/mastodon-api
+ * Version: 0.1.0
  *
- * Description: Allow accessing the Friends plugin with Mastodon clients. Just enter your own blog URL as your instance.
+ * Description: Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
  *
  * License: GPL2
- * Text Domain: friends
+ * Text Domain: mastodon-api
  *
- * @package Friends_Mastodon_API
+ * @package Mastodon_API
  */
 
 defined( 'ABSPATH' ) || exit;
-define( 'FRIENDS_MASTODON_API_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+define( 'MASTODON_API_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+define( 'MASTODON_API_VERSION', '0.1.0' );
 
 require __DIR__ . '/vendor/bshaffer/oauth2-server-php/src/OAuth2/Autoloader.php';
 OAuth2\Autoloader::register();
@@ -40,10 +41,9 @@ if ( apply_filters( 'friends_debug', false ) ) {
     }, 10, 2 );
 }
 
-add_action( 'init', array( 'Friends\Mastodon_App', 'register_taxonomy' ) );
 add_action(
-    'friends_loaded',
-    function( $friends ) {
-        new Friends\Mastodon_API( $friends );
+    'init',
+    function() {
+        new Mastodon_API\Mastodon_API();
     }
 );

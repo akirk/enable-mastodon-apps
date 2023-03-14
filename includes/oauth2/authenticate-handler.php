@@ -1,8 +1,8 @@
 <?php
 
-namespace Friends\OAuth2;
+namespace Mastodon_API\OAuth2;
 
-use Friends\Mastodon_App;
+use Mastodon_API\Mastodon_App;
 use OAuth2\Request;
 use OAuth2\Response;
 
@@ -41,7 +41,7 @@ class AuthenticateHandler {
 
 		$has_permission = current_user_can( \Friends\Friends::REQUIRED_ROLE );
 		if ( ! $has_permission ) {
-			login_header( 'Authorize Mastodon Client', null, new \WP_Error( 'OIDC_NO_PERMISSION', __( "You don't have permission to use OpenID Connect.", 'friends' ) ) );
+			login_header( 'Authorize Mastodon Client', null, new \WP_Error( 'OIDC_NO_PERMISSION', __( "You don't have permission to use Mastodon-API.", 'mastodon-api' ) ) );
 			$this->render_no_permission_screen( $data );
 		} else {
 			login_header( 'Authorize Mastodon Client' );
@@ -63,20 +63,20 @@ class AuthenticateHandler {
 						echo esc_html(
 							sprintf(
 							// translators: %s is a username.
-								__( 'Hi %s!', 'wp-openid-connect-server' ),
+								__( 'Hi %s!', 'mastodon-api' ),
 								$data['user']->user_nicename
 							)
 						);
 						?>
 					</h2>
 					<br/>
-					<p><?php esc_html_e( "You don't have permission to use OpenID Connect.", 'wp-openid-connect-server' ); ?></p>
+					<p><?php esc_html_e( "You don't have permission to use the Mastodon API.", 'mastodon-api' ); ?></p>
 					<br/>
-					<p><?php esc_html_e( 'Contact your administrator for more details.', 'wp-openid-connect-server' ); ?></p>
+					<p><?php esc_html_e( 'Contact your administrator for more details.', 'mastodon-api' ); ?></p>
 					<br/>
 					<p class="submit">
 						<a class="button button-large" href="<?php echo esc_url( $data['cancel_url'] ); ?>" target="_top">
-							<?php esc_html_e( 'Cancel', 'wp-openid-connect-server' ); ?>
+							<?php esc_html_e( 'Cancel', 'mastodon-api' ); ?>
 						</a>
 					</p>
 				</form>
@@ -95,7 +95,7 @@ class AuthenticateHandler {
 						echo esc_html(
 							sprintf(
 							// translators: %s is a username.
-								__( 'Hi %s!', 'wp-openid-connect-server' ),
+								__( 'Hi %s!', 'mastodon-api' ),
 								$data['user']->user_nicename
 							)
 						);
@@ -108,7 +108,7 @@ class AuthenticateHandler {
 							echo wp_kses(
 								sprintf(
 								// translators: %1$s is the site name, %2$s is the username.
-									__( 'Do you want to log in to <em>%1$s</em> with your <em>%2$s</em> account?', 'wp-openid-connect-server' ),
+									__( 'Do you want to log in to <em>%1$s</em> with your <em>%2$s</em> account?', 'mastodon-api' ),
 									$data['client_name'],
 									get_bloginfo( 'name' )
 								),
@@ -125,47 +125,15 @@ class AuthenticateHandler {
 						<input type="hidden" name="<?php echo esc_attr( $key ); ?>" value="<?php echo esc_attr( $value ); ?>"/>
 					<?php endforeach; ?>
 					<p class="submit">
-						<input type="submit" name="authorize" class="button button-primary button-large" value="<?php esc_attr_e( 'Authorize', 'wp-openid-connect-server' ); ?>"/>
+						<input type="submit" name="authorize" class="button button-primary button-large" value="<?php esc_attr_e( 'Authorize', 'mastodon-api' ); ?>"/>
 						<a href="<?php echo esc_url( $data['cancel_url'] ); ?>" target="_top">
-							<?php esc_html_e( 'Cancel', 'wp-openid-connect-server' ); ?>
+							<?php esc_html_e( 'Cancel', 'mastodon-api' ); ?>
 						</a>
 					</p>
 				</form>
 			</div>
 		</div>
 		<?php
-	}
-
-	private function redirect( Request $request ) {
-		// Rebuild request with all parameters and send to authorize endpoint.
-		wp_safe_redirect(
-			add_query_arg(
-				array_merge(
-					array( '_wpnonce' => wp_create_nonce( 'wp_rest' ) ),
-					$request->getAllQueryParameters()
-				),
-				home_url( '/oauth/authorize' )
-			)
-		);
-	}
-
-	/**
-	 * TODO: Remove this function in favour of ClientCredentialsStorage?
-	 */
-	private function get_client_name( Request $request ) {
-		$client_id = $request->query( 'client_id' );
-
-		if ( ! isset( $this->clients[ $client_id ] ) ) {
-			return '';
-		}
-
-		$client = $this->clients[ $client_id ];
-
-		if ( empty( $client['name'] ) ) {
-			return '';
-		}
-
-		return $client['name'];
 	}
 
 	private function get_cancel_url( Request $request ) {

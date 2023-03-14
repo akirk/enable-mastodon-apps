@@ -1,25 +1,25 @@
 <?php
 /**
- * Friends Mastodon Apps
+ * Mastodon Apps
  *
- * This contains the REST Apps handlers.
+ * This contains the Mastodon Apps handlers.
  *
- * @package Friends_Mastodon_Apps
+ * @package Mastodon_Apps
  */
 
-namespace Friends;
+namespace Mastodon_API;
 
 /**
- * This is the class that implements the Mastodon Apps endpoints.
+ * This is the class that implements the Mastodon Apps storage.
  *
  * @since 0.1
  *
- * @package Friends_Mastodon_Apps
+ * @package Mastodon_Apps
  * @author Alex Kirk
  */
 class Mastodon_App {
 	/**
-	 * Contains a reference to the Friends class.
+	 * Contains a reference to the term that represents the app.
 	 *
 	 * @var \WP_Term
 	 */
@@ -37,7 +37,7 @@ class Mastodon_App {
 	/**
 	 * Constructor
 	 *
-	 * @param Friends $friends A reference to the Friends object.
+	 * @param WP_Term $term The term that represents the app.
 	 */
 	public function __construct( \WP_Term $term ) {
 		$this->term = $term;
@@ -102,13 +102,34 @@ class Mastodon_App {
 		return false;
 	}
 
+	public function is_outdated() {
+		foreach( OAuth2\AccessTokenStorage::getAll() as $token ) {
+			if ( $token['client_id'] === $this->get_client_id() && !$token['expired'] ) {
+				return false;
+			}
+		}
+		foreach( OAuth2\AuthorizationCodeStorage::getAll() as $code ) {
+			if ( $code['client_id'] === $this->get_client_id() && ! $code['expired'] ) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	public function delete() {
+		return wp_delete_term( $this->term->term_id, self::TAXONOMY );
+	}
+
 	public static function get_all() {
 		$apps = array();
 		foreach ( get_terms( array(
 			'taxonomy' => self::TAXONOMY,
 			'hide_empty' => false,
 		) ) as $term ) {
-			$apps[] = new Mastodon_App( $term );
+			if ( $term instanceof \WP_Term ) {
+				$app = new Mastodon_App( $term );
+				$apps[ $app->get_client_id() ] = $app;
+			}
 		}
 
 		return $apps;
@@ -117,9 +138,9 @@ class Mastodon_App {
 	public static function register_taxonomy() {
 		$args = array(
 			'labels'       => array(
-				'name'          => __( 'Mastodon Apps', 'friends' ),
-				'singular_name' => __( 'Mastodon App', 'friends' ),
-				'menu_name'     => __( 'Mastodon Apps', 'friends' ),
+				'name'          => __( 'Mastodon Apps', 'mastodon-api' ),
+				'singular_name' => __( 'Mastodon App', 'mastodon-api' ),
+				'menu_name'     => __( 'Mastodon Apps', 'mastodon-api' ),
 			),
 			'public'       => false,
 			'show_ui'      => false,
@@ -147,7 +168,7 @@ class Mastodon_App {
 				}
 				$urls = array();
 				foreach ( $value as $url ) {
-					if ( Mastodon_Oauth::OOB_REDIRECT_URI === $url ) {
+					if ( Mastodon_OAuth::OOB_REDIRECT_URI === $url ) {
 						$urls[] = $url;
 					} elseif ( preg_match( '#[a-z0-9.-]+://[a-z0-9.-]+#i', $url ) ) {
 						// custom protocols are ok.
@@ -194,11 +215,19 @@ class Mastodon_App {
 			'show_in_rest' => false,
 			'single'       => true,
 			'type'         => 'string',
-			'sanitize_callback' => function( $value ) {
-				if ( ! Friends::check_url( $value ) ) {
-					$value = '';
+			'sanitize_callback' => function( $url ) {
+				$host = parse_url( $url, PHP_URL_HOST );
+
+				$check_url = apply_filters( 'friends_host_is_valid', null, $host );
+				if ( ! is_null( $check_url ) ) {
+					return $check_url;
 				}
-				return $value;
+
+				if ( ! wp_http_validate_url( $url ) ) {
+					$url = '';
+				}
+
+				return $url;
 			},
 		) );
 
@@ -237,6 +266,17 @@ class Mastodon_App {
 		return new \WP_Error( 'term_not_found', $client_id );
 	}
 
+	public static function delete_outdated() {
+		$count = 0;
+		foreach ( self::get_all() as $app ) {
+			if ( $app->is_outdated() ) {
+				if ( $app->delete() ) {
+					$count += 1;
+				}
+			}
+		}
+		return $count;
+	}
 
 	public static function save( $client_name, array $redirect_uris, $scopes, $website ) {
 		$client_id = strtolower( wp_generate_password( 32, false ) );

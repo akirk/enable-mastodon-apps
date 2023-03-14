@@ -5,7 +5,7 @@
  * @package Friends
  */
 
-namespace Friends;
+namespace Mastodon_API;
 
 /**
  * A testcase for the apps endpoint.

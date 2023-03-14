@@ -2,7 +2,7 @@
 
 // phpcs:disable WordPress.Security.NonceVerification.Missing
 
-namespace Friends\OAuth2;
+namespace Mastodon_API\OAuth2;
 
 use OAuth2\Request;
 use OAuth2\Response;

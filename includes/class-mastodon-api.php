@@ -4,42 +4,35 @@
  *
  * This contains the REST API handlers.
  *
- * @package Friends_Mastodon_API
+ * @package Mastodon_API
  */
 
-namespace Friends;
+namespace Mastodon_API;
 
+use Friends\Friends;
 /**
  * This is the class that implements the Mastodon API endpoints.
  *
  * @since 0.1
  *
- * @package Friends_Mastodon_API
+ * @package Mastodon_API
  * @author Alex Kirk
  */
 class Mastodon_API {
 	const VERSION = '0.0.1';
-	/**
-	 * Contains a reference to the Friends class.
-	 *
-	 * @var Friends
-	 */
-	private $friends;
 	private $oauth;
 
-	const PREFIX = 'friends-mastodon-api';
+	const PREFIX = 'mastodon-api';
 	const APP_TAXONOMY = 'mastodon-app';
 
 	/**
 	 * Constructor
-	 *
-	 * @param Friends $friends A reference to the Friends object.
 	 */
-	public function __construct( Friends $friends ) {
-		$this->friends = $friends;
-		$this->oauth = new Mastodon_Oauth( $friends );
+	public function __construct() {
+		Mastodon_App::register_taxonomy();
+		$this->oauth = new Mastodon_OAuth();
 		$this->register_hooks();
-		new Mastodon_Admin(	$friends );
+		new Mastodon_Admin( $this->oauth );
 	}
 
 	function register_hooks() {
@@ -222,6 +215,10 @@ class Mastodon_API {
 	}
 
 	public function api_apps( $request ) {
+		if ( get_option( 'mastodon_api_disable_logins' ) ) {
+			return new \WP_Error( 'registation-disabled', __( 'App registration has been disabled.', 'mastodon_api' ), array( 'status' => 403 ) );
+		}
+
 		try {
 			$app = Mastodon_App::save(
 				$request->get_param( 'client_name' ),
@@ -299,7 +296,11 @@ class Mastodon_API {
 	}
 
 	private function get_posts_query_args( $request ) {
-		$tax_query = $this->friends->wp_query_get_post_format_tax_query( array(), apply_filters( 'friends_mastodon_api_post_format', 'status' ) );
+		$friends = Friends::get_instance();
+		if ( ! $friends ) {
+			return array();
+		}
+		$tax_query = $friends->wp_query_get_post_format_tax_query( array(), apply_filters( 'mastodon_api_post_format', 'status' ) );
 		$limit = $request->get_param( 'limit' );
 		if ( $limit < 1 ) {
 			$limit = 1;
@@ -365,7 +366,7 @@ class Mastodon_API {
 			'mentions'          => array(),
 			'tags'              => array(),
 			'application'       => array(
-				'name' => 'WordPress/' . $GLOBALS['wp_version'] . ' Friends/' . FRIENDS_VERSION,
+				'name' => 'WordPress/' . $GLOBALS['wp_version'] . ' Mastodon-API/' . MASTODON_API_VERSION,
 				'website' => home_url(),
 			),
 			'language'          => 'en',
@@ -418,23 +419,29 @@ class Mastodon_API {
 
 	public function api_timelines( $request ) {
 		$args = $this->get_posts_query_args( $request );
-		$args = apply_filters( 'friends_mastodon_api_timelines_args', $args, $request );
+		if ( empty( $args ) ) {
+			return array();
+		}
+		$args = apply_filters( 'mastodon_api_timelines_args', $args, $request );
 
 		return $this->get_posts( $args, $request->get_param( 'max_id' ) );
 	}
 
 	public function api_account_statuses( $request ) {
 		$args = $this->get_posts_query_args( $request );
+		if ( empty( $args ) ) {
+			return array();
+		}
 		$args['author'] = $request->get_param( 'user_id' );
 
-		$args = apply_filters( 'friends_mastodon_api_account_statuses_args', $args, $request );
+		$args = apply_filters( 'mastodon_api_account_statuses_args', $args, $request );
 
 		return $this->get_posts( $args );
 	}
 
 	public function api_account_relationships( $request ) {
 		$user_id = $request->get_param( 'id' );
-		$friend_user = User::get_user_by_id( $user_id );
+		$friend_user = new \WP_User( $user_id );
 
 		return array();
 	}
@@ -443,12 +450,28 @@ class Mastodon_API {
 		return $this->get_friend_account_data( $request->get_param( 'user_id' ) );
 	}
 
+	/**
+	 * Check whether this is a valid URL
+	 *
+	 * @param string $url The URL to check.
+	 * @return false|string URL or false on failure.
+	 */
+	public static function check_url( $url ) {
+		$host = parse_url( $url, PHP_URL_HOST );
+
+		$check_url = apply_filters( 'friends_host_is_valid', null, $host );
+		if ( ! is_null( $check_url ) ) {
+			return $check_url;
+		}
+
+		return wp_http_validate_url( $url );
+	}
+
+
 	private function get_friend_account_data( $user_id, $meta = array() ) {
-		$friend_user = User::get_user_by_id( $user_id );
+		$friend_user = \Friends\User::get_user_by_id( $user_id );
 		if ( ! $friend_user || is_wp_error( $friend_user ) ) {
-			return array(
-				'error' => 'User not found',
-			);
+			return new \WP_Error( 'user-not-found', __( 'User not found.', 'mastodon_api' ), array( 'status' => 403 ) );
 		}
 		$avatar = get_avatar_url( $friend_user->ID );
 		$posts = $friend_user->get_post_count_by_post_format();
@@ -519,7 +542,7 @@ class Mastodon_API {
 			}
 		}
 
-		if ( ! Friends::check_url( $id ) ) {
+		if ( ! self::check_url( $id ) ) {
 			return $backup_id;
 		}
 
@@ -538,7 +561,7 @@ class Mastodon_API {
 		$host = parse_url( $id, PHP_URL_HOST );
 
 		$url = \add_query_arg( 'resource', $id, 'https://' . $host . '/.well-known/webfinger' );
-		if ( ! Friends::check_url( $url ) ) {
+		if ( ! self::check_url( $url ) ) {
 			$response = new \WP_Error( 'invalid_webfinger_url', null, $url );
 			\set_transient( $transient_key, $response, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
 			return $backup_id;

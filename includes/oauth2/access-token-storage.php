@@ -5,10 +5,9 @@
  * @package Friends
  */
 
-namespace Friends\OAuth2;
+namespace Mastodon_API\OAuth2;
 
 use OAuth2\Storage\AccessTokenInterface;
-use PO;
 
 class AccessTokenStorage implements AccessTokenInterface {
     const META_KEY_PREFIX = 'friends_oa2_access_token';
@@ -20,7 +19,7 @@ class AccessTokenStorage implements AccessTokenInterface {
     );
 
     public function __construct() {
-        add_action( 'oidc_cron_hook', array( $this, 'cleanupOldCodes' ) );
+        add_action( 'mastodon_api_cron_hook', array( $this, 'cleanupOldCodes' ) );
     }
 
     public static function getAll() {
@@ -165,12 +164,14 @@ class AccessTokenStorage implements AccessTokenInterface {
         foreach ( array_keys( self::$access_token_data ) as $key ) {
             delete_user_meta( $user_id, self::META_KEY_PREFIX . '_' . $key . '_' . $access_token );
         }
+
+        return true;
     }
 
     /**
-     * This function cleans up auth codes that are sitting in the database because of interrupted/abandoned OAuth flows.
+     * This function cleans up access tokens that are sitting in the database because of interrupted/abandoned OAuth flows.
      */
-    public function cleanupOldCodes() {
+    public static function cleanupOldTokens() {
         global $wpdb;
 
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
