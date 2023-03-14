@@ -1,11 +1,11 @@
 {
-    "name": "akirk/friends-mastodon-api",
+    "name": "akirk/mastodon-api",
     "require-dev": {
         "dealerdirect/phpcodesniffer-composer-installer": "*",
-        "object-calisthenics/phpcs-calisthenics-rules": "*",
         "phpcompatibility/php-compatibility": "*",
         "wp-coding-standards/wpcs": "*",
-        "yoast/phpunit-polyfills": "*"
+        "yoast/phpunit-polyfills": "*",
+        "phpunit/phpunit": "*"
     },
     "config": {
         "allow-plugins": {
