@@ -143,7 +143,7 @@ class AuthenticateHandler {
 				'error_description' => 'Access denied! Permission not granted.',
 				'state'             => $request->query( 'state' ),
 			),
-			$request->query( 'redirect_uri' ),
+			$request->query( 'redirect_uri' )
 		);
 	}
 }
