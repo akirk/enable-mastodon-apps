@@ -797,14 +797,17 @@ class Mastodon_API {
 				return \Friends\Feed_Parser_ActivityPub::get_metadata( $url );
 			}
 		}
-
-		$user = \Friends\User::get_user_by_id( $user_id );
+		$user = false;
+		if ( class_exists( '\Friends\User' ) ) {
+			$user = \Friends\User::get_user_by_id( $user_id );
+		}
 		if ( ! $user || is_wp_error( $user ) ) {
 			$user = new \WP_User( $user_id );
 			if ( ! $user || is_wp_error( $user ) ) {
 				return new \WP_Error( 'user-not-found', __( 'User not found.', 'mastodon_api' ), array( 'status' => 403 ) );
 			}
 		}
+
 		$avatar = get_avatar_url( $user->ID );
 		if ( $user instanceof \Friends\User ) {
 			$posts = $user->get_post_count_by_post_format();
@@ -863,7 +866,7 @@ class Mastodon_API {
 	}
 
 	public function get_user_acct( $user ) {
-		return $this->get_acct( get_author_posts_url( $user->ID ) );
+		return strtok( $this->get_acct( get_author_posts_url( $user->ID ) ), '@' );
 	}
 
 	public function get_acct( $id ) {
@@ -872,7 +875,7 @@ class Mastodon_API {
 		}
 
 		$backup_id = $id;
-		if ( preg_match( '#^https://([^/]+)/@([^/]+)$#', $id, $m ) ) {
+		if ( preg_match( '#^https://([^/]+)/(?:@|users/|author/)([^/]+)/?$#', $id, $m ) ) {
 			$backup_id = $m[2] . '@' . $m[1];
 		}
 
