@@ -752,7 +752,6 @@ class Mastodon_API {
 
 	public function api_account_relationships( $request ) {
 		$user_id = $request->get_param( 'id' );
-		$friend_user = new \WP_User( $user_id );
 
 		return array();
 	}
@@ -835,7 +834,7 @@ class Mastodon_API {
 			),
 		);
 
-		if ( class_exists( '\Friends\Feed_Parser_ActivityPub' ) ) {
+		if ( class_exists( '\Friends\Feed_Parser_ActivityPub' ) && $user instanceof \Friends\User ) {
 			foreach ( $user->get_feeds() as $feed ) {
 				if ( \Friends\Feed_Parser_ActivityPub::SLUG === $feed->get_parser() ) {
 					$meta = \Friends\Feed_Parser_ActivityPub::get_metadata( $feed->get_url() );
