@@ -1,4 +1,4 @@
-name: Friends Tests
+name: Mastodon API Tests
 on: [push]
 jobs:
   build:
