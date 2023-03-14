@@ -1,6 +1,6 @@
-# friends-mastodon-api
+# Mastodon API
 
-Allow accessing the Friends plugin with Mastodon clients. Just enter your own blog URL as your instance.
+Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
 **Contributors:** akirk
 **Requires at least:** 5.0
