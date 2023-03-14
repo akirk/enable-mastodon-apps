@@ -650,8 +650,18 @@ class Mastodon_API {
 						'redirection' => 1,
 					)
 				);
+
 				if ( ! is_wp_error( $response ) ) {
 					$context = json_decode( wp_remote_retrieve_body( $response ), true );
+				}
+				if ( isset( $context['error'] ) ) {
+					$context = array_merge(
+						$context,
+						array(
+							'ancestors' => array(),
+							'descendants' => array(),
+						)
+					);
 				}
 
 				set_transient( $transient_key, $context, HOUR_IN_SECONDS );
