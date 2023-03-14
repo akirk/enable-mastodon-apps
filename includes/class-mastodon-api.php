@@ -367,9 +367,9 @@ class Mastodon_API {
 	}
 
 	private function get_posts_query_args( $request ) {
-		$friends = Friends::get_instance();
 		$post_types = array( 'post' );
-		if ( $friends ) {
+		if ( class_exists( '\Friends\Friends' ) ) {
+			$friends = Friends::get_instance();
 			$tax_query = $friends->wp_query_get_post_format_tax_query( array(), apply_filters( 'mastodon_api_post_format', 'status' ) );
 			$post_types = array_merge( $post_types, Friends::get_frontend_post_types() );
 		} else {
