@@ -98,6 +98,7 @@ class Mastodon_OAuth {
 		}
 		$token = $this->server->getAccessTokenData( $request );
 		wp_set_current_user( $token['user_id'] );
+		return $token;
 	}
 
 	public function authenticate_handler() {

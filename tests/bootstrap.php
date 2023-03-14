@@ -39,7 +39,7 @@ function _manually_load_plugin() {
 		require $alternate_friends_plugin;
 	}
 
-	require dirname( dirname( __FILE__ ) ) . '/friends-mastodon-api.php';
+	require dirname( dirname( __FILE__ ) ) . '/mastodon-api.php';
 }
 tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
 
@@ -48,9 +48,6 @@ ob_start();
 
 // Start up the WP testing environment.
 require $_tests_dir . '/includes/bootstrap.php';
-if ( class_exists( 'Friends\Friends' ) ) {
-	Friends\Friends::activate_plugin();
-}
 ob_end_clean();
 
 // Make sure to be able to query these hosts.

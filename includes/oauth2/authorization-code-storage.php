@@ -18,28 +18,27 @@ class AuthorizationCodeStorage implements AuthorizationCodeInterface {
 		add_action( 'mastodon_api_cron_hook', array( $this, 'cleanupOldCodes' ) );
 	}
 
-    public static function getAll() {
-        $tokens = array();
+	public static function getAll() {
+		$tokens = array();
 
-        foreach ( get_user_meta( get_current_user_id() ) as $key => $value ) {
-            if ( 0 !== strpos( $key, self::META_KEY_PREFIX ) ) {
-                continue;
-            }
-            $key_parts = explode( '_', substr( $key, strlen( self::META_KEY_PREFIX ) + 1 ) );
-            $token = array_pop( $key_parts );
-            $key = implode( '_', $key_parts );
-            $value = $value[0];
+		foreach ( get_user_meta( get_current_user_id() ) as $key => $value ) {
+			if ( 0 !== strpos( $key, self::META_KEY_PREFIX ) ) {
+				continue;
+			}
+			$key_parts = explode( '_', substr( $key, strlen( self::META_KEY_PREFIX ) + 1 ) );
+			$token = array_pop( $key_parts );
+			$key = implode( '_', $key_parts );
+			$value = $value[0];
 
-            if ( 'expires' === $key ) {
-                $tokens[$token]['expired'] = time() > $value;
-                $value = date( 'r', $value ) ;
-            }
+			if ( 'expires' === $key ) {
+				$tokens[$token]['expired'] = time() > $value;
+			}
 
-            $tokens[$token][$key] = $value;
-        }
+			$tokens[$token][$key] = $value;
+		}
 
-        return $tokens;
-    }
+		return $tokens;
+	}
 	private function getUserIdByCode( $code ) {
 		if ( empty( $code ) ) {
 			return null;

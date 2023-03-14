@@ -91,6 +91,34 @@ class Mastodon_Admin {
 		$codes = OAuth2\AuthorizationCodeStorage::getAll();
 		$tokens = OAuth2\AccessTokenStorage::getAll();
 		$apps = Mastodon_App::get_all();
+
+		function td_timestamp( $timestamp ) {
+			?>
+			<td>
+				<abbr title="<?php echo esc_attr( date( 'r', $timestamp ) ); ?>">
+					<?php
+					if ( $timestamp > time() ) {
+						echo esc_html(
+							sprintf(
+								// translators: %s is a relative time
+								__( 'in %s' ),
+								human_time_diff( $timestamp )
+							)
+						);
+					} else {
+						echo esc_html(
+							sprintf(
+								// translators: %s is a relative time
+								__( '%s ago' ),
+								human_time_diff( $timestamp )
+							)
+						);
+					}
+					?>
+				</abbr>
+			</td>
+			<?php
+		}
 		?>
 		<div class="wrap">
 		<h1><?php esc_html_e( 'Mastodon API', 'mastodon-api' ); ?></h1>
@@ -116,16 +144,16 @@ class Mastodon_Admin {
 
 			<button class="button button-primary"><?php esc_html_e( 'Save' ); ?></button>
 			<?php if ( ! empty( $codes ) ) : ?>
-				<h2>Authorization Codes</h2>
+				<h2><?php esc_html_e( 'Authorization Codes', 'mastodon-api' ); ?></h2>
 
 				<table class="widefat striped">
 					<thead>
-						<th>App</th>
-						<th>Redirect URI</th>
-						<th>Expires</th>
-						<th>Expired</th>
-						<th>Scope</th>
-						<th>Actions</th>
+						<th><?php esc_html_e( 'App', 'mastodon-api' ); ?></th>
+						<th><?php esc_html_e( 'Redirect URI', 'mastodon-api' ); ?></th>
+						<th><?php esc_html_e( 'Expires', 'mastodon-api' ); ?></th>
+						<th><?php esc_html_e( 'Expired', 'mastodon-api' ); ?></th>
+						<th><?php esc_html_e( 'Scope', 'mastodon-api' ); ?></th>
+						<th><?php esc_html_e( 'Actions', 'mastodon-api' ); ?></th>
 					</thead>
 					<tbody>
 						<?php
@@ -142,10 +170,10 @@ class Mastodon_Admin {
 									?>
 								</td>
 								<td><?php echo esc_html( $data['redirect_uri'] ); ?></td>
-								<td><?php echo esc_html( $data['expires'] ); ?></td>
-								<td><?php echo esc_html( $data['expired'] ? 'expired' : '' ); ?></td>
+								<?php td_timestamp( $data['expires'] ); ?>
+								<td><?php echo esc_html( $data['expired'] ? __( 'expired' ) : __( 'no' ) ); ?></td>
 								<td><?php echo esc_html( $data['scope'] ); ?></td>
-								<td><button name="delete-code" value="<?php echo esc_attr( $code ); ?>" class="button">delete</button></td>
+								<td><button name="delete-code" value="<?php echo esc_attr( $code ); ?>" class="button"><?php esc_html_e( 'Delete' ); ?></button></td>
 							</tr>
 							<?php
 						}
@@ -155,14 +183,14 @@ class Mastodon_Admin {
 			<?php endif; ?>
 
 			<?php if ( ! empty( $tokens ) ) : ?>
-				<h2>Access Tokens</h2>
+				<h2><?php esc_html_e( 'Access Tokens', 'mastodon-api' ); ?></h2>
 				<table class="widefat striped">
 					<thead>
-						<th>App</th>
-						<th>Expires</th>
-						<th>Expired</th>
-						<th>Scope</th>
-						<th>Actions</th>
+						<th><?php esc_html_e( 'App', 'mastodon-api' ); ?></th>
+						<th><?php esc_html_e( 'Expires', 'mastodon-api' ); ?></th>
+						<th><?php esc_html_e( 'Expired', 'mastodon-api' ); ?></th>
+						<th><?php esc_html_e( 'Scope', 'mastodon-api' ); ?></th>
+						<th><?php esc_html_e( 'Actions', 'mastodon-api' ); ?></th>
 					</thead>
 					<tbody>
 						<?php
@@ -178,10 +206,10 @@ class Mastodon_Admin {
 									}
 									?>
 								</td>
-								<td><?php echo esc_html( $data['expires'] ); ?></td>
-								<td><?php echo esc_html( $data['expired'] ? 'expired' : '' ); ?></td>
+								<?php td_timestamp( $data['expires'] ); ?>
+								<td><?php echo esc_html( $data['expired'] ? __( 'expired' ) : __( 'no' ) ); ?></td>
 								<td><?php echo esc_html( $data['scope'] ); ?></td>
-								<td><button name="delete-token" value="<?php echo esc_attr( $token ); ?>" class="button">delete</button></td>
+								<td><button name="delete-token" value="<?php echo esc_attr( $token ); ?>" class="button"><?php esc_html_e( 'Delete' ); ?></button></td>
 							</tr>
 							<?php
 						}
@@ -191,15 +219,16 @@ class Mastodon_Admin {
 			<?php endif; ?>
 
 			<?php if ( ! empty( $apps ) ) : ?>
-				<h2>Apps</h2>
+				<h2><?php esc_html_e( 'Apps', 'mastodon-api' ); ?></h2>
 
 				<table class="widefat striped">
 					<thead>
-						<th>Name</th>
-						<th>Redirect URI</th>
-						<th>Scope</th>
-						<th>Created</th>
-						<th>Actions</th>
+						<th><?php esc_html_e( 'Name', 'mastodon-api' ); ?></th>
+						<th><?php esc_html_e( 'Redirect URI', 'mastodon-api' ); ?></th>
+						<th><?php esc_html_e( 'Scope', 'mastodon-api' ); ?></th>
+						<th><?php esc_html_e( 'Created', 'mastodon-api' ); ?></th>
+						<th><?php esc_html_e( 'Last Used', 'mastodon-api' ); ?></th>
+						<th><?php esc_html_e( 'Actions', 'mastodon-api' ); ?></th>
 					</thead>
 					<tbody>
 						<?php
@@ -217,8 +246,9 @@ class Mastodon_Admin {
 								</td>
 								<td><?php echo wp_kses( implode('<br/>', $app->get_redirect_uris() ), array( 'br' => array() ) ); ?></td>
 								<td><?php echo esc_html( $app->get_scopes() ); ?></td>
-								<td><?php echo esc_html( $app->get_creation_date() ); ?></td>
-								<td><button name="delete-app" value="<?php echo esc_attr( $app->get_client_id() ); ?>" class="button">delete</button></td>
+								<?php td_timestamp( $app->get_creation_date() ); ?>
+								<?php td_timestamp( $app->get_last_used() ); ?>
+								<td><button name="delete-app" value="<?php echo esc_attr( $app->get_client_id() ); ?>" class="button"><?php esc_html_e( 'Delete' ); ?></button></td>
 							</tr>
 							<?php
 						}

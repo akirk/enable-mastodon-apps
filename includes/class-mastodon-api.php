@@ -20,7 +20,19 @@ use Friends\Friends;
  */
 class Mastodon_API {
 	const VERSION = '0.0.1';
+	/**
+	 * The OAuth handler.
+	 *
+	 * @var Mastodon_OAuth
+	 */
 	private $oauth;
+
+	/**
+	 * The Mastodon App.
+	 *
+	 * @var Mastodon_App
+	 */
+	private $app;
 
 	const PREFIX = 'mastodon-api';
 	const APP_TAXONOMY = 'mastodon-app';
@@ -251,7 +263,9 @@ class Mastodon_API {
 
 	public function logged_in_permission() {
 		$this->allow_cors();
-		$this->oauth->authenticate();
+		$token = $this->oauth->authenticate();
+		$this->app = Mastodon_App::get_by_client_id( $token['client_id'] );
+		$this->app->was_used();
 		return is_user_logged_in();
 	}
 

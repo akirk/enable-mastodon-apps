@@ -2,7 +2,7 @@
 /**
  * Class Test_Apps_Endpoint
  *
- * @package Friends
+ * @package Mastodon_API
  */
 
 namespace Mastodon_API;
@@ -20,7 +20,7 @@ class AppsEndpoint_Test extends \WP_Test_REST_Controller_Testcase {
 				'role' => 'administrator',
 			)
 		);
-		$this->endpoint = new Mastodon_API( Friends::get_instance() );
+		$this->endpoint = new Mastodon_API( \Friends\Friends::get_instance() );
 	}
 
 	public function test_apps_instance() {

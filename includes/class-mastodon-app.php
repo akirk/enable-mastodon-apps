@@ -67,12 +67,12 @@ class Mastodon_App {
 		return get_term_meta( $this->term->term_id, 'website', true );
 	}
 
+	public function get_last_used() {
+		return get_term_meta( $this->term->term_id, 'last_used', true );
+	}
+
 	public function get_creation_date() {
-		$date = get_term_meta( $this->term->term_id, 'creation_date', true );
-		if ( ! $date ) {
-			return null;
-		}
-		return date( 'r', $date );
+		return get_term_meta( $this->term->term_id, 'creation_date', true );
 	}
 
 	public function check_redirect_uri( $redirect_uri ) {
@@ -100,6 +100,13 @@ class Mastodon_App {
 		}
 
 		return false;
+	}
+
+	public function was_used() {
+		if ( $this->get_last_used() > time() -  MINUTE_IN_SECONDS ) {
+			return true;
+		}
+		update_term_meta( $this->term->term_id, 'last_used', time() );
 	}
 
 	public function is_outdated() {
@@ -232,6 +239,18 @@ class Mastodon_App {
 		) );
 
 		register_term_meta( self::TAXONOMY, 'creation_date', array(
+			'show_in_rest' => false,
+			'single'       => true,
+			'type'         => 'int',
+			'sanitize_callback' => function( $value ) {
+				if ( ! is_int( $value ) ) {
+					$value = time();
+				}
+				return $value;
+			},
+		) );
+
+		register_term_meta( self::TAXONOMY, 'last_used', array(
 			'show_in_rest' => false,
 			'single'       => true,
 			'type'         => 'int',
