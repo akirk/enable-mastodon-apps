@@ -751,7 +751,7 @@ class Mastodon_API {
 		$data = array(
 			'id'                => $user->ID,
 			'username'          => $user->user_login,
-			'acct'              => isset( ['attributedTo']['id'] ) ? $this->get_acct( $meta['attributedTo']['id'] ) : $this->get_user_acct( $user ),
+			'acct'              => isset( $meta['attributedTo']['id'] ) ? $this->get_acct( $meta['attributedTo']['id'] ) : $this->get_user_acct( $user ),
 			'display_name'      => $user->display_name,
 			'locked'            => false,
 			'created_at'        => mysql2date( 'c', $user->user_registered, false ),
