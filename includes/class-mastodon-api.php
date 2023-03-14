@@ -368,10 +368,19 @@ class Mastodon_API {
 
 	private function get_posts_query_args( $request ) {
 		$friends = Friends::get_instance();
-		if ( ! $friends ) {
-			return array();
+		$post_types = array( 'post' );
+		if ( $friends ) {
+			$tax_query = $friends->wp_query_get_post_format_tax_query( array(), apply_filters( 'mastodon_api_post_format', 'status' ) );
+			$post_types = array_merge( $post_types, Friends::get_frontend_post_types() );
+		} else {
+			$tax_query = array(
+				'taxonomy' => 'post_format',
+				'field'    => 'slug',
+				'operator' => 'IN',
+				'terms'    => array( 'post-format-status' ),
+			);
 		}
-		$tax_query = $friends->wp_query_get_post_format_tax_query( array(), apply_filters( 'mastodon_api_post_format', 'status' ) );
+
 		$limit = $request->get_param( 'limit' );
 		if ( $limit < 1 ) {
 			$limit = 1;
@@ -383,7 +392,7 @@ class Mastodon_API {
 
 		$args = array(
 			'posts_per_page' => $limit,
-			'post_type' => array_merge( array( 'post' ), Friends::get_frontend_post_types() ),
+			'post_type' => $post_types,
 			'tax_query' => $tax_query,
 			'suppress_filters' => false,
 			'post_status' => array( 'publish', 'private' ),
