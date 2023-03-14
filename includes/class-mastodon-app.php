@@ -313,7 +313,7 @@ class Mastodon_App {
 			'client_secret',
 			'redirect_uris',
 			'scopes',
-			'website',
+			'website'
 		) as $key => $value ) {
 			if ( metadata_exists( 'term', $term_id, $key ) ) {
 				update_metadata( 'term', $term_id, $key, $value );
