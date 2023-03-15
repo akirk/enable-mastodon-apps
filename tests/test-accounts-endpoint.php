@@ -82,11 +82,9 @@ class AccountsEndpoint_Test extends Mastodon_TestCase {
 		}
 		$this->assertIsBool( $data['group'] );
 		$this->assertIsString( $data['created_at'] );
+		$this->assertTrue( false !== \DateTime::createFromFormat( \DateTimeInterface::RFC3339_EXTENDED, $data['created_at'] ) );
 		$this->assertIsInt( $data['statuses_count'] );
 		$this->assertIsInt( $data['followers_count'] );
 		$this->assertIsInt( $data['following_count'] );
-
-
 	}
-
 }
