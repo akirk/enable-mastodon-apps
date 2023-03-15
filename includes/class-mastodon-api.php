@@ -344,7 +344,7 @@ class Mastodon_API {
 		}
 		$avatar = get_avatar_url( $user->ID );
 		$data = array(
-			'id'                => $user->ID,
+			'id'                => strval( $user->ID ),
 			'username'          => $user->user_login,
 			'acct'              => $this->get_user_acct( $user ),
 			'display_name'      => $user->display_name,
@@ -378,24 +378,6 @@ class Mastodon_API {
 	}
 
 	private function get_posts_query_args( $request ) {
-		$post_types = array( 'post' );
-		if ( class_exists( '\Friends\Friends' ) ) {
-			$friends = Friends::get_instance();
-			$tax_query = $friends->wp_query_get_post_format_tax_query( array(), apply_filters( 'mastodon_api_post_format', 'status' ) );
-			$post_types = array_merge( $post_types, Friends::get_frontend_post_types() );
-		} else {
-			$tax_query = array(
-				'taxonomy' => 'post_format',
-				'field'    => 'slug',
-				'operator' => 'IN',
-				'terms'    => array( 'post-format-status' ),
-			);
-		}
-
-		$limit = $request->get_param( 'limit' );
-		if ( $limit < 1 ) {
-			$limit = 1;
-		}
 		$limit = $request->get_param( 'limit' );
 		if ( $limit < 1 ) {
 			$limit = 1;
@@ -403,8 +385,13 @@ class Mastodon_API {
 
 		$args = array(
 			'posts_per_page' => $limit,
-			'post_type' => $post_types,
-			'tax_query' => $tax_query,
+			'post_type' => apply_filters( 'friends_frontend_post_types', array( 'post' ) ),
+			'tax_query' => array(
+				'taxonomy' => 'post_format',
+				'field'    => 'slug',
+				'operator' => 'IN',
+				'terms'    => array( 'post-format-status' ),
+			),
 			'suppress_filters' => false,
 			'post_status' => array( 'publish', 'private' ),
 		);
@@ -943,7 +930,7 @@ class Mastodon_API {
 
 
 		$data = array(
-			'id'                => $user->ID,
+			'id'                => strval( $user->ID ),
 			'username'          => $user->user_login,
 			'acct'              => isset( $meta['attributedTo']['id'] ) ? $this->get_acct( $meta['attributedTo']['id'] ) : $this->get_user_acct( $user ),
 			'display_name'      => $user->display_name,
@@ -969,22 +956,19 @@ class Mastodon_API {
 			),
 		);
 
-		if ( class_exists( '\Friends\Feed_Parser_ActivityPub' ) && $user instanceof \Friends\User ) {
-			foreach ( $user->get_feeds() as $feed ) {
-				if ( \Friends\Feed_Parser_ActivityPub::SLUG === $feed->get_parser() ) {
-					$meta = \Friends\Feed_Parser_ActivityPub::get_metadata( $feed->get_url() );
-					if ( $meta && ! is_wp_error( $meta ) ) {
-						if ( ! empty( $meta['image']['url'] ) ) {
-							$data['header'] = $meta['image']['url'];
-							$data['header_static'] = $meta['image']['url'];
-						}
-						$data['url'] = $meta['url'];
-						$data['note'] = $meta['summary'];
-						$data['acct'] = $this->get_acct( $meta['id'] );
-					}
+		foreach ( apply_filters( 'friends_get_user_feeds', array(), $user ) as $feed ) {
+			$meta = apply_filters( 'friends_get_feed_metadata', array(), $feed );
+			if ( $meta && ! is_wp_error( $meta ) ) {
+				if ( ! empty( $meta['image']['url'] ) ) {
+					$data['header'] = $meta['image']['url'];
+					$data['header_static'] = $meta['image']['url'];
 				}
+				$data['url'] = $meta['url'];
+				$data['note'] = $meta['summary'];
+				$data['acct'] = $this->get_acct( $meta['id'] );
 			}
 		}
+
 		$cache[$user_id] = $data;
 		return $cache[$user_id];
 	}
@@ -1003,10 +987,9 @@ class Mastodon_API {
 			$backup_id = $m[2] . '@' . $m[1];
 		}
 
-		if ( class_exists( '\Friends\Feed_Parser_ActivityPub' ) ) {
-			if ( preg_match( '/^@?' . \Friends\Feed_Parser_ActivityPub::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $id ) ) {
-				return \ActivityPub\Webfinger::resolve( $id );
-			}
+		$resolved = apply_filters( 'friends_webfinger_resolve', false, $id );
+		if ( $resolved && ! is_wp_error( $resolved ) ) {
+			return $resolved;
 		}
 
 		if ( ! self::check_url( $id ) ) {
