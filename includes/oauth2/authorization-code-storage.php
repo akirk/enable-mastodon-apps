@@ -50,7 +50,7 @@ class AuthorizationCodeStorage implements AuthorizationCodeInterface {
 				// Specifying blog_id does nothing for non-MultiSite installs. But for MultiSite installs, it allows you
 				// to customize users of which site is supposed to be available for whatever sites
 				// this plugin is meant to be activated on.
-				'blog_id'      => apply_filters( 'oidc_auth_code_storage_blog_id', get_current_blog_id() ),
+				'blog_id'      => get_current_blog_id(),
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 				'meta_key'     => self::META_KEY_PREFIX . '_client_id_' . $code,
 				// Using a meta_key EXISTS query is not slow, see https://github.com/WordPress/WordPress-Coding-Standards/issues/1871.
@@ -90,7 +90,7 @@ class AuthorizationCodeStorage implements AuthorizationCodeInterface {
 		}
 		$expires = time() + 86400;
 
-		$user = get_user_by( 'login', $user_id ); // We have chosen WordPress' user_login as the user identifier for OIDC context.
+		$user = get_user_by( 'login', $user_id );
 
 		if ( $user ) {
 			foreach ( self::$authorization_code_data as $key => $data_type ) {

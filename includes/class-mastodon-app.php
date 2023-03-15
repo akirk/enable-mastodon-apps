@@ -162,7 +162,12 @@ class Mastodon_App {
 			'show_in_rest' => false,
 			'single'       => true,
 			'type'         => 'string',
-			'sanitize_callback' => 'sanitize_text_field'
+			'sanitize_callback' => function( $value ) {
+				if ( ! is_string( $value ) || strlen( $value ) < 16 || strlen( $value ) > 200 ) {
+					throw new \Exception( 'invalid-client_secret,Client secret must be a string with a length between 16 and 200 chars.' );
+				}
+				return $value;
+			},
 		) );
 
 		register_term_meta( self::TAXONOMY, 'redirect_uris', array(
@@ -184,7 +189,7 @@ class Mastodon_App {
 				}
 
 				if ( empty( $urls ) ) {
-					throw new \Exception( 'invalid_redirect_uris,No valid redirect URIs given' );
+					throw new \Exception( 'invalid-redirect_uris,No valid redirect URIs given' );
 				}
 
 				return $urls;
@@ -196,8 +201,8 @@ class Mastodon_App {
 			'single'       => true,
 			'type'         => 'string',
 			'sanitize_callback' => function( $value ) {
-				if ( ! is_string( $value ) || strlen( $value ) > 200 ) {
-					throw new \Exception( 'invalid_client_name,Client secret must be a string of 200 chars or less.' );
+				if ( ! is_string( $value ) || strlen( $value ) < 5 || strlen( $value ) > 200 ) {
+					throw new \Exception( 'invalid-client_name,Client name must be a string with a length between 5 and 200 chars.' );
 				}
 				return $value;
 			},
@@ -208,13 +213,21 @@ class Mastodon_App {
 			'single'       => true,
 			'type'         => 'string',
 			'sanitize_callback' => function( $value ) {
+				$scopes = array();
 				foreach ( explode( ' ', $value ) as $scope ) {
-					if ( ! in_array( $scope, self::VALID_SCOPES, true ) ) {
-						throw new \Exception( 'invalid_scope,Invalid scope given: ' . $scope );
+					if ( ! trim( $scope ) ) {
+						continue;
 					}
+					if ( ! in_array( $scope, self::VALID_SCOPES, true ) ) {
+						throw new \Exception( 'invalid-scopes,Invalid scope given: ' . $scope );
+					}
+					$scopes[] = $scope;
 				}
 
-				return $value;
+				if ( empty( $scopes ) ) {
+					throw new \Exception( 'invalid-scopes,No scopes given.' );
+				}
+				return implode( ' ', $scopes );
 			}
 		) );
 

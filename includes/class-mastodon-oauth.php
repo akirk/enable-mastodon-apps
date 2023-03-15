@@ -92,9 +92,9 @@ class Mastodon_OAuth {
 
 	public function authenticate() {
 		$request  = Request::createFromGlobals();
-		if ( !$this->server->verifyResourceRequest( $request ) ) {
+		if ( ! $this->server->verifyResourceRequest( $request ) ) {
 			$this->server->getResponse()->send();
-			exit;
+			return null;
 		}
 		$token = $this->server->getAccessTokenData( $request );
 		wp_set_current_user( $token['user_id'] );

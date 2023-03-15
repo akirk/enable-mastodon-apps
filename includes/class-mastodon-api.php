@@ -19,7 +19,7 @@ use Friends\Friends;
  * @author Alex Kirk
  */
 class Mastodon_API {
-	const VERSION = '0.0.1';
+	const VERSION = MASTODON_API_VERSION;
 	/**
 	 * The OAuth handler.
 	 *
@@ -319,6 +319,9 @@ class Mastodon_API {
 	public function logged_in_permission() {
 		$this->allow_cors();
 		$token = $this->oauth->authenticate();
+		if ( is_null( $token ) ) {
+			return false;
+		}
 		$this->app = Mastodon_App::get_by_client_id( $token['client_id'] );
 		$this->app->was_used();
 		return is_user_logged_in();

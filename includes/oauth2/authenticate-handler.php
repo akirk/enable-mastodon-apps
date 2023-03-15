@@ -41,7 +41,7 @@ class AuthenticateHandler {
 
 		$has_permission = current_user_can( 'edit_private_posts' );
 		if ( ! $has_permission ) {
-			login_header( 'Authorize Mastodon Client', null, new \WP_Error( 'OIDC_NO_PERMISSION', __( "You don't have permission to use Mastodon-API.", 'mastodon-api' ) ) );
+			login_header( 'Authorize Mastodon Client', null, new \WP_Error( 'no-permission', __( "You don't have permission to use Mastodon-API.", 'mastodon-api' ) ) );
 			$this->render_no_permission_screen( $data );
 		} else {
 			login_header( 'Authorize Mastodon Client' );

@@ -27,7 +27,7 @@ class AuthorizeHandler {
 			return $response;
 		}
 
-		// The initial OIDC request will come without a nonce, thus unauthenticated.
+		// The initial request will come without a nonce, thus unauthenticated.
 		if ( ! is_user_logged_in() || ! current_user_can( 'edit_private_posts' ) || ! isset( $_POST['authorize'] ) ) {
 			// This is handled by a hook in wp-login.php which will display a form asking the user to consent.
 			// TODO: Redirect with $response->setRedirect().
