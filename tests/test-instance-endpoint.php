@@ -12,21 +12,7 @@ namespace Mastodon_API;
  *
  * @package
  */
-class InstanceEndpoint_Test extends \WP_UnitTestCase {
-	public function set_up() {
-		parent::set_up();
-
-		global $wp_rest_server;
-		$wp_rest_server = new \Spy_REST_Server;
-		do_action( 'rest_api_init', $wp_rest_server );
-
-		$this->administrator = $this->factory->user->create(
-			array(
-				'role' => 'administrator',
-			)
-		);
-	}
-
+class InstanceEndpoint_Test extends Mastodon_TestCase {
 	public function test_register_routes() {
 		global $wp_rest_server;
 		$routes = $wp_rest_server->get_routes();

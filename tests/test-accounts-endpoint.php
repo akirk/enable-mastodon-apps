@@ -12,29 +12,7 @@ namespace Mastodon_API;
  *
  * @package
  */
-class AccountsEndpoint_Test extends \WP_UnitTestCase {
-	private $token;
-	public function set_up() {
-		parent::set_up();
-
-		global $wp_rest_server;
-		$wp_rest_server = new \Spy_REST_Server;
-		do_action( 'rest_api_init', $wp_rest_server );
-
-		$this->administrator = $this->factory->user->create(
-			array(
-				'role' => 'administrator',
-			)
-		);
-
-		$app = Mastodon_App::save( 'Test App', array( 'https://test' ), 'read write follow push', 'https://mastodon.local' );
-		$oauth = new Mastodon_OAuth();
-		$this->token = wp_generate_password( 128, false );
-		$userdata = get_userdata( $this->administrator );
-		$oauth->get_token_storage()->setAccessToken( $this->token, $app->get_client_id(), $userdata->user_login, time() + HOUR_IN_SECONDS, $app->get_scopes() );
-		unset( $_SERVER['HTTP_AUTHORIZATION'] );
-	}
-
+class AccountsEndpoint_Test extends Mastodon_TestCase {
 	public function test_register_routes() {
 		global $wp_rest_server;
 		$routes = $wp_rest_server->get_routes();

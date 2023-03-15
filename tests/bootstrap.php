@@ -2,7 +2,7 @@
 /**
  * PHPUnit bootstrap file
  *
- * @package Friends
+ * @package Mastodon_API
  */
 
 $_tests_dir = getenv( 'WP_TESTS_DIR' );
@@ -48,6 +48,7 @@ ob_start();
 
 // Start up the WP testing environment.
 require $_tests_dir . '/includes/bootstrap.php';
+require_once __DIR__ . "/class-mastodon-testcase.php";
 ob_end_clean();
 
 // Make sure to be able to query these hosts.
@@ -75,12 +76,6 @@ add_filter(
 	2
 );
 
-
-// Disable the feed fetching after a friendship was established.
-add_filter( 'friends_immediately_fetch_feed', '__return_false' );
-
-// Disable sending e-mails.
-add_filter( 'friends_send_mail', '__return_false' );
 
 // Output setting of options during debugging.
 if ( defined( 'TESTS_VERBOSE' ) && TESTS_VERBOSE ) {
@@ -110,5 +105,3 @@ if ( defined( 'TESTS_VERBOSE' ) && TESTS_VERBOSE ) {
 		4
 	);
 }
-
-Friends\User_Query::$cache = false;
