@@ -237,8 +237,9 @@ class Mastodon_App {
 			'type'         => 'string',
 			'sanitize_callback' => function( $url ) {
 				$host = parse_url( $url, PHP_URL_HOST );
+				$protocol = parse_url( $url, PHP_URL_SCHEME );
 
-				if ( ! $host ) {
+				if ( ! $host || 0 !== strpos( 'https', $protocol ) ) {
 					$url = '';
 				}
 

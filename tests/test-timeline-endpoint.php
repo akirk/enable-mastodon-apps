@@ -73,7 +73,7 @@ class TimelineEndpoint_Test extends \WP_UnitTestCase {
 		$this->token = wp_generate_password( 128, false );
 		$userdata = get_userdata( $this->administrator );
 		$oauth->get_token_storage()->setAccessToken( $this->token, $app->get_client_id(), $userdata->user_login, time() + HOUR_IN_SECONDS, $app->get_scopes() );
-
+		unset( $_SERVER['HTTP_AUTHORIZATION'] );
 	}
 
 	public function test_register_routes() {
@@ -82,7 +82,7 @@ class TimelineEndpoint_Test extends \WP_UnitTestCase {
 		$this->assertArrayHasKey( '/' . Mastodon_API::PREFIX . '/api/v1/timelines/(home)', $routes );
 	}
 
-	public function test_accounts_verify_credentials() {
+	public function test_timelines_home() {
 		global $wp_rest_server;
 		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/timelines/home' );
 		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;

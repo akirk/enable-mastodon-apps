@@ -341,43 +341,7 @@ class Mastodon_API {
 	}
 
 	public function api_verify_credentials( $request ) {
-		$user = wp_get_current_user();
-		if ( ! $user->exists() ) {
-			return new \WP_Error( 'not_logged_in', 'Not logged in', array( 'status' => 401 ) );
-		}
-		$avatar = get_avatar_url( $user->ID );
-		$data = array(
-			'id'                => strval( $user->ID ),
-			'username'          => $user->user_login,
-			'acct'              => $this->get_user_acct( $user ),
-			'display_name'      => $user->display_name,
-			'locked'            => false,
-			'created_at'        => mysql2date( 'c', $user->user_registered, false ),
-			'followers_count'   => 0,
-			'following_count'   => 0,
-			'statuses_count'    => 0,
-			'note'              => '',
-			'url'               => home_url( '/author/' . $user->user_login ),
-			'avatar'            => $avatar,
-			'avatar_static'     => $avatar,
-			'header'            => '',
-			'header_static'     => '',
-			'emojis'            => array(),
-			'fields'            => array(),
-			'bot'               => false,
-			'last_status_at'    => null,
-			'source'            => array(
-				'privacy'       => 'public',
-				'sensitive'     => false,
-				'language'      => 'en',
-			),
-		);
-
-		if ( class_exists( '\ActivityPub\ActivityPub' ) ) {
-			$data['followers_count'] = \ActivityPub\count_followers( $user->ID );
-		}
-
-		return $data;
+		return $this->get_friend_account_data( get_current_user_id() );
 	}
 
 	private function get_posts_query_args( $request ) {
@@ -943,7 +907,7 @@ class Mastodon_API {
 			'following_count'   => 0,
 			'statuses_count'    => isset( $posts['status'] ) ? $posts['status'] : 0,
 			'note'              => '',
-			'url'               => $user->get_url(),
+			'url'               => strval( $user->get_url() ),
 			'avatar'            => $avatar,
 			'avatar_static'     => $avatar,
 			'header'            => '',
@@ -951,6 +915,7 @@ class Mastodon_API {
 			'emojis'            => array(),
 			'fields'            => array(),
 			'bot'               => false,
+			'group'             => false,
 			'last_status_at'    => null,
 			'source'            => array(
 				'privacy'       => 'public',
