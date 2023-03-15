@@ -103,6 +103,11 @@ class AccountsEndpoint_Test extends \WP_UnitTestCase {
 			$this->assertIsBool( $data['discoverable'] );
 		}
 		$this->assertIsBool( $data['group'] );
+		$this->assertIsString( $data['created_at'] );
+		$this->assertIsInt( $data['statuses_count'] );
+		$this->assertIsInt( $data['followers_count'] );
+		$this->assertIsInt( $data['following_count'] );
+
 
 	}
 
