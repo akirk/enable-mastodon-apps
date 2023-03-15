@@ -238,12 +238,7 @@ class Mastodon_App {
 			'sanitize_callback' => function( $url ) {
 				$host = parse_url( $url, PHP_URL_HOST );
 
-				$check_url = apply_filters( 'friends_host_is_valid', null, $host );
-				if ( ! is_null( $check_url ) ) {
-					return $check_url;
-				}
-
-				if ( ! wp_http_validate_url( $url ) ) {
+				if ( ! $host ) {
 					$url = '';
 				}
 
