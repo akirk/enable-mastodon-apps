@@ -383,7 +383,7 @@ class Mastodon_API {
 	private function get_posts_query_args( $request ) {
 		$limit = $request->get_param( 'limit' );
 		if ( $limit < 1 ) {
-			$limit = 1;
+			$limit = 10;
 		}
 
 		$args = array(
@@ -439,7 +439,7 @@ class Mastodon_API {
 		}
 
 		$data = array(
-			'id'                => $post->ID,
+			'id'                => strval( $post->ID ),
 			'uri'               => $post->guid,
 			'url'               => $post->guid,
 			'account'           => $account_data,
