@@ -19,6 +19,7 @@ use Friends\Friends;
  * @author Alex Kirk
  */
 class Mastodon_API {
+	const ACTIVITYPUB_USERNAME_REGEXP = '(?:([A-Za-z0-9_-]+)@((?:[A-Za-z0-9_-]+\.)+[A-Za-z]+))';
 	const VERSION = MASTODON_API_VERSION;
 	/**
 	 * The OAuth handler.
@@ -82,6 +83,15 @@ class Mastodon_API {
 			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'api_instance' ),
+				'permission_callback' => array( $this, 'public_api_permission' ),
+			)
+		);
+		register_rest_route(
+			self::PREFIX,
+			'api/nodeinfo/2.0.json',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'api_nodeinfo' ),
 				'permission_callback' => array( $this, 'public_api_permission' ),
 			)
 		);
@@ -247,6 +257,7 @@ class Mastodon_API {
 		$parametrized = array(
 			'api/v1/accounts/([^/+])/statuses' => 'api/v1/accounts/$matches[1]/statuses',
 			'api/v1/statuses/([0-9]+)/context' => 'api/v1/statuses/$matches[1]/context',
+			'api/nodeinfo/([0-9]+[.][0-9]+).json' => 'api/nodeinfo/$matches[1].json',
 			'api/v1/media/([0-9]+)' => 'api/v1/media/$matches[1]',
 			'api/v1/statuses/([0-9]+)' => 'api/v1/statuses/$matches[1]',
 			'api/v1/statuses' => 'api/v1/statuses',
@@ -678,75 +689,89 @@ class Mastodon_API {
 		return $this->get_status_array( get_post( $post_id ) );
 	}
 
+	private function convert_outbox_to_status( $outbox, $user_id ) {
+		$items = array();
+		foreach ( $outbox['orderedItems'] as $item ) {
+			$status = $this->convert_activity_to_status( $item, $user_id );
+			if ( $status ) {
+				$items[] = $status;
+			}
+		}
+		return $items;
+	}
+
+	public function convert_activity_to_status( $activity, $user_id ) {
+		if ( 'Note' !== $activity['object']['type'] ) {
+			return null;
+		}
+		return array(
+			'id'                => $activity['id'],
+			'uri'               => $activity['object']['id'],
+			'url'               => $activity['object']['id'],
+			'account'           => $this->get_friend_account_data( $user_id ),
+			'in_reply_to_id'    => $activity['object']['inReplyTo'],
+			'in_reply_to_account_id' => null,
+			'reblog'            => null,
+			'content'           => $activity['object']['content'],
+			'created_at'        => $activity['object']['published'],
+			'emojis'            => array(),
+			'favourites_count'  => 0,
+			'reblogged'         => false,
+			'reblogged_by'      => array(),
+			'muted'             => false,
+			'sensitive'         => $activity['object']['sensitive'],
+			'spoiler_text'      => '',
+			'visibility'        => 'public',
+			'media_attachments' => array_map( function( $attachment ) {
+				return array(
+					'id'                => crc32( $attachment['url'] ),
+					'type'              => strtok( $attachment['mediaType'], '/' ),
+					'url'               => $attachment['url'],
+					'preview_url'       => $attachment['url'],
+					'text_url'          => $attachment['url'],
+					'width' 		   => $attachment['width'],
+					'height' 		   => $attachment['height'],
+				);
+			}, $activity['object']['attachment'] ),
+			'mentions'          =>  array_map( function( $mention ) {
+				return array(
+					'id'                => $mention['href'],
+					'username'          => $mention['name'],
+					'acct'              => $mention['name'],
+					'url'               => $mention['href'],
+				);
+			}, array_filter( $activity['object']['tag'], function( $tag ) {
+				return 'Mention' === $tag['type'];
+			} ) ),
+			'tags'              => array_map( function( $tag ) {
+				return array(
+					'name'              => $tag['name'],
+					'url'               => $tag['href'],
+				);
+			}, array_filter( $activity['object']['tag'], function( $tag ) {
+				return 'Hashtag' === $tag['type'];
+			} ) ),
+			'language'          => 'en',
+			'pinned'            => false,
+			'card'              => null,
+			'poll'              => null,
+		);
+	}
+
 	public function api_account_statuses( $request ) {
 		$user_id = rawurldecode( $request->get_param( 'user_id' ) );
-		if ( class_exists( '\Friends\Feed_Parser_ActivityPub' ) ) {
-			if ( preg_match( '/^@?' . \Friends\Feed_Parser_ActivityPub::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id ) ) {
+		if ( preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id ) ) {
+			$url = $this->get_activitypub_url( $user_id );
+			if ( $url ) {
 				$account = $this->get_acct( $user_id );
-				$meta = \Friends\Feed_Parser_ActivityPub::get_metadata( $account );
-				$outbox = $this->get_json( $meta['outbox'], 'outbox-' . $account, array( 'first' => null ) );
-				$outbox_page = $this->get_json( $outbox['first'], 'outbox-' . $account, array( 'orderedItems' => array() ) );
+				$meta = apply_filters( 'friends_get_activitypub_metadata', array(), $url );
+				if ( $meta && ! is_wp_error( $meta ) ) {
+					$outbox = $this->get_json( $meta['outbox'], 'outbox-' . $account, array( 'first' => null ) );
+					$outbox_page = $this->get_json( $outbox['first'], 'outbox-' . $account, array( 'orderedItems' => array() ) );
 
-				$items = array();
-				foreach ( $outbox_page['orderedItems'] as $status ) {
-					if ( 'Note' !== $status['object']['type'] ) {
-						continue;
-					}
-					$items[] = array(
-						'id'                => $status['id'],
-						'uri'               => $status['object']['id'],
-						'url'               => $status['object']['id'],
-						'account'           => $this->get_friend_account_data( $user_id ),
-						'in_reply_to_id'    => $status['object']['inReplyTo'],
-						'in_reply_to_account_id' => null,
-						'reblog'            => null,
-						'content'           => $status['object']['content'],
-						'created_at'        => $status['object']['published'],
-						'emojis'            => array(),
-						'favourites_count'  => 0,
-						'reblogged'         => false,
-						'reblogged_by'      => array(),
-						'muted'             => false,
-						'sensitive'         => $status['object']['sensitive'],
-						'spoiler_text'      => '',
-						'visibility'        => 'public',
-						'media_attachments' => array_map( function( $attachment ) {
-							return array(
-								'id'                => crc32( $attachment['url'] ),
-								'type'              => strtok( $attachment['mediaType'], '/' ),
-								'url'               => $attachment['url'],
-								'preview_url'       => $attachment['url'],
-								'text_url'          => $attachment['url'],
-								'width' 		   => $attachment['width'],
-								'height' 		   => $attachment['height'],
-							);
-						}, $status['object']['attachment'] ),
-						'mentions'          =>  array_map( function( $mention ) {
-							return array(
-								'id'                => $mention['href'],
-								'username'          => $mention['name'],
-								'acct'              => $mention['name'],
-								'url'               => $mention['href'],
-							);
-						}, array_filter( $status['object']['tag'], function( $tag ) {
-							return 'Mention' === $tag['type'];
-						} ) ),
-						'tags'              => array_map( function( $tag ) {
-							return array(
-								'name'              => $tag['name'],
-								'url'               => $tag['href'],
-							);
-						}, array_filter( $status['object']['tag'], function( $tag ) {
-							return 'Hashtag' === $tag['type'];
-						} ) ),
-						'language'          => 'en',
-						'pinned'            => false,
-						'card'              => null,
-						'poll'              => null,
-					);
+					$items = $this->convert_outbox_to_status( $outbox_page, $user_id );
+					return $items;
 				}
-
-				return $items;
 			}
 		}
 
@@ -804,7 +829,7 @@ class Mastodon_API {
 			$url,
 			array(
 				'headers' => array( 'Accept' => 'application/activity+json' ),
-				'redirection' => 0,
+				'redirection' => 2,
 				'timeout' => 5,
 			)
 		);
@@ -833,50 +858,75 @@ class Mastodon_API {
 
 
 	private function get_friend_account_data( $user_id, $meta = array() ) {
-		static $cache = array();
-		if ( isset( $cache[$user_id] ) ) {
-			return $cache[$user_id];
+		$cache_key = 'account-' . $user_id;
+		$ret = wp_cache_get( $cache_key, 'mastodon-api' );
+		if ( false !== $ret ) {
+			return $ret;
 		}
-		if ( class_exists( '\Friends\Feed_Parser_ActivityPub' ) ) {
-			if ( preg_match( '/^@?' . \Friends\Feed_Parser_ActivityPub::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id ) ) {
-				$account = $this->get_acct( $user_id );
-				if ( ! $account ) {
-					return array();
-				}
-				$meta = \Friends\Feed_Parser_ActivityPub::get_metadata( $account );
+
+		if ( preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id ) ) {
+			$url = $this->get_activitypub_url( $user_id );
+			if ( ! $url ) {
+				return array();
+			}
+			$account = $this->get_acct( $user_id );
+			$meta = apply_filters( 'friends_get_activitypub_metadata', array(), $url );
+			$ret = array(
+				'id' => $account,
+				'acct'              => $account,
+				'username'          => '',
+				'display_name'      => '',
+				'note'             => '',
+				'created_at'        => date( \DateTimeInterface::RFC3339_EXTENDED ),
+				'followers_count'   => 0,
+				'following_count'   => 0,
+				'statuses_count'    => 0,
+				'url'               => '',
+				'avatar'            => '',
+				'avatar_static'     => '',
+				'header'            => '',
+				'header_static'     => '',
+				'locked'            => false,
+				'emojis'            => array(),
+				'fields'            => array(),
+				'bot'               => false,
+				'group'             => false,
+				'last_status_at'    => null,
+				'source'            => array(
+					'privacy'       => 'public',
+					'sensitive'     => false,
+					'language'      => 'en',
+				),
+			);
+
+			if ( $meta && ! is_wp_error( $meta ) ) {
 				$followers = $this->get_json( $meta['followers'], 'followers-' . $account, array( 'totalItems' => 0 ) );
 				$following = $this->get_json( $meta['following'], 'following-' . $account, array( 'totalItems' => 0 ) );
 				$outbox = $this->get_json( $meta['outbox'], 'outbox-' . $account, array( 'totalItems' => 0 ) );
 
-				$cache[$user_id] = array(
-					'id'                => $account,
-					'username'          => $meta['preferredUsername'],
-					'acct'              => $account,
-					'display_name'      => $meta['name'],
-					'note'             => $meta['summary'],
-					'locked'            => false,
-					'created_at'        => $meta['published'],
-					'followers_count'   => intval( $followers['totalItems'] ),
-					'following_count'   => intval( $following['totalItems'] ),
-					'statuses_count'    => intval( $outbox['totalItems'] ),
-					'url'               => $meta['url'],
-					'avatar'            => $meta['icon']['url'],
-					'avatar_static'     => $meta['icon']['url'],
-					'header'            => $meta['image']['url'],
-					'header_static'     => $meta['image']['url'],
-					'emojis'            => array(),
-					'fields'            => array(),
-					'bot'               => false,
-					'last_status_at'    => null,
-					'source'            => array(
-						'privacy'       => 'public',
-						'sensitive'     => false,
-						'language'      => 'en',
-					),
-				);
-				return $cache[$user_id];
+				$ret['username'] = $meta['preferredUsername'];
+				$ret['display_name'] = $meta['name'];
+				$ret['note'] = $meta['summary'];
+				$ret['created_at'] = $meta['published'];
+				$ret['followers_count'] = intval( $followers['totalItems'] );
+				$ret['following_count'] = intval( $following['totalItems'] );
+				$ret['statuses_count'] = intval( $outbox['totalItems'] );
+				$ret['url'] = $meta['url'];
+				if ( isset( $meta['icon'] ) ) {
+					$ret['avatar'] = $meta['icon']['url'];
+					$ret['avatar_static'] = $meta['icon']['url'];
+				}
+				if ( isset( $meta['image'] ) ) {
+					$ret['header'] = $meta['image']['url'];
+					$ret['header_static'] = $meta['image']['url'];
+				}
 			}
+
+			wp_cache_set( $cache_key, $ret, 'mastodon-api' );
+
+			return $ret;
 		}
+
 		$user = false;
 		if ( class_exists( '\Friends\User' ) ) {
 			$user = \Friends\User::get_user_by_id( $user_id );
@@ -949,69 +999,127 @@ class Mastodon_API {
 		return strtok( $this->get_acct( get_author_posts_url( $user->ID ) ), '@' );
 	}
 
-	public function get_acct( $id ) {
-		if ( strpos( $id, 'acct:' ) === 0 ) {
-			$id = substr( $id, 5 );
+	public function get_acct( $id_or_url ) {
+		$webfinger = $this->webfinger( $id_or_url );
+		if ( !isset( $webfinger['subject'] ) ) {
+			return false;
 		}
+		return $webfinger['subject'];
+	}
 
-		$backup_id = $id;
-		if ( preg_match( '#^https://([^/]+)/(?:@|users/|author/)([^/]+)/?$#', $id, $m ) ) {
-			$backup_id = $m[2] . '@' . $m[1];
+	public function get_activitypub_url( $id_or_url ) {
+		$webfinger = $this->webfinger( $id_or_url );
+		if ( empty( $webfinger['aliases'] ) ) {
+			return false;
 		}
-
-		$resolved = apply_filters( 'friends_webfinger_resolve', false, $id );
-		if ( $resolved && ! is_wp_error( $resolved ) ) {
-			return $resolved;
-		}
-
-		if ( ! self::check_url( $id ) ) {
-			return $backup_id;
-		}
-
-		// We have a URL.
-
-		$transient_key = 'mastodon-api_webfinger_' . md5( $id );
-
-		$subject = \get_transient( $transient_key );
-		if ( $subject ) {
-			if ( is_wp_error( $subject ) ) {
-				return $backup_id;
+		$first_alias = false;
+		foreach ( $webfinger['aliases'] as $alias ) {
+			if ( ! $first_alias ) {
+				$first_alias = $alias;
 			}
-			return $subject;
+			if ( strpos( $alias, '@' ) === false ) {
+				return $alias;
+			}
+			return $alias;
 		}
 
-		$host = parse_url( $id, PHP_URL_HOST );
+		return $first_alias;
+	}
+
+	private function webfinger( $id_or_url ) {
+		if ( strpos( $id_or_url, 'acct:' ) === 0 ) {
+			$id_or_url = substr( $id_or_url, 5 );
+		}
+
+		$id = $id_or_url;
+		if ( preg_match( '#^https://([^/]+)/(?:@|users/|author/)([^/]+)/?$#', $id_or_url, $m ) ) {
+			$id = $m[2] . '@' . $m[1];
+			$host = $m[1];
+		} else {
+			$parts = explode( '@', ltrim( $id_or_url, '@' ) );
+			$host = $parts[1];
+		}
+
+		$transient_key = 'mastodon_api_webfinger_' . md5( $id_or_url );
+
+		$body = \get_transient( $transient_key );
+		if ( $body ) {
+			if ( is_wp_error( $body ) ) {
+				return $id;
+			}
+			return $body;
+		}
 
 		$url = \add_query_arg( 'resource', $id, 'https://' . $host . '/.well-known/webfinger' );
 		if ( ! self::check_url( $url ) ) {
 			$response = new \WP_Error( 'invalid_webfinger_url', null, $url );
 			\set_transient( $transient_key, $response, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
-			return $backup_id;
+			return $response;
 		}
 
 		// try to access author URL
 		$body = $this->get_json( $url, $transient_key );
+
 		if ( \is_wp_error( $body ) ) {
-			$subject = new \WP_Error( 'webfinger_url_not_accessible', null, $url );
-			\set_transient( $transient_key, $subject, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
-			return $backup_id;
+			$body = new \WP_Error( 'webfinger_url_not_accessible', null, $url );
+			\set_transient( $transient_key, $body, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
+			return $response;
 		}
 
-		if ( empty( $body['subject'] ) ) {
-			$subject = new \WP_Error( 'webfinger_url_invalid_response', null, $url );
-			\set_transient( $transient_key, $subject, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
-			return $backup_id;
-		}
-
-		$subject = $body['subject'];
-
-		if ( strpos( $subject, 'acct:' ) === 0 ) {
-			$subject = substr( $subject, 5 );
-		}
-
-		\set_transient( $transient_key, $subject, WEEK_IN_SECONDS );
-		return $subject;
+		\set_transient( $transient_key, $body, WEEK_IN_SECONDS );
+		return $body;
 	}
+
+	public function api_nodeinfo() {
+		global $wp_version;
+
+		$software = array(
+			'name' => 'WordPress/' . $wp_version . ' with Mastodon-API Plugin',
+			'version' => self::VERSION,
+		);
+		if ( 'okhttp/4.9.2' === $_SERVER['HTTP_USER_AGENT'] ) {
+			$software['name'] = 'pixelfed';
+			$software['version'] = '0.11.4';
+		}
+
+		$ret = array(
+			'metadata' => array(
+				'nodeName' => get_bloginfo( 'name' ),
+				'nodeDescription' => get_bloginfo( 'description' ),
+				'software' => $software,
+				'config' => array(
+					'features' => array(
+						"timelines" => array(
+							'local' => true,
+							'network' => true,
+						),
+						"mobile_apis" => true,
+						"stories" => false,
+						"video" => false,
+						"import" => array(
+							"instagram" => false,
+							"mastodon" => false,
+							"pixelfed" => false
+						),
+					),
+				),
+			),
+			'version' => '2.0',
+			'protocols' => array(
+				'activitpypub',
+			),
+			"services" => array(
+				"inbound" => array(),
+				"outbound" => array(),
+			),
+
+			'software' => $software,
+			'openRegistrations' => false,
+		);
+
+		return $ret;
+	}
+
 
 	public function api_instance() {
 		$ret = array(
