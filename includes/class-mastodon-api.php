@@ -202,6 +202,16 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
+			'api/v1/accounts/relationships',
+			array(
+				'methods'             => array( 'GET', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_account_relationships' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
 			'api/v1/accounts/(?P<user_id>[^/]+)/statuses',
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
@@ -216,17 +226,6 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_account' ),
-				'permission_callback' => array( $this, 'logged_in_permission' ),
-			)
-		);
-
-
-		register_rest_route(
-			self::PREFIX,
-			'api/v1/accounts/relationships',
-			array(
-				'methods'             => array( 'GET', 'OPTIONS' ),
-				'callback'            => array( $this, 'api_account_relationships' ),
 				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
@@ -785,7 +784,7 @@ class Mastodon_API {
 		$relationships = array();
 		$user_ids = $request->get_param( 'id' );
 		if ( ! is_array( $user_ids ) ) {
-			$user_ids = array();
+			$user_ids = array( $user_ids );
 		}
 
 		foreach ( $user_ids as $user_id ) {
