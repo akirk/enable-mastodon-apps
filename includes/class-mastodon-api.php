@@ -782,9 +782,52 @@ class Mastodon_API {
 	}
 
 	public function api_account_relationships( $request ) {
-		$user_id = $request->get_param( 'id' );
+		$relationships = array();
+		$user_ids = $request->get_param( 'id' );
+		if ( ! is_array( $user_ids ) ) {
+			$user_ids = array();
+		}
 
-		return array();
+		foreach ( $user_ids as $user_id ) {
+			$relationship = array(
+				'id' => $user_id,
+				'following' => false,
+				'showing_reblogs' => false,
+				'notifying' => false,
+				'followed_by' => false,
+				'blocking' => false,
+				'blocked_by' => false,
+				'muting' => false,
+				'muting_notifications' => false,
+				'requested' => false,
+				'domain_blocking' => false,
+				'endorsed' => false,
+				'note' => '',
+			);
+			if ( is_numeric( $user_id ) ) {
+				$user = new \WP_User( $user_id );
+				if ( ! $user || is_wp_error( $user ) ) {
+					continue;
+				}
+
+				if ( $user->has_cap( 'friend' ) ) {
+					$relationship['following'] = true;
+					$relationship['showing_reblogs'] = true;
+				} elseif ( $user->has_cap( 'subscription' ) ) {
+					$relationship['following'] = true;
+					$relationship['showing_reblogs'] = true;
+				} elseif ( $user->has_cap( 'friend_request' ) ) {
+					$relationship['following'] = true;
+					$relationship['showing_reblogs'] = true;
+					$relationship['requested'] = true;
+				}
+			} elseif ( preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id ) ) {
+				$relationship['following'] = false;
+			}
+			$relationships[] = $relationship;
+		}
+
+		return $relationships;
 	}
 
 	public function api_account( $request ) {
