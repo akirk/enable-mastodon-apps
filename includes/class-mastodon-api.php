@@ -423,8 +423,7 @@ class Mastodon_API {
 			remove_filter( 'posts_where', $filter_handler );
 		}
 		$ret = array();
-		foreach ( $p
-			osts as $post ) {
+		foreach ( $posts as $post ) {
 			$status = $this->get_status_array( $post );
 			if ( $status ) {
 				$ret[] = $status;
