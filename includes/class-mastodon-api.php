@@ -9,7 +9,6 @@
 
 namespace Mastodon_API;
 
-use Friends\Friends;
 /**
  * This is the class that implements the Mastodon API endpoints.
  *
@@ -626,10 +625,6 @@ class Mastodon_API {
 			'descendants' => array(),
 		);
 
-		if ( ! class_exists( '\Friends\Friends' ) || \Friends\Friends::CPT !== get_post_type( $post_id ) ) {
-			return $context;
-		}
-
 
 		$meta = get_post_meta( $post_id, 'activitypub', true );
 		if ( $meta ) {
@@ -865,13 +860,18 @@ class Mastodon_API {
 		}
 
 		if ( preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id ) ) {
-			$url = $this->get_activitypub_url( $user_id );
+			if ( isset( $meta['attributedTo']['id'] ) ) {
+				$url = $meta['attributedTo']['id'];
+				$user_id = $meta['attributedTo']['id'];
+			} else {
+				$url = $this->get_activitypub_url( $user_id );
+			}
 			if ( ! $url ) {
 				return array();
 			}
 			$account = $this->get_acct( $user_id );
 			$meta = apply_filters( 'friends_get_activitypub_metadata', array(), $url );
-			$ret = array(
+			$data = array(
 				'id' => $account,
 				'acct'              => $account,
 				'username'          => '',
@@ -904,27 +904,27 @@ class Mastodon_API {
 				$following = $this->get_json( $meta['following'], 'following-' . $account, array( 'totalItems' => 0 ) );
 				$outbox = $this->get_json( $meta['outbox'], 'outbox-' . $account, array( 'totalItems' => 0 ) );
 
-				$ret['username'] = $meta['preferredUsername'];
-				$ret['display_name'] = $meta['name'];
-				$ret['note'] = $meta['summary'];
-				$ret['created_at'] = $meta['published'];
-				$ret['followers_count'] = intval( $followers['totalItems'] );
-				$ret['following_count'] = intval( $following['totalItems'] );
-				$ret['statuses_count'] = intval( $outbox['totalItems'] );
-				$ret['url'] = $meta['url'];
+				$data['username'] = $meta['preferredUsername'];
+				$data['display_name'] = $meta['name'];
+				$data['note'] = $meta['summary'];
+				$data['created_at'] = $meta['published'];
+				$data['followers_count'] = intval( $followers['totalItems'] );
+				$data['following_count'] = intval( $following['totalItems'] );
+				$data['statuses_count'] = intval( $outbox['totalItems'] );
+				$data['url'] = $meta['url'];
 				if ( isset( $meta['icon'] ) ) {
-					$ret['avatar'] = $meta['icon']['url'];
-					$ret['avatar_static'] = $meta['icon']['url'];
+					$data['avatar'] = $meta['icon']['url'];
+					$data['avatar_static'] = $meta['icon']['url'];
 				}
 				if ( isset( $meta['image'] ) ) {
-					$ret['header'] = $meta['image']['url'];
-					$ret['header_static'] = $meta['image']['url'];
+					$data['header'] = $meta['image']['url'];
+					$data['header_static'] = $meta['image']['url'];
 				}
 			}
 
-			wp_cache_set( $cache_key, $ret, 'mastodon-api' );
+			wp_cache_set( $cache_key, $data, 'mastodon-api' );
 
-			return $ret;
+			return $data;
 		}
 
 		$user = false;
@@ -934,8 +934,9 @@ class Mastodon_API {
 		if ( ! $user || is_wp_error( $user ) ) {
 			$user = new \WP_User( $user_id );
 			if ( ! $user || is_wp_error( $user ) ) {
-				$cache[$user_id] = new \WP_Error( 'user-not-found', __( 'User not found.', 'mastodon_api' ), array( 'status' => 403 ) );
-				return $cache[$user_id];
+				$data = new \WP_Error( 'user-not-found', __( 'User not found.', 'mastodon_api' ), array( 'status' => 403 ) );
+				wp_cache_set( $cache_key, $data, 'mastodon-api' );
+				return $data;
 			}
 		}
 
@@ -991,8 +992,8 @@ class Mastodon_API {
 			}
 		}
 
-		$cache[$user_id] = $data;
-		return $cache[$user_id];
+		wp_cache_set( $cache_key, $data, 'mastodon-api' );
+		return $data;
 	}
 
 	public function get_user_acct( $user ) {
@@ -1003,6 +1004,9 @@ class Mastodon_API {
 		$webfinger = $this->webfinger( $id_or_url );
 		if ( !isset( $webfinger['subject'] ) ) {
 			return false;
+		}
+		if ( substr( $webfinger['subject'], 0, 5 ) === 'acct:' ) {
+			return substr( $webfinger['subject'], 5 );
 		}
 		return $webfinger['subject'];
 	}
