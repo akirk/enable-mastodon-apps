@@ -1180,7 +1180,7 @@ class Mastodon_API {
 		if ( preg_match( '#^https://([^/]+)/(?:@|users/|author/)([^/]+)/?$#', $id_or_url, $m ) ) {
 			$id = $m[2] . '@' . $m[1];
 			$host = $m[1];
-		} elseif ( false !== strpos( '@', $id_or_url ) ) {
+		} elseif ( false !== strpos( $id_or_url, '@' ) ) {
 			$parts = explode( '@', ltrim( $id_or_url, '@' ) );
 			$host = $parts[1];
 		} else {
