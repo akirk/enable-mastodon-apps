@@ -27,7 +27,7 @@ class AppsEndpoint_Test extends Mastodon_TestCase {
 		$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/apps' );
 		$request->set_param( 'client_name', $name );
 		$request->set_param( 'redirect_uris', $redirect_uri );
-		$request->set_param( 'website',  $website );
+		$request->set_param( 'website', $website );
 		$request->set_param( 'scopes', 'read write follow push' );
 		$response = $wp_rest_server->dispatch( $request );
 		$this->assertEquals( 200, $response->get_status() );

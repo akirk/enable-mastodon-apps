@@ -999,7 +999,9 @@ class Mastodon_API {
 				$url = $this->get_activitypub_url( $user_id );
 			}
 			if ( ! $url ) {
-				return array();
+				$data = new \WP_Error( 'user-not-found', 'User not found.', array( 'status' => 404 ) );
+				wp_cache_set( $cache_key, $data, 'mastodon-api' );
+				return $data;
 			}
 			$account = $this->get_acct( $user_id );
 			$meta = apply_filters( 'friends_get_activitypub_metadata', array(), $url );
@@ -1066,7 +1068,7 @@ class Mastodon_API {
 		if ( ! $user || is_wp_error( $user ) ) {
 			$user = new \WP_User( $user_id );
 			if ( ! $user || is_wp_error( $user ) ) {
-				$data = new \WP_Error( 'user-not-found', __( 'User not found.', 'mastodon_api' ), array( 'status' => 403 ) );
+				$data = new \WP_Error( 'user-not-found', 'User not found.', array( 'status' => 404 ) );
 				wp_cache_set( $cache_key, $data, 'mastodon-api' );
 				return $data;
 			}
@@ -1169,13 +1171,20 @@ class Mastodon_API {
 			$id_or_url = substr( $id_or_url, 5 );
 		}
 
+		$body = apply_filters( 'mastodon_api_webfinger', null, $id_or_url );
+		if ( $body ) {
+			return $body;
+		}
+
 		$id = $id_or_url;
 		if ( preg_match( '#^https://([^/]+)/(?:@|users/|author/)([^/]+)/?$#', $id_or_url, $m ) ) {
 			$id = $m[2] . '@' . $m[1];
 			$host = $m[1];
-		} else {
+		} elseif ( false !== strpos( '@', $id_or_url ) ) {
 			$parts = explode( '@', ltrim( $id_or_url, '@' ) );
 			$host = $parts[1];
+		} else {
+			return null;
 		}
 
 		$transient_key = 'mastodon_api_webfinger_' . md5( $id_or_url );
