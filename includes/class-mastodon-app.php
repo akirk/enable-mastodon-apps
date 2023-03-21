@@ -418,7 +418,6 @@ class Mastodon_App {
 		$app_metadata = compact(
 			'client_name',
 			'redirect_uris',
-			'post_formats',
 			'scopes',
 			'website'
 		);
