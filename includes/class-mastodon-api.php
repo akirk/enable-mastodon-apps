@@ -690,7 +690,7 @@ class Mastodon_API {
 	}
 
 	public function convert_activity_to_status( $activity, $user_id ) {
-		if ( 'Note' !== $activity['object']['type'] ) {
+		if ( ! isset( $activity['object']['type'] ) || 'Note' !== $activity['object']['type'] ) {
 			return null;
 		}
 		return array(
@@ -730,7 +730,10 @@ class Mastodon_API {
 					'url'               => $mention['href'],
 				);
 			}, array_filter( $activity['object']['tag'], function( $tag ) {
-				return 'Mention' === $tag['type'];
+				if ( isset( $tag['type'] ) ) {
+					return 'Mention' === $tag['type'];
+				}
+				return false;
 			} ) ),
 			'tags'              => array_map( function( $tag ) {
 				return array(
@@ -738,7 +741,10 @@ class Mastodon_API {
 					'url'               => $tag['href'],
 				);
 			}, array_filter( $activity['object']['tag'], function( $tag ) {
-				return 'Hashtag' === $tag['type'];
+				if ( isset( $tag['type'] ) ) {
+					return 'Hashtag' === $tag['type'];
+				}
+				return false;
 			} ) ),
 			'language'          => 'en',
 			'pinned'            => false,
