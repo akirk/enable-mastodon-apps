@@ -831,6 +831,7 @@ class Mastodon_API {
 
 	public function api_account_follow( $request ) {
 		$user_id = $request->get_param( 'user_id' );
+		$relationships = array();
 
 		if ( is_numeric( $user_id ) && class_exists( '\Friends\User' ) ) {
 			$user = \Friends\User::get_user_by_id( $user_id );
@@ -847,9 +848,9 @@ class Mastodon_API {
 					$feed->activate();
 				}
 			}
-			$request->set_param( 'id', $user->ID );
 
-			return $this->api_account_relationships( $request );
+			$request->set_param( 'id', $user->ID );
+			$relationships = $this->api_account_relationships( $request );
 		} elseif ( preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id ) ) {
 			$url = $this->get_activitypub_url( $user_id );
 			$new_user_id = apply_filters( 'friends_create_and_follow', $user_id, $url, 'application/activity+json' );
@@ -858,14 +859,19 @@ class Mastodon_API {
 			}
 
 			$request->set_param( 'id', $new_user_id );
-			return $this->api_account_relationships( $request );
+			$relationships = $this->api_account_relationships( $request );
 		}
 
-		return new \WP_Error( 'invalid-user', 'Invalid user', array( 'status' => 404 ) );
+		if ( empty( $relationships ) ) {
+			return new \WP_Error( 'invalid-user', 'Invalid user', array( 'status' => 404 ) );
+		}
+
+		return $relationships[0];
 	}
 
 	public function api_account_unfollow( $request ) {
 		$user_id = $request->get_param( 'user_id' );
+		$relationships = array();
 
 		if ( is_numeric( $user_id ) && class_exists( '\Friends\User' ) ) {
 			$user = \Friends\User::get_user_by_id( $user_id );
@@ -883,10 +889,14 @@ class Mastodon_API {
 			}
 
 			$request->set_param( 'id', $user->ID );
-			return $this->api_account_relationships( $request );
+			$relationships = $this->api_account_relationships( $request );
 		}
 
-		return new \WP_Error( 'not-followed', 'Not followed', array( 'status' => 404 ) );
+		if ( empty( $relationships ) ) {
+			return new \WP_Error( 'invalid-user', 'Invalid user', array( 'status' => 404 ) );
+		}
+
+		return $relationships[0];
 	}
 
 	public function api_account_relationships( $request ) {
