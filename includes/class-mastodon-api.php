@@ -363,17 +363,11 @@ class Mastodon_API {
 		$args = array(
 			'posts_per_page' => $limit,
 			'post_type' => apply_filters( 'friends_frontend_post_types', array( 'post' ) ),
-			'tax_query' => array(
-				array(
-					'taxonomy' => 'post_format',
-					'field'    => 'slug',
-					'terms'    => 'post-format-status',
-				)
-			),
 			'suppress_filters' => false,
 			'post_status' => array( 'publish', 'private' ),
 		);
 
+		$args = $this->app->modify_wp_query_args( $args );
 		$post_id = $request->get_param( 'post_id' );
 		if ( $post_id ) {
 			$args['p'] = $post_id;
@@ -1076,16 +1070,11 @@ class Mastodon_API {
 
 	public function api_nodeinfo() {
 		global $wp_version;
-
 		$software = array(
 			'name' => 'WordPress/' . $wp_version . ' with Mastodon-API Plugin',
-			'version' => self::VERSION,
+			'version' => Mastodon_API::VERSION,
 		);
-		if ( 'okhttp/4.9.2' === $_SERVER['HTTP_USER_AGENT'] ) {
-			$software['name'] = 'pixelfed';
-			$software['version'] = '0.11.4';
-		}
-
+		$software = apply_filters( 'mastodon_api_nodeinfo_software', $software );
 		$ret = array(
 			'metadata' => array(
 				'nodeName' => get_bloginfo( 'name' ),

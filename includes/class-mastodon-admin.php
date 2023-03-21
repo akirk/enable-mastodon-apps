@@ -57,13 +57,22 @@ class Mastodon_Admin {
 		if ( isset( $_POST['delete-code'] ) ) {
 			$deleted = $this->oauth->get_code_storage()->expireAuthorizationCode( $_POST['delete-code'] );
 			add_settings_error( 'mastodon-api', 'deleted-codes', sprintf( _n( 'Deleted %d authorization code.', 'Deleted %d authorization codes.', $deleted ? 1 : 0, 'mastodon-api' ), $deleted ? 1 : 0 ) );
-		} elseif ( isset( $_POST['delete-token'] ) ) {
+			return;
+		}
+
+		if ( isset( $_POST['delete-token'] ) ) {
 			$deleted = $this->oauth->get_token_storage()->unsetAccessToken( $_POST['delete-token'] );
 			add_settings_error( 'mastodon-api', 'deleted-tokens', sprintf( _n( 'Deleted %d access token.', 'Deleted %d access tokens.', $deleted ? 1 : 0, 'mastodon-api' ), $deleted ? 1 : 0 ) );
-		} elseif ( isset( $_POST['delete-app'] ) ) {
+			return;
+		}
+
+		if ( isset( $_POST['delete-app'] ) ) {
 			$deleted = Mastodon_App::get_by_client_id( $_POST['delete-app'] )->delete();
 			add_settings_error( 'mastodon-api', 'deleted-apps', sprintf( _n( 'Deleted %d app.', 'Deleted %d apps.', $deleted ? 1 : 0, 'mastodon-api' ), $deleted ? 1 : 0 ) );
-		} elseif ( isset( $_POST['delete-outdated'] ) ) {
+			return;
+		}
+
+		if ( isset( $_POST['delete-outdated'] ) ) {
 			$deleted = OAuth2\AccessTokenStorage::cleanupOldTokens();
 			if ( $deleted ) {
 				add_settings_error( 'mastodon-api', 'deleted-tokens', sprintf( _n( 'Deleted %d access token.', 'Deleted %d access tokens.', $deleted, 'mastodon-api' ), $deleted ) );
@@ -78,13 +87,64 @@ class Mastodon_Admin {
 			if ( $deleted ) {
 				add_settings_error( 'mastodon-api', 'deleted-apps', sprintf( _n( 'Deleted %d app.', 'Deleted %d apps.', $deleted, 'mastodon-api' ), $deleted ) );
 			}
+			return;
+		}
+
+		if ( isset( $_POST['mastodon_api_enable_logins'] ) ) {
+			delete_option( 'mastodon_api_disable_logins' );
 		} else {
-			if ( isset( $_POST['mastodon_api_enable_logins'] ) ) {
-				delete_option( 'mastodon_api_disable_logins' );
+			update_option( 'mastodon_api_disable_logins', '1' );
+		}
+
+		if ( isset( $_POST['mastodon_api_default_post_formats'] ) && is_array( $_POST['mastodon_api_default_post_formats'] ) ) {
+			$default_post_formats = array_filter(
+				$_POST['mastodon_api_default_post_formats'],
+				function( $post_format ) {
+					if ( ! in_array( $post_format, get_post_format_slugs(), true ) ) {
+						return false;
+					}
+					return true;
+				}
+			);
+
+			if ( ! empty( $default_post_formats ) ) {
+				update_option( 'mastodon_api_default_post_formats', $default_post_formats );
 			} else {
-				update_option( 'mastodon_api_disable_logins', '1' );
+				delete_option( 'mastodon_api_default_post_formats' );
 			}
 		}
+
+		if ( isset( $_POST['app_post_formats'] ) && is_array( $_POST['app_post_formats'] ) ) {
+			foreach ( $_POST['app_post_formats'] as $client_id => $post_formats ) {
+				$post_formats = array_filter(
+					$post_formats,
+					function( $post_format ) {
+						if ( ! in_array( $post_format, get_post_format_slugs(), true ) ) {
+							return false;
+						}
+						return true;
+					}
+				);
+
+				$app = Mastodon_App::get_by_client_id( $client_id );
+				$app->set_post_formats( $post_formats );
+			}
+		}
+
+	}
+
+	private function post_format_select( $name, $selected = array() ) {
+		?>
+		<select name="<?php echo esc_attr( $name ); ?>[]" id="<?php echo esc_attr( $name ); ?>" size="10" multiple>
+			<?php
+			foreach ( get_post_format_slugs() as $format ) {
+				?>
+				<option value="<?php echo esc_attr( $format ); ?>" <?php selected( in_array( $format, $selected, true ) ); ?>><?php echo esc_html( $format ); ?></option>
+				<?php
+			}
+			?>
+		</select>
+		<?php
 	}
 
 	public function admin_page() {
@@ -137,6 +197,19 @@ class Mastodon_Admin {
 									<?php esc_html_e( 'Allow new logins via the Mastodon API', 'mastodon-api' ); ?>
 								</label>
 							</fieldset>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Default Post Formats', 'mastodon-api' ); ?></th>
+						<td>
+							<details>
+								<summary style="cursor: pointer"><?php esc_html_e( 'Change the post formats new apps will receive by default.', 'mastodon-api' ); ?></summary>
+								<fieldset>
+									<label for="mastodon_api_default_post_formats">
+										<?php $this->post_format_select( 'mastodon_api_default_post_formats', get_option( 'mastodon_api_default_post_formats', array( 'status' ) ) ); ?>
+									</label>
+								</fieldset>
+							</details>
 						</td>
 					</tr>
 				</tbody>
@@ -226,8 +299,9 @@ class Mastodon_Admin {
 						<th><?php esc_html_e( 'Name', 'mastodon-api' ); ?></th>
 						<th><?php esc_html_e( 'Redirect URI', 'mastodon-api' ); ?></th>
 						<th><?php esc_html_e( 'Scope', 'mastodon-api' ); ?></th>
-						<th><?php esc_html_e( 'Created', 'mastodon-api' ); ?></th>
+						<th><?php esc_html_e( 'Post Formats', 'mastodon-api' ); ?></th>
 						<th><?php esc_html_e( 'Last Used', 'mastodon-api' ); ?></th>
+						<th><?php esc_html_e( 'Created', 'mastodon-api' ); ?></th>
 						<th><?php esc_html_e( 'Actions', 'mastodon-api' ); ?></th>
 					</thead>
 					<tbody>
@@ -246,9 +320,18 @@ class Mastodon_Admin {
 								</td>
 								<td><?php echo wp_kses( implode('<br/>', $app->get_redirect_uris() ), array( 'br' => array() ) ); ?></td>
 								<td><?php echo esc_html( $app->get_scopes() ); ?></td>
-								<?php td_timestamp( $app->get_creation_date() ); ?>
+								<td>
+									<details>
+										<summary style="cursor: pointer"><?php echo esc_html( implode( ', ', $app->get_post_formats() ) ); ?></summary>
+										<?php $this->post_format_select( 'app_post_formats[' . $app->get_client_id() . ']', $app->get_post_formats() ); ?>
+									</details>
+								</td>
 								<?php td_timestamp( $app->get_last_used() ); ?>
-								<td><button name="delete-app" value="<?php echo esc_attr( $app->get_client_id() ); ?>" class="button"><?php esc_html_e( 'Delete' ); ?></button></td>
+								<?php td_timestamp( $app->get_creation_date() ); ?>
+								<td>
+									<button name="save-app" value="<?php echo esc_attr( $app->get_client_id() ); ?>" class="button button-secondary"><?php esc_html_e( 'Save' ); ?></button>
+									<button name="delete-app" value="<?php echo esc_attr( $app->get_client_id() ); ?>" class="button button-link-delete"><?php esc_html_e( 'Delete' ); ?></button>
+								</td>
 							</tr>
 							<?php
 						}

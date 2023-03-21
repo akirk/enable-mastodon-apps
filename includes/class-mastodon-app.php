@@ -75,6 +75,26 @@ class Mastodon_App {
 		return get_term_meta( $this->term->term_id, 'creation_date', true );
 	}
 
+	public function get_query_args() {
+		return get_term_meta( $this->term->term_id, 'query_args', true );
+	}
+
+	public function get_post_formats() {
+		$query_args = $this->get_query_args();
+		if ( ! isset( $query_args['post_formats'] ) || ! is_array( $query_args['post_formats'] ) ) {
+			return get_option( 'mastodon_api_default_post_formats', array( 'status' ) );
+		}
+
+		return $query_args['post_formats'];
+	}
+
+	public function set_post_formats( $post_formats ) {
+		$query_args = $this->get_query_args();
+		$query_args['post_formats'] = $post_formats;
+		update_term_meta( $this->term->term_id, 'query_args', $query_args );
+		return $this->get_post_formats();
+	}
+
 	public function check_redirect_uri( $redirect_uri ) {
 		$redirect_uris = $this->get_redirect_uris();
 		if ( ! is_array( $redirect_uris ) ) {
@@ -270,6 +290,85 @@ class Mastodon_App {
 				return $value;
 			},
 		) );
+
+		register_term_meta( self::TAXONOMY, 'query_args', array(
+			'show_in_rest' => false,
+			'single'       => true,
+			'type'         => 'array',
+			'sanitize_callback' => function( $value ) {
+				if ( ! is_array( $value ) ) {
+					return array();
+				}
+				$value = array_diff_key( $value, array( 'post_formats' ) );
+				if ( isset( $value['post_formats'] ) ) {
+					if ( ! is_array( $value['post_formats'] ) ) {
+						unset( $value['post_formats'] );
+					}
+					$value['post_formats'] = array_filter(
+						$value['post_formats'],
+						function( $post_format ) {
+							if ( ! in_array( $post_format, get_post_format_slugs(), true ) ) {
+								return false;
+							}
+							return true;
+						}
+					);
+					if ( empty( $value['post_formats'] ) ) {
+						unset( $value['post_formats'] );
+					}
+				}
+				return $value;
+			},
+		) );
+	}
+
+	public function modify_wp_query_args( $args ) {
+		$tax_query = array();
+		if ( isset( $args['tax_query'] ) ) {
+			$tax_query = $args['tax_query'];
+		}
+
+		$filter_by_post_format = $this->get_post_formats();
+		$post_formats = get_post_format_slugs();
+		$filter_by_post_format = array_filter(
+			$filter_by_post_format,
+			function( $post_format ) use ( $post_formats ) {
+				return in_array( $post_format, $post_formats, true );
+			}
+		);
+		if ( ! empty( $filter_by_post_format ) ) {
+			if ( ! empty( $tax_query ) ) {
+				$tax_query['relation'] = 'AND';
+			}
+			$post_format_query = array(
+				'taxonomy' => 'post_format',
+				'field'    => 'slug',
+			);
+
+			if ( in_array( 'standard', $filter_by_post_format, true ) ) {
+				$post_format_query['operator'] = 'NOT IN';
+				$post_format_query['terms']    = array_values(
+					array_map(
+						function( $post_format ) {
+							return 'post-format-' . $post_format;
+						},
+						array_diff( $post_formats, $filter_by_post_format )
+					)
+				);
+			} else {
+				$post_format_query['operator'] = 'IN';
+				$post_format_query['terms']    = array_map(
+					function( $post_format ) {
+						return 'post-format-' . $post_format;
+					},
+					$filter_by_post_format
+				);
+			}
+			$tax_query[] = $post_format_query;
+		}
+		$args['tax_query'] = $tax_query;
+
+		return $args;
 	}
 
 	/**
@@ -316,20 +415,22 @@ class Mastodon_App {
 			return $term;
 		}
 
-		$term_id = $term['term_id'];
-		foreach ( compact(
+		$app_metadata = compact(
 			'client_name',
-			'client_secret',
 			'redirect_uris',
+			'post_formats',
 			'scopes',
 			'website'
-		) as $key => $value ) {
-			if ( metadata_exists( 'term', $term_id, $key ) ) {
-				update_metadata( 'term', $term_id, $key, $value );
-			} else {
-				add_metadata( 'term', $term_id, $key, $value, true );
-			}
+		);
+
+		$post_formats = get_option( 'mastodon_api_default_post_formats', array( 'status' ) );
+		$post_formats = apply_filters( 'mastodon_api_new_app_post_formats', $post_formats, $app_metadata );
+
+		$term_id = $term['term_id'];
+		foreach ( $app_metadata as $key => $value ) {
+			add_metadata( 'term', $term_id, $key, $value, true );
 		}
+		add_metadata( 'term', $term_id, 'client_secret', $client_secret, true );
 		add_metadata( 'term', $term_id, 'creation_date', time(), true );
 
 		$term = get_term( $term['term_id'] );
