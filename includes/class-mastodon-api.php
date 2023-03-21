@@ -212,6 +212,26 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
+			'api/v1/accounts/(?P<user_id>[^/]+)/follow',
+			array(
+				'methods'             => array( 'POST', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_account_follow' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/accounts/(?P<user_id>[^/]+)/unfollow',
+			array(
+				'methods'             => array( 'POST', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_account_unfollow' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
 			'api/v1/accounts/(?P<user_id>[^/]+)/statuses',
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
@@ -253,6 +273,8 @@ class Mastodon_API {
 			'api/v2/media',
 		);
 		$parametrized = array(
+			'api/v1/accounts/([^/+])/follow' => 'api/v1/accounts/$matches[1]/follow',
+			'api/v1/accounts/([^/+])/unfollow' => 'api/v1/accounts/$matches[1]/unfollow',
 			'api/v1/accounts/([^/+])/statuses' => 'api/v1/accounts/$matches[1]/statuses',
 			'api/v1/statuses/([0-9]+)/context' => 'api/v1/statuses/$matches[1]/context',
 			'api/nodeinfo/([0-9]+[.][0-9]+).json' => 'api/nodeinfo/$matches[1].json',
@@ -780,6 +802,66 @@ class Mastodon_API {
 		return $this->get_posts( $args );
 	}
 
+	public function api_account_follow( $request ) {
+		$user_id = $request->get_param( 'user_id' );
+
+		if ( is_numeric( $user_id ) && class_exists( '\Friends\User' ) ) {
+			$user = \Friends\User::get_user_by_id( $user_id );
+			if ( ! $user || is_wp_error( $user ) ) {
+				return array();
+			}
+
+			foreach ( $user->get_feeds() as $feed ) {
+				if ( $feed->get_parser() !== 'activitypub' ) {
+					continue;
+				}
+
+				if ( ! $feed->is_active() ) {
+					$feed->activate();
+				}
+			}
+			$request->set_param( 'id', $user->ID );
+
+			return $this->api_account_relationships( $request );
+		} elseif ( preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id ) ) {
+			$url = $this->get_activitypub_url( $user_id );
+			$new_user_id = apply_filters( 'friends_create_and_follow', $user_id, $url, 'application/activity+json' );
+			if ( is_wp_error( $new_user_id ) ) {
+				return $new_user_id;
+			}
+
+			$request->set_param( 'id', $new_user_id );
+			return $this->api_account_relationships( $request );
+		}
+
+		return new \WP_Error( 'invalid-user', 'Invalid user', array( 'status' => 404 ) );
+	}
+
+	public function api_account_unfollow( $request ) {
+		$user_id = $request->get_param( 'user_id' );
+
+		if ( is_numeric( $user_id ) && class_exists( '\Friends\User' ) ) {
+			$user = \Friends\User::get_user_by_id( $user_id );
+			if ( ! $user || is_wp_error( $user ) ) {
+				return array();
+			}
+
+			foreach ( $user->get_feeds() as $feed ) {
+				if ( $feed->get_parser() !== 'activitypub' ) {
+					continue;
+				}
+				if ( $feed->is_active() ) {
+					$feed->deactivate();
+				}
+			}
+
+			$request->set_param( 'id', $user->ID );
+			return $this->api_account_relationships( $request );
+		}
+
+		return new \WP_Error( 'not-followed', 'Not followed', array( 'status' => 404 ) );
+	}
+
 	public function api_account_relationships( $request ) {
 		$relationships = array();
 		$user_ids = $request->get_param( 'id' );
@@ -809,16 +891,24 @@ class Mastodon_API {
 					continue;
 				}
 
-				if ( $user->has_cap( 'friend' ) ) {
-					$relationship['following'] = true;
-					$relationship['showing_reblogs'] = true;
-				} elseif ( $user->has_cap( 'subscription' ) ) {
-					$relationship['following'] = true;
-					$relationship['showing_reblogs'] = true;
-				} elseif ( $user->has_cap( 'friend_request' ) ) {
-					$relationship['following'] = true;
-					$relationship['showing_reblogs'] = true;
-					$relationship['requested'] = true;
+				if ( $user->has_cap( 'friends_plugin' ) ) {
+					if ( class_exists( '\Friends\User' ) ) {
+						$user = new \Friends\User( $user->ID );
+
+						foreach ( $user->get_feeds() as $feed ) {
+							if ( $feed->get_parser() !== 'activitypub' ) {
+								continue;
+							}
+
+							if ( $feed->is_active() ) {
+								$relationship['following'] = true;
+							}
+						}
+
+						if ( $user->has_cap( 'friend_request' ) ) {
+							$relationship['requested'] = true;
+						}
+					}
 				}
 			} elseif ( preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id ) ) {
 				$relationship['following'] = false;
@@ -1055,21 +1145,23 @@ class Mastodon_API {
 
 	public function get_activitypub_url( $id_or_url ) {
 		$webfinger = $this->webfinger( $id_or_url );
-		if ( empty( $webfinger['aliases'] ) ) {
+		if ( empty( $webfinger['links'] ) ) {
 			return false;
 		}
-		$first_alias = false;
-		foreach ( $webfinger['aliases'] as $alias ) {
-			if ( ! $first_alias ) {
-				$first_alias = $alias;
+		foreach ( $webfinger['links'] as $link ) {
+			if ( ! isset( $link['rel'] ) ) {
+				continue;
 			}
-			if ( strpos( $alias, '@' ) === false ) {
-				return $alias;
+			if ( 'self' === $link['rel'] && 'application/activity+json' === $link['type'] && in_array( $link['href'], $webfinger['aliases'] ) )  {
+				return $link['href'];
 			}
-			return $alias;
 		}
 
-		return $first_alias;
+		if ( ! empty( $webfinger['aliases'] ) ) {
+			return $webfinger['aliases'][0];
+		}
+
+		return false;
 	}
 
 	private function webfinger( $id_or_url ) {
