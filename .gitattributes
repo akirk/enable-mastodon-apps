@@ -6,6 +6,7 @@ bin	export-ignore
 comments.json	export-ignore
 composer.lock	export-ignore
 tests	export-ignore
+phpunit.xml	export-ignore
 package-lock.json	export-ignore
 package.*	export-ignore
 sftp-config.json	export-ignore
