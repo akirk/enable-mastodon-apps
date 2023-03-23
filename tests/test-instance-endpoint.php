@@ -2,26 +2,26 @@
 /**
  * Class Test_Apps_Endpoint
  *
- * @package Mastodon_API
+ * @package MastoAPI
  */
 
-namespace Mastodon_API;
+namespace MastoAPI;
 
 /**
  * A testcase for the apps endpoint.
  *
  * @package
  */
-class InstanceEndpoint_Test extends Mastodon_TestCase {
+class InstanceEndpoint_Test extends MastoAPI_TestCase {
 	public function test_register_routes() {
 		global $wp_rest_server;
 		$routes = $wp_rest_server->get_routes();
-		$this->assertArrayHasKey( '/' . Mastodon_API::PREFIX . '/api/v1/instance', $routes );
+		$this->assertArrayHasKey( '/' . MastoAPI::PREFIX . '/api/v1/instance', $routes );
 	}
 
 	public function test_apps_instance() {
 		global $wp_rest_server;
-		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/instance' );
+		$request = new \WP_REST_Request( 'GET', '/' . MastoAPI::PREFIX . '/api/v1/instance' );
 		$response = $wp_rest_server->dispatch( $request );
 		$this->assertEquals( 200, $response->get_status() );
 
@@ -49,7 +49,7 @@ class InstanceEndpoint_Test extends Mastodon_TestCase {
 
 		$this->assertArrayHasKey( 'version', $data );
 		$this->assertIsString( $data['version'] );
-		$this->assertEquals( $data['version'], MASTODON_API_VERSION );
+		$this->assertEquals( $data['version'], MASTOAPI_VERSION );
 
 		$this->assertFalse( $data['registrations'], false );
 

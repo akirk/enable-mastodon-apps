@@ -1,5 +1,5 @@
 {
-    "name": "akirk/mastodon-api",
+    "name": "akirk/mastoapi",
     "require-dev": {
         "dealerdirect/phpcodesniffer-composer-installer": "*",
         "phpcompatibility/php-compatibility": "*",

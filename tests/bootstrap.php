@@ -2,7 +2,7 @@
 /**
  * PHPUnit bootstrap file
  *
- * @package Mastodon_API
+ * @package MastoAPI
  */
 
 $_tests_dir = getenv( 'WP_TESTS_DIR' );
@@ -39,7 +39,7 @@ function _manually_load_plugin() {
 		require $alternate_friends_plugin;
 	}
 
-	require dirname( dirname( __FILE__ ) ) . '/mastodon-api.php';
+	require dirname( dirname( __FILE__ ) ) . '/mastoapi.php';
 }
 tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
 

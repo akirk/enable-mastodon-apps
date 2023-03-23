@@ -2,17 +2,17 @@
 /**
  * Class Test_Apps_Endpoint
  *
- * @package Mastodon_API
+ * @package MastoAPI
  */
 
-namespace Mastodon_API;
+namespace MastoAPI;
 
 /**
  * A testcase for the apps endpoint.
  *
  * @package
  */
-class AccountsEndpoint_Test extends Mastodon_TestCase {
+class AccountsEndpoint_Test extends MastoAPI_TestCase {
 	private $external_account = 'alex@kirk.at';
 
 	public function set_up() {
@@ -71,16 +71,16 @@ class AccountsEndpoint_Test extends Mastodon_TestCase {
 	public function test_register_routes() {
 		global $wp_rest_server;
 		$routes = $wp_rest_server->get_routes();
-		$this->assertArrayHasKey( '/' . Mastodon_API::PREFIX . '/api/v1/accounts/verify_credentials', $routes );
+		$this->assertArrayHasKey( '/' . MastoAPI::PREFIX . '/api/v1/accounts/verify_credentials', $routes );
 	}
 
 	public function test_accounts_verify_credentials() {
 		global $wp_rest_server;
-		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/accounts/verify_credentials' );
+		$request = new \WP_REST_Request( 'GET', '/' . MastoAPI::PREFIX . '/api/v1/accounts/verify_credentials' );
 		$response = $wp_rest_server->dispatch( $request );
 		$this->assertEquals( 401, $response->get_status() );
 
-		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/accounts/verify_credentials' );
+		$request = new \WP_REST_Request( 'GET', '/' . MastoAPI::PREFIX . '/api/v1/accounts/verify_credentials' );
 		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
 		$response = $wp_rest_server->dispatch( $request );
 		$data = $response->get_data();
@@ -100,11 +100,11 @@ class AccountsEndpoint_Test extends Mastodon_TestCase {
 
 	public function test_accounts_external() {
 		global $wp_rest_server;
-		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/accounts/' . $this->external_account );
+		$request = new \WP_REST_Request( 'GET', '/' . MastoAPI::PREFIX . '/api/v1/accounts/' . $this->external_account );
 		$response = $wp_rest_server->dispatch( $request );
 		$this->assertEquals( 401, $response->get_status() );
 
-		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/accounts/' . $this->external_account );
+		$request = new \WP_REST_Request( 'GET', '/' . MastoAPI::PREFIX . '/api/v1/accounts/' . $this->external_account );
 		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
 		$response = $wp_rest_server->dispatch( $request );
 		$data = $response->get_data();
@@ -114,7 +114,7 @@ class AccountsEndpoint_Test extends Mastodon_TestCase {
 		add_filter( 'mastodon_api_webfinger', array( $this, 'mastodon_api_webfinger' ), 10, 2 );
 		add_filter( 'friends_get_activitypub_metadata', array( $this, 'friends_get_activitypub_metadata' ), 10, 2 );
 
-		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/accounts/' . $this->external_account );
+		$request = new \WP_REST_Request( 'GET', '/' . MastoAPI::PREFIX . '/api/v1/accounts/' . $this->external_account );
 		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
 		$response = $wp_rest_server->dispatch( $request );
 		$data = $response->get_data();

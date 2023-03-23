@@ -1,21 +1,21 @@
 <?php
 /**
- * Plugin name: Mastodon API
+ * Plugin name: MastoAPI
  * Plugin author: Alex Kirk
- * Plugin URI: https://github.com/akirk/mastodon-api
+ * Plugin URI: https://github.com/akirk/mastoapi
  * Version: 0.1.0
  *
  * Description: Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
  *
  * License: GPL2
- * Text Domain: mastodon-api
+ * Text Domain: mastoapi
  *
- * @package Mastodon_API
+ * @package MastoAPI
  */
 
 defined( 'ABSPATH' ) || exit;
-define( 'MASTODON_API_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
-define( 'MASTODON_API_VERSION', '0.1.0' );
+define( 'MASTOAPI_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+define( 'MASTOAPI_VERSION', '0.1.0' );
 
 require __DIR__ . '/vendor/bshaffer/oauth2-server-php/src/OAuth2/Autoloader.php';
 OAuth2\Autoloader::register();
@@ -29,7 +29,7 @@ require_once __DIR__ . '/includes/oauth2/token-handler.php';
 require_once __DIR__ . '/includes/class-mastodon-oauth.php';
 
 require_once __DIR__ . '/includes/class-mastodon-admin.php';
-require_once __DIR__ . '/includes/class-mastodon-api.php';
+require_once __DIR__ . '/includes/class-mastoapi.php';
 require_once __DIR__ . '/includes/class-mastodon-app.php';
 
 if ( apply_filters( 'friends_debug', false ) ) {
@@ -65,6 +65,6 @@ add_filter( 'mastodon_api_new_app_post_formats', 'mastodon_api_pixelfed_post_for
 add_action(
 	'init',
 	function() {
-		new Mastodon_API\Mastodon_API();
+		new MastoAPI\MastoAPI();
 	}
 );

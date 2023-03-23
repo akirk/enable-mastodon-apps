@@ -1,6 +1,6 @@
 <?php
 
-namespace Mastodon_API\OAuth2;
+namespace MastoAPI\OAuth2;
 
 use OAuth2\Storage\AuthorizationCodeInterface;
 

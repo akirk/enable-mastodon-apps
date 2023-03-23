@@ -2,17 +2,17 @@
 /**
  * Class Test_Apps_Endpoint
  *
- * @package Mastodon_API
+ * @package MastoAPI
  */
 
-namespace Mastodon_API;
+namespace MastoAPI;
 
 /**
  * A testcase for the apps endpoint.
  *
  * @package
  */
-class Mastodon_TestCase extends \WP_UnitTestCase {
+class MastoAPI_TestCase extends \WP_UnitTestCase {
 	protected $token;
 	protected $post;
 	public function set_up() {

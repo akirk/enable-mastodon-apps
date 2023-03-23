@@ -7,7 +7,7 @@
  * @package Mastodon_Apps
  */
 
-namespace Mastodon_API;
+namespace MastoAPI;
 
 /**
  * This is the class that implements the Mastodon Apps storage.
@@ -165,9 +165,9 @@ class Mastodon_App {
 	public static function register_taxonomy() {
 		$args = array(
 			'labels'       => array(
-				'name'          => __( 'Mastodon Apps', 'mastodon-api' ),
-				'singular_name' => __( 'Mastodon App', 'mastodon-api' ),
-				'menu_name'     => __( 'Mastodon Apps', 'mastodon-api' ),
+				'name'          => __( 'Mastodon Apps', 'mastoapi' ),
+				'singular_name' => __( 'Mastodon App', 'mastoapi' ),
+				'menu_name'     => __( 'Mastodon Apps', 'mastoapi' ),
 			),
 			'public'       => false,
 			'show_ui'      => false,

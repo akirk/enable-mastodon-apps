@@ -4,10 +4,10 @@
  *
  * This contains the OAuth handlers.
  *
- * @package Mastodon_API
+ * @package MastoAPI
  */
 
-namespace Mastodon_API;
+namespace MastoAPI;
 
 use OAuth2\Server;
 use OAuth2\Request;
@@ -18,7 +18,7 @@ use OAuth2\Response;
  *
  * @since 0.1
  *
- * @package Mastodon_API
+ * @package MastoAPI
  * @author Alex Kirk
  */
 class Mastodon_OAuth {
@@ -46,7 +46,7 @@ class Mastodon_OAuth {
 		$this->server->addStorage( new Oauth2\AccessTokenStorage(), 'access_token' );
 
 		add_action( 'template_redirect', array( $this, 'handle_oauth' ) );
-		add_action( 'login_form_mastodon-api-authenticate', array( $this, 'authenticate_handler' ) );
+		add_action( 'login_form_mastoapi-authenticate', array( $this, 'authenticate_handler' ) );
 	}
 
 	public function handle_oauth() {
