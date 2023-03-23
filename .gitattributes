@@ -9,4 +9,3 @@ tests	export-ignore
 package-lock.json	export-ignore
 package.*	export-ignore
 sftp-config.json	export-ignore
-vendor	export-ignore
