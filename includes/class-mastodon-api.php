@@ -52,7 +52,6 @@ class Mastodon_API {
 		add_action( 'query_vars', array( $this, 'query_vars' ) );
 		add_action( 'rest_api_init', array( $this, 'add_rest_routes' ) );
 		add_filter( 'rest_pre_serve_request', array( $this, 'allow_cors' ), 10, 4 );
-		$this->allow_cors(); // TODO: Remove
 	}
 
 	function allow_cors() {
@@ -182,6 +181,26 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
+			'api/v1/statuses/(?P<post_id>[0-9]+)/favorite',
+			array(
+				'methods'             => array( 'POST', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_favorite_post' ),
+				'permission_callback' => array( $this, 'logged_in_for_private_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/statuses/(?P<post_id>[0-9]+)/unfavorite',
+			array(
+				'methods'             => array( 'POST', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_unfavorite_post' ),
+				'permission_callback' => array( $this, 'logged_in_for_private_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
 			'api/v1/statuses/(?P<post_id>[0-9]+)',
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
@@ -277,6 +296,7 @@ class Mastodon_API {
 			'api/v1/accounts/([^/+])/unfollow'    => 'api/v1/accounts/$matches[1]/unfollow',
 			'api/v1/accounts/([^/+])/statuses'    => 'api/v1/accounts/$matches[1]/statuses',
 			'api/v1/statuses/([0-9]+)/context'    => 'api/v1/statuses/$matches[1]/context',
+			'api/v1/statuses/([0-9]+)/favorite'   => 'api/v1/statuses/$matches[1]/favorite',
 			'api/nodeinfo/([0-9]+[.][0-9]+).json' => 'api/nodeinfo/$matches[1].json',
 			'api/v1/media/([0-9]+)'               => 'api/v1/media/$matches[1]',
 			'api/v1/statuses/([0-9]+)'            => 'api/v1/statuses/$matches[1]',
@@ -439,6 +459,18 @@ class Mastodon_API {
 			return null;
 		}
 
+		$reblogged = get_post_meta( $post->ID, 'reblogged' );
+		$reblogged_by = array();
+		if ( $reblogged ) {
+			$reblog_user_ids = get_post_meta( $post->ID, 'reblogged_by' );
+			if ( ! is_array( $reblog_user_ids ) ) {
+				$reblog_user_ids = array();
+			}
+			$reblogged_by = array_map( function( $user_id ) {
+				return $this->get_friend_account_data( $user_id );
+			}, $reblog_user_ids );
+		}
+
 		$data = array(
 			'id'                     => strval( $post->ID ),
 			'uri'                    => $post->guid,
@@ -450,12 +482,12 @@ class Mastodon_API {
 			'content'                => $post->post_content,
 			'created_at'             => mysql2date( \DateTimeInterface::RFC3339_EXTENDED, $post->post_date, false ),
 			'edited_at'              => null,
-			'emojis'                 => array(),
+			'emojis'                 => apply_filters( 'friends_get_reactions', array(), $post->ID ),
 			'replies_count'          => 0,
 			'reblogs_count'          => 0,
 			'favourites_count'       => 0,
-			'reblogged'              => false,
-			'reblogged_by'           => array(),
+			'reblogged'              => $reblogged,
+			'reblogged_by'           => $reblogged_by,
 			'muted'                  => false,
 			'sensitive'              => false,
 			'spoiler_text'           => '',
@@ -700,6 +732,36 @@ class Mastodon_API {
 			}
 		}
 		return $context;
+	}
+
+	public function api_favorite_post( $request ) {
+		$post_id = $request->get_param( 'post_id' );
+		if ( ! $post_id ) {
+			return false;
+		}
+
+		// 2b50 = star
+		// 2764 = heart
+		apply_filters( 'friends_react', $post_id, '2b50' );
+
+		$post = get_post( $post_id );
+
+		return $this->get_status_array( $post );
+	}
+
+	public function api_unfavorite_post( $request ) {
+		$post_id = $request->get_param( 'post_id' );
+		if ( ! $post_id ) {
+			return false;
+		}
+
+		// 2b50 = star
+		// 2764 = heart
+		apply_filters( 'friends_unreact', $post_id, '2b50' );
+
+		$post = get_post( $post_id );
+
+		return $this->get_status_array( $post );
 	}
 
 	public function api_get_post( $request ) {
