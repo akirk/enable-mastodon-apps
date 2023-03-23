@@ -338,9 +338,13 @@ class MastoAPI {
 		}
 
 		try {
+			$redirect_uris = $request->get_param( 'redirect_uris' );
+			if ( ! $redirect_uris ) {
+				$redirect_uris = '';
+			}
 			$app = Mastodon_App::save(
 				$request->get_param( 'client_name' ),
-				explode( ',', $request->get_param( 'redirect_uris' ) ),
+				explode( ',', $redirect_uris ),
 				$request->get_param( 'scopes' ),
 				$request->get_param( 'website' )
 			);
@@ -480,7 +484,7 @@ class MastoAPI {
 			'in_reply_to_account_id' => null,
 			'reblog'                 => null,
 			'content'                => $post->post_content,
-			'created_at'             => mysql2date( \DateTimeInterface::RFC3339_EXTENDED, $post->post_date, false ),
+			'created_at'             => mysql2date( 'Y-m-d\TH:i:s.uP', $post->post_date, false ),
 			'edited_at'              => null,
 			'emojis'                 => apply_filters( 'friends_get_reactions', array(), $post->ID ),
 			'replies_count'          => 0,
@@ -1110,7 +1114,7 @@ class MastoAPI {
 				'username'        => '',
 				'display_name'    => '',
 				'note'            => '',
-				'created_at'      => date( \DateTimeInterface::RFC3339_EXTENDED ),
+				'created_at'      => date( 'Y-m-d\TH:i:s.uP' ),
 				'followers_count' => 0,
 				'following_count' => 0,
 				'statuses_count'  => 0,
@@ -1189,7 +1193,7 @@ class MastoAPI {
 			'acct'            => isset( $meta['attributedTo']['id'] ) ? $this->get_acct( $meta['attributedTo']['id'] ) : $this->get_user_acct( $user ),
 			'display_name'    => $user->display_name,
 			'locked'          => false,
-			'created_at'      => mysql2date( \DateTimeInterface::RFC3339_EXTENDED, $user->user_registered, false ),
+			'created_at'      => mysql2date( 'Y-m-d\TH:i:s.uP', $user->user_registered, false ),
 			'followers_count' => 0,
 			'following_count' => 0,
 			'statuses_count'  => isset( $posts['status'] ) ? intval( $posts['status'] ) : 0,

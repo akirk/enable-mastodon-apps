@@ -233,6 +233,9 @@ class Mastodon_App {
 			'single'       => true,
 			'type'         => 'string',
 			'sanitize_callback' => function( $value ) {
+				if ( ! is_string( $value ) ) {
+					$value = '';
+				}
 				$scopes = array();
 				foreach ( explode( ' ', $value ) as $scope ) {
 					if ( ! trim( $scope ) ) {
@@ -256,6 +259,9 @@ class Mastodon_App {
 			'single'       => true,
 			'type'         => 'string',
 			'sanitize_callback' => function( $url ) {
+				if ( ! $url ) {
+					return '';
+				}
 				$host = parse_url( $url, PHP_URL_HOST );
 				$protocol = parse_url( $url, PHP_URL_SCHEME );
 

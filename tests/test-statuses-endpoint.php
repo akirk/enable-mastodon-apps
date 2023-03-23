@@ -42,7 +42,7 @@ class StatusesEndpoint_Test extends MastoAPI_TestCase {
 			$this->assertIsInt( $data['in_reply_to_account_id'] );
 		}
 		$this->assertIsString( $data['created_at'] );
-		$this->assertTrue( false !== \DateTime::createFromFormat( \DateTimeInterface::RFC3339_EXTENDED, $data['created_at'] ) );
+		$this->assertTrue( false !== \DateTime::createFromFormat( 'Y-m-d\TH:i:s.uP', $data['created_at'] ) );
 		$this->assertIsInt( $data['replies_count'] );
 		$this->assertIsInt( $data['reblogs_count'] );
 		$this->assertIsInt( $data['favourites_count'] );

@@ -15,6 +15,9 @@ namespace MastoAPI;
 class MastoAPI_TestCase extends \WP_UnitTestCase {
 	protected $token;
 	protected $post;
+	protected $friend_post;
+	protected $administrator;
+	protected $friend;
 	public function set_up() {
 		parent::set_up();
 
