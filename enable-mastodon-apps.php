@@ -1,16 +1,16 @@
 <?php
 /**
- * Plugin name: MastoAPI
+ * Plugin name: Enable Mastodon Apps
  * Plugin author: Alex Kirk
- * Plugin URI: https://github.com/akirk/mastoapi
+ * Plugin URI: https://github.com/akirk/enable-mastodon-apps
  * Version: 0.1.0
  *
  * Description: Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
  *
  * License: GPL2
- * Text Domain: mastoapi
+ * Text Domain: enable-mastodon-apps
  *
- * @package MastoAPI
+ * @package Enable_Mastodon_Apps
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -29,7 +29,7 @@ require_once __DIR__ . '/includes/oauth2/token-handler.php';
 require_once __DIR__ . '/includes/class-mastodon-oauth.php';
 
 require_once __DIR__ . '/includes/class-mastodon-admin.php';
-require_once __DIR__ . '/includes/class-mastoapi.php';
+require_once __DIR__ . '/includes/class-mastodon-api.php';
 require_once __DIR__ . '/includes/class-mastodon-app.php';
 
 if ( apply_filters( 'friends_debug', false ) ) {
@@ -65,6 +65,6 @@ add_filter( 'mastodon_api_new_app_post_formats', 'mastodon_api_pixelfed_post_for
 add_action(
 	'init',
 	function() {
-		new MastoAPI\MastoAPI();
+		new Enable_Mastodon_Apps\Mastodon_API();
 	}
 );

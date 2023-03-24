@@ -2,7 +2,7 @@
 
 // phpcs:disable WordPress.Security.NonceVerification.Missing
 
-namespace MastoAPI\OAuth2;
+namespace Enable_Mastodon_Apps\OAuth2;
 
 use OAuth2\Request;
 use OAuth2\Response;
@@ -31,7 +31,7 @@ class AuthorizeHandler {
 		if ( ! is_user_logged_in() || ! current_user_can( 'edit_private_posts' ) || ! isset( $_POST['authorize'] ) ) {
 			// This is handled by a hook in wp-login.php which will display a form asking the user to consent.
 			// TODO: Redirect with $response->setRedirect().
-			wp_safe_redirect( add_query_arg( array_map( 'rawurlencode', array_merge( $request->getAllQueryParameters(), array( 'action' => 'mastoapi-authenticate' ) ) ), wp_login_url() ) );
+			wp_safe_redirect( add_query_arg( array_map( 'rawurlencode', array_merge( $request->getAllQueryParameters(), array( 'action' => 'enable-mastodon-apps-authenticate' ) ) ), wp_login_url() ) );
 			exit;
 		}
 

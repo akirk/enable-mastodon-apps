@@ -2,7 +2,7 @@
 /**
  * PHPUnit bootstrap file
  *
- * @package MastoAPI
+ * @package Enable_Mastodon_Apps
  */
 
 $_tests_dir = getenv( 'WP_TESTS_DIR' );
@@ -39,7 +39,7 @@ function _manually_load_plugin() {
 		require $alternate_friends_plugin;
 	}
 
-	require dirname( dirname( __FILE__ ) ) . '/mastoapi.php';
+	require dirname( dirname( __FILE__ ) ) . '/enable-mastodon-apps.php';
 }
 tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
 
@@ -48,7 +48,7 @@ ob_start();
 
 // Start up the WP testing environment.
 require $_tests_dir . '/includes/bootstrap.php';
-require_once __DIR__ . "/class-mastoapi-testcase.php";
+require_once __DIR__ . "/class-enable-mastodon-apps-testcase.php";
 ob_end_clean();
 
 // Make sure to be able to query these hosts.

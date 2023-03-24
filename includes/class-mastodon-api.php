@@ -4,20 +4,20 @@
  *
  * This contains the REST API handlers.
  *
- * @package MastoAPI
+ * @package Enable_Mastodon_Apps
  */
 
-namespace MastoAPI;
+namespace Enable_Mastodon_Apps;
 
 /**
  * This is the class that implements the Mastodon API endpoints.
  *
  * @since 0.1
  *
- * @package MastoAPI
+ * @package Enable_Mastodon_Apps
  * @author Alex Kirk
  */
-class MastoAPI {
+class Mastodon_API {
 	const ACTIVITYPUB_USERNAME_REGEXP = '(?:([A-Za-z0-9_-]+)@((?:[A-Za-z0-9_-]+\.)+[A-Za-z]+))';
 	const VERSION = MASTOAPI_VERSION;
 	/**
@@ -34,7 +34,7 @@ class MastoAPI {
 	 */
 	private $app;
 
-	const PREFIX = 'mastoapi';
+	const PREFIX = 'enable-mastodon-apps';
 	const APP_TAXONOMY = 'mastodon-app';
 
 	/**
@@ -272,7 +272,7 @@ class MastoAPI {
 	}
 
 	public function query_vars( $query_vars ) {
-		$query_vars[] = 'mastoapi';
+		$query_vars[] = 'enable-mastodon-apps';
 		return $query_vars;
 	}
 
@@ -1096,7 +1096,7 @@ class MastoAPI {
 
 	private function get_friend_account_data( $user_id, $meta = array() ) {
 		$cache_key = 'account-' . $user_id;
-		$ret = wp_cache_get( $cache_key, 'mastoapi' );
+		$ret = wp_cache_get( $cache_key, 'enable-mastodon-apps' );
 		if ( false !== $ret ) {
 			return $ret;
 		}
@@ -1110,7 +1110,7 @@ class MastoAPI {
 			}
 			if ( ! $url ) {
 				$data = new \WP_Error( 'user-not-found', 'User not found.', array( 'status' => 404 ) );
-				wp_cache_set( $cache_key, $data, 'mastoapi' );
+				wp_cache_set( $cache_key, $data, 'enable-mastodon-apps' );
 				return $data;
 			}
 			$account = $this->get_acct( $user_id );
@@ -1166,7 +1166,7 @@ class MastoAPI {
 				}
 			}
 
-			wp_cache_set( $cache_key, $data, 'mastoapi' );
+			wp_cache_set( $cache_key, $data, 'enable-mastodon-apps' );
 
 			return $data;
 		}
@@ -1179,7 +1179,7 @@ class MastoAPI {
 			$user = new \WP_User( $user_id );
 			if ( ! $user || is_wp_error( $user ) ) {
 				$data = new \WP_Error( 'user-not-found', 'User not found.', array( 'status' => 404 ) );
-				wp_cache_set( $cache_key, $data, 'mastoapi' );
+				wp_cache_set( $cache_key, $data, 'enable-mastodon-apps' );
 				return $data;
 			}
 		}
@@ -1235,7 +1235,7 @@ class MastoAPI {
 			}
 		}
 
-		wp_cache_set( $cache_key, $data, 'mastoapi' );
+		wp_cache_set( $cache_key, $data, 'enable-mastodon-apps' );
 		return $data;
 	}
 
@@ -1330,7 +1330,7 @@ class MastoAPI {
 		global $wp_version;
 		$software = array(
 			'name'    => 'WordPress/' . $wp_version . ' with Mastodon-API Plugin',
-			'version' => MastoAPI::VERSION,
+			'version' => Mastodon_API::VERSION,
 		);
 		$software = apply_filters( 'mastodon_api_nodeinfo_software', $software );
 		$ret = array(

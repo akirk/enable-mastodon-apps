@@ -1,8 +1,8 @@
 <?php
 
-namespace MastoAPI\OAuth2;
+namespace Enable_Mastodon_Apps\OAuth2;
 
-use MastoAPI\Mastodon_App;
+use Mastodon_API\Mastodon_App;
 use OAuth2\Storage\ClientCredentialsInterface;
 
 class MastodonAppStorage implements ClientCredentialsInterface {

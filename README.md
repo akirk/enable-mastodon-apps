@@ -1,4 +1,4 @@
-# MastoAPI
+# Mastodon_API
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 

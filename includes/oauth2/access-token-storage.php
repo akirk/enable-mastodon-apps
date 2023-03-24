@@ -5,7 +5,7 @@
  * @package Friends
  */
 
-namespace MastoAPI\OAuth2;
+namespace Enable_Mastodon_Apps\OAuth2;
 
 use OAuth2\Storage\AccessTokenInterface;
 

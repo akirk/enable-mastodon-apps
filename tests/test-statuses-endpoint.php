@@ -2,26 +2,26 @@
 /**
  * Class Test_Apps_Endpoint
  *
- * @package MastoAPI
+ * @package Enable_Mastodon_Apps
  */
 
-namespace MastoAPI;
+namespace Enable_Mastodon_Apps;
 
 /**
  * A testcase for the apps endpoint.
  *
  * @package
  */
-class StatusesEndpoint_Test extends MastoAPI_TestCase {
+class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 	public function test_register_routes() {
 		global $wp_rest_server;
 		$routes = $wp_rest_server->get_routes();
-		$this->assertArrayHasKey( '/' . MastoAPI::PREFIX . '/api/v1/statuses', $routes );
+		$this->assertArrayHasKey( '/' . Mastodon_API::PREFIX . '/api/v1/statuses', $routes );
 	}
 
 	public function test_statuses_id() {
 		global $wp_rest_server;
-		$request = new \WP_REST_Request( 'GET', '/' . MastoAPI::PREFIX . '/api/v1/statuses/' . $this->friend_post );
+		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/statuses/' . $this->friend_post );
 		$response = $wp_rest_server->dispatch( $request );
 		$this->assertEquals( 200, $response->get_status() );
 

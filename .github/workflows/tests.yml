@@ -1,4 +1,4 @@
-name: Mastodon API Tests
+name: Tests
 on: [push]
 jobs:
   build:

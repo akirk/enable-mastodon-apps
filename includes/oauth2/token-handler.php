@@ -1,6 +1,6 @@
 <?php
 
-namespace MastoAPI\OAuth2;
+namespace Enable_Mastodon_Apps\OAuth2;
 
 use OAuth2\Request;
 use OAuth2\Response;

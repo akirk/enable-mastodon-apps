@@ -1,8 +1,8 @@
 <?php
 
-namespace MastoAPI\OAuth2;
+namespace Enable_Mastodon_Apps\OAuth2;
 
-use MastoAPI\Mastodon_App;
+use Mastodon_API\Mastodon_App;
 use OAuth2\Request;
 use OAuth2\Response;
 
@@ -41,7 +41,7 @@ class AuthenticateHandler {
 
 		$has_permission = current_user_can( 'edit_private_posts' );
 		if ( ! $has_permission ) {
-			login_header( 'Authorize Mastodon Client', null, new \WP_Error( 'no-permission', __( "You don't have permission to use Mastodon-API.", 'mastoapi' ) ) );
+			login_header( 'Authorize Mastodon Client', null, new \WP_Error( 'no-permission', __( "You don't have permission to use Mastodon-API.", 'enable-mastodon-apps' ) ) );
 			$this->render_no_permission_screen( $data );
 		} else {
 			login_header( 'Authorize Mastodon Client' );
@@ -63,20 +63,20 @@ class AuthenticateHandler {
 						echo esc_html(
 							sprintf(
 							// translators: %s is a username.
-								__( 'Hi %s!', 'mastoapi' ),
+								__( 'Hi %s!', 'enable-mastodon-apps' ),
 								$data['user']->user_nicename
 							)
 						);
 						?>
 					</h2>
 					<br/>
-					<p><?php esc_html_e( "You don't have permission to use the Mastodon API.", 'mastoapi' ); ?></p>
+					<p><?php esc_html_e( "You don't have permission to use the Mastodon API.", 'enable-mastodon-apps' ); ?></p>
 					<br/>
-					<p><?php esc_html_e( 'Contact your administrator for more details.', 'mastoapi' ); ?></p>
+					<p><?php esc_html_e( 'Contact your administrator for more details.', 'enable-mastodon-apps' ); ?></p>
 					<br/>
 					<p class="submit">
 						<a class="button button-large" href="<?php echo esc_url( $data['cancel_url'] ); ?>" target="_top">
-							<?php esc_html_e( 'Cancel', 'mastoapi' ); ?>
+							<?php esc_html_e( 'Cancel', 'enable-mastodon-apps' ); ?>
 						</a>
 					</p>
 				</form>
@@ -95,7 +95,7 @@ class AuthenticateHandler {
 						echo esc_html(
 							sprintf(
 							// translators: %s is a username.
-								__( 'Hi %s!', 'mastoapi' ),
+								__( 'Hi %s!', 'enable-mastodon-apps' ),
 								$data['user']->user_nicename
 							)
 						);
@@ -108,7 +108,7 @@ class AuthenticateHandler {
 							echo wp_kses(
 								sprintf(
 								// translators: %1$s is the site name, %2$s is the username.
-									__( 'Do you want to log in to <em>%1$s</em> with your <em>%2$s</em> account?', 'mastoapi' ),
+									__( 'Do you want to log in to <em>%1$s</em> with your <em>%2$s</em> account?', 'enable-mastodon-apps' ),
 									$data['client_name'],
 									get_bloginfo( 'name' )
 								),
@@ -125,9 +125,9 @@ class AuthenticateHandler {
 						<input type="hidden" name="<?php echo esc_attr( $key ); ?>" value="<?php echo esc_attr( $value ); ?>"/>
 					<?php endforeach; ?>
 					<p class="submit">
-						<input type="submit" name="authorize" class="button button-primary button-large" value="<?php esc_attr_e( 'Authorize', 'mastoapi' ); ?>"/>
+						<input type="submit" name="authorize" class="button button-primary button-large" value="<?php esc_attr_e( 'Authorize', 'enable-mastodon-apps' ); ?>"/>
 						<a href="<?php echo esc_url( $data['cancel_url'] ); ?>" target="_top">
-							<?php esc_html_e( 'Cancel', 'mastoapi' ); ?>
+							<?php esc_html_e( 'Cancel', 'enable-mastodon-apps' ); ?>
 						</a>
 					</p>
 				</form>

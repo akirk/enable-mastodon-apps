@@ -1,5 +1,5 @@
 <?php
-namespace MastoAPI;
+namespace Enable_Mastodon_Apps;
 
 /**
  * The admin-specific functionality of the plugin.
@@ -21,71 +21,71 @@ class Mastodon_Admin {
 		if ( $friends_settings_exist && class_exists( '\Friends\Friends' )  ) {
 			add_submenu_page(
 				'friends',
-				__( 'Mastodon API', 'mastoapi' ),
-				__( 'Mastodon API', 'mastoapi' ),
+				__( 'Mastodon', 'enable-mastodon-apps' ),
+				__( 'Mastodon', 'enable-mastodon-apps' ),
 				'edit_private_posts',
-				'mastoapi',
+				'enable-mastodon-apps',
 				array( $this, 'admin_page' )
 			);
 			$menu_title = __( 'Friends', 'friends' ) . \Friends\Friends::get_instance()->admin->get_unread_badge();
 			$page_type = sanitize_title( $menu_title );
 		} else {
 			add_options_page(
-				__( 'Mastodon API', 'mastoapi' ),
-				__( 'Mastodon API', 'mastoapi' ),
+				__( 'Mastodon', 'enable-mastodon-apps' ),
+				__( 'Mastodon', 'enable-mastodon-apps' ),
 				'edit_private_posts',
-				'mastoapi',
+				'enable-mastodon-apps',
 				array( $this, 'admin_page' )
 			);
 		}
-		add_action( 'load-' . $page_type . '_page_mastoapi', array( $this, 'process_admin' ) );
+		add_action( 'load-' . $page_type . '_page_enable-mastodon-apps', array( $this, 'process_admin' ) );
 	}
 
 	public function process_admin() {
 		if ( ! current_user_can( 'edit_private_posts' ) ) {
-			wp_die( esc_html__( 'Sorry, you are not allowed to change the settings.', 'mastoapi' ) );
+			wp_die( esc_html__( 'Sorry, you are not allowed to change the settings.', 'enable-mastodon-apps' ) );
 		}
 
 		if ( empty( $_POST ) ) {
 			return;
 		}
 
-		if ( ! wp_verify_nonce( $_POST['_wpnonce'], 'mastoapi' ) ) {
+		if ( ! wp_verify_nonce( $_POST['_wpnonce'], 'enable-mastodon-apps' ) ) {
 			return;
 		}
 
 		if ( isset( $_POST['delete-code'] ) ) {
 			$deleted = $this->oauth->get_code_storage()->expireAuthorizationCode( $_POST['delete-code'] );
-			add_settings_error( 'mastoapi', 'deleted-codes', sprintf( _n( 'Deleted %d authorization code.', 'Deleted %d authorization codes.', $deleted ? 1 : 0, 'mastoapi' ), $deleted ? 1 : 0 ) );
+			add_settings_error( 'enable-mastodon-apps', 'deleted-codes', sprintf( _n( 'Deleted %d authorization code.', 'Deleted %d authorization codes.', $deleted ? 1 : 0, 'enable-mastodon-apps' ), $deleted ? 1 : 0 ) );
 			return;
 		}
 
 		if ( isset( $_POST['delete-token'] ) ) {
 			$deleted = $this->oauth->get_token_storage()->unsetAccessToken( $_POST['delete-token'] );
-			add_settings_error( 'mastoapi', 'deleted-tokens', sprintf( _n( 'Deleted %d access token.', 'Deleted %d access tokens.', $deleted ? 1 : 0, 'mastoapi' ), $deleted ? 1 : 0 ) );
+			add_settings_error( 'enable-mastodon-apps', 'deleted-tokens', sprintf( _n( 'Deleted %d access token.', 'Deleted %d access tokens.', $deleted ? 1 : 0, 'enable-mastodon-apps' ), $deleted ? 1 : 0 ) );
 			return;
 		}
 
 		if ( isset( $_POST['delete-app'] ) ) {
 			$deleted = Mastodon_App::get_by_client_id( $_POST['delete-app'] )->delete();
-			add_settings_error( 'mastoapi', 'deleted-apps', sprintf( _n( 'Deleted %d app.', 'Deleted %d apps.', $deleted ? 1 : 0, 'mastoapi' ), $deleted ? 1 : 0 ) );
+			add_settings_error( 'enable-mastodon-apps', 'deleted-apps', sprintf( _n( 'Deleted %d app.', 'Deleted %d apps.', $deleted ? 1 : 0, 'enable-mastodon-apps' ), $deleted ? 1 : 0 ) );
 			return;
 		}
 
 		if ( isset( $_POST['delete-outdated'] ) ) {
 			$deleted = OAuth2\AccessTokenStorage::cleanupOldTokens();
 			if ( $deleted ) {
-				add_settings_error( 'mastoapi', 'deleted-tokens', sprintf( _n( 'Deleted %d access token.', 'Deleted %d access tokens.', $deleted, 'mastoapi' ), $deleted ) );
+				add_settings_error( 'enable-mastodon-apps', 'deleted-tokens', sprintf( _n( 'Deleted %d access token.', 'Deleted %d access tokens.', $deleted, 'enable-mastodon-apps' ), $deleted ) );
 			}
 
 			$deleted = OAuth2\AuthorizationCodeStorage::cleanupOldCodes();
 			if ( $deleted ) {
-				add_settings_error( 'mastoapi', 'deleted-codes', sprintf( _n( 'Deleted %d authorization code.', 'Deleted %d authorization codes.', $deleted, 'mastoapi' ), $deleted ) );
+				add_settings_error( 'enable-mastodon-apps', 'deleted-codes', sprintf( _n( 'Deleted %d authorization code.', 'Deleted %d authorization codes.', $deleted, 'enable-mastodon-apps' ), $deleted ) );
 			}
 
 			$deleted = Mastodon_App::delete_outdated();
 			if ( $deleted ) {
-				add_settings_error( 'mastoapi', 'deleted-apps', sprintf( _n( 'Deleted %d app.', 'Deleted %d apps.', $deleted, 'mastoapi' ), $deleted ) );
+				add_settings_error( 'enable-mastodon-apps', 'deleted-apps', sprintf( _n( 'Deleted %d app.', 'Deleted %d apps.', $deleted, 'enable-mastodon-apps' ), $deleted ) );
 			}
 			return;
 		}
@@ -181,29 +181,29 @@ class Mastodon_Admin {
 		}
 		?>
 		<div class="wrap">
-		<h1><?php esc_html_e( 'Mastodon API', 'mastoapi' ); ?></h1>
+		<h1><?php esc_html_e( 'Mastodon', 'enable-mastodon-apps' ); ?></h1>
 		<?php settings_errors(); ?>
 
 		<form method="post">
-			<?php wp_nonce_field( 'mastoapi' ); ?>
+			<?php wp_nonce_field( 'enable-mastodon-apps' ); ?>
 			<table class="form-table">
 				<tbody>
 					<tr>
-						<th scope="row"><?php esc_html_e( 'Enable Logins', 'mastoapi' ); ?></th>
+						<th scope="row"><?php esc_html_e( 'Enable Logins', 'enable-mastodon-apps' ); ?></th>
 						<td>
 							<fieldset>
 								<label for="mastodon_api_enable_logins">
 									<input name="mastodon_api_enable_logins" type="checkbox" id="mastodon_api_enable_logins" value="1" <?php checked( '1', ! get_option( 'mastodon_api_disable_logins' ) ); ?> />
-									<?php esc_html_e( 'Allow new logins via the Mastodon API', 'mastoapi' ); ?>
+									<?php esc_html_e( 'Allow new logins via the Mastodon API', 'enable-mastodon-apps' ); ?>
 								</label>
 							</fieldset>
 						</td>
 					</tr>
 					<tr>
-						<th scope="row"><?php esc_html_e( 'Default Post Formats', 'mastoapi' ); ?></th>
+						<th scope="row"><?php esc_html_e( 'Default Post Formats', 'enable-mastodon-apps' ); ?></th>
 						<td>
 							<details>
-								<summary style="cursor: pointer"><?php esc_html_e( 'Change the post formats new apps will receive by default.', 'mastoapi' ); ?></summary>
+								<summary style="cursor: pointer"><?php esc_html_e( 'Change the post formats new apps will receive by default.', 'enable-mastodon-apps' ); ?></summary>
 								<fieldset>
 									<label for="mastodon_api_default_post_formats">
 										<?php $this->post_format_select( 'mastodon_api_default_post_formats', get_option( 'mastodon_api_default_post_formats', array( 'status' ) ) ); ?>
@@ -217,16 +217,16 @@ class Mastodon_Admin {
 
 			<button class="button button-primary"><?php esc_html_e( 'Save' ); ?></button>
 			<?php if ( ! empty( $codes ) ) : ?>
-				<h2><?php esc_html_e( 'Authorization Codes', 'mastoapi' ); ?></h2>
+				<h2><?php esc_html_e( 'Authorization Codes', 'enable-mastodon-apps' ); ?></h2>
 
 				<table class="widefat striped">
 					<thead>
-						<th><?php esc_html_e( 'App', 'mastoapi' ); ?></th>
-						<th><?php esc_html_e( 'Redirect URI', 'mastoapi' ); ?></th>
-						<th><?php esc_html_e( 'Expires', 'mastoapi' ); ?></th>
-						<th><?php esc_html_e( 'Expired', 'mastoapi' ); ?></th>
-						<th><?php esc_html_e( 'Scope', 'mastoapi' ); ?></th>
-						<th><?php esc_html_e( 'Actions', 'mastoapi' ); ?></th>
+						<th><?php esc_html_e( 'App', 'enable-mastodon-apps' ); ?></th>
+						<th><?php esc_html_e( 'Redirect URI', 'enable-mastodon-apps' ); ?></th>
+						<th><?php esc_html_e( 'Expires', 'enable-mastodon-apps' ); ?></th>
+						<th><?php esc_html_e( 'Expired', 'enable-mastodon-apps' ); ?></th>
+						<th><?php esc_html_e( 'Scope', 'enable-mastodon-apps' ); ?></th>
+						<th><?php esc_html_e( 'Actions', 'enable-mastodon-apps' ); ?></th>
 					</thead>
 					<tbody>
 						<?php
@@ -256,14 +256,14 @@ class Mastodon_Admin {
 			<?php endif; ?>
 
 			<?php if ( ! empty( $tokens ) ) : ?>
-				<h2><?php esc_html_e( 'Access Tokens', 'mastoapi' ); ?></h2>
+				<h2><?php esc_html_e( 'Access Tokens', 'enable-mastodon-apps' ); ?></h2>
 				<table class="widefat striped">
 					<thead>
-						<th><?php esc_html_e( 'App', 'mastoapi' ); ?></th>
-						<th><?php esc_html_e( 'Expires', 'mastoapi' ); ?></th>
-						<th><?php esc_html_e( 'Expired', 'mastoapi' ); ?></th>
-						<th><?php esc_html_e( 'Scope', 'mastoapi' ); ?></th>
-						<th><?php esc_html_e( 'Actions', 'mastoapi' ); ?></th>
+						<th><?php esc_html_e( 'App', 'enable-mastodon-apps' ); ?></th>
+						<th><?php esc_html_e( 'Expires', 'enable-mastodon-apps' ); ?></th>
+						<th><?php esc_html_e( 'Expired', 'enable-mastodon-apps' ); ?></th>
+						<th><?php esc_html_e( 'Scope', 'enable-mastodon-apps' ); ?></th>
+						<th><?php esc_html_e( 'Actions', 'enable-mastodon-apps' ); ?></th>
 					</thead>
 					<tbody>
 						<?php
@@ -292,17 +292,17 @@ class Mastodon_Admin {
 			<?php endif; ?>
 
 			<?php if ( ! empty( $apps ) ) : ?>
-				<h2><?php esc_html_e( 'Apps', 'mastoapi' ); ?></h2>
+				<h2><?php esc_html_e( 'Apps', 'enable-mastodon-apps' ); ?></h2>
 
 				<table class="widefat striped">
 					<thead>
-						<th><?php esc_html_e( 'Name', 'mastoapi' ); ?></th>
-						<th><?php esc_html_e( 'Redirect URI', 'mastoapi' ); ?></th>
-						<th><?php esc_html_e( 'Scope', 'mastoapi' ); ?></th>
-						<th><?php esc_html_e( 'Post Formats', 'mastoapi' ); ?></th>
-						<th><?php esc_html_e( 'Last Used', 'mastoapi' ); ?></th>
-						<th><?php esc_html_e( 'Created', 'mastoapi' ); ?></th>
-						<th><?php esc_html_e( 'Actions', 'mastoapi' ); ?></th>
+						<th><?php esc_html_e( 'Name', 'enable-mastodon-apps' ); ?></th>
+						<th><?php esc_html_e( 'Redirect URI', 'enable-mastodon-apps' ); ?></th>
+						<th><?php esc_html_e( 'Scope', 'enable-mastodon-apps' ); ?></th>
+						<th><?php esc_html_e( 'Post Formats', 'enable-mastodon-apps' ); ?></th>
+						<th><?php esc_html_e( 'Last Used', 'enable-mastodon-apps' ); ?></th>
+						<th><?php esc_html_e( 'Created', 'enable-mastodon-apps' ); ?></th>
+						<th><?php esc_html_e( 'Actions', 'enable-mastodon-apps' ); ?></th>
 					</thead>
 					<tbody>
 						<?php
@@ -341,8 +341,8 @@ class Mastodon_Admin {
 			<?php endif; ?>
 
 			<?php if ( ! empty( $codes ) || ! empty( $tokens ) || ! empty( $apps ) ) : ?>
-				<h2><?php esc_html_e( 'Cleanup', 'mastoapi' ); ?></h2>
-					<button name="delete-outdated" class="button"><?php esc_html_e( 'Delete outdated apps and tokens', 'mastoapi' ); ?></button>
+				<h2><?php esc_html_e( 'Cleanup', 'enable-mastodon-apps' ); ?></h2>
+					<button name="delete-outdated" class="button"><?php esc_html_e( 'Delete outdated apps and tokens', 'enable-mastodon-apps' ); ?></button>
 			<?php endif; ?>
 			</form>
 		</div>
