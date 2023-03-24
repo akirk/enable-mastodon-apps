@@ -69,7 +69,7 @@ class AppsEndpoint_Test extends Mastodon_API_TestCase {
 
 		foreach ( array(
 			'',
-			'test',
+			'te',
 		) as $invalid_client_name ) {
 			$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/apps' );
 			$request->set_param( 'client_name', 'test123' );
