@@ -96,12 +96,14 @@ class Mastodon_App {
 	}
 
 	public function check_redirect_uri( $redirect_uri ) {
+		error_log('redirect_uri: '. $redirect_uri );
 		$redirect_uris = $this->get_redirect_uris();
 		if ( ! is_array( $redirect_uris ) ) {
 			$redirect_uris = array( $redirect_uris );
 		}
 
 		foreach ( $redirect_uris as $uri ) {
+		error_log('compare: '. $uri );
 			if ( $uri === $redirect_uri ) {
 				return true;
 			}
@@ -202,7 +204,7 @@ class Mastodon_App {
 				foreach ( $value as $url ) {
 					if ( Mastodon_OAuth::OOB_REDIRECT_URI === $url ) {
 						$urls[] = $url;
-					} elseif ( preg_match( '#[a-z0-9.-]+://[a-z0-9.-]+#i', $url ) ) {
+					} elseif ( preg_match( '#^[a-z0-9.-]+://[a-z0-9.-%]+#i', $url ) ) {
 						// custom protocols are ok.
 						$urls[] = $url;
 					}

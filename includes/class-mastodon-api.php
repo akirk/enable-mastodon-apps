@@ -92,7 +92,7 @@ class Mastodon_API {
 			'api/v1/statuses/([0-9]+)'            => 'api/v1/statuses/$matches[1]',
 			'api/v1/statuses'                     => 'api/v1/statuses',
 			'api/v1/accounts/(.+)'                => 'api/v1/accounts/$matches[1]',
-			'api/v1/timelines/(home)'             => 'api/v1/timelines/$matches[1]',
+			'api/v1/timelines/(home|public)'      => 'api/v1/timelines/$matches[1]',
 		);
 
 		foreach ( $generic as $rule ) {
@@ -266,6 +266,16 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_timelines' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/timelines/(public)',
+			array(
+				'methods'             => array( 'GET', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_public_timeline' ),
 				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
@@ -684,6 +694,10 @@ class Mastodon_API {
 		$args = apply_filters( 'mastodon_api_timelines_args', $args, $request );
 
 		return $this->get_posts( $args, $request->get_param( 'max_id' ) );
+	}
+
+	public function api_public_timeline( $request ) {
+		return array();
 	}
 
 	public function api_get_post_context( $request ) {

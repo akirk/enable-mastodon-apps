@@ -157,7 +157,9 @@ class Mastodon_Admin {
 			<td>
 				<abbr title="<?php echo esc_attr( is_int( $timestamp ) ? date( 'r', $timestamp ) : $timestamp ); ?>">
 					<?php
-					if ( $timestamp > time() ) {
+					if ( ! $timestamp ) {
+						esc_html_e( 'Never' );
+					} elseif ( $timestamp > time() ) {
 						echo esc_html(
 							sprintf(
 								// translators: %s is a relative time

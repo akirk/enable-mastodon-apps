@@ -9,7 +9,7 @@ class AuthorizationCodeStorage implements AuthorizationCodeInterface {
 
 	private static $authorization_code_data = array(
 		'client_id'    => 'string', // client identifier.
-		'redirect_uri' => 'string', // redirect URI.
+		'redirect_uri' => 'url', // redirect URI.
 		'expires'      => 'int',    // expires as unix timestamp.
 		'scope'        => 'string', // scope as space-separated string.
 	);
@@ -96,6 +96,8 @@ class AuthorizationCodeStorage implements AuthorizationCodeInterface {
 			foreach ( self::$authorization_code_data as $key => $data_type ) {
 				if ( 'int' === $data_type ) {
 					$value = absint( $$key );
+				} elseif ( 'url' === $data_type ) {
+					$value = strval( $$key );
 				} else {
 					$value = sanitize_text_field( $$key );
 				}
@@ -114,6 +116,8 @@ class AuthorizationCodeStorage implements AuthorizationCodeInterface {
 		foreach ( array_keys( self::$authorization_code_data ) as $key ) {
 			delete_user_meta( $user_id, self::META_KEY_PREFIX . '_' . $key . '_' . $code );
 		}
+
+		return true;
 	}
 
 	/**
