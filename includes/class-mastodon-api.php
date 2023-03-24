@@ -65,6 +65,57 @@ class Mastodon_API {
 		}
 	}
 
+	public function rewrite_rules() {
+		$existing_rules = get_option( 'rewrite_rules' );
+		$needs_flush = false;
+
+		$generic = array(
+			'api/v1/accounts/relationships',
+			'api/v1/accounts/verify_credentials',
+			'api/v1/announcements',
+			'api/v1/apps',
+			'api/v1/custom_emojis',
+			'api/v1/filters',
+			'api/v1/instance',
+			'api/v1/lists',
+			'api/v2/media',
+		);
+		$parametrized = array(
+			'api/v1/accounts/([^/+])/follow'      => 'api/v1/accounts/$matches[1]/follow',
+			'api/v1/accounts/([^/+])/unfollow'    => 'api/v1/accounts/$matches[1]/unfollow',
+			'api/v1/accounts/([^/+])/statuses'    => 'api/v1/accounts/$matches[1]/statuses',
+			'api/v1/statuses/([0-9]+)/context'    => 'api/v1/statuses/$matches[1]/context',
+			'api/v1/statuses/([0-9]+)/favourite'   => 'api/v1/statuses/$matches[1]/favourite',
+			'api/v1/statuses/([0-9]+)/unfavourite'   => 'api/v1/statuses/$matches[1]/unfavourite',
+			'api/nodeinfo/([0-9]+[.][0-9]+).json' => 'api/nodeinfo/$matches[1].json',
+			'api/v1/media/([0-9]+)'               => 'api/v1/media/$matches[1]',
+			'api/v1/statuses/([0-9]+)'            => 'api/v1/statuses/$matches[1]',
+			'api/v1/statuses'                     => 'api/v1/statuses',
+			'api/v1/accounts/(.+)'                => 'api/v1/accounts/$matches[1]',
+			'api/v1/timelines/(home)'             => 'api/v1/timelines/$matches[1]',
+		);
+
+		foreach ( $generic as $rule ) {
+			if ( empty( $existing_rules[ $rule ] ) ) {
+				// Add a specific rewrite rule so that we can also catch requests without our prefix.
+				$needs_flush = true;
+			}
+			add_rewrite_rule( $rule, 'index.php?rest_route=/' . self::PREFIX . '/' . $rule, 'top' );
+		}
+
+		foreach ( $parametrized as $rule => $rewrite ) {
+			if ( empty( $existing_rules[ $rule ] ) ) {
+				// Add a specific rewrite rule so that we can also catch requests without our prefix.
+				$needs_flush = true;
+			}
+			add_rewrite_rule( $rule, 'index.php?rest_route=/' . self::PREFIX . '/' . $rewrite, 'top' );
+		}
+
+		if ( $needs_flush ) {
+			global $wp_rewrite;
+			$wp_rewrite->flush_rules();
+		}
+	}
 	public function add_rest_routes() {
 		register_rest_route(
 			self::PREFIX,
@@ -274,57 +325,6 @@ class Mastodon_API {
 	public function query_vars( $query_vars ) {
 		$query_vars[] = 'enable-mastodon-apps';
 		return $query_vars;
-	}
-
-	public function rewrite_rules() {
-		$existing_rules = get_option( 'rewrite_rules' );
-		$needs_flush = false;
-
-		$generic = array(
-			'api/v1/accounts/relationships',
-			'api/v1/accounts/verify_credentials',
-			'api/v1/announcements',
-			'api/v1/apps',
-			'api/v1/custom_emojis',
-			'api/v1/filters',
-			'api/v1/instance',
-			'api/v1/lists',
-			'api/v2/media',
-		);
-		$parametrized = array(
-			'api/v1/accounts/([^/+])/follow'      => 'api/v1/accounts/$matches[1]/follow',
-			'api/v1/accounts/([^/+])/unfollow'    => 'api/v1/accounts/$matches[1]/unfollow',
-			'api/v1/accounts/([^/+])/statuses'    => 'api/v1/accounts/$matches[1]/statuses',
-			'api/v1/statuses/([0-9]+)/context'    => 'api/v1/statuses/$matches[1]/context',
-			'api/v1/statuses/([0-9]+)/favourite'   => 'api/v1/statuses/$matches[1]/favourite',
-			'api/nodeinfo/([0-9]+[.][0-9]+).json' => 'api/nodeinfo/$matches[1].json',
-			'api/v1/media/([0-9]+)'               => 'api/v1/media/$matches[1]',
-			'api/v1/statuses/([0-9]+)'            => 'api/v1/statuses/$matches[1]',
-			'api/v1/statuses'                     => 'api/v1/statuses',
-			'api/v1/accounts/(.+)'                => 'api/v1/accounts/$matches[1]',
-			'api/v1/timelines/(home)'             => 'api/v1/timelines/$matches[1]',
-		);
-
-		foreach ( $generic as $rule ) {
-			if ( empty( $existing_rules[ $rule ] ) ) {
-				// Add a specific rewrite rule so that we can also catch requests without our prefix.
-				$needs_flush = true;
-			}
-			add_rewrite_rule( $rule, 'index.php?rest_route=/' . self::PREFIX . '/' . $rule, 'top' );
-		}
-
-		foreach ( $parametrized as $rule => $rewrite ) {
-			if ( empty( $existing_rules[ $rule ] ) ) {
-				// Add a specific rewrite rule so that we can also catch requests without our prefix.
-				$needs_flush = true;
-			}
-			add_rewrite_rule( $rule, 'index.php?rest_route=/' . self::PREFIX . '/' . $rewrite, 'top' );
-		}
-
-		if ( $needs_flush ) {
-			global $wp_rewrite;
-			$wp_rewrite->flush_rules();
-		}
 	}
 
 	public function public_api_permission() {
