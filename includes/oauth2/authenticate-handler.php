@@ -2,7 +2,7 @@
 
 namespace Enable_Mastodon_Apps\OAuth2;
 
-use Mastodon_API\Mastodon_App;
+use Enable_Mastodon_Apps\Mastodon_App;
 use OAuth2\Request;
 use OAuth2\Response;
 

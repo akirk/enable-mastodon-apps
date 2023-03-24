@@ -155,7 +155,7 @@ class Mastodon_Admin {
 		function td_timestamp( $timestamp ) {
 			?>
 			<td>
-				<abbr title="<?php echo esc_attr( date( 'r', $timestamp ) ); ?>">
+				<abbr title="<?php echo esc_attr( is_int( $timestamp ) ? date( 'r', $timestamp ) : $timestamp ); ?>">
 					<?php
 					if ( $timestamp > time() ) {
 						echo esc_html(

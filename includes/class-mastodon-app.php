@@ -221,8 +221,8 @@ class Mastodon_App {
 			'single'       => true,
 			'type'         => 'string',
 			'sanitize_callback' => function( $value ) {
-				if ( ! is_string( $value ) || strlen( $value ) < 5 || strlen( $value ) > 200 ) {
-					throw new \Exception( 'invalid-client_name,Client name must be a string with a length between 5 and 200 chars.' );
+				if ( ! is_string( $value ) || strlen( $value ) < 3 || strlen( $value ) > 200 ) {
+					throw new \Exception( 'invalid-client_name,Client name must be a string with a length between 3 and 200 chars.' );
 				}
 				return $value;
 			},
