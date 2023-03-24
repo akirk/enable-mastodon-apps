@@ -181,21 +181,21 @@ class MastoAPI {
 
 		register_rest_route(
 			self::PREFIX,
-			'api/v1/statuses/(?P<post_id>[0-9]+)/favorite',
+			'api/v1/statuses/(?P<post_id>[0-9]+)/favourite',
 			array(
 				'methods'             => array( 'POST', 'OPTIONS' ),
-				'callback'            => array( $this, 'api_favorite_post' ),
-				'permission_callback' => array( $this, 'logged_in_for_private_permission' ),
+				'callback'            => array( $this, 'api_favourite_post' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
 
 		register_rest_route(
 			self::PREFIX,
-			'api/v1/statuses/(?P<post_id>[0-9]+)/unfavorite',
+			'api/v1/statuses/(?P<post_id>[0-9]+)/unfavourite',
 			array(
 				'methods'             => array( 'POST', 'OPTIONS' ),
-				'callback'            => array( $this, 'api_unfavorite_post' ),
-				'permission_callback' => array( $this, 'logged_in_for_private_permission' ),
+				'callback'            => array( $this, 'api_unfavourite_post' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
 
@@ -296,7 +296,7 @@ class MastoAPI {
 			'api/v1/accounts/([^/+])/unfollow'    => 'api/v1/accounts/$matches[1]/unfollow',
 			'api/v1/accounts/([^/+])/statuses'    => 'api/v1/accounts/$matches[1]/statuses',
 			'api/v1/statuses/([0-9]+)/context'    => 'api/v1/statuses/$matches[1]/context',
-			'api/v1/statuses/([0-9]+)/favorite'   => 'api/v1/statuses/$matches[1]/favorite',
+			'api/v1/statuses/([0-9]+)/favourite'   => 'api/v1/statuses/$matches[1]/favourite',
 			'api/nodeinfo/([0-9]+[.][0-9]+).json' => 'api/nodeinfo/$matches[1].json',
 			'api/v1/media/([0-9]+)'               => 'api/v1/media/$matches[1]',
 			'api/v1/statuses/([0-9]+)'            => 'api/v1/statuses/$matches[1]',
@@ -473,6 +473,8 @@ class MastoAPI {
 			$reblogged_by = array_map( function( $user_id ) {
 				return $this->get_friend_account_data( $user_id );
 			}, $reblog_user_ids );
+		} else {
+			$reblogged = false;
 		}
 
 		$data = array(
@@ -486,7 +488,7 @@ class MastoAPI {
 			'content'                => $post->post_content,
 			'created_at'             => mysql2date( 'Y-m-d\TH:i:s.uP', $post->post_date, false ),
 			'edited_at'              => null,
-			'emojis'                 => apply_filters( 'friends_get_reactions', array(), $post->ID ),
+			'emojis'                 => array(),
 			'replies_count'          => 0,
 			'reblogs_count'          => 0,
 			'favourites_count'       => 0,
@@ -554,6 +556,11 @@ class MastoAPI {
 			}
 		} elseif ( $author_name !== $override_author_name ) {
 			$data['account_data']['display_name'] = $override_author_name;
+		}
+
+		$reactions = apply_filters( 'friends_get_user_reactions', array(), $post->ID );
+		if ( ! empty( $reactions ) ) {
+			$data['favourited'] = true;
 		}
 
 		return $data;
@@ -738,7 +745,7 @@ class MastoAPI {
 		return $context;
 	}
 
-	public function api_favorite_post( $request ) {
+	public function api_favourite_post( $request ) {
 		$post_id = $request->get_param( 'post_id' );
 		if ( ! $post_id ) {
 			return false;
@@ -753,7 +760,7 @@ class MastoAPI {
 		return $this->get_status_array( $post );
 	}
 
-	public function api_unfavorite_post( $request ) {
+	public function api_unfavourite_post( $request ) {
 		$post_id = $request->get_param( 'post_id' );
 		if ( ! $post_id ) {
 			return false;
