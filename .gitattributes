@@ -2,6 +2,7 @@
 .gitignore	export-ignore
 .idea	export-ignore
 .sass-cache	export-ignore
+assets	export-ignore
 bin	export-ignore
 comments.json	export-ignore
 composer.lock	export-ignore
