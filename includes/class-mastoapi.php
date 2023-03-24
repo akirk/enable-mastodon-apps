@@ -746,7 +746,7 @@ class MastoAPI {
 
 		// 2b50 = star
 		// 2764 = heart
-		apply_filters( 'friends_react', $post_id, '2b50' );
+		apply_filters( 'friends_react', null, $post_id, '2b50' );
 
 		$post = get_post( $post_id );
 
@@ -761,7 +761,7 @@ class MastoAPI {
 
 		// 2b50 = star
 		// 2764 = heart
-		apply_filters( 'friends_unreact', $post_id, '2b50' );
+		apply_filters( 'friends_unreact', null, $post_id, '2b50' );
 
 		$post = get_post( $post_id );
 
