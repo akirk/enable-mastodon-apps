@@ -21,8 +21,8 @@ class Mastodon_Admin {
 		if ( $friends_settings_exist && class_exists( '\Friends\Friends' )  ) {
 			add_submenu_page(
 				'friends',
-				__( 'Mastodon', 'enable-mastodon-apps' ),
-				__( 'Mastodon', 'enable-mastodon-apps' ),
+				__( 'Mastodon Apps', 'enable-mastodon-apps' ),
+				__( 'Mastodon Apps', 'enable-mastodon-apps' ),
 				'edit_private_posts',
 				'enable-mastodon-apps',
 				array( $this, 'admin_page' )
@@ -31,8 +31,8 @@ class Mastodon_Admin {
 			$page_type = sanitize_title( $menu_title );
 		} else {
 			add_options_page(
-				__( 'Mastodon', 'enable-mastodon-apps' ),
-				__( 'Mastodon', 'enable-mastodon-apps' ),
+				__( 'Mastodon Apps', 'enable-mastodon-apps' ),
+				__( 'Mastodon Apps', 'enable-mastodon-apps' ),
 				'edit_private_posts',
 				'enable-mastodon-apps',
 				array( $this, 'admin_page' )
@@ -183,7 +183,7 @@ class Mastodon_Admin {
 		}
 		?>
 		<div class="wrap">
-		<h1><?php esc_html_e( 'Mastodon', 'enable-mastodon-apps' ); ?></h1>
+		<h1><?php esc_html_e( 'Mastodon Apps', 'enable-mastodon-apps' ); ?></h1>
 
 		<form method="post">
 			<?php wp_nonce_field( 'enable-mastodon-apps' ); ?>
@@ -195,9 +195,10 @@ class Mastodon_Admin {
 							<fieldset>
 								<label for="mastodon_api_enable_logins">
 									<input name="mastodon_api_enable_logins" type="checkbox" id="mastodon_api_enable_logins" value="1" <?php checked( '1', ! get_option( 'mastodon_api_disable_logins' ) ); ?> />
-									<?php esc_html_e( 'Allow new logins via the Mastodon API', 'enable-mastodon-apps' ); ?>
+									<?php esc_html_e( 'Allow new and existing apps to sign in.', 'enable-mastodon-apps' ); ?>
 								</label>
 							</fieldset>
+							<p class="description"><?php esc_html_e( 'New apps can register on their own, so the list might grow if you keep this enabled.', 'enable-mastodon-apps' ); ?></p>
 						</td>
 					</tr>
 					<tr>
