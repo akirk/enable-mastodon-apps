@@ -184,7 +184,6 @@ class Mastodon_Admin {
 		?>
 		<div class="wrap">
 		<h1><?php esc_html_e( 'Mastodon', 'enable-mastodon-apps' ); ?></h1>
-		<?php settings_errors(); ?>
 
 		<form method="post">
 			<?php wp_nonce_field( 'enable-mastodon-apps' ); ?>
