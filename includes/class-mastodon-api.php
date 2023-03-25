@@ -93,6 +93,7 @@ class Mastodon_API {
 			'api/v1/statuses'                     => 'api/v1/statuses',
 			'api/v1/accounts/(.+)'                => 'api/v1/accounts/$matches[1]',
 			'api/v1/timelines/(home|public)'      => 'api/v1/timelines/$matches[1]',
+			'api/v2/search'                       => 'api/v1/search',
 		);
 
 		foreach ( $generic as $rule ) {
@@ -276,6 +277,15 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_public_timeline' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/search',
+			array(
+				'methods'             => array( 'GET', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_search' ),
 				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
@@ -694,6 +704,45 @@ class Mastodon_API {
 		$args = apply_filters( 'mastodon_api_timelines_args', $args, $request );
 
 		return $this->get_posts( $args, $request->get_param( 'max_id' ) );
+	}
+
+	public function api_search( $request ) {
+		$ret = array(
+			'accounts' => array(),
+			'statuses' => array(),
+		);
+		if ( $request->get_param( 'type' ) === 'accounts' ) {
+			$query = new \WP_User_Query(
+				array(
+					'search'         => '*' . $request->get_param( 'q' ) . '*',
+					'search_columns' => array(
+						'user_login',
+						'user_nicename',
+						'user_email',
+						'user_url',
+						'display_name',
+					),
+					'offset'         => $request->get_param( 'offset' ),
+					'number'         => $request->get_param( 'limit' ),
+				)
+			);
+			$users = $query->get_results();
+			foreach ( $users as $user ) {
+				$ret[ 'accounts' ][] = $this->get_friend_account_data( $user->ID );
+			}
+		}
+		if ( $request->get_param( 'type' ) === 'statuses' ) {
+			$args = $this->get_posts_query_args( $request );
+			if ( empty( $args ) ) {
+				return array();
+			}
+			$args = apply_filters( 'mastodon_api_timelines_args', $args, $request );
+			$args['s'] = $request->get_param( 'q' );
+			$args['offset']	= $request->get_param( 'offset' );
+			$args['posts_per_page']	= $request->get_param( 'limit' );
+			$ret[ 'statuses' ] = $this->get_posts( $args );
+		}
+		return $ret;
 	}
 
 	public function api_public_timeline( $request ) {
