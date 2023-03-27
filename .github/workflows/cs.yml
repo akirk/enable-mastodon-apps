@@ -7,32 +7,34 @@ on:
   # Allow manually triggering the workflow.
   workflow_dispatch:
 
-# Cancels all previous workflow runs for the same branch that have not yet completed.
 concurrency:
-  # The concurrency group contains the workflow name and the branch name.
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-strategy:
-  matrix:
-    php:
-      - "5.6"
-      - "7.4"
-      - "8.0"
-      - "8.1"
-    dependencies:
-      - "lowest"
-      - "highest"
-    include:
-      - php-version: "8.2"
-        composer-options: "--ignore-platform-reqs"
+jobs:
+  checkcs:
+    name: 'Basic CS and QA checks  ${{ matrix.php }}'
+    runs-on: ubuntu-latest
 
-steps:
-  - uses: "actions/checkout@v3"
-  - uses: "shivammathur/setup-php@v2"
-    with:
-      php-version: "${{ matrix.php }}"
-  - uses: "ramsey/composer-install@v2"
-    with:
-      dependency-versions: "${{ matrix.dependencies }}"
-      composer-options: "${{ matrix.composer-options }}"
+    strategy:
+      matrix:
+        php:
+          - "7.4"
+          - "8.0"
+          - "8.1"
+        dependencies:
+          - "lowest"
+          - "highest"
+        include:
+          - php-version: "8.2"
+            composer-options: "--ignore-platform-reqs"
+
+    steps:
+      - uses: "actions/checkout@v3"
+      - uses: "shivammathur/setup-php@v2"
+        with:
+          php-version: "${{ matrix.php }}"
+      - uses: "ramsey/composer-install@v2"
+        with:
+          dependency-versions: "${{ matrix.dependencies }}"
+          composer-options: "${{ matrix.composer-options }}"
