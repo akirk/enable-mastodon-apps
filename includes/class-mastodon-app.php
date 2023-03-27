@@ -4,7 +4,7 @@
  *
  * This contains the Mastodon Apps handlers.
  *
- * @package Mastodon_Apps
+ * @package Enable_Mastodon_Apps
  */
 
 namespace Enable_Mastodon_Apps;
@@ -14,7 +14,7 @@ namespace Enable_Mastodon_Apps;
  *
  * @since 0.1
  *
- * @package Mastodon_Apps
+ * @package Enable_Mastodon_Apps
  * @author Alex Kirk
  */
 class Mastodon_App {

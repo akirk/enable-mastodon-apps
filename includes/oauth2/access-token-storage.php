@@ -10,7 +10,7 @@ namespace Enable_Mastodon_Apps\OAuth2;
 use OAuth2\Storage\AccessTokenInterface;
 
 class AccessTokenStorage implements AccessTokenInterface {
-	const META_KEY_PREFIX = 'friends_oa2_access_token';
+	const TAXONOMY = 'mastoapi-at';
 
 	private static $access_token_data = array(
 		'client_id' => 'string', // client identifier.
@@ -20,54 +20,73 @@ class AccessTokenStorage implements AccessTokenInterface {
 
 	public function __construct() {
 		add_action( 'mastodon_api_cron_hook', array( $this, 'cleanupOldCodes' ) );
+
+		// Store the access tokens in a taxonomy.
+		register_taxonomy( self::TAXONOMY, null );
+		foreach ( self::$access_token_data as $key => $type ) {
+			register_term_meta(
+				self::TAXONOMY,
+				$key,
+				array(
+					'type'              => $type,
+					'single'            => true,
+					'sanitize_callback' => array( __CLASS__, 'sanitize_' . $key ),
+				)
+			);
+		}
+	}
+
+	/**
+	 * Sanitize the token content.
+	 *
+	 * @param      string $token   The token.
+	 *
+	 * @return     string  The sanitized token.
+	 */
+	public static function sanitize_token( $token ) {
+		return substr( $token, 0, 200 );
+	}
+
+	/**
+	 * Sanitize the client identifier.
+	 *
+	 * @param      string $client_id  The client id.
+	 *
+	 * @return     string  The sanitized client id.
+	 */
+	public static function sanitize_client_id( $client_id ) {
+		return substr( $client_id, 0, 200 );
+	}
+
+	/**
+	 * Sanitize the redirect URI.
+	 *
+	 * @param      string $redirect_uri  The redirect uri.
+	 *
+	 * @return     string  The sanitized redirect uri.
+	 */
+	public static function sanitize_redirect_uri( $redirect_uri ) {
+		return substr( $redirect_uri, 0, 2000 );
 	}
 
 	public static function getAll() {
 		$tokens = array();
 
-		foreach ( get_user_meta( get_current_user_id() ) as $key => $value ) {
-			if ( 0 !== strpos( $key, self::META_KEY_PREFIX ) ) {
-				continue;
-			}
-			$key_parts = explode( '_', substr( $key, strlen( self::META_KEY_PREFIX ) + 1 ) );
-			$token = array_pop( $key_parts );
-			$key = implode( '_', $key_parts );
-			$value = $value[0];
-
-			if ( 'expires' === $key ) {
-				$tokens[ $token ]['expired'] = time() > $value;
-			}
-
-			$tokens[ $token ][ $key ] = $value;
-		}
-
-		return $tokens;
-	}
-
-	private function getUserIdByToken( $oauth_token ) {
-		if ( empty( $oauth_token ) ) {
-			return null;
-		}
-
-		$users = get_users(
+		$terms = new \WP_Term_Query(
 			array(
-				'number'       => 1,
-				// Specifying blog_id does nothing for non-MultiSite installs. But for MultiSite installs, it allows you
-				// to customize users of which site is supposed to be available for whatever sites
-				// this plugin is meant to be activated on.
-				'blog_id'      => get_current_blog_id(),
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-				'meta_key'     => self::META_KEY_PREFIX . '_client_id_' . $oauth_token,
-				// Using a meta_key EXISTS query is not slow, see https://github.com/WordPress/WordPress-Coding-Standards/issues/1871.
-				'meta_compare' => 'EXISTS',
+				'taxonomy' => self::TAXONOMY,
 			)
 		);
 
-		if ( empty( $users ) ) {
-			return null;
+		foreach ( $terms->get_terms() as $term ) {
+			$token = array();
+			foreach ( array_keys( self::$access_token_data ) as $key ) {
+				$token[ $key ] = get_term_meta( $term->term_id, $key, true );
+			}
+			$tokens[ $term->slug ] = $token;
 		}
 
-		return absint( $users[0]->ID );
+		return $tokens;
 	}
 
 	/**
@@ -91,21 +110,24 @@ class AccessTokenStorage implements AccessTokenInterface {
 	 * @ingroup oauth2_section_7
 	 */
 	public function getAccessToken( $oauth_token ) {
-		$user_id = $this->getUserIdByToken( $oauth_token );
-		if ( empty( $user_id ) ) {
-			return null;
+		$term = get_term_by( 'slug', $oauth_token, self::TAXONOMY );
+
+		if ( $term ) {
+			$access_token = array();
+			foreach ( array(
+				'client_id'    => 'client_id',
+				'user_id'      => 'user_id',
+				'expires'      => 'expires',
+				'redirect_uri' => 'redirect_uri',
+				'scope'        => 'scope',
+			) as $key => $meta_key ) {
+				$access_token[ $key ] = get_term_meta( $term->term_id, $meta_key, true );
+			}
+
+			return $access_token;
 		}
 
-		$user = new \WP_User( $user_id );
-
-		$access_token = array(
-			'user_id' => $user->ID,
-		);
-		foreach ( array_keys( self::$access_token_data ) as $key ) {
-			$access_token[ $key ] = get_user_meta( $user_id, self::META_KEY_PREFIX . '_' . $key . '_' . $oauth_token, true );
-		}
-
-		return $access_token;
+		return null;
 	}
 
 	/**
@@ -122,20 +144,22 @@ class AccessTokenStorage implements AccessTokenInterface {
 	 * @ingroup oauth2_section_4
 	 */
 	public function setAccessToken( $oauth_token, $client_id, $user_id, $expires, $scope = null ) {
-		if ( empty( $oauth_token ) ) {
-			return;
-		}
-		$user = get_user_by( 'login', $user_id );
+		if ( $oauth_token ) {
+			$this->unsetAccessToken( $oauth_token );
 
-		if ( $user ) {
-			foreach ( self::$access_token_data as $key => $data_type ) {
-				if ( 'int' === $data_type ) {
-					$value = absint( $$key );
-				} else {
-					$value = sanitize_text_field( $$key );
-				}
+			$term = wp_insert_term( $oauth_token, self::TAXONOMY );
+			if ( is_wp_error( $term ) || ! isset( $term['term_id'] ) ) {
+				status_header( 500 );
+				exit;
+			}
 
-				update_user_meta( $user->ID, self::META_KEY_PREFIX . '_' . $key . '_' . $oauth_token, $value );
+			foreach ( array(
+				'client_id'    => $client_id,
+				'user_id'      => $user_id,
+				'expires'      => $expires,
+				'scope'        => $scope,
+			) as $key => $value ) {
+				add_term_meta( $term['term_id'], $key, $value );
 			}
 		}
 	}
@@ -155,15 +179,11 @@ class AccessTokenStorage implements AccessTokenInterface {
 	 * @todo v2.0 include this method in interface. Omitted to maintain BC in v1.x
 	 */
 	public function unsetAccessToken( $access_token ) {
-		$user_id = $this->getUserIdByToken( $access_token );
-		if ( empty( $user_id ) ) {
-			return null;
-		}
+		$term = get_term_by( 'slug', $access_token, self::TAXONOMY );
 
-		foreach ( array_keys( self::$access_token_data ) as $key ) {
-			delete_user_meta( $user_id, self::META_KEY_PREFIX . '_' . $key . '_' . $access_token );
+		if ( $term ) {
+			wp_delete_term( $term->term_id, self::TAXONOMY );
 		}
-
 		return true;
 	}
 
@@ -171,49 +191,38 @@ class AccessTokenStorage implements AccessTokenInterface {
 	 * This function cleans up access tokens that are sitting in the database because of interrupted/abandoned OAuth flows.
 	 */
 	public static function cleanupOldTokens() {
-		global $wpdb;
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-		$data = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT user_id, meta_key FROM $wpdb->usermeta WHERE meta_key LIKE %s AND meta_value < %d",
-				self::META_KEY_PREFIX . '_expires_%',
-				time() - 3600 // wait for an hour past expiry, to offer a chance at debug.
+		$terms = new \WP_Term_Query(
+			array(
+				'taxonomy'   => self::TAXONOMY,
+				'fields'     => 'ids',
+				'meta_query' => array(
+					array(
+						'key'     => 'expires',
+						'value'   => time(),
+						'compare' => '<',
+					),
+				),
 			)
 		);
-		if ( empty( $data ) ) {
-			return;
-		}
 
-		foreach ( $data as $row ) {
-			$code = substr( $row->meta_key, strlen( self::META_KEY_PREFIX . '_expires_' ) );
-			foreach ( array_keys( self::$access_token_data ) as $key ) {
-				delete_user_meta( $row->user_id, self::META_KEY_PREFIX . '_' . $key . '_' . $code );
-			}
+		foreach ( $terms->terms as $term_id ) {
+			wp_delete_term( $term_id, self::TAXONOMY );
 		}
 	}
 
+	/**
+	 * Delete all auth codes when the plugin is uninstalled.
+	 */
 	public static function uninstall() {
-		global $wpdb;
-
-		// Following query is only possible via a direct query since meta_key is not a fixed string
-		// and since it only runs at uninstall, we don't need it cached.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-		$data = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT user_id, meta_key FROM $wpdb->usermeta WHERE meta_key LIKE %s",
-				self::META_KEY_PREFIX . '_expires_%'
+		$terms = new \WP_Term_Query(
+			array(
+				'taxonomy' => self::TAXONOMY,
+				'fields'   => 'ids',
 			)
 		);
-		if ( empty( $data ) ) {
-			return;
-		}
 
-		foreach ( $data as $row ) {
-			$code = substr( $row->meta_key, strlen( self::META_KEY_PREFIX . '_expires_' ) );
-			foreach ( array_keys( self::$access_token_data ) as $key ) {
-				delete_user_meta( $row->user_id, self::META_KEY_PREFIX . '_' . $key . '_' . $code );
-			}
+		foreach ( $terms->terms as $term_id ) {
+			wp_delete_term( $term_id, self::TAXONOMY );
 		}
 	}
 }

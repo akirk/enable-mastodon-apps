@@ -16,12 +16,10 @@ use OAuth2\Storage\AuthorizationCodeInterface;
  */
 class AuthorizationCodeStorage implements AuthorizationCodeInterface {
 	const TAXONOMY = 'mastoapi-ac';
-	const META_KEY_PREFIX = 'mastodon_api_oa2_auth_code';
 
 	private static $authorization_code_data = array(
-		'code'         => 'string',         // authorization code.
 		'client_id'    => 'string', // client identifier.
-		'user_login'   => 'string',         // The WordPress user id.
+		'user_id'      => 'int',    // The WordPress user id.
 		'redirect_uri' => 'string', // redirect URI.
 		'expires'      => 'int',    // expires as unix timestamp.
 		'scope'        => 'string', // scope as space-separated string.
@@ -32,7 +30,7 @@ class AuthorizationCodeStorage implements AuthorizationCodeInterface {
 
 		// Store the authorization codes in a taxonomy.
 		register_taxonomy( self::TAXONOMY, null );
-		foreach ( $this->authorization_code_data as $key => $type ) {
+		foreach ( self::$authorization_code_data as $key => $type ) {
 			register_term_meta(
 				self::TAXONOMY,
 				$key,
@@ -45,21 +43,6 @@ class AuthorizationCodeStorage implements AuthorizationCodeInterface {
 		}
 	}
 
-	public static function sanitize_string_length( $string, $length ) {
-		return substr( $string, 0, $length );
-	}
-
-	/**
-	 * Sanitize the code content.
-	 *
-	 * @param      string $code   The code.
-	 *
-	 * @return     string  The sanitized code.
-	 */
-	public static function sanitize_code( $code ) {
-		return self::sanitize_string_length( $code, 40 );
-	}
-
 	/**
 	 * Sanitize the client identifier.
 	 *
@@ -68,7 +51,7 @@ class AuthorizationCodeStorage implements AuthorizationCodeInterface {
 	 * @return     string  The sanitized client id.
 	 */
 	public static function sanitize_client_id( $client_id ) {
-		return self::sanitize_string_length( $client_id, 200 );
+		return substr( $client_id, 0, 200 );
 	}
 
 	/**
@@ -79,7 +62,7 @@ class AuthorizationCodeStorage implements AuthorizationCodeInterface {
 	 * @return     string  The sanitized redirect uri.
 	 */
 	public static function sanitize_redirect_uri( $redirect_uri ) {
-		return self::sanitize_string_length( $redirect_uri, 2000 );
+		return substr( $redirect_uri, 0, 2000 );
 	}
 
 	/**
@@ -90,18 +73,18 @@ class AuthorizationCodeStorage implements AuthorizationCodeInterface {
 	 * @return     string  The sanitized scope.
 	 */
 	public static function sanitize_scope( $scope ) {
-		return self::sanitize_string_length( $scope, 100 );
+		return substr( $scope, 0, 100 );
 	}
 
 	/**
-	 * Sanitize the user login.
+	 * Sanitize the user id.
 	 *
-	 * @param      string $user_login  The user login.
+	 * @param      string $user_id  The user id.
 	 *
-	 * @return     string  The sanitized user login.
+	 * @return     string  The sanitized user id.
 	 */
-	public static function sanitize_user_login( $user_login ) {
-		return self::sanitize_string_length( $user_login, 60 );
+	public static function sanitize_user_id( $user_id ) {
+		return intval( $user_id );
 	}
 
 	/**
@@ -126,16 +109,15 @@ class AuthorizationCodeStorage implements AuthorizationCodeInterface {
 		$terms = new \WP_Term_Query(
 			array(
 				'taxonomy' => self::TAXONOMY,
-				'fields'   => 'ids',
 			)
 		);
 
-		foreach ( $terms->get_terms() as $term_id ) {
+		foreach ( $terms->get_terms() as $term ) {
 			$code = array();
 			foreach ( array_keys( self::$authorization_code_data ) as $key ) {
-				$code[ $key ] = get_term_meta( $term_id, $key, true );
+				$code[ $key ] = get_term_meta( $term->term_id, $key, true );
 			}
-			$codes[] = $code;
+			$codes[ $term->slug ] = $code;
 		}
 
 		return $codes;
@@ -173,7 +155,7 @@ class AuthorizationCodeStorage implements AuthorizationCodeInterface {
 			$authorization_code = array();
 			foreach ( array(
 				'client_id'    => 'client_id',
-				'user_id'      => 'user_login',
+				'user_id'      => 'user_id',
 				'expires'      => 'expires',
 				'redirect_uri' => 'redirect_uri',
 				'scope'        => 'scope',
@@ -186,7 +168,6 @@ class AuthorizationCodeStorage implements AuthorizationCodeInterface {
 
 		return null;
 	}
-
 
 	/**
 	 * Take the provided authorization code values and store them somewhere.
@@ -220,11 +201,10 @@ class AuthorizationCodeStorage implements AuthorizationCodeInterface {
 
 			foreach ( array(
 				'client_id'    => $client_id,
-				'user_login'   => $user_login,
+				'user_id'   => $user_id,
 				'redirect_uri' => $redirect_uri,
 				'expires'      => $expires,
 				'scope'        => $scope,
-				'id_token'     => $id_token,
 			) as $key => $value ) {
 				add_term_meta( $term['term_id'], $key, $value );
 			}

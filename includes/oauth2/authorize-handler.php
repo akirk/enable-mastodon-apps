@@ -51,6 +51,6 @@ class AuthorizeHandler {
 			exit;
 		}
 
-		return $this->server->handleAuthorizeRequest( $request, $response, true, $user->user_login );
+		return $this->server->handleAuthorizeRequest( $request, $response, true, $user->ID );
 	}
 }
