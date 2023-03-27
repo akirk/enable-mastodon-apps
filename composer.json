@@ -1,5 +1,8 @@
 {
     "name": "akirk/enable-mastodon-apps",
+    "description": "A WordPress plugin that implements the Mastodon API to enable access through Mastodon apps",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
     "require-dev": {
         "dealerdirect/phpcodesniffer-composer-installer": "*",
         "phpcompatibility/php-compatibility": "*",
