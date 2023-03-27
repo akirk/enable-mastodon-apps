@@ -8,6 +8,7 @@
         "phpcompatibility/php-compatibility": "*",
         "wp-coding-standards/wpcs": "*",
         "yoast/phpunit-polyfills": "*",
+        "php-parallel-lint/php-parallel-lint": "^1.3",
         "phpunit/phpunit": "*"
     },
     "config": {
