@@ -1,4 +1,10 @@
 <?php
+/**
+ * The admin-specific functionality of the plugin.
+ *
+ * @package    Enable_Mastodon_Apps
+ */
+
 namespace Enable_Mastodon_Apps;
 
 /**
@@ -26,7 +32,7 @@ class Mastodon_Admin {
 				'enable-mastodon-apps',
 				array( $this, 'admin_page' )
 			);
-			$menu_title = __( 'Friends', 'friends' ) . \Friends\Friends::get_instance()->admin->get_unread_badge();
+			$menu_title = __( 'Friends', 'friends' ) . \Friends\Friends::get_instance()->admin->get_unread_badge(); // phpcs:ignore WordPress.WP.I18n.TextDomainMismatch
 			$page_type = sanitize_title( $menu_title );
 		} else {
 			add_options_page(
@@ -55,36 +61,84 @@ class Mastodon_Admin {
 
 		if ( isset( $_POST['delete-code'] ) ) {
 			$deleted = $this->oauth->get_code_storage()->expireAuthorizationCode( $_POST['delete-code'] );
-			add_settings_error( 'enable-mastodon-apps', 'deleted-codes', sprintf( _n( 'Deleted %d authorization code.', 'Deleted %d authorization codes.', $deleted ? 1 : 0, 'enable-mastodon-apps' ), $deleted ? 1 : 0 ) );
+			add_settings_error(
+				'enable-mastodon-apps',
+				'deleted-codes',
+				sprintf(
+				// translators: %d: number of deleted codes.
+					_n( 'Deleted %d authorization code.', 'Deleted %d authorization codes.', $deleted ? 1 : 0, 'enable-mastodon-apps' ),
+					$deleted ? 1 : 0
+				)
+			);
 			return;
 		}
 
 		if ( isset( $_POST['delete-token'] ) ) {
 			$deleted = $this->oauth->get_token_storage()->unsetAccessToken( $_POST['delete-token'] );
-			add_settings_error( 'enable-mastodon-apps', 'deleted-tokens', sprintf( _n( 'Deleted %d access token.', 'Deleted %d access tokens.', $deleted ? 1 : 0, 'enable-mastodon-apps' ), $deleted ? 1 : 0 ) );
+			add_settings_error(
+				'enable-mastodon-apps',
+				'deleted-tokens',
+				sprintf(
+				// translators: %d: number of deleted tokens.
+					_n( 'Deleted %d access token.', 'Deleted %d access tokens.', $deleted ? 1 : 0, 'enable-mastodon-apps' ),
+					$deleted ? 1 : 0
+				)
+			);
 			return;
 		}
 
 		if ( isset( $_POST['delete-app'] ) ) {
 			$deleted = Mastodon_App::get_by_client_id( $_POST['delete-app'] )->delete();
-			add_settings_error( 'enable-mastodon-apps', 'deleted-apps', sprintf( _n( 'Deleted %d app.', 'Deleted %d apps.', $deleted ? 1 : 0, 'enable-mastodon-apps' ), $deleted ? 1 : 0 ) );
+			add_settings_error(
+				'enable-mastodon-apps',
+				'deleted-apps',
+				sprintf(
+				// translators: %d: number of deleted apps.
+					_n( 'Deleted %d app.', 'Deleted %d apps.', $deleted ? 1 : 0, 'enable-mastodon-apps' ),
+					$deleted ? 1 : 0
+				)
+			);
 			return;
 		}
 
 		if ( isset( $_POST['delete-outdated'] ) ) {
 			$deleted = OAuth2\AccessTokenStorage::cleanupOldTokens();
 			if ( $deleted ) {
-				add_settings_error( 'enable-mastodon-apps', 'deleted-tokens', sprintf( _n( 'Deleted %d access token.', 'Deleted %d access tokens.', $deleted, 'enable-mastodon-apps' ), $deleted ) );
+				add_settings_error(
+					'enable-mastodon-apps',
+					'deleted-tokens',
+					sprintf(
+					// translators: %d: number of deleted tokens.
+						_n( 'Deleted %d access token.', 'Deleted %d access tokens.', $deleted, 'enable-mastodon-apps' ),
+						$deleted
+					)
+				);
 			}
 
 			$deleted = OAuth2\AuthorizationCodeStorage::cleanupOldCodes();
 			if ( $deleted ) {
-				add_settings_error( 'enable-mastodon-apps', 'deleted-codes', sprintf( _n( 'Deleted %d authorization code.', 'Deleted %d authorization codes.', $deleted, 'enable-mastodon-apps' ), $deleted ) );
+				add_settings_error(
+					'enable-mastodon-apps',
+					'deleted-codes',
+					sprintf(
+					// translators: %d: number of deleted codes.
+						_n( 'Deleted %d authorization code.', 'Deleted %d authorization codes.', $deleted, 'enable-mastodon-apps' ),
+						$deleted
+					)
+				);
 			}
 
 			$deleted = Mastodon_App::delete_outdated();
 			if ( $deleted ) {
-				add_settings_error( 'enable-mastodon-apps', 'deleted-apps', sprintf( _n( 'Deleted %d app.', 'Deleted %d apps.', $deleted, 'enable-mastodon-apps' ), $deleted ) );
+				add_settings_error(
+					'enable-mastodon-apps',
+					'deleted-apps',
+					sprintf(
+					// translators: %d: number of deleted apps.
+						_n( 'Deleted %d app.', 'Deleted %d apps.', $deleted, 'enable-mastodon-apps' ),
+						$deleted
+					)
+				);
 			}
 			return;
 		}
@@ -151,26 +205,36 @@ class Mastodon_Admin {
 		$tokens = OAuth2\AccessTokenStorage::getAll();
 		$apps = Mastodon_App::get_all();
 
-		function td_timestamp( $timestamp ) {
+		function td_timestamp( $timestamp, $strikethrough_past = false ) {
 			?>
 			<td>
-				<abbr title="<?php echo esc_attr( is_numeric( $timestamp ) ? date( 'r', $timestamp ) : $timestamp ); ?>">
+				<abbr title="<?php echo esc_attr( is_numeric( $timestamp ) ? gmdate( 'r', $timestamp ) : $timestamp ); ?>">
 					<?php
 					if ( ! $timestamp ) {
-						esc_html_e( 'Never' );
+						echo esc_html( _x( 'Never', 'Code was never used', 'enable-mastodon-apps' ) );
 					} elseif ( $timestamp > time() ) {
 						echo esc_html(
 							sprintf(
-								// translators: %s is a relative time
-								__( 'in %s' ),
+								// translators: %s is a relative time.
+								__( 'in %s', 'enable-mastodon-apps' ),
 								human_time_diff( $timestamp )
 							)
 						);
+					} elseif ( $strikethrough_past ) {
+						echo '<strike>';
+						echo esc_html(
+							sprintf(
+								// translators: %s: Human-readable time difference.
+								__( '%s ago' ), // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
+								human_time_diff( $timestamp )
+							)
+						);
+						echo '</strike>';
 					} else {
 						echo esc_html(
 							sprintf(
-								// translators: %s is a relative time
-								__( '%s ago' ),
+								// translators: %s: Human-readable time difference.
+								__( '%s ago' ), // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
 								human_time_diff( $timestamp )
 							)
 						);
@@ -216,7 +280,7 @@ class Mastodon_Admin {
 				</tbody>
 			</table>
 
-			<button class="button button-primary"><?php esc_html_e( 'Save' ); ?></button>
+			<button class="button button-primary"><?php esc_html_e( 'Save' ); /* phpcs:ignore WordPress.WP.I18n.MissingArgDomain */ ?></button>
 			<?php if ( ! empty( $codes ) ) : ?>
 				<h2><?php esc_html_e( 'Authorization Codes', 'enable-mastodon-apps' ); ?></h2>
 
@@ -225,7 +289,6 @@ class Mastodon_Admin {
 						<th><?php esc_html_e( 'App', 'enable-mastodon-apps' ); ?></th>
 						<th><?php esc_html_e( 'Redirect URI', 'enable-mastodon-apps' ); ?></th>
 						<th><?php esc_html_e( 'Expires', 'enable-mastodon-apps' ); ?></th>
-						<th><?php esc_html_e( 'Expired', 'enable-mastodon-apps' ); ?></th>
 						<th><?php esc_html_e( 'Scope', 'enable-mastodon-apps' ); ?></th>
 						<th><?php esc_html_e( 'Actions', 'enable-mastodon-apps' ); ?></th>
 					</thead>
@@ -245,9 +308,8 @@ class Mastodon_Admin {
 								</td>
 								<td><?php echo esc_html( $data['redirect_uri'] ); ?></td>
 								<?php td_timestamp( $data['expires'] ); ?>
-								<td><?php echo esc_html( $data['expired'] ? __( 'expired' ) : __( 'no' ) ); ?></td>
 								<td><?php echo esc_html( $data['scope'] ); ?></td>
-								<td><button name="delete-code" value="<?php echo esc_attr( $code ); ?>" class="button"><?php esc_html_e( 'Delete' ); ?></button></td>
+								<td><button name="delete-code" value="<?php echo esc_attr( $code ); ?>" class="button"><?php esc_html_e( 'Delete' ); /* phpcs:ignore WordPress.WP.I18n.MissingArgDomain */ ?></button></td>
 							</tr>
 							<?php
 						}
@@ -262,7 +324,6 @@ class Mastodon_Admin {
 					<thead>
 						<th><?php esc_html_e( 'App', 'enable-mastodon-apps' ); ?></th>
 						<th><?php esc_html_e( 'Expires', 'enable-mastodon-apps' ); ?></th>
-						<th><?php esc_html_e( 'Expired', 'enable-mastodon-apps' ); ?></th>
 						<th><?php esc_html_e( 'Scope', 'enable-mastodon-apps' ); ?></th>
 						<th><?php esc_html_e( 'Actions', 'enable-mastodon-apps' ); ?></th>
 					</thead>
@@ -278,14 +339,19 @@ class Mastodon_Admin {
 										<a href="#app-<?php echo esc_attr( $data['client_id'] ); ?>"><?php echo esc_html( $apps[ $data['client_id'] ]->get_client_name() ); ?></a>
 										<?php
 									} else {
-										echo esc_html( 'Unknown: ' . $data['client_id'] );
+										echo esc_html(
+											sprintf(
+											// Translators: %s is the app ID.
+												__( 'Unknown App: %s', 'enable-mastodon-apps' ),
+												$data['client_id']
+											)
+										);
 									}
 									?>
 								</td>
-								<?php td_timestamp( $data['expires'] ); ?>
-								<td><?php echo esc_html( $data['expired'] ? __( 'expired' ) : __( 'no' ) ); ?></td>
+								<?php td_timestamp( $data['expires'], true ); ?>
 								<td><?php echo esc_html( $data['scope'] ); ?></td>
-								<td><button name="delete-token" value="<?php echo esc_attr( $token ); ?>" class="button"><?php esc_html_e( 'Delete' ); ?></button></td>
+								<td><button name="delete-token" value="<?php echo esc_attr( $token ); ?>" class="button"><?php esc_html_e( 'Delete' ); /* phpcs:ignore WordPress.WP.I18n.MissingArgDomain */ ?></button></td>
 							</tr>
 							<?php
 						}
@@ -334,8 +400,8 @@ class Mastodon_Admin {
 								<?php td_timestamp( $app->get_last_used() ); ?>
 								<?php td_timestamp( $app->get_creation_date() ); ?>
 								<td>
-									<button name="save-app" value="<?php echo esc_attr( $app->get_client_id() ); ?>" class="button button-secondary"><?php esc_html_e( 'Save' ); ?></button>
-									<button name="delete-app" value="<?php echo esc_attr( $app->get_client_id() ); ?>" class="button button-link-delete"><?php esc_html_e( 'Delete' ); ?></button>
+									<button name="save-app" value="<?php echo esc_attr( $app->get_client_id() ); ?>" class="button button-secondary"><?php esc_html_e( 'Save' ); /* phpcs:ignore WordPress.WP.I18n.MissingArgDomain */ ?></button>
+									<button name="delete-app" value="<?php echo esc_attr( $app->get_client_id() ); ?>" class="button button-link-delete"><?php esc_html_e( 'Delete' ); /* phpcs:ignore WordPress.WP.I18n.MissingArgDomain */ ?></button>
 								</td>
 							</tr>
 							<?php

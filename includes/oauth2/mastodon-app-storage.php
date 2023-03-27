@@ -1,10 +1,18 @@
 <?php
+/**
+ * Mastodon App Storage
+ *
+ * @package Enable_Mastodon_Apps
+ */
 
 namespace Enable_Mastodon_Apps\OAuth2;
 
 use Enable_Mastodon_Apps\Mastodon_App;
 use OAuth2\Storage\ClientCredentialsInterface;
 
+/**
+ * This class describes a mastodon application storage.
+ */
 class MastodonAppStorage implements ClientCredentialsInterface {
 	public function getClientDetails( $client_id ) {
 		if ( ! $this->has( $client_id ) ) {
@@ -65,9 +73,9 @@ class MastodonAppStorage implements ClientCredentialsInterface {
 	/**
 	 * Gets the specified client identifier.
 	 *
-	 * @param      <type> $client_id  The client identifier
+	 * @param      string $client_id  The client identifier.
 	 *
-	 * @return     <type>  ( description_of_the_return_value )
+	 * @return     Mastodon_App|null  The client.
 	 */
 	private function get( $client_id ) {
 		return Mastodon_App::get_by_client_id( $client_id );

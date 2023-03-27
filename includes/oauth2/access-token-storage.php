@@ -9,6 +9,9 @@ namespace Enable_Mastodon_Apps\OAuth2;
 
 use OAuth2\Storage\AccessTokenInterface;
 
+/**
+ * This class describes an access token storage.
+ */
 class AccessTokenStorage implements AccessTokenInterface {
 	const TAXONOMY = 'mastoapi-at';
 
@@ -154,10 +157,10 @@ class AccessTokenStorage implements AccessTokenInterface {
 			}
 
 			foreach ( array(
-				'client_id'    => $client_id,
-				'user_id'      => $user_id,
-				'expires'      => $expires,
-				'scope'        => $scope,
+				'client_id' => $client_id,
+				'user_id'   => $user_id,
+				'expires'   => $expires,
+				'scope'     => $scope,
 			) as $key => $value ) {
 				add_term_meta( $term['term_id'], $key, $value );
 			}
@@ -170,8 +173,7 @@ class AccessTokenStorage implements AccessTokenInterface {
 	 * This is not explicitly required in the spec, but if defined in a draft RFC for token
 	 * revoking (RFC 7009) https://tools.ietf.org/html/rfc7009
 	 *
-	 * @param $access_token
-	 * Access token to be expired.
+	 * @param string $access_token Access token to be expired.
 	 *
 	 * @return BOOL true if an access token was unset, false if not
 	 * @ingroup oauth2_section_6

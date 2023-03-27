@@ -59,7 +59,7 @@ class Mastodon_API {
 		header( 'Access-Control-Allow-Methods: GET, POST, OPTIONS' );
 		header( 'Access-Control-Allow-Headers: content-type, authorization' );
 		header( 'Access-Control-Allow-Credentials: true' );
-		if ( $_SERVER['REQUEST_METHOD'] === 'OPTIONS' ) {
+		if ( 'OPTIONS' === $_SERVER['REQUEST_METHOD'] ) {
 			header( 'Access-Control-Allow-Origin: *', true, 204 );
 			exit;
 		}
@@ -354,7 +354,7 @@ class Mastodon_API {
 
 	public function api_apps( $request ) {
 		if ( get_option( 'mastodon_api_disable_logins' ) ) {
-			return new \WP_Error( 'registation-disabled', __( 'App registration has been disabled.', 'mastodon_api' ), array( 'status' => 403 ) );
+			return new \WP_Error( 'registation-disabled', __( 'App registration has been disabled.', 'enable-mastodon-apps' ), array( 'status' => 403 ) );
 		}
 
 		try {
@@ -533,7 +533,7 @@ class Mastodon_API {
 		// get the attachments for the post.
 		$attachments = get_attached_media( '', $post->ID );
 		$p = strpos( $data['content'], '<!-- wp:image' );
-		while ( ( $p = strpos( $data['content'], '<!-- wp:image' ) ) !== false ) {
+		while ( false !== $p ) {
 			$e = strpos( $data['content'], '<!-- /wp:image', $p );
 			if ( ! $e ) {
 				break;
@@ -558,6 +558,7 @@ class Mastodon_API {
 				);
 			}
 			$data['content'] = substr( $data['content'], 0, $p ) . substr( $data['content'], $e + 19 );
+			$p = strpos( $data['content'], '<!-- wp:image' );
 		}
 
 		$author_name = $data['account']['display_name'];
@@ -1187,7 +1188,7 @@ class Mastodon_API {
 				'username'        => '',
 				'display_name'    => '',
 				'note'            => '',
-				'created_at'      => date( 'Y-m-d\TH:i:s.uP' ),
+				'created_at'      => gmdate( 'Y-m-d\TH:i:s.uP' ),
 				'followers_count' => 0,
 				'following_count' => 0,
 				'statuses_count'  => 0,
@@ -1379,7 +1380,6 @@ class Mastodon_API {
 			return $response;
 		}
 
-		// try to access author URL
 		$body = $this->get_json( $url, $transient_key );
 
 		if ( \is_wp_error( $body ) ) {

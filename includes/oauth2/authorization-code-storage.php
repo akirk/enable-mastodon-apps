@@ -201,7 +201,7 @@ class AuthorizationCodeStorage implements AuthorizationCodeInterface {
 
 			foreach ( array(
 				'client_id'    => $client_id,
-				'user_id'   => $user_id,
+				'user_id'      => $user_id,
 				'redirect_uri' => $redirect_uri,
 				'expires'      => $expires,
 				'scope'        => $scope,
