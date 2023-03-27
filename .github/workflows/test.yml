@@ -58,7 +58,7 @@ jobs:
         with:
           php-version: ${{ matrix.php }}
           extensions: mysql
-          tools: phpunit-polyfills
+          tools: phpunit-polyfills composer
           ini-values: error_reporting=E_ALL, display_errors=On
           coverage: none
 

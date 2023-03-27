@@ -1260,11 +1260,10 @@ class Mastodon_API {
 				'status' => count_user_posts( $user->ID, 'post', true ),
 			);
 		}
-
 		$data = array(
 			'id'              => strval( $user->ID ),
 			'username'        => $user->user_login,
-			'acct'            => isset( $meta['attributedTo']['id'] ) ? $this->get_acct( $meta['attributedTo']['id'] ) : $this->get_user_acct( $user ),
+			'acct'            => $user->user_login,
 			'display_name'    => $user->display_name,
 			'locked'          => false,
 			'created_at'      => mysql2date( 'Y-m-d\TH:i:s.uP', $user->user_registered, false ),
@@ -1288,6 +1287,15 @@ class Mastodon_API {
 				'language'  => 'en',
 			),
 		);
+
+		if ( isset( $meta['attributedTo']['id'] ) ) {
+			$data['acct'] = $this->get_acct( $meta['attributedTo']['id'] );
+		} else {
+			$acct = $this->get_user_acct( $user );
+			if ( $acct ) {
+				$data['acct'] = $acct;
+			}
+		}
 
 		foreach ( apply_filters( 'friends_get_user_feeds', array(), $user ) as $feed ) {
 			$meta = apply_filters( 'friends_get_feed_metadata', array(), $feed );
