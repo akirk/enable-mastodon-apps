@@ -78,6 +78,7 @@ class AccessTokenStorage implements AccessTokenInterface {
 		$terms = new \WP_Term_Query(
 			array(
 				'taxonomy' => self::TAXONOMY,
+				'hide_empty' => false,
 			)
 		);
 
@@ -196,6 +197,7 @@ class AccessTokenStorage implements AccessTokenInterface {
 		$terms = new \WP_Term_Query(
 			array(
 				'taxonomy'   => self::TAXONOMY,
+				'hide_empty' => false,
 				'fields'     => 'ids',
 				'meta_query' => array(
 					array(
@@ -219,6 +221,7 @@ class AccessTokenStorage implements AccessTokenInterface {
 		$terms = new \WP_Term_Query(
 			array(
 				'taxonomy' => self::TAXONOMY,
+				'hide_empty' => false,
 				'fields'   => 'ids',
 			)
 		);
