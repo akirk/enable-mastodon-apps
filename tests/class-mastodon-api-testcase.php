@@ -78,7 +78,7 @@ class Mastodon_API_TestCase extends \WP_UnitTestCase {
 		$oauth = new Mastodon_OAuth();
 		$this->token = wp_generate_password( 128, false );
 		$userdata = get_userdata( $this->administrator );
-		$oauth->get_token_storage()->setAccessToken( $this->token, $app->get_client_id(), $userdata->user_login, time() + HOUR_IN_SECONDS, $app->get_scopes() );
+		$oauth->get_token_storage()->setAccessToken( $this->token, $app->get_client_id(), $userdata->ID, time() + HOUR_IN_SECONDS, $app->get_scopes() );
 		unset( $_SERVER['HTTP_AUTHORIZATION'] );
 	}
 }
