@@ -108,7 +108,7 @@ class AuthorizationCodeStorage implements AuthorizationCodeInterface {
 
 		$terms = new \WP_Term_Query(
 			array(
-				'taxonomy' => self::TAXONOMY,
+				'taxonomy'   => self::TAXONOMY,
 				'hide_empty' => false,
 			)
 		);
@@ -264,9 +264,9 @@ class AuthorizationCodeStorage implements AuthorizationCodeInterface {
 	public static function uninstall() {
 		$terms = new \WP_Term_Query(
 			array(
-				'taxonomy' => self::TAXONOMY,
+				'taxonomy'   => self::TAXONOMY,
 				'hide_empty' => false,
-				'fields'   => 'ids',
+				'fields'     => 'ids',
 			)
 		);
 
