@@ -35,22 +35,33 @@ jobs:
         with:
           php-version: "${{ matrix.php }}"
           coverage: none
-          tools: cs2pr
+          tools: composer, cs2pr
       - uses: "ramsey/composer-install@v2"
         with:
           dependency-versions: "${{ matrix.dependencies }}"
           composer-options: "${{ matrix.composer-options }}"
 
-      # Validate the composer.json file.
-      # @link https://getcomposer.org/doc/03-cli.md#validate
-      - name: Validate Composer installation
-        run: composer validate --no-check-all --strict
+      - name: Get Composer home directory
+        id: composer-home
+        run: |
+          echo "::set-output name=dir::$(composer config home)"
 
-      # Check the code-style consistency of the PHP files.
-      - name: Check PHP code style
-        id: phpcs
-        run: composer check-cs -- --report-full --report-checkstyle=./phpcs-report.xml
+      - name: Install PHP dependencies
+        uses: ramsey/composer-install@v2
 
-      - name: Show PHPCS results in PR
-        if: ${{ always() && steps.phpcs.outcome == 'failure' }}
-        run: cs2pr ./phpcs-report.xml
+      - name: Install composer-normalize
+        run: composer global require ergebnis/composer-normalize
+
+      - name: Make Composer packages available globally
+        run: |
+          echo "${PWD}/vendor/bin" >> $GITHUB_PATH
+          echo "${{ steps.composer-home.outputs.dir }}/vendor/bin" >> $GITHUB_PATH
+
+      - name: Lint PHP files
+        run: phpcs -q --report=checkstyle | cs2pr
+
+      - name: Analyze PHP files
+        run: composer run-script analyze
+
+      - name: Lint composer.json
+        run: composer normalize --dry-run
