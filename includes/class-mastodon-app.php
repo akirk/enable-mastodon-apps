@@ -21,7 +21,7 @@ class Mastodon_App {
 	/**
 	 * Contains a reference to the term that represents the app.
 	 *
-	 * @var \WP_Term
+	 * @var \WP_Term $term
 	 */
 	private $term;
 
@@ -37,7 +37,7 @@ class Mastodon_App {
 	/**
 	 * Constructor
 	 *
-	 * @param WP_Term $term The term that represents the app.
+	 * @param \WP_Term $term The term that represents the app.
 	 */
 	public function __construct( \WP_Term $term ) {
 		$this->term = $term;
@@ -96,14 +96,14 @@ class Mastodon_App {
 	}
 
 	public function check_redirect_uri( $redirect_uri ) {
-		error_log('redirect_uri: '. $redirect_uri );
+		error_log( 'redirect_uri: ' . $redirect_uri );
 		$redirect_uris = $this->get_redirect_uris();
 		if ( ! is_array( $redirect_uris ) ) {
 			$redirect_uris = array( $redirect_uris );
 		}
 
 		foreach ( $redirect_uris as $uri ) {
-		error_log('compare: '. $uri );
+			error_log( 'compare: ' . $uri );
 			if ( $uri === $redirect_uri ) {
 				return true;
 			}
@@ -115,7 +115,7 @@ class Mastodon_App {
 	public function check_scopes( $requested_scopes ) {
 		$allowed_scopes = explode( ' ', $this->get_scopes() );
 
-		foreach (  explode( ' ', $requested_scopes ) as $s ) {
+		foreach ( explode( ' ', $requested_scopes ) as $s ) {
 			if ( ! in_array( $s, $allowed_scopes, true ) ) {
 				return false;
 			}
@@ -125,19 +125,19 @@ class Mastodon_App {
 	}
 
 	public function was_used() {
-		if ( $this->get_last_used() > time() -  MINUTE_IN_SECONDS ) {
+		if ( $this->get_last_used() > time() - MINUTE_IN_SECONDS ) {
 			return true;
 		}
 		update_term_meta( $this->term->term_id, 'last_used', time() );
 	}
 
 	public function is_outdated() {
-		foreach( OAuth2\AccessTokenStorage::getAll() as $token ) {
-			if ( $token['client_id'] === $this->get_client_id() && !$token['expired'] ) {
+		foreach ( OAuth2\AccessTokenStorage::getAll() as $token ) {
+			if ( $token['client_id'] === $this->get_client_id() && ! $token['expired'] ) {
 				return false;
 			}
 		}
-		foreach( OAuth2\AuthorizationCodeStorage::getAll() as $code ) {
+		foreach ( OAuth2\AuthorizationCodeStorage::getAll() as $code ) {
 			if ( $code['client_id'] === $this->get_client_id() && ! $code['expired'] ) {
 				return false;
 			}
@@ -151,10 +151,12 @@ class Mastodon_App {
 
 	public static function get_all() {
 		$apps = array();
-		foreach ( get_terms( array(
-			'taxonomy' => self::TAXONOMY,
-			'hide_empty' => false,
-		) ) as $term ) {
+		foreach ( get_terms(
+			array(
+				'taxonomy'   => self::TAXONOMY,
+				'hide_empty' => false,
+			)
+		) as $term ) {
 			if ( $term instanceof \WP_Term ) {
 				$app = new Mastodon_App( $term );
 				$apps[ $app->get_client_id() ] = $app;
@@ -180,154 +182,186 @@ class Mastodon_App {
 
 		register_taxonomy( self::TAXONOMY, null, $args );
 
-		register_term_meta( self::TAXONOMY, 'client_secret', array(
-			'show_in_rest' => false,
-			'single'       => true,
-			'type'         => 'string',
-			'sanitize_callback' => function( $value ) {
-				if ( ! is_string( $value ) || strlen( $value ) < 16 || strlen( $value ) > 200 ) {
-					throw new \Exception( 'invalid-client_secret,Client secret must be a string with a length between 16 and 200 chars.' );
-				}
-				return $value;
-			},
-		) );
-
-		register_term_meta( self::TAXONOMY, 'redirect_uris', array(
-			'show_in_rest' => false,
-			'single'       => true,
-			'type'         => 'array',
-			'sanitize_callback' => function( $value ) {
-				if ( ! is_array( $value ) ) {
-					return array();
-				}
-				$urls = array();
-				foreach ( $value as $url ) {
-					if ( Mastodon_OAuth::OOB_REDIRECT_URI === $url ) {
-						$urls[] = $url;
-					} elseif ( preg_match( '#^[a-z0-9.-]+://[a-z0-9.%-]+#i', $url ) ) {
-						// custom protocols are ok.
-						$urls[] = $url;
+		register_term_meta(
+			self::TAXONOMY,
+			'client_secret',
+			array(
+				'show_in_rest'      => false,
+				'single'            => true,
+				'type'              => 'string',
+				'sanitize_callback' => function( $value ) {
+					if ( ! is_string( $value ) || strlen( $value ) < 16 || strlen( $value ) > 200 ) {
+						throw new \Exception( 'invalid-client_secret,Client secret must be a string with a length between 16 and 200 chars.' );
 					}
-				}
+					return $value;
+				},
+			)
+		);
 
-				if ( empty( $urls ) ) {
-					throw new \Exception( 'invalid-redirect_uris,No valid redirect URIs given' );
-				}
-
-				return $urls;
-			},
-		) );
-
-		register_term_meta( self::TAXONOMY, 'client_name', array(
-			'show_in_rest' => false,
-			'single'       => true,
-			'type'         => 'string',
-			'sanitize_callback' => function( $value ) {
-				if ( ! is_string( $value ) || strlen( $value ) < 3 || strlen( $value ) > 200 ) {
-					throw new \Exception( 'invalid-client_name,Client name must be a string with a length between 3 and 200 chars.' );
-				}
-				return $value;
-			},
-		) );
-
-		register_term_meta( self::TAXONOMY, 'scopes', array(
-			'show_in_rest' => false,
-			'single'       => true,
-			'type'         => 'string',
-			'sanitize_callback' => function( $value ) {
-				if ( ! is_string( $value ) ) {
-					$value = '';
-				}
-				$scopes = array();
-				foreach ( explode( ' ', $value ) as $scope ) {
-					if ( ! trim( $scope ) ) {
-						continue;
+		register_term_meta(
+			self::TAXONOMY,
+			'redirect_uris',
+			array(
+				'show_in_rest'      => false,
+				'single'            => true,
+				'type'              => 'array',
+				'sanitize_callback' => function( $value ) {
+					if ( ! is_array( $value ) ) {
+						return array();
 					}
-					if ( ! in_array( $scope, self::VALID_SCOPES, true ) ) {
-						throw new \Exception( 'invalid-scopes,Invalid scope given: ' . $scope );
-					}
-					$scopes[] = $scope;
-				}
-
-				if ( empty( $scopes ) ) {
-					throw new \Exception( 'invalid-scopes,No scopes given.' );
-				}
-				return implode( ' ', $scopes );
-			}
-		) );
-
-		register_term_meta( self::TAXONOMY, 'website', array(
-			'show_in_rest' => false,
-			'single'       => true,
-			'type'         => 'string',
-			'sanitize_callback' => function( $url ) {
-				if ( ! $url ) {
-					return '';
-				}
-				$host = parse_url( $url, PHP_URL_HOST );
-				$protocol = parse_url( $url, PHP_URL_SCHEME );
-
-				if ( ! $host || 0 !== strpos( 'https', $protocol ) ) {
-					$url = '';
-				}
-
-				return $url;
-			},
-		) );
-
-		register_term_meta( self::TAXONOMY, 'creation_date', array(
-			'show_in_rest' => false,
-			'single'       => true,
-			'type'         => 'int',
-			'sanitize_callback' => function( $value ) {
-				if ( ! is_int( $value ) ) {
-					$value = time();
-				}
-				return $value;
-			},
-		) );
-
-		register_term_meta( self::TAXONOMY, 'last_used', array(
-			'show_in_rest' => false,
-			'single'       => true,
-			'type'         => 'int',
-			'sanitize_callback' => function( $value ) {
-				if ( ! is_int( $value ) ) {
-					$value = time();
-				}
-				return $value;
-			},
-		) );
-
-		register_term_meta( self::TAXONOMY, 'query_args', array(
-			'show_in_rest' => false,
-			'single'       => true,
-			'type'         => 'array',
-			'sanitize_callback' => function( $value ) {
-				if ( ! is_array( $value ) ) {
-					return array();
-				}
-				$value = array_diff_key( $value, array( 'post_formats' ) );
-				if ( isset( $value['post_formats'] ) ) {
-					if ( ! is_array( $value['post_formats'] ) ) {
-						unset( $value['post_formats'] );
-					}
-					$value['post_formats'] = array_filter(
-						$value['post_formats'],
-						function( $post_format ) {
-							if ( ! in_array( $post_format, get_post_format_slugs(), true ) ) {
-								return false;
-							}
-							return true;
+					$urls = array();
+					foreach ( $value as $url ) {
+						if ( Mastodon_OAuth::OOB_REDIRECT_URI === $url ) {
+							$urls[] = $url;
+						} elseif ( preg_match( '#^[a-z0-9.-]+://[a-z0-9.%-]+#i', $url ) ) {
+							// custom protocols are ok.
+							$urls[] = $url;
 						}
-					);
-					if ( empty( $value['post_formats'] ) ) {
-						unset( $value['post_formats'] );
 					}
-				}
-				return $value;
-			},
-		) );
+
+					if ( empty( $urls ) ) {
+						throw new \Exception( 'invalid-redirect_uris,No valid redirect URIs given' );
+					}
+
+					return $urls;
+				},
+			)
+		);
+
+		register_term_meta(
+			self::TAXONOMY,
+			'client_name',
+			array(
+				'show_in_rest'      => false,
+				'single'            => true,
+				'type'              => 'string',
+				'sanitize_callback' => function( $value ) {
+					if ( ! is_string( $value ) || strlen( $value ) < 3 || strlen( $value ) > 200 ) {
+						throw new \Exception( 'invalid-client_name,Client name must be a string with a length between 3 and 200 chars.' );
+					}
+					return $value;
+				},
+			)
+		);
+
+		register_term_meta(
+			self::TAXONOMY,
+			'scopes',
+			array(
+				'show_in_rest'      => false,
+				'single'            => true,
+				'type'              => 'string',
+				'sanitize_callback' => function( $value ) {
+					if ( ! is_string( $value ) ) {
+						$value = '';
+					}
+					$scopes = array();
+					foreach ( explode( ' ', $value ) as $scope ) {
+						if ( ! trim( $scope ) ) {
+							continue;
+						}
+						if ( ! in_array( $scope, self::VALID_SCOPES, true ) ) {
+							throw new \Exception( 'invalid-scopes,Invalid scope given: ' . $scope );
+						}
+						$scopes[] = $scope;
+					}
+
+					if ( empty( $scopes ) ) {
+						throw new \Exception( 'invalid-scopes,No scopes given.' );
+					}
+					return implode( ' ', $scopes );
+				},
+			)
+		);
+
+		register_term_meta(
+			self::TAXONOMY,
+			'website',
+			array(
+				'show_in_rest'      => false,
+				'single'            => true,
+				'type'              => 'string',
+				'sanitize_callback' => function( $url ) {
+					if ( ! $url ) {
+						return '';
+					}
+					$host = parse_url( $url, PHP_URL_HOST );
+					$protocol = parse_url( $url, PHP_URL_SCHEME );
+
+					if ( ! $host || 0 !== strpos( 'https', $protocol ) ) {
+						$url = '';
+					}
+
+					return $url;
+				},
+			)
+		);
+
+		register_term_meta(
+			self::TAXONOMY,
+			'creation_date',
+			array(
+				'show_in_rest'      => false,
+				'single'            => true,
+				'type'              => 'int',
+				'sanitize_callback' => function( $value ) {
+					if ( ! is_int( $value ) ) {
+						$value = time();
+					}
+					return $value;
+				},
+			)
+		);
+
+		register_term_meta(
+			self::TAXONOMY,
+			'last_used',
+			array(
+				'show_in_rest'      => false,
+				'single'            => true,
+				'type'              => 'int',
+				'sanitize_callback' => function( $value ) {
+					if ( ! is_int( $value ) ) {
+						$value = time();
+					}
+					return $value;
+				},
+			)
+		);
+
+		register_term_meta(
+			self::TAXONOMY,
+			'query_args',
+			array(
+				'show_in_rest'      => false,
+				'single'            => true,
+				'type'              => 'array',
+				'sanitize_callback' => function( $value ) {
+					if ( ! is_array( $value ) ) {
+						return array();
+					}
+					$value = array_diff_key( $value, array( 'post_formats' ) );
+					if ( isset( $value['post_formats'] ) ) {
+						if ( ! is_array( $value['post_formats'] ) ) {
+							unset( $value['post_formats'] );
+						}
+						$value['post_formats'] = array_filter(
+							$value['post_formats'],
+							function( $post_format ) {
+								if ( ! in_array( $post_format, get_post_format_slugs(), true ) ) {
+									return false;
+								}
+								return true;
+							}
+						);
+						if ( empty( $value['post_formats'] ) ) {
+							unset( $value['post_formats'] );
+						}
+					}
+					return $value;
+				},
+			)
+		);
 	}
 
 	public function modify_wp_query_args( $args ) {

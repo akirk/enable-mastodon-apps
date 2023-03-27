@@ -1,4 +1,9 @@
 <?php
+/**
+ * Authorize Handler
+ *
+ * @package Enable_Mastodon_Apps
+ */
 
 // phpcs:disable WordPress.Security.NonceVerification.Missing
 
@@ -8,6 +13,11 @@ use OAuth2\Request;
 use OAuth2\Response;
 use OAuth2\Server as OAuth2Server;
 
+/**
+ * Authorize Handler
+ *
+ * This class implements handling the authorization.
+ */
 class AuthorizeHandler {
 	private $server;
 

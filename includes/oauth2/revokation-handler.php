@@ -1,8 +1,8 @@
 <?php
 /**
- * Token Handler
+ * Revokation Handler
  *
- * This file implements handling the issuance of the token.
+ * This file implements handling the revokation of the token.
  *
  * @package Enable_Mastodon_Apps
  */
@@ -14,11 +14,9 @@ use OAuth2\Response;
 use OAuth2\Server as OAuth2Server;
 
 /**
- * Token Handler
- *
- * This class implements handling the issuance of the token.
+ * This class handles the revokation of a token.
  */
-class TokenHandler {
+class RevokationHandler {
 	private $server;
 
 	public function __construct( OAuth2Server $server ) {
@@ -26,6 +24,6 @@ class TokenHandler {
 	}
 
 	public function handle( Request $request, Response $response ) {
-		return $this->server->handleTokenRequest( $request );
+		return $this->server->handleRevokeRequest( $request, $response );
 	}
 }

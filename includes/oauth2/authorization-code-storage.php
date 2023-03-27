@@ -1,122 +1,255 @@
 <?php
+/**
+ * Authorization Code Storage
+ *
+ * This file implements authorization code storage.
+ *
+ * @package Enable_Mastodon_Apps
+ */
 
 namespace Enable_Mastodon_Apps\OAuth2;
 
 use OAuth2\Storage\AuthorizationCodeInterface;
 
+/**
+ * This class implements the OAuth2 authorization code storage.
+ */
 class AuthorizationCodeStorage implements AuthorizationCodeInterface {
+	const TAXONOMY = 'mastoapi-ac';
 	const META_KEY_PREFIX = 'mastodon_api_oa2_auth_code';
 
 	private static $authorization_code_data = array(
+		'code'         => 'string',         // authorization code.
 		'client_id'    => 'string', // client identifier.
-		'redirect_uri' => 'url', // redirect URI.
+		'user_login'   => 'string',         // The WordPress user id.
+		'redirect_uri' => 'string', // redirect URI.
 		'expires'      => 'int',    // expires as unix timestamp.
 		'scope'        => 'string', // scope as space-separated string.
 	);
 
 	public function __construct() {
 		add_action( 'mastodon_api_cron_hook', array( $this, 'cleanupOldCodes' ) );
+
+		// Store the authorization codes in a taxonomy.
+		register_taxonomy( self::TAXONOMY, null );
+		foreach ( $this->authorization_code_data as $key => $type ) {
+			register_term_meta(
+				self::TAXONOMY,
+				$key,
+				array(
+					'type'              => $type,
+					'single'            => true,
+					'sanitize_callback' => array( __CLASS__, 'sanitize_' . $key ),
+				)
+			);
+		}
 	}
 
+	public static function sanitize_string_length( $string, $length ) {
+		return substr( $string, 0, $length );
+	}
+
+	/**
+	 * Sanitize the code content.
+	 *
+	 * @param      string $code   The code.
+	 *
+	 * @return     string  The sanitized code.
+	 */
+	public static function sanitize_code( $code ) {
+		return self::sanitize_string_length( $code, 40 );
+	}
+
+	/**
+	 * Sanitize the client identifier.
+	 *
+	 * @param      string $client_id  The client id.
+	 *
+	 * @return     string  The sanitized client id.
+	 */
+	public static function sanitize_client_id( $client_id ) {
+		return self::sanitize_string_length( $client_id, 200 );
+	}
+
+	/**
+	 * Sanitize the redirect URI.
+	 *
+	 * @param      string $redirect_uri  The redirect uri.
+	 *
+	 * @return     string  The sanitized redirect uri.
+	 */
+	public static function sanitize_redirect_uri( $redirect_uri ) {
+		return self::sanitize_string_length( $redirect_uri, 2000 );
+	}
+
+	/**
+	 * Sanitize the scope.
+	 *
+	 * @param      string $scope  The scope.
+	 *
+	 * @return     string  The sanitized scope.
+	 */
+	public static function sanitize_scope( $scope ) {
+		return self::sanitize_string_length( $scope, 100 );
+	}
+
+	/**
+	 * Sanitize the user login.
+	 *
+	 * @param      string $user_login  The user login.
+	 *
+	 * @return     string  The sanitized user login.
+	 */
+	public static function sanitize_user_login( $user_login ) {
+		return self::sanitize_string_length( $user_login, 60 );
+	}
+
+	/**
+	 * Sanitize the expires.
+	 *
+	 * @param      int $expires  The expires.
+	 *
+	 * @return     int  The sanitized expires.
+	 */
+	public static function sanitize_expires( $expires ) {
+		return intval( $expires );
+	}
+
+	/**
+	 * Gets all authorization codes.
+	 *
+	 * @return     array  All codes.
+	 */
 	public static function getAll() {
-		$tokens = array();
+		$codes = array();
 
-		foreach ( get_user_meta( get_current_user_id() ) as $key => $value ) {
-			if ( 0 !== strpos( $key, self::META_KEY_PREFIX ) ) {
-				continue;
-			}
-			$key_parts = explode( '_', substr( $key, strlen( self::META_KEY_PREFIX ) + 1 ) );
-			$token = array_pop( $key_parts );
-			$key = implode( '_', $key_parts );
-			$value = $value[0];
-
-			if ( 'expires' === $key ) {
-				$tokens[$token]['expired'] = time() > $value;
-			}
-
-			$tokens[$token][$key] = $value;
-		}
-
-		return $tokens;
-	}
-	private function getUserIdByCode( $code ) {
-		if ( empty( $code ) ) {
-			return null;
-		}
-
-		$users = get_users(
+		$terms = new \WP_Term_Query(
 			array(
-				'number'       => 1,
-				// Specifying blog_id does nothing for non-MultiSite installs. But for MultiSite installs, it allows you
-				// to customize users of which site is supposed to be available for whatever sites
-				// this plugin is meant to be activated on.
-				'blog_id'      => get_current_blog_id(),
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-				'meta_key'     => self::META_KEY_PREFIX . '_client_id_' . $code,
-				// Using a meta_key EXISTS query is not slow, see https://github.com/WordPress/WordPress-Coding-Standards/issues/1871.
-				'meta_compare' => 'EXISTS',
+				'taxonomy' => self::TAXONOMY,
+				'fields'   => 'ids',
 			)
 		);
 
-		if ( empty( $users ) ) {
-			return null;
+		foreach ( $terms->get_terms() as $term_id ) {
+			$code = array();
+			foreach ( array_keys( self::$authorization_code_data ) as $key ) {
+				$code[ $key ] = get_term_meta( $term_id, $key, true );
+			}
+			$codes[] = $code;
 		}
 
-		return absint( $users[0]->ID );
+		return $codes;
 	}
 
+	/**
+	 * Fetch authorization code data (probably the most common grant type).
+	 *
+	 * Retrieve the stored data for the given authorization code.
+	 *
+	 * Required for OAuth2::GRANT_TYPE_AUTH_CODE.
+	 *
+	 * @param string $code  Authorization code to be check with.
+	 *
+	 * @return An associative array as below, and NULL if the code is invalid
+	 *
+	 * @code
+	 * return array(
+	 *     "client_id"    => CLIENT_ID,      // REQUIRED Stored client identifier
+	 *     "user_id"      => USER_ID,        // REQUIRED Stored user identifier
+	 *     "expires"      => EXPIRES,        // REQUIRED Stored expiration in unix timestamp
+	 *     "redirect_uri" => REDIRECT_URI,   // REQUIRED Stored redirect URI
+	 *     "scope"        => SCOPE,          // OPTIONAL Stored scope values in space-separated string
+	 * );
+	 * @endcode
+	 *
+	 * @see http://tools.ietf.org/html/rfc6749#section-4.1
+	 *
+	 * @ingroup oauth2_section_4
+	 */
 	public function getAuthorizationCode( $code ) {
-		$user_id = $this->getUserIdByCode( $code );
-		if ( empty( $user_id ) ) {
-			return null;
+		$term = get_term_by( 'slug', $code, self::TAXONOMY );
+
+		if ( $term ) {
+			$authorization_code = array();
+			foreach ( array(
+				'client_id'    => 'client_id',
+				'user_id'      => 'user_login',
+				'expires'      => 'expires',
+				'redirect_uri' => 'redirect_uri',
+				'scope'        => 'scope',
+			) as $key => $meta_key ) {
+				$authorization_code[ $key ] = get_term_meta( $term->term_id, $meta_key, true );
+			}
+
+			return $authorization_code;
 		}
 
-		$user = new \WP_User( $user_id );
-
-		$authorization_code = array(
-			'user_id' => $user->user_login,
-			'code'    => $code,
-		);
-		foreach ( array_keys( self::$authorization_code_data ) as $key ) {
-			$authorization_code[ $key ] = get_user_meta( $user_id, self::META_KEY_PREFIX . '_' . $key . '_' . $code, true );
-		}
-
-		return $authorization_code;
+		return null;
 	}
 
+
+	/**
+	 * Take the provided authorization code values and store them somewhere.
+	 *
+	 * This function should be the storage counterpart to getAuthCode().
+	 *
+	 * If storage fails for some reason, we're not currently checking for
+	 * any sort of success/failure, so you should bail out of the script
+	 * and provide a descriptive fail message.
+	 *
+	 * Required for OAuth2::GRANT_TYPE_AUTH_CODE.
+	 *
+	 * @param string $code          - authorization code to be stored.
+	 * @param mixed  $client_id     - client identifier to be stored.
+	 * @param mixed  $user_id       - user identifier to be stored.
+	 * @param string $redirect_uri  - redirect URI(s) to be stored in a space-separated string.
+	 * @param int    $expires       - expiration to be stored as a Unix timestamp.
+	 * @param string $scope         - OPTIONAL scopes to be stored in space-separated string.
+	 *
+	 * @ingroup oauth2_section_4
+	 */
 	public function setAuthorizationCode( $code, $client_id, $user_id, $redirect_uri, $expires, $scope = null ) {
-		if ( empty( $code ) ) {
-			return;
-		}
-		$expires = time() + 86400;
+		if ( $code ) {
+			$this->expireAuthorizationCode( $code );
 
-		$user = get_user_by( 'login', $user_id );
+			$term = wp_insert_term( $code, self::TAXONOMY );
+			if ( is_wp_error( $term ) || ! isset( $term['term_id'] ) ) {
+				status_header( 500 );
+				exit;
+			}
 
-		if ( $user ) {
-			foreach ( self::$authorization_code_data as $key => $data_type ) {
-				if ( 'int' === $data_type ) {
-					$value = absint( $$key );
-				} elseif ( 'url' === $data_type ) {
-					$value = strval( $$key );
-				} else {
-					$value = sanitize_text_field( $$key );
-				}
-
-				update_user_meta( $user->ID, self::META_KEY_PREFIX . '_' . $key . '_' . $code, $value );
+			foreach ( array(
+				'client_id'    => $client_id,
+				'user_login'   => $user_login,
+				'redirect_uri' => $redirect_uri,
+				'expires'      => $expires,
+				'scope'        => $scope,
+				'id_token'     => $id_token,
+			) as $key => $value ) {
+				add_term_meta( $term['term_id'], $key, $value );
 			}
 		}
 	}
 
+	/**
+	 * Once an Authorization Code is used, it must be expired
+	 *
+	 * @param      string $code   The code.
+	 *
+	 * @see http://tools.ietf.org/html/rfc6749#section-4.1.2
+	 *
+	 *    The client MUST NOT use the authorization code
+	 *    more than once.  If an authorization code is used more than
+	 *    once, the authorization server MUST deny the request and SHOULD
+	 *    revoke (when possible) all tokens previously issued based on
+	 *    that authorization code
+	 */
 	public function expireAuthorizationCode( $code ) {
-		$user_id = $this->getUserIdByCode( $code );
-		if ( empty( $user_id ) ) {
-			return null;
-		}
+		$term = get_term_by( 'slug', $code, self::TAXONOMY );
 
-		foreach ( array_keys( self::$authorization_code_data ) as $key ) {
-			delete_user_meta( $user_id, self::META_KEY_PREFIX . '_' . $key . '_' . $code );
+		if ( $term ) {
+			wp_delete_term( $term->term_id, self::TAXONOMY );
 		}
-
 		return true;
 	}
 
@@ -124,49 +257,38 @@ class AuthorizationCodeStorage implements AuthorizationCodeInterface {
 	 * This function cleans up auth codes that are sitting in the database because of interrupted/abandoned OAuth flows.
 	 */
 	public static function cleanupOldCodes() {
-		global $wpdb;
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-		$data = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT user_id, meta_key FROM $wpdb->usermeta WHERE meta_key LIKE %s AND meta_value < %d",
-				self::META_KEY_PREFIX . '_expires_%',
-				time() - 3600 // wait for an hour past expiry, to offer a chance at debug.
+		$terms = new \WP_Term_Query(
+			array(
+				'taxonomy'   => self::TAXONOMY,
+				'fields'     => 'ids',
+				'meta_query' => array(
+					array(
+						'key'     => 'expires',
+						'value'   => time(),
+						'compare' => '<',
+					),
+				),
 			)
 		);
-		if ( empty( $data ) ) {
-			return;
-		}
 
-		foreach ( $data as $row ) {
-			$code = substr( $row->meta_key, strlen( self::META_KEY_PREFIX . '_expires_' ) );
-			foreach ( array_keys( self::$authorization_code_data ) as $key ) {
-				delete_user_meta( $row->user_id, self::META_KEY_PREFIX . '_' . $key . '_' . $code );
-			}
+		foreach ( $terms->terms as $term_id ) {
+			wp_delete_term( $term_id, self::TAXONOMY );
 		}
 	}
 
+	/**
+	 * Delete all auth codes when the plugin is uninstalled.
+	 */
 	public static function uninstall() {
-		global $wpdb;
-
-		// Following query is only possible via a direct query since meta_key is not a fixed string
-		// and since it only runs at uninstall, we don't need it cached.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-		$data = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT user_id, meta_key FROM $wpdb->usermeta WHERE meta_key LIKE %s",
-				self::META_KEY_PREFIX . '_expires_%'
+		$terms = new \WP_Term_Query(
+			array(
+				'taxonomy' => self::TAXONOMY,
+				'fields'   => 'ids',
 			)
 		);
-		if ( empty( $data ) ) {
-			return;
-		}
 
-		foreach ( $data as $row ) {
-			$code = substr( $row->meta_key, strlen( self::META_KEY_PREFIX . '_expires_' ) );
-			foreach ( array_keys( self::$authorization_code_data ) as $key ) {
-				delete_user_meta( $row->user_id, self::META_KEY_PREFIX . '_' . $key . '_' . $code );
-			}
+		foreach ( $terms->terms as $term_id ) {
+			wp_delete_term( $term_id, self::TAXONOMY );
 		}
 	}
 }

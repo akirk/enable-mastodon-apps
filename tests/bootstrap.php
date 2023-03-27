@@ -48,7 +48,7 @@ ob_start();
 
 // Start up the WP testing environment.
 require $_tests_dir . '/includes/bootstrap.php';
-require_once __DIR__ . "/class-mastodon-api-testcase.php";
+require_once __DIR__ . '/class-mastodon-api-testcase.php';
 ob_end_clean();
 
 // Make sure to be able to query these hosts.

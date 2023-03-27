@@ -36,9 +36,9 @@ class Mastodon_OAuth {
 	 */
 	public function __construct() {
 		$config = array(
-		    'issuer'                => home_url( '/' ),
-		    'enforce_state'         => false,
-		    'access_lifetime'       => YEAR_IN_SECONDS * 2,
+			'issuer'          => home_url( '/' ),
+			'enforce_state'   => false,
+			'access_lifetime' => YEAR_IN_SECONDS * 2,
 		);
 
 		$this->server = new Server( new Oauth2\AuthorizationCodeStorage(), $config );
@@ -50,36 +50,32 @@ class Mastodon_OAuth {
 	}
 
 	public function handle_oauth() {
-		$handler = null;
-		switch( strtok( $_SERVER['REQUEST_URI'], '?' ) ) {
+		switch ( strtok( $_SERVER['REQUEST_URI'], '?' ) ) {
 			case '/oauth/authorize':
 				if ( get_option( 'mastodon_api_disable_logins' ) ) {
 					return;
 				}
 				$handler = new OAuth2\AuthorizeHandler( $this->server );
 				break;
+
 			case '/oauth/token':
 				header( 'Access-Control-Allow-Methods: POST' );
 				header( 'Access-Control-Allow-Headers: content-type' );
 				header( 'Access-Control-Allow-Credentials: true' );
-				if ( $_SERVER['REQUEST_METHOD']  === 'OPTIONS' ) {
+				if ( 'OPTIONS' === $_SERVER['REQUEST_METHOD'] ) {
 					header( 'Access-Control-Allow-Origin: *', true, 204 );
 					exit;
 				}
 				header( 'Access-Control-Allow-Origin: *' );
 				$handler = new OAuth2\TokenHandler( $this->server );
 				break;
+
 			case '/oauth/revoke':
-				$request  = Request::createFromGlobals();
-				$response = new Response();
-				$response = $this->server->handleRevokeRequest( $request, $response );
-				$response->send();
+				$handler = new OAuth2\RevokationHandler( $this->server );
 				exit;
-			default:
-				break;
 		}
 
-		if ( is_null( $handler ) ) {
+		if ( ! isset( $handler ) ) {
 			return;
 		}
 
@@ -91,7 +87,7 @@ class Mastodon_OAuth {
 	}
 
 	public function authenticate() {
-		$request  = Request::createFromGlobals();
+		$request = Request::createFromGlobals();
 		if ( ! $this->server->verifyResourceRequest( $request ) ) {
 			$this->server->getResponse()->send();
 			return null;

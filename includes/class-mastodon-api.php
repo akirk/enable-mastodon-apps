@@ -81,19 +81,19 @@ class Mastodon_API {
 			'api/v2/media',
 		);
 		$parametrized = array(
-			'api/v1/accounts/([^/+])/follow'      => 'api/v1/accounts/$matches[1]/follow',
-			'api/v1/accounts/([^/+])/unfollow'    => 'api/v1/accounts/$matches[1]/unfollow',
-			'api/v1/accounts/([^/+])/statuses'    => 'api/v1/accounts/$matches[1]/statuses',
-			'api/v1/statuses/([0-9]+)/context'    => 'api/v1/statuses/$matches[1]/context',
+			'api/v1/accounts/([^/+])/follow'       => 'api/v1/accounts/$matches[1]/follow',
+			'api/v1/accounts/([^/+])/unfollow'     => 'api/v1/accounts/$matches[1]/unfollow',
+			'api/v1/accounts/([^/+])/statuses'     => 'api/v1/accounts/$matches[1]/statuses',
+			'api/v1/statuses/([0-9]+)/context'     => 'api/v1/statuses/$matches[1]/context',
 			'api/v1/statuses/([0-9]+)/favourite'   => 'api/v1/statuses/$matches[1]/favourite',
-			'api/v1/statuses/([0-9]+)/unfavourite'   => 'api/v1/statuses/$matches[1]/unfavourite',
-			'api/nodeinfo/([0-9]+[.][0-9]+).json' => 'api/nodeinfo/$matches[1].json',
-			'api/v1/media/([0-9]+)'               => 'api/v1/media/$matches[1]',
-			'api/v1/statuses/([0-9]+)'            => 'api/v1/statuses/$matches[1]',
-			'api/v1/statuses'                     => 'api/v1/statuses',
-			'api/v1/accounts/(.+)'                => 'api/v1/accounts/$matches[1]',
-			'api/v1/timelines/(home|public)'      => 'api/v1/timelines/$matches[1]',
-			'api/v2/search'                       => 'api/v1/search',
+			'api/v1/statuses/([0-9]+)/unfavourite' => 'api/v1/statuses/$matches[1]/unfavourite',
+			'api/nodeinfo/([0-9]+[.][0-9]+).json'  => 'api/nodeinfo/$matches[1].json',
+			'api/v1/media/([0-9]+)'                => 'api/v1/media/$matches[1]',
+			'api/v1/statuses/([0-9]+)'             => 'api/v1/statuses/$matches[1]',
+			'api/v1/statuses'                      => 'api/v1/statuses',
+			'api/v1/accounts/(.+)'                 => 'api/v1/accounts/$matches[1]',
+			'api/v1/timelines/(home|public)'       => 'api/v1/timelines/$matches[1]',
+			'api/v2/search'                        => 'api/v1/search',
 		);
 
 		foreach ( $generic as $rule ) {
@@ -490,9 +490,12 @@ class Mastodon_API {
 			if ( ! is_array( $reblog_user_ids ) ) {
 				$reblog_user_ids = array();
 			}
-			$reblogged_by = array_map( function( $user_id ) {
-				return $this->get_friend_account_data( $user_id );
-			}, $reblog_user_ids );
+			$reblogged_by = array_map(
+				function( $user_id ) {
+					return $this->get_friend_account_data( $user_id );
+				},
+				$reblog_user_ids
+			);
 		} else {
 			$reblogged = false;
 		}
@@ -728,7 +731,7 @@ class Mastodon_API {
 			);
 			$users = $query->get_results();
 			foreach ( $users as $user ) {
-				$ret[ 'accounts' ][] = $this->get_friend_account_data( $user->ID );
+				$ret['accounts'][] = $this->get_friend_account_data( $user->ID );
 			}
 		}
 		if ( $request->get_param( 'type' ) === 'statuses' ) {
@@ -738,9 +741,9 @@ class Mastodon_API {
 			}
 			$args = apply_filters( 'mastodon_api_timelines_args', $args, $request );
 			$args['s'] = $request->get_param( 'q' );
-			$args['offset']	= $request->get_param( 'offset' );
-			$args['posts_per_page']	= $request->get_param( 'limit' );
-			$ret[ 'statuses' ] = $this->get_posts( $args );
+			$args['offset'] = $request->get_param( 'offset' );
+			$args['posts_per_page'] = $request->get_param( 'limit' );
+			$ret['statuses'] = $this->get_posts( $args );
 		}
 		return $ret;
 	}

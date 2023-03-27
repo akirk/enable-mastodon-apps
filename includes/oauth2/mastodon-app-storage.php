@@ -14,9 +14,9 @@ class MastodonAppStorage implements ClientCredentialsInterface {
 		$client = $this->get( $client_id );
 
 		return array(
-			'client_id'    => $client_id,
+			'client_id'     => $client_id,
 			'redirect_uris' => $client->get_redirect_uris(),
-			'scope'        => $client->get_scopes(),
+			'scope'         => $client->get_scopes(),
 		);
 	}
 
@@ -65,7 +65,7 @@ class MastodonAppStorage implements ClientCredentialsInterface {
 	/**
 	 * Gets the specified client identifier.
 	 *
-	 * @param      <type>  $client_id  The client identifier
+	 * @param      <type> $client_id  The client identifier
 	 *
 	 * @return     <type>  ( description_of_the_return_value )
 	 */

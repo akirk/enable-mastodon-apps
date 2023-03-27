@@ -13,9 +13,9 @@ class AccessTokenStorage implements AccessTokenInterface {
 	const META_KEY_PREFIX = 'friends_oa2_access_token';
 
 	private static $access_token_data = array(
-		'client_id'    => 'string', // client identifier.
-		'expires'      => 'int',    // expires as unix timestamp.
-		'scope'        => 'string', // scope as space-separated string.
+		'client_id' => 'string', // client identifier.
+		'expires'   => 'int',    // expires as unix timestamp.
+		'scope'     => 'string', // scope as space-separated string.
 	);
 
 	public function __construct() {
@@ -35,10 +35,10 @@ class AccessTokenStorage implements AccessTokenInterface {
 			$value = $value[0];
 
 			if ( 'expires' === $key ) {
-				$tokens[$token]['expired'] = time() > $value;
+				$tokens[ $token ]['expired'] = time() > $value;
 			}
 
-			$tokens[$token][$key] = $value;
+			$tokens[ $token ][ $key ] = $value;
 		}
 
 		return $tokens;
@@ -70,7 +70,7 @@ class AccessTokenStorage implements AccessTokenInterface {
 		return absint( $users[0]->ID );
 	}
 
-  /**
+	/**
 	 * Look up the supplied oauth_token from storage.
 	 *
 	 * We need to retrieve access token data as we create and verify tokens.
@@ -90,23 +90,23 @@ class AccessTokenStorage implements AccessTokenInterface {
 	 *
 	 * @ingroup oauth2_section_7
 	 */
-  public function getAccessToken( $oauth_token ) {
-	$user_id = $this->getUserIdByToken( $oauth_token );
-	if ( empty( $user_id ) ) {
-		return null;
+	public function getAccessToken( $oauth_token ) {
+		$user_id = $this->getUserIdByToken( $oauth_token );
+		if ( empty( $user_id ) ) {
+			return null;
+		}
+
+		$user = new \WP_User( $user_id );
+
+		$access_token = array(
+			'user_id' => $user->ID,
+		);
+		foreach ( array_keys( self::$access_token_data ) as $key ) {
+			$access_token[ $key ] = get_user_meta( $user_id, self::META_KEY_PREFIX . '_' . $key . '_' . $oauth_token, true );
+		}
+
+		return $access_token;
 	}
-
-	$user = new \WP_User( $user_id );
-
-	$access_token = array(
-		'user_id' => $user->ID,
-	);
-	foreach ( array_keys( self::$access_token_data ) as $key ) {
-		$access_token[ $key ] = get_user_meta( $user_id, self::META_KEY_PREFIX . '_' . $key . '_' . $oauth_token, true );
-	}
-
-	return $access_token;
-  }
 
 	/**
 	 * Store the supplied access token values to storage.
@@ -121,7 +121,7 @@ class AccessTokenStorage implements AccessTokenInterface {
 	 *
 	 * @ingroup oauth2_section_4
 	 */
-	public function setAccessToken($oauth_token, $client_id, $user_id, $expires, $scope = null) {
+	public function setAccessToken( $oauth_token, $client_id, $user_id, $expires, $scope = null ) {
 		if ( empty( $oauth_token ) ) {
 			return;
 		}

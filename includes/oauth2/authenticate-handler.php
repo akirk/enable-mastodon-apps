@@ -1,4 +1,11 @@
 <?php
+/**
+ * Authentication Handler
+ *
+ * This file implements handling the authentication.
+ *
+ * @package Enable_Mastodon_Apps
+ */
 
 namespace Enable_Mastodon_Apps\OAuth2;
 
@@ -6,6 +13,9 @@ use Enable_Mastodon_Apps\Mastodon_App;
 use OAuth2\Request;
 use OAuth2\Response;
 
+/**
+ * This class implements the Authentication handler.
+ */
 class AuthenticateHandler {
 	public function handle( Request $request, Response $response ) {
 		if ( ! is_user_logged_in() ) {

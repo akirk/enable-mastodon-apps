@@ -32,20 +32,11 @@ require_once __DIR__ . '/includes/class-mastodon-admin.php';
 require_once __DIR__ . '/includes/class-mastodon-api.php';
 require_once __DIR__ . '/includes/class-mastodon-app.php';
 
-if ( apply_filters( 'friends_debug', false ) ) {
-	add_filter( 'friends_host_is_valid', function( $result, $host ) {
-		if ( $host === 'localhost' ) {
-			return true;
-		}
-		return $result;
-	}, 10, 2 );
-}
-
 function mastodon_api_pixelfed_nodeinfo_software( $software ) {
 	if ( 'okhttp/4.9.2' === $_SERVER['HTTP_USER_AGENT'] ) {
 		return array(
-			'name' => 'pixelfed',
-			'version' =>'0.11.4',
+			'name'    => 'pixelfed',
+			'version' => '0.11.4',
 		);
 	}
 

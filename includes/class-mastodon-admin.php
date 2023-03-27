@@ -3,7 +3,6 @@ namespace Enable_Mastodon_Apps;
 
 /**
  * The admin-specific functionality of the plugin.
- *
  */
 class Mastodon_Admin {
 	private $oauth;
@@ -18,7 +17,7 @@ class Mastodon_Admin {
 
 		// Only show the menu if installed standalone.
 		$friends_settings_exist = '' !== menu_page_url( 'friends', false );
-		if ( $friends_settings_exist && class_exists( '\Friends\Friends' )  ) {
+		if ( $friends_settings_exist && class_exists( '\Friends\Friends' ) ) {
 			add_submenu_page(
 				'friends',
 				__( 'Mastodon Apps', 'enable-mastodon-apps' ),
@@ -252,7 +251,7 @@ class Mastodon_Admin {
 							</tr>
 							<?php
 						}
-					?>
+						?>
 					</tbody>
 				</table>
 			<?php endif; ?>
@@ -275,7 +274,9 @@ class Mastodon_Admin {
 								<td>
 									<?php
 									if ( isset( $apps[ $data['client_id'] ] ) ) {
-										?><a href="#app-<?php echo esc_attr( $data['client_id'] ); ?>"><?php echo esc_html( $apps[ $data['client_id'] ]->get_client_name() ); ?></a><?php
+										?>
+										<a href="#app-<?php echo esc_attr( $data['client_id'] ); ?>"><?php echo esc_html( $apps[ $data['client_id'] ]->get_client_name() ); ?></a>
+										<?php
 									} else {
 										echo esc_html( 'Unknown: ' . $data['client_id'] );
 									}
@@ -288,7 +289,7 @@ class Mastodon_Admin {
 							</tr>
 							<?php
 						}
-					?>
+						?>
 					</tbody>
 				</table>
 			<?php endif; ?>
@@ -314,13 +315,15 @@ class Mastodon_Admin {
 								<td>
 									<?php
 									if ( $app->get_website() ) {
-										?><a href="<?php echo esc_url( $app->get_website() ); ?>"><?php echo esc_html( $app->get_client_name() ); ?></a><?php
+										?>
+										<a href="<?php echo esc_url( $app->get_website() ); ?>"><?php echo esc_html( $app->get_client_name() ); ?></a>
+										<?php
 									} else {
 										echo esc_html( $app->get_client_name() );
 									}
 									?>
 								</td>
-								<td><?php echo wp_kses( implode('<br/>', $app->get_redirect_uris() ), array( 'br' => array() ) ); ?></td>
+								<td><?php echo wp_kses( implode( '<br/>', $app->get_redirect_uris() ), array( 'br' => array() ) ); ?></td>
 								<td><?php echo esc_html( $app->get_scopes() ); ?></td>
 								<td>
 									<details>
@@ -337,7 +340,7 @@ class Mastodon_Admin {
 							</tr>
 							<?php
 						}
-					?>
+						?>
 					</tbody>
 				</table>
 			<?php endif; ?>
