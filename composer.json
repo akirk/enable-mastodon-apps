@@ -4,7 +4,7 @@
 	"type": "wordpress-plugin",
 	"license": "GPL-2.0-or-later",
 	"require-dev": {
-		"dealerdirect/phpcodesniffer-composer-installer": "^0.7",
+		"dealerdirect/phpcodesniffer-composer-installer": "*",
 		"phpcompatibility/php-compatibility": "*",
 		"wp-coding-standards/wpcs": "*",
 		"yoast/phpunit-polyfills": "*",
