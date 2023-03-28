@@ -51,7 +51,7 @@ class AuthenticateHandler {
 
 		$has_permission = current_user_can( 'edit_private_posts' );
 		if ( ! $has_permission ) {
-			login_header( 'Authorize Mastodon Client', null, new \WP_Error( 'no-permission', __( "You don't have permission to use Mastodon-API.", 'enable-mastodon-apps' ) ) );
+			login_header( 'Authorize Mastodon Client', null, new \WP_Error( 'no-permission', __( "You don't have permission to use Mastodon Apps.", 'enable-mastodon-apps' ) ) );
 			$this->render_no_permission_screen( $data );
 		} else {
 			login_header( 'Authorize Mastodon Client' );
@@ -80,7 +80,7 @@ class AuthenticateHandler {
 						?>
 					</h2>
 					<br/>
-					<p><?php esc_html_e( "You don't have permission to use the Mastodon API.", 'enable-mastodon-apps' ); ?></p>
+					<p><?php esc_html_e( "You don't have permission to use Mastodon Apps.", 'enable-mastodon-apps' ); ?></p>
 					<br/>
 					<p><?php esc_html_e( 'Contact your administrator for more details.', 'enable-mastodon-apps' ); ?></p>
 					<br/>

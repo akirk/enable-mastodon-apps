@@ -19,31 +19,14 @@ class Mastodon_Admin {
 	}
 
 	public function admin_menu() {
-		$page_type = 'settings';
-
-		// Only show the menu if installed standalone.
-		$friends_settings_exist = '' !== menu_page_url( 'friends', false );
-		if ( $friends_settings_exist && class_exists( '\Friends\Friends' ) ) {
-			add_submenu_page(
-				'friends',
-				__( 'Mastodon Apps', 'enable-mastodon-apps' ),
-				__( 'Mastodon Apps', 'enable-mastodon-apps' ),
-				'edit_private_posts',
-				'enable-mastodon-apps',
-				array( $this, 'admin_page' )
-			);
-			$menu_title = __( 'Friends', 'friends' ) . \Friends\Friends::get_instance()->admin->get_unread_badge(); // phpcs:ignore WordPress.WP.I18n.TextDomainMismatch
-			$page_type = sanitize_title( $menu_title );
-		} else {
-			add_options_page(
-				__( 'Mastodon Apps', 'enable-mastodon-apps' ),
-				__( 'Mastodon Apps', 'enable-mastodon-apps' ),
-				'edit_private_posts',
-				'enable-mastodon-apps',
-				array( $this, 'admin_page' )
-			);
-		}
-		add_action( 'load-' . $page_type . '_page_enable-mastodon-apps', array( $this, 'process_admin' ) );
+		add_options_page(
+			__( 'Mastodon Apps', 'enable-mastodon-apps' ),
+			__( 'Mastodon Apps', 'enable-mastodon-apps' ),
+			'edit_private_posts',
+			'enable-mastodon-apps',
+			array( $this, 'admin_page' )
+		);
+		add_action( 'load-settings_page_enable-mastodon-apps', array( $this, 'process_admin' ) );
 	}
 
 	public function process_admin() {
@@ -205,6 +188,14 @@ class Mastodon_Admin {
 		$tokens = OAuth2\AccessTokenStorage::getAll();
 		$apps = Mastodon_App::get_all();
 
+		wp_enqueue_script( 'plugin-install' );
+		add_thickbox();
+		wp_enqueue_script( 'updates' );
+
+		$plugins = get_plugins();
+		$activitypub_installed = isset( $plugins['activitypub/activitypub.php'] );
+		$friends_installed = isset( $plugins['friends/friends.php'] );
+
 		function td_timestamp( $timestamp, $strikethrough_past = false ) {
 			?>
 			<td>
@@ -248,6 +239,29 @@ class Mastodon_Admin {
 		<div class="wrap">
 		<h1><?php esc_html_e( 'Mastodon Apps', 'enable-mastodon-apps' ); ?></h1>
 
+		<h2><?php esc_html_e( 'Recommended Plugins', 'enable-mastodon-apps' ); ?></h2>
+		<p><span><?php esc_html_e( 'On its own, this plugin allows you to publish status posts and show your own posts in the apps\' timelines.', 'enable-mastodon-apps' ); ?> <span><?php esc_html_e( 'To make the plugin more useful, you can install the following plugins:', 'enable-mastodon-apps' ); ?></span></p>
+
+		<?php if ( $activitypub_installed ) : ?>
+			<details><summary style="cursor: pointer;"><?php esc_html_e( 'The ActivityPub plugin is already installed.', 'enable-mastodon-apps' ); ?></summary>
+		<?php endif; ?>
+		<p><?php esc_html_e( 'The ActivityPub plugin connects your blog to the fediverse: Other people can follow your WordPress using a Mastodon account. It also provides functionality for communicating with the ActivityPub protocol to other plugins.', 'enable-mastodon-apps' ); ?></p>
+		<p><a href="<?php echo \esc_url_raw( \admin_url( 'plugin-install.php?tab=plugin-information&plugin=activitypub&TB_iframe=true' ) ); ?>" class="thickbox open-plugin-details-modal button install-now" target="_blank"><?php \esc_html_e( 'Install the Activitypub Plugin', 'enable-mastodon-apps' ); ?></a></p>
+		<?php if ( $activitypub_installed ) : ?>
+			</details>
+		<?php endif; ?>
+
+		<?php if ( $friends_installed ) : ?>
+			<details><summary style="cursor: pointer;"><?php esc_html_e( 'The Friends plugin is already installed.', 'enable-mastodon-apps' ); ?></summary>
+		<?php endif; ?>
+		<p><span><?php esc_html_e( 'The Friends plugin allows you to follow other blogs or, if the ActivityPub plugin is also installed, Mastodon accounts.', 'enable-mastodon-apps' ); ?></span> <span><?php esc_html_e( 'You can then see the posts of people you follow inside your Mastodon compatible app.', 'enable-mastodon-apps' ); ?></span></p>
+
+		<p><a href="<?php echo \esc_url_raw( \admin_url( 'plugin-install.php?tab=plugin-information&plugin=friends&TB_iframe=true' ) ); ?>" class="thickbox open-plugin-details-modal button install-now" target="_blank"><?php \esc_html_e( 'Install the Friends Plugin', 'enable-mastodon-apps' ); ?></a></p>
+		<?php if ( $friends_installed ) : ?>
+			</details>
+		<?php endif; ?>
+
+		</p>
 		<form method="post">
 			<?php wp_nonce_field( 'enable-mastodon-apps' ); ?>
 			<table class="form-table">
@@ -258,7 +272,7 @@ class Mastodon_Admin {
 							<fieldset>
 								<label for="mastodon_api_enable_logins">
 									<input name="mastodon_api_enable_logins" type="checkbox" id="mastodon_api_enable_logins" value="1" <?php checked( '1', ! get_option( 'mastodon_api_disable_logins' ) ); ?> />
-									<?php esc_html_e( 'Allow new and existing apps to sign in.', 'enable-mastodon-apps' ); ?>
+									<span><?php esc_html_e( 'Allow new and existing apps to sign in.', 'enable-mastodon-apps' ); ?></span>
 								</label>
 							</fieldset>
 							<p class="description"><?php esc_html_e( 'New apps can register on their own, so the list might grow if you keep this enabled.', 'enable-mastodon-apps' ); ?></p>

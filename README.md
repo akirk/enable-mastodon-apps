@@ -1,6 +1,7 @@
 # Enable Mastodon Apps
 
 - Contributors: akirk
+- Tags: mastodon, activitypub, friends, fediverse
 - Requires at least: 5.0
 - Tested up to: 6.2
 - Requires PHP: 5.2.4

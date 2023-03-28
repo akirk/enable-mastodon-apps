@@ -1417,7 +1417,7 @@ class Mastodon_API {
 	public function api_nodeinfo() {
 		global $wp_version;
 		$software = array(
-			'name'    => 'WordPress/' . $wp_version . ' with Mastodon-API Plugin',
+			'name'    => 'WordPress/' . $wp_version . ' with the Enable Mastodon Apps Plugin',
 			'version' => Mastodon_API::VERSION,
 		);
 		$software = apply_filters( 'mastodon_api_nodeinfo_software', $software );
