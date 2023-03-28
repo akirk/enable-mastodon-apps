@@ -544,6 +544,7 @@ class Mastodon_API {
 				foreach ( $attachments as $attachment_id => $attachment ) {
 					if ( $attachment->guid === $img_tag['url'] ) {
 						$media_id = $attachment_id;
+						unset( $attachments[ $attachment_id ] );
 						break;
 					}
 				}
@@ -561,6 +562,19 @@ class Mastodon_API {
 			$p = strpos( $data['content'], '<!-- wp:image' );
 		}
 
+		foreach ( $attachments as $attachment_id => $attachment ) {
+			$attachment_metadata = \wp_get_attachment_metadata( $attachment_id );
+			$url = wp_get_attachment_url( $attachment_id );
+			$data['media_attachments'][] = array(
+				'id'          => $attachment_id,
+				'type'        => 'image',
+				'url'         => $url,
+				'preview_url' => $url,
+				'text_url'    => $url,
+				'width'       => $attachment_metadata['width'],
+				'height'      => $attachment_metadata['height'],
+			);
+		}
 		$author_name = $data['account']['display_name'];
 		$override_author_name = get_post_meta( $post->ID, 'author', true );
 
