@@ -192,6 +192,7 @@ class AppsEndpoint_Test extends Mastodon_API_TestCase {
 			'read write follow',
 			'read write follow push',
 			'write',
+			'write:statuses',
 			'write follow',
 			'write follow push',
 		) as $i => $valid_scope ) {
