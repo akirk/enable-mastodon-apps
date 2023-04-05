@@ -86,7 +86,7 @@ class Mastodon_API_TestCase extends \WP_UnitTestCase {
 	}
 
 	function block_http_requests() {
-	    return new \WP_Error('http_request_failed', 'HTTP requests have been blocked.');
+		return new \WP_Error( 'http_request_failed', 'HTTP requests have been blocked.' );
 	}
 
 }
