@@ -46,7 +46,11 @@ class Mastodon_OAuth {
 		$this->server->addStorage( new Oauth2\AccessTokenStorage(), 'access_token' );
 
 		add_action( 'template_redirect', array( $this, 'handle_oauth' ) );
-		// add_filter( 'determine_current_user', array( $this, 'authenticate' ), 10 );
+
+		/*
+		 * A potential way to also determine a user but also for endpoints that don't require authentication.
+		 * add_filter( 'determine_current_user', array( $this, 'authenticate' ), 10 );
+		 */
 		add_action( 'login_form_enable-mastodon-apps-authenticate', array( $this, 'authenticate_handler' ) );
 	}
 
