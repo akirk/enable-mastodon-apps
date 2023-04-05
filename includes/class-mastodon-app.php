@@ -261,7 +261,8 @@ class Mastodon_App {
 						if ( ! trim( $s ) ) {
 							continue;
 						}
-						list( $scope, $subscope ) = explode( ':', $s, 2 );
+						$scope_parts = explode( ':', $s, 2 );
+						$scope = array_shift( $scope_parts );
 						if ( ! in_array( $scope, self::VALID_SCOPES, true ) ) {
 							throw new \Exception( 'invalid-scopes,Invalid scope given: ' . $s );
 						}

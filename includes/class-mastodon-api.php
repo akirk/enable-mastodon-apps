@@ -416,11 +416,12 @@ class Mastodon_API {
 	public function logged_in_permission() {
 		$this->allow_cors();
 		$token = $this->oauth->get_token();
-		if ( is_null( $token ) ) {
+		if ( ! $token ) {
 			return false;
 		}
 		$this->app = Mastodon_App::get_by_client_id( $token['client_id'] );
 		$this->app->was_used();
+		wp_set_current_user( $token['user_id'] );
 		return is_user_logged_in();
 	}
 
@@ -1398,7 +1399,7 @@ class Mastodon_API {
 
 	public function get_activitypub_url( $id_or_url ) {
 		$webfinger = $this->webfinger( $id_or_url );
-		if ( empty( $webfinger['links'] ) ) {
+		if ( is_wp_error( $webfinger ) || empty( $webfinger['links'] ) ) {
 			return false;
 		}
 		foreach ( $webfinger['links'] as $link ) {
@@ -1460,7 +1461,7 @@ class Mastodon_API {
 		if ( \is_wp_error( $body ) ) {
 			$body = new \WP_Error( 'webfinger_url_not_accessible', null, $url );
 			\set_transient( $transient_key, $body, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
-			return $response;
+			return $body;
 		}
 
 		\set_transient( $transient_key, $body, WEEK_IN_SECONDS );

@@ -99,6 +99,7 @@ class AccountsEndpoint_Test extends Mastodon_API_TestCase {
 	}
 
 	public function test_accounts_external() {
+		wp_cache_flush();
 		global $wp_rest_server;
 		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/accounts/' . $this->external_account );
 		$response = $wp_rest_server->dispatch( $request );
