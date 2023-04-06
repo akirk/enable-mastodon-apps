@@ -116,7 +116,8 @@ class Mastodon_App {
 		$allowed_scopes = explode( ' ', $this->get_scopes() );
 
 		foreach ( explode( ' ', $requested_scopes ) as $s ) {
-			if ( ! in_array( $s, $allowed_scopes, true ) ) {
+			list( $scope, $subscope ) = explode( ':', $s, 2 );
+			if ( ! in_array( $scope, $allowed_scopes, true ) ) {
 				return false;
 			}
 		}
@@ -256,14 +257,16 @@ class Mastodon_App {
 						$value = '';
 					}
 					$scopes = array();
-					foreach ( explode( ' ', $value ) as $scope ) {
-						if ( ! trim( $scope ) ) {
+					foreach ( explode( ' ', $value ) as $s ) {
+						if ( ! trim( $s ) ) {
 							continue;
 						}
+						$scope_parts = explode( ':', $s, 2 );
+						$scope = array_shift( $scope_parts );
 						if ( ! in_array( $scope, self::VALID_SCOPES, true ) ) {
-							throw new \Exception( 'invalid-scopes,Invalid scope given: ' . $scope );
+							throw new \Exception( 'invalid-scopes,Invalid scope given: ' . $s );
 						}
-						$scopes[] = $scope;
+						$scopes[] = $s;
 					}
 
 					if ( empty( $scopes ) ) {

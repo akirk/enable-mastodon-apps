@@ -46,6 +46,11 @@ class Mastodon_OAuth {
 		$this->server->addStorage( new Oauth2\AccessTokenStorage(), 'access_token' );
 
 		add_action( 'template_redirect', array( $this, 'handle_oauth' ) );
+
+		/*
+		 * A potential way to also determine a user but also for endpoints that don't require authentication.
+		 * add_filter( 'determine_current_user', array( $this, 'authenticate' ), 10 );
+		 */
 		add_action( 'login_form_enable-mastodon-apps-authenticate', array( $this, 'authenticate_handler' ) );
 	}
 
@@ -86,15 +91,20 @@ class Mastodon_OAuth {
 		exit;
 	}
 
-	public function authenticate() {
+	public function get_token() {
 		$request = Request::createFromGlobals();
 		if ( ! $this->server->verifyResourceRequest( $request ) ) {
 			$this->server->getResponse()->send();
 			return null;
 		}
-		$token = $this->server->getAccessTokenData( $request );
-		wp_set_current_user( $token['user_id'] );
-		return $token;
+		return $this->server->getAccessTokenData( $request );
+	}
+	public function authenticate( $user_id ) {
+		$token = $this->get_token();
+		if ( is_array( $token ) && isset( $token['user_id'] ) ) {
+			return intval( $token['user_id'] );
+		}
+		return $user_id;
 	}
 
 	public function authenticate_handler() {

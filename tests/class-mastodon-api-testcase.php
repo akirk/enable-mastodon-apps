@@ -80,5 +80,13 @@ class Mastodon_API_TestCase extends \WP_UnitTestCase {
 		$userdata = get_userdata( $this->administrator );
 		$oauth->get_token_storage()->setAccessToken( $this->token, $app->get_client_id(), $userdata->ID, time() + HOUR_IN_SECONDS, $app->get_scopes() );
 		unset( $_SERVER['HTTP_AUTHORIZATION'] );
+
+		add_filter( 'pre_http_request', array( $this, 'block_http_requests' ), 10 );
+
 	}
+
+	function block_http_requests() {
+		return new \WP_Error( 'http_request_failed', 'HTTP requests have been blocked.' );
+	}
+
 }

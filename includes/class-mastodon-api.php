@@ -87,6 +87,8 @@ class Mastodon_API {
 			'api/v1/statuses/([0-9]+)/context'     => 'api/v1/statuses/$matches[1]/context',
 			'api/v1/statuses/([0-9]+)/favourite'   => 'api/v1/statuses/$matches[1]/favourite',
 			'api/v1/statuses/([0-9]+)/unfavourite' => 'api/v1/statuses/$matches[1]/unfavourite',
+			'api/v1/statuses/([0-9]+)/reblog'      => 'api/v1/statuses/$matches[1]/reblog',
+			'api/v1/statuses/([0-9]+)/unreblog'    => 'api/v1/statuses/$matches[1]/unreblog',
 			'api/nodeinfo/([0-9]+[.][0-9]+).json'  => 'api/nodeinfo/$matches[1].json',
 			'api/v1/media/([0-9]+)'                => 'api/v1/media/$matches[1]',
 			'api/v1/statuses/([0-9]+)'             => 'api/v1/statuses/$matches[1]',
@@ -253,6 +255,26 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
+			'api/v1/statuses/(?P<post_id>[0-9]+)/reblog',
+			array(
+				'methods'             => array( 'POST', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_reblog_post' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/statuses/(?P<post_id>[0-9]+)/unreblog',
+			array(
+				'methods'             => array( 'POST', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_unreblog_post' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
 			'api/v1/statuses/(?P<post_id>[0-9]+)',
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
@@ -393,12 +415,13 @@ class Mastodon_API {
 
 	public function logged_in_permission() {
 		$this->allow_cors();
-		$token = $this->oauth->authenticate();
-		if ( is_null( $token ) ) {
+		$token = $this->oauth->get_token();
+		if ( ! $token ) {
 			return false;
 		}
 		$this->app = Mastodon_App::get_by_client_id( $token['client_id'] );
 		$this->app->was_used();
+		wp_set_current_user( $token['user_id'] );
 		return is_user_logged_in();
 	}
 
@@ -496,6 +519,7 @@ class Mastodon_API {
 				},
 				$reblog_user_ids
 			);
+			$reblogged = in_array( get_current_user_id(), $reblog_user_ids, true );
 		} else {
 			$reblogged = false;
 		}
@@ -834,7 +858,7 @@ class Mastodon_API {
 
 		// 2b50 = star
 		// 2764 = heart
-		apply_filters( 'friends_react', null, $post_id, '2b50' );
+		do_action( 'mastodon_api_react', null, $post_id, '2b50' );
 
 		$post = get_post( $post_id );
 
@@ -849,7 +873,37 @@ class Mastodon_API {
 
 		// 2b50 = star
 		// 2764 = heart
-		apply_filters( 'friends_unreact', null, $post_id, '2b50' );
+		do_action( 'mastodon_api_unreact', null, $post_id, '2b50' );
+
+		$post = get_post( $post_id );
+
+		return $this->get_status_array( $post );
+	}
+
+	public function api_reblog_post( $request ) {
+		$post_id = $request->get_param( 'post_id' );
+		if ( ! $post_id ) {
+			return false;
+		}
+
+		$post = get_post( $post_id );
+		if ( $post ) {
+			do_action( 'mastodon_api_reblog', null, $post );
+		}
+
+		return $this->get_status_array( $post );
+	}
+
+	public function api_unreblog_post( $request ) {
+		$post_id = $request->get_param( 'post_id' );
+		if ( ! $post_id ) {
+			return false;
+		}
+
+		$post = get_post( $post_id );
+		if ( $post ) {
+			do_action( 'mastodon_api_unreblog', null, $post );
+		}
 
 		$post = get_post( $post_id );
 
@@ -1345,7 +1399,7 @@ class Mastodon_API {
 
 	public function get_activitypub_url( $id_or_url ) {
 		$webfinger = $this->webfinger( $id_or_url );
-		if ( empty( $webfinger['links'] ) ) {
+		if ( is_wp_error( $webfinger ) || empty( $webfinger['links'] ) ) {
 			return false;
 		}
 		foreach ( $webfinger['links'] as $link ) {
@@ -1387,7 +1441,7 @@ class Mastodon_API {
 
 		$transient_key = 'mastodon_api_webfinger_' . md5( $id_or_url );
 
-		$body = \get_transient( $transient_key );
+		// $body = \get_transient( $transient_key );
 		if ( $body ) {
 			if ( is_wp_error( $body ) ) {
 				return $id;
@@ -1395,7 +1449,7 @@ class Mastodon_API {
 			return $body;
 		}
 
-		$url = \add_query_arg( 'resource', $id, 'https://' . $host . '/.well-known/webfinger' );
+		$url = \add_query_arg( 'resource', 'acct:' . $id, 'https://' . $host . '/.well-known/webfinger' );
 		if ( ! self::check_url( $url ) ) {
 			$response = new \WP_Error( 'invalid_webfinger_url', null, $url );
 			\set_transient( $transient_key, $response, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
@@ -1407,7 +1461,7 @@ class Mastodon_API {
 		if ( \is_wp_error( $body ) ) {
 			$body = new \WP_Error( 'webfinger_url_not_accessible', null, $url );
 			\set_transient( $transient_key, $body, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
-			return $response;
+			return $body;
 		}
 
 		\set_transient( $transient_key, $body, WEEK_IN_SECONDS );
