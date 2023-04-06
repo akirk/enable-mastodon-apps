@@ -513,7 +513,7 @@ class Mastodon_API {
 			if ( ! is_array( $reblog_user_ids ) ) {
 				$reblog_user_ids = array();
 			}
-			$reblog_user_ids = array_map('intval', $reblog_user_ids );
+			$reblog_user_ids = array_map( 'intval', $reblog_user_ids );
 			$reblogged_by = array_map(
 				function( $user_id ) {
 					return $this->get_friend_account_data( $user_id );
