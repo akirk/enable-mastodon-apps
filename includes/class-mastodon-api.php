@@ -495,7 +495,6 @@ class Mastodon_API {
 		}
 
 		$posts = get_posts( $args );
-
 		if ( $max_id ) {
 			remove_filter( 'posts_where', $filter_handler );
 		}
@@ -503,10 +502,40 @@ class Mastodon_API {
 		foreach ( $posts as $post ) {
 			$status = $this->get_status_array( $post );
 			if ( $status ) {
-				$ret[] = $status;
+				$ret[ $post->post_date ] = $status;
 			}
 		}
+
+		$comments = get_comments(
+			array(
+				'user_id' => get_current_user_id(),
+			)
+		);
+
+		foreach ( $comments as $comment ) {
+			$status = $this->get_comment_status_array( $comment );
+			if ( $status ) {
+				$ret[ $comment->comment_date ] = $status;
+			}
+		}
+		krsort( $ret );
+		$ret = array_slice( array_values( $ret ), 0, $args['posts_per_page'] );
 		return $ret;
+	}
+
+	private function get_comment_status_array( \WP_Comment $comment ) {
+		$post = (object) array(
+			'ID'           => 'comment-' . $comment->comment_ID,
+			'guid'         => $comment->guid . '#comment-' . $comment->comment_ID,
+			'post_author'  => $comment->user_id,
+			'post_content' => $comment->comment_content,
+			'post_date'    => $comment->comment_date,
+			'post_status'  => $comment->post_status,
+			'post_type'    => $comment->post_type,
+			'post_title'   => '',
+		);
+
+		return $this->get_status_array( $post );
 	}
 
 	private function get_status_array( $post ) {
@@ -649,6 +678,40 @@ class Mastodon_API {
 		if ( empty( $visibility ) ) {
 			$visibility = 'public';
 		}
+
+		$parent_post_id = $request->get_param( 'in_reply_to_id' );
+		if ( ! empty( $parent_post_id ) ) {
+			$parent_post = get_post( $parent_post_id );
+			if ( $parent_post ) {
+				$user = wp_get_current_user();
+
+				$commentdata = array(
+					'comment_post_ID'      => $parent_post_id,
+					'comment_author'       => $user->user_nicename,
+					'user_id'              => get_current_user_id(),
+					'comment_author_email' => $user->user_email,
+					'comment_author_url'   => $user->user_url,
+					'comment_content'      => $status,
+					'comment_type'         => 'comment',
+					'comment_parent'       => 0,
+					'comment_meta'         => array(
+						'protocol' => 'activitypub',
+					),
+				);
+
+				\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
+
+				$id = \wp_new_comment( $commentdata, true );
+				if ( is_wp_error( $id ) ) {
+					return $id;
+				}
+
+				\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+
+				return $this->get_comment_status_array( get_comment( $id ) );
+			}
+		}
+
 		$post_data = array(
 			'post_content' => $status,
 			'post_status'  => 'public' === $visibility ? 'publish' : 'private',
