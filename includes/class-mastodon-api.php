@@ -858,7 +858,7 @@ class Mastodon_API {
 
 		// 2b50 = star
 		// 2764 = heart
-		apply_filters( 'friends_react', null, $post_id, '2b50' );
+		do_action( 'mastodon_api_react', null, $post_id, '2b50' );
 
 		$post = get_post( $post_id );
 
@@ -873,7 +873,7 @@ class Mastodon_API {
 
 		// 2b50 = star
 		// 2764 = heart
-		apply_filters( 'friends_unreact', null, $post_id, '2b50' );
+		do_action( 'mastodon_api_unreact', null, $post_id, '2b50' );
 
 		$post = get_post( $post_id );
 
@@ -888,7 +888,7 @@ class Mastodon_API {
 
 		$post = get_post( $post_id );
 		if ( $post ) {
-			apply_filters( 'friends_reblog', null, $post );
+			do_action( 'mastodon_api_reblog', null, $post );
 		}
 
 		return $this->get_status_array( $post );
@@ -902,7 +902,7 @@ class Mastodon_API {
 
 		$post = get_post( $post_id );
 		if ( $post ) {
-			apply_filters( 'friends_unreblog', null, $post );
+			do_action( 'mastodon_api_unreblog', null, $post );
 		}
 
 		$post = get_post( $post_id );
