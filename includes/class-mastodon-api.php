@@ -56,7 +56,7 @@ class Mastodon_API {
 
 	function allow_cors() {
 		header( 'Access-Control-Allow-Origin: *' );
-		header( 'Access-Control-Allow-Methods: GET, POST, OPTIONS' );
+		header( 'Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS' );
 		header( 'Access-Control-Allow-Headers: content-type, authorization' );
 		header( 'Access-Control-Allow-Credentials: true' );
 		if ( 'OPTIONS' === $_SERVER['REQUEST_METHOD'] ) {
@@ -81,21 +81,21 @@ class Mastodon_API {
 			'api/v2/media',
 		);
 		$parametrized = array(
-			'api/v1/accounts/([^/+])/follow'       => 'api/v1/accounts/$matches[1]/follow',
-			'api/v1/accounts/([^/+])/unfollow'     => 'api/v1/accounts/$matches[1]/unfollow',
-			'api/v1/accounts/([^/+])/statuses'     => 'api/v1/accounts/$matches[1]/statuses',
-			'api/v1/statuses/([0-9]+)/context'     => 'api/v1/statuses/$matches[1]/context',
-			'api/v1/statuses/([0-9]+)/favourite'   => 'api/v1/statuses/$matches[1]/favourite',
-			'api/v1/statuses/([0-9]+)/unfavourite' => 'api/v1/statuses/$matches[1]/unfavourite',
-			'api/v1/statuses/([0-9]+)/reblog'      => 'api/v1/statuses/$matches[1]/reblog',
-			'api/v1/statuses/([0-9]+)/unreblog'    => 'api/v1/statuses/$matches[1]/unreblog',
-			'api/nodeinfo/([0-9]+[.][0-9]+).json'  => 'api/nodeinfo/$matches[1].json',
-			'api/v1/media/([0-9]+)'                => 'api/v1/media/$matches[1]',
-			'api/v1/statuses/([0-9]+)'             => 'api/v1/statuses/$matches[1]',
-			'api/v1/statuses'                      => 'api/v1/statuses',
-			'api/v1/accounts/(.+)'                 => 'api/v1/accounts/$matches[1]',
-			'api/v1/timelines/(home|public)'       => 'api/v1/timelines/$matches[1]',
-			'api/v2/search'                        => 'api/v1/search',
+			'api/v1/accounts/([^/+])/follow'               => 'api/v1/accounts/$matches[1]/follow',
+			'api/v1/accounts/([^/+])/unfollow'             => 'api/v1/accounts/$matches[1]/unfollow',
+			'api/v1/accounts/([^/+])/statuses'             => 'api/v1/accounts/$matches[1]/statuses',
+			'api/v1/statuses/((?:comment-)?[0-9]+)/context' => 'api/v1/statuses/$matches[1]/context',
+			'api/v1/statuses/((?:comment-)?[0-9]+)/favourite' => 'api/v1/statuses/$matches[1]/favourite',
+			'api/v1/statuses/((?:comment-)?[0-9]+)/unfavourite' => 'api/v1/statuses/$matches[1]/unfavourite',
+			'api/v1/statuses/((?:comment-)?[0-9]+)/reblog' => 'api/v1/statuses/$matches[1]/reblog',
+			'api/v1/statuses/((?:comment-)?[0-9]+)/unreblog' => 'api/v1/statuses/$matches[1]/unreblog',
+			'api/nodeinfo/([0-9]+[.][0-9]+).json'          => 'api/nodeinfo/$matches[1].json',
+			'api/v1/media/([0-9]+)'                        => 'api/v1/media/$matches[1]',
+			'api/v1/statuses/((?:comment-)?[0-9]+)'        => 'api/v1/statuses/$matches[1]',
+			'api/v1/statuses'                              => 'api/v1/statuses',
+			'api/v1/accounts/(.+)'                         => 'api/v1/accounts/$matches[1]',
+			'api/v1/timelines/(home|public)'               => 'api/v1/timelines/$matches[1]',
+			'api/v2/search'                                => 'api/v1/search',
 		);
 
 		foreach ( $generic as $rule ) {
@@ -205,7 +205,7 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
-			'api/v1/media/(?P<post_id>[0-9]+)',
+			'api/v1/media/(?P<post_id>(?:comment-)?[0-9]+)',
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_get_media' ),
@@ -225,7 +225,7 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
-			'api/v1/statuses/(?P<post_id>[0-9]+)/context',
+			'api/v1/statuses/(?P<post_id>(?:comment-)?[0-9]+)/context',
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_get_post_context' ),
@@ -235,7 +235,7 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
-			'api/v1/statuses/(?P<post_id>[0-9]+)/favourite',
+			'api/v1/statuses/(?P<post_id>(?:comment-)?[0-9]+)/favourite',
 			array(
 				'methods'             => array( 'POST', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_favourite_post' ),
@@ -245,7 +245,7 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
-			'api/v1/statuses/(?P<post_id>[0-9]+)/unfavourite',
+			'api/v1/statuses/(?P<post_id>(?:comment-)?[0-9]+)/unfavourite',
 			array(
 				'methods'             => array( 'POST', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_unfavourite_post' ),
@@ -255,7 +255,7 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
-			'api/v1/statuses/(?P<post_id>[0-9]+)/reblog',
+			'api/v1/statuses/(?P<post_id>(?:comment-)?[0-9]+)/reblog',
 			array(
 				'methods'             => array( 'POST', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_reblog_post' ),
@@ -265,7 +265,7 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
-			'api/v1/statuses/(?P<post_id>[0-9]+)/unreblog',
+			'api/v1/statuses/(?P<post_id>(?:comment-)?[0-9]+)/unreblog',
 			array(
 				'methods'             => array( 'POST', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_unreblog_post' ),
@@ -275,7 +275,17 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
-			'api/v1/statuses/(?P<post_id>[0-9]+)',
+			'api/v1/statuses/(?P<post_id>(?:comment-)?[0-9]+)',
+			array(
+				'methods'             => array( 'DELETE', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_delete_post' ),
+				'permission_callback' => array( $this, 'logged_in_for_private_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/statuses/(?P<post_id>(?:comment-)?[0-9]+)',
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_get_post' ),
@@ -909,6 +919,28 @@ class Mastodon_API {
 		$post = get_post( $post_id );
 
 		return $this->get_status_array( $post );
+	}
+
+	public function api_delete_post( $request ) {
+		$post_id = $request->get_param( 'post_id' );
+		if ( ! $post_id ) {
+			return false;
+		}
+		if ( substr( $post_id, 0, 8 ) === 'comment-' ) {
+			$comment_id = intval( substr( $post_id, 8 ) );
+			$comment = get_comment( $comment_id );
+			if ( intval( $comment->user_id ) === get_current_user_id() ) {
+				wp_trash_comment( $comment_id );
+			}
+			return $this->get_comment_status_array( get_comment( $comment_id ) );
+		}
+
+		$post = get_post( $post_id );
+		if ( intval( $post->post_author ) === get_current_user_id() ) {
+			wp_trash_post( $post_id );
+		}
+
+		return $this->get_status_array( get_post( $post_id ) );
 	}
 
 	public function api_get_post( $request ) {
