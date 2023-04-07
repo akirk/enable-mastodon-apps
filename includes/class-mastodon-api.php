@@ -535,10 +535,15 @@ class Mastodon_API {
 			'post_title'   => '',
 		);
 
-		return $this->get_status_array( $post );
+		return $this->get_status_array(
+			$post,
+			array(
+				'in_reply_to_id' => $comment->comment_post_ID,
+			)
+		);
 	}
 
-	private function get_status_array( $post ) {
+	private function get_status_array( $post, $data = array() ) {
 		$meta = get_post_meta( $post->ID, 'activitypub', true );
 		$account_data = $this->get_friend_account_data( $post->post_author, $meta );
 		if ( is_wp_error( $account_data ) ) {
@@ -564,34 +569,37 @@ class Mastodon_API {
 			$reblogged = false;
 		}
 
-		$data = array(
-			'id'                     => strval( $post->ID ),
-			'uri'                    => $post->guid,
-			'url'                    => $post->guid,
-			'account'                => $account_data,
-			'in_reply_to_id'         => null,
-			'in_reply_to_account_id' => null,
-			'reblog'                 => null,
-			'content'                => $post->post_content,
-			'created_at'             => mysql2date( 'Y-m-d\TH:i:s.uP', $post->post_date, false ),
-			'edited_at'              => null,
-			'emojis'                 => array(),
-			'replies_count'          => 0,
-			'reblogs_count'          => 0,
-			'favourites_count'       => 0,
-			'reblogged'              => $reblogged,
-			'reblogged_by'           => $reblogged_by,
-			'muted'                  => false,
-			'sensitive'              => false,
-			'spoiler_text'           => '',
-			'visibility'             => 'publish' === $post->post_status ? 'public' : 'unlisted',
-			'media_attachments'      => array(),
-			'mentions'               => array(),
-			'tags'                   => array(),
-			'language'               => 'en',
-			'pinned'                 => false,
-			'card'                   => null,
-			'poll'                   => null,
+		$data = array_merge(
+			array(
+				'id'                     => strval( $post->ID ),
+				'uri'                    => $post->guid,
+				'url'                    => $post->guid,
+				'account'                => $account_data,
+				'in_reply_to_id'         => null,
+				'in_reply_to_account_id' => null,
+				'reblog'                 => null,
+				'content'                => $post->post_content,
+				'created_at'             => mysql2date( 'Y-m-d\TH:i:s.uP', $post->post_date, false ),
+				'edited_at'              => null,
+				'emojis'                 => array(),
+				'replies_count'          => 0,
+				'reblogs_count'          => 0,
+				'favourites_count'       => 0,
+				'reblogged'              => $reblogged,
+				'reblogged_by'           => $reblogged_by,
+				'muted'                  => false,
+				'sensitive'              => false,
+				'spoiler_text'           => '',
+				'visibility'             => 'publish' === $post->post_status ? 'public' : 'unlisted',
+				'media_attachments'      => array(),
+				'mentions'               => array(),
+				'tags'                   => array(),
+				'language'               => 'en',
+				'pinned'                 => false,
+				'card'                   => null,
+				'poll'                   => null,
+			),
+			$data
 		);
 
 		// get the attachments for the post.
@@ -880,47 +888,60 @@ class Mastodon_API {
 			$transient_key = 'mastodon_api_get_post_context_' . $post_id;
 			$saved_context = get_transient( $transient_key );
 			if ( $saved_context ) {
-				return $saved_context;
-			}
-
-			$post = get_post( $post_id );
-			if ( preg_match( '#^https://([^/]+)/(?:users/)?[^/]+(?:/statuses)?/(.+)$#', $post->guid, $matches ) ) {
-				$domain = $matches[1];
-				$id = $matches[2];
-				$context_api_url = 'https://' . $domain . '/api/v1/statuses/' . $id . '/context';
-				$response = wp_safe_remote_get(
-					$context_api_url,
-					array(
-						'timeout'     => apply_filters( 'friends_http_timeout', 20 ),
-						'redirection' => 1,
-					)
-				);
-
-				if ( ! is_wp_error( $response ) ) {
-					$context = json_decode( wp_remote_retrieve_body( $response ), true );
-				}
-				if ( isset( $context['error'] ) ) {
-					$context = array_merge(
-						$context,
+				// $context = $saved_context;
+			} else {
+				$post = get_post( $post_id );
+				if ( preg_match( '#^https://([^/]+)/(?:users/)?[^/]+(?:/statuses)?/(.+)$#', $post->guid, $matches ) ) {
+					$domain = $matches[1];
+					$id = $matches[2];
+					$context_api_url = 'https://' . $domain . '/api/v1/statuses/' . $id . '/context';
+					$response = wp_safe_remote_get(
+						$context_api_url,
 						array(
-							'ancestors'   => array(),
-							'descendants' => array(),
+							'timeout'     => apply_filters( 'friends_http_timeout', 20 ),
+							'redirection' => 1,
 						)
 					);
-				} else {
-					foreach ( $context as $key => $posts ) {
-						foreach ( $posts as $index => $post ) {
-							if ( false === strpos( $post['account']['acct'], '@' ) ) {
-								$post['account']['acct'] .= '@' . $domain;
+
+					if ( ! is_wp_error( $response ) ) {
+						$context = json_decode( wp_remote_retrieve_body( $response ), true );
+						if ( isset( $context['error'] ) ) {
+							$context = array_merge(
+								$context,
+								array(
+									'ancestors'   => array(),
+									'descendants' => array(),
+								)
+							);
+						} else {
+							foreach ( $context as $key => $posts ) {
+								foreach ( $posts as $index => $post ) {
+									if ( false === strpos( $post['account']['acct'], '@' ) ) {
+										$post['account']['acct'] .= '@' . $domain;
+									}
+									$context[ $key ][ $index ]['account']['id'] = $post['account']['acct'];
+								}
 							}
-							$context[ $key ][ $index ]['account']['id'] = $post['account']['acct'];
 						}
+
+						set_transient( $transient_key, $context, HOUR_IN_SECONDS );
 					}
 				}
-
-				set_transient( $transient_key, $context, HOUR_IN_SECONDS );
 			}
 		}
+
+		if ( substr( $post_id, 0, 8 ) === 'comment-' ) {
+			$comment_id = intval( substr( $post_id, 8 ) );
+			$comment = get_comment( $comment_id );
+			$post_id = $comment->comment_post_ID;
+
+			$context['ancestors'][] = $this->get_status_array( get_post( $post_id ) );
+		}
+
+		foreach ( get_comments( array( 'post_id' => $post_id ) ) as $comment ) {
+			$context['descendants'][] = $this->get_comment_status_array( $comment );
+		}
+
 		return $context;
 	}
 
