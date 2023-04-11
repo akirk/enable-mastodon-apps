@@ -90,6 +90,9 @@ class Mastodon_App {
 
 	public function set_post_formats( $post_formats ) {
 		$query_args = $this->get_query_args();
+		if ( ! is_array( $query_args ) ) {
+			$query_args = array();
+		}
 		$query_args['post_formats'] = $post_formats;
 		update_term_meta( $this->term->term_id, 'query_args', $query_args );
 		return $this->get_post_formats();
