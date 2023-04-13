@@ -465,6 +465,16 @@ class Mastodon_API {
 			'post_status'      => array( 'publish', 'private' ),
 		);
 
+		$pinned = $request->get_param( 'pinned' );
+		if ( $pinned || 'true' === $pinned ) {
+			$args['pinned'] = true;
+			$args['post__in'] = get_option( 'sticky_posts' );
+			if ( empty( $args['post__in'] ) ) {
+				// No pinned posts, we need to find nothing.
+				$args['post__in'] = array( -1 );
+			}
+		}
+
 		if ( $this->app ) {
 			$args = $this->app->modify_wp_query_args( $args );
 		} else {
@@ -495,21 +505,71 @@ class Mastodon_API {
 		}
 
 		$posts = get_posts( $args );
-
 		if ( $max_id ) {
 			remove_filter( 'posts_where', $filter_handler );
 		}
-		$ret = array();
+
+		$statuses = array();
 		foreach ( $posts as $post ) {
 			$status = $this->get_status_array( $post );
 			if ( $status ) {
-				$ret[] = $status;
+				$statuses[ $post->post_date ] = $status;
 			}
+		}
+
+		if ( ! isset( $args['pinned'] ) || ! $args['pinned'] ) {
+			// Comments cannot be pinned for now.
+			$comments = get_comments(
+				array(
+					'meta_key'   => 'protocol',
+					'meta_value' => 'activitypub',
+				)
+			);
+
+			foreach ( $comments as $comment ) {
+				$status = $this->get_comment_status_array( $comment );
+				if ( $status ) {
+					$statuses[ $comment->comment_date ] = $status;
+				}
+			}
+		}
+		krsort( $statuses );
+
+		$ret = array();
+		$c = $args['posts_per_page'];
+		foreach ( $statuses as $status ) {
+			if ( $max_id && $status['id'] === $max_id ) {
+				break;
+			}
+			if ( $c-- <= 0 ) {
+				break;
+			}
+			$ret[] = $status;
 		}
 		return $ret;
 	}
 
-	private function get_status_array( $post ) {
+	private function get_comment_status_array( \WP_Comment $comment ) {
+		$post = (object) array(
+			'ID'           => 'comment-' . $comment->comment_ID,
+			'guid'         => $comment->guid . '#comment-' . $comment->comment_ID,
+			'post_author'  => $comment->user_id,
+			'post_content' => $comment->comment_content,
+			'post_date'    => $comment->comment_date,
+			'post_status'  => $comment->post_status,
+			'post_type'    => $comment->post_type,
+			'post_title'   => '',
+		);
+
+		return $this->get_status_array(
+			$post,
+			array(
+				'in_reply_to_id' => $comment->comment_post_ID,
+			)
+		);
+	}
+
+	private function get_status_array( $post, $data = array() ) {
 		$meta = get_post_meta( $post->ID, 'activitypub', true );
 		$account_data = $this->get_friend_account_data( $post->post_author, $meta );
 		if ( is_wp_error( $account_data ) ) {
@@ -535,34 +595,37 @@ class Mastodon_API {
 			$reblogged = false;
 		}
 
-		$data = array(
-			'id'                     => strval( $post->ID ),
-			'uri'                    => $post->guid,
-			'url'                    => $post->guid,
-			'account'                => $account_data,
-			'in_reply_to_id'         => null,
-			'in_reply_to_account_id' => null,
-			'reblog'                 => null,
-			'content'                => $post->post_content,
-			'created_at'             => mysql2date( 'Y-m-d\TH:i:s.uP', $post->post_date, false ),
-			'edited_at'              => null,
-			'emojis'                 => array(),
-			'replies_count'          => 0,
-			'reblogs_count'          => 0,
-			'favourites_count'       => 0,
-			'reblogged'              => $reblogged,
-			'reblogged_by'           => $reblogged_by,
-			'muted'                  => false,
-			'sensitive'              => false,
-			'spoiler_text'           => '',
-			'visibility'             => 'publish' === $post->post_status ? 'public' : 'unlisted',
-			'media_attachments'      => array(),
-			'mentions'               => array(),
-			'tags'                   => array(),
-			'language'               => 'en',
-			'pinned'                 => false,
-			'card'                   => null,
-			'poll'                   => null,
+		$data = array_merge(
+			array(
+				'id'                     => strval( $post->ID ),
+				'uri'                    => $post->guid,
+				'url'                    => $post->guid,
+				'account'                => $account_data,
+				'in_reply_to_id'         => null,
+				'in_reply_to_account_id' => null,
+				'reblog'                 => null,
+				'content'                => $post->post_content,
+				'created_at'             => mysql2date( 'Y-m-d\TH:i:s.uP', $post->post_date, false ),
+				'edited_at'              => null,
+				'emojis'                 => array(),
+				'replies_count'          => 0,
+				'reblogs_count'          => 0,
+				'favourites_count'       => 0,
+				'reblogged'              => $reblogged,
+				'reblogged_by'           => $reblogged_by,
+				'muted'                  => false,
+				'sensitive'              => false,
+				'spoiler_text'           => '',
+				'visibility'             => 'publish' === $post->post_status ? 'public' : 'unlisted',
+				'media_attachments'      => array(),
+				'mentions'               => array(),
+				'tags'                   => array(),
+				'language'               => 'en',
+				'pinned'                 => is_sticky( $post->ID ),
+				'card'                   => null,
+				'poll'                   => null,
+			),
+			$data
 		);
 
 		// get the attachments for the post.
@@ -627,8 +690,8 @@ class Mastodon_API {
 			if ( ! empty( $meta['attributedTo']['summary'] ) ) {
 				$data['reblog']['account']['note'] = $meta['attributedTo']['summary'];
 			}
-		} elseif ( $author_name !== $override_author_name ) {
-			$data['account_data']['display_name'] = $override_author_name;
+		} elseif ( $override_author_name && $author_name !== $override_author_name ) {
+			$data['account']['display_name'] = $override_author_name;
 		}
 
 		$reactions = apply_filters( 'friends_get_user_reactions', array(), $post->ID );
@@ -649,6 +712,40 @@ class Mastodon_API {
 		if ( empty( $visibility ) ) {
 			$visibility = 'public';
 		}
+
+		$parent_post_id = $request->get_param( 'in_reply_to_id' );
+		if ( ! empty( $parent_post_id ) ) {
+			$parent_post = get_post( $parent_post_id );
+			if ( $parent_post ) {
+				$user = wp_get_current_user();
+
+				$commentdata = array(
+					'comment_post_ID'      => $parent_post_id,
+					'comment_author'       => $user->user_nicename,
+					'user_id'              => get_current_user_id(),
+					'comment_author_email' => $user->user_email,
+					'comment_author_url'   => $user->user_url,
+					'comment_content'      => $status,
+					'comment_type'         => 'comment',
+					'comment_parent'       => 0,
+					'comment_meta'         => array(
+						'protocol' => 'activitypub',
+					),
+				);
+
+				\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
+
+				$id = \wp_new_comment( $commentdata, true );
+				if ( is_wp_error( $id ) ) {
+					return $id;
+				}
+
+				\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+
+				return $this->get_comment_status_array( get_comment( $id ) );
+			}
+		}
+
 		$post_data = array(
 			'post_content' => $status,
 			'post_status'  => 'public' === $visibility ? 'publish' : 'private',
@@ -817,47 +914,60 @@ class Mastodon_API {
 			$transient_key = 'mastodon_api_get_post_context_' . $post_id;
 			$saved_context = get_transient( $transient_key );
 			if ( $saved_context ) {
-				return $saved_context;
-			}
-
-			$post = get_post( $post_id );
-			if ( preg_match( '#^https://([^/]+)/(?:users/)?[^/]+(?:/statuses)?/(.+)$#', $post->guid, $matches ) ) {
-				$domain = $matches[1];
-				$id = $matches[2];
-				$context_api_url = 'https://' . $domain . '/api/v1/statuses/' . $id . '/context';
-				$response = wp_safe_remote_get(
-					$context_api_url,
-					array(
-						'timeout'     => apply_filters( 'friends_http_timeout', 20 ),
-						'redirection' => 1,
-					)
-				);
-
-				if ( ! is_wp_error( $response ) ) {
-					$context = json_decode( wp_remote_retrieve_body( $response ), true );
-				}
-				if ( isset( $context['error'] ) ) {
-					$context = array_merge(
-						$context,
+				// $context = $saved_context;
+			} else {
+				$post = get_post( $post_id );
+				if ( preg_match( '#^https://([^/]+)/(?:users/)?[^/]+(?:/statuses)?/(.+)$#', $post->guid, $matches ) ) {
+					$domain = $matches[1];
+					$id = $matches[2];
+					$context_api_url = 'https://' . $domain . '/api/v1/statuses/' . $id . '/context';
+					$response = wp_safe_remote_get(
+						$context_api_url,
 						array(
-							'ancestors'   => array(),
-							'descendants' => array(),
+							'timeout'     => apply_filters( 'friends_http_timeout', 20 ),
+							'redirection' => 1,
 						)
 					);
-				} else {
-					foreach ( $context as $key => $posts ) {
-						foreach ( $posts as $index => $post ) {
-							if ( false === strpos( $post['account']['acct'], '@' ) ) {
-								$post['account']['acct'] .= '@' . $domain;
+
+					if ( ! is_wp_error( $response ) ) {
+						$context = json_decode( wp_remote_retrieve_body( $response ), true );
+						if ( isset( $context['error'] ) ) {
+							$context = array_merge(
+								$context,
+								array(
+									'ancestors'   => array(),
+									'descendants' => array(),
+								)
+							);
+						} else {
+							foreach ( $context as $key => $posts ) {
+								foreach ( $posts as $index => $post ) {
+									if ( false === strpos( $post['account']['acct'], '@' ) ) {
+										$post['account']['acct'] .= '@' . $domain;
+									}
+									$context[ $key ][ $index ]['account']['id'] = $post['account']['acct'];
+								}
 							}
-							$context[ $key ][ $index ]['account']['id'] = $post['account']['acct'];
 						}
+
+						set_transient( $transient_key, $context, HOUR_IN_SECONDS );
 					}
 				}
-
-				set_transient( $transient_key, $context, HOUR_IN_SECONDS );
 			}
 		}
+
+		if ( substr( $post_id, 0, 8 ) === 'comment-' ) {
+			$comment_id = intval( substr( $post_id, 8 ) );
+			$comment = get_comment( $comment_id );
+			$post_id = $comment->comment_post_ID;
+
+			$context['ancestors'][] = $this->get_status_array( get_post( $post_id ) );
+		}
+
+		foreach ( get_comments( array( 'post_id' => $post_id ) ) as $comment ) {
+			$context['descendants'][] = $this->get_comment_status_array( $comment );
+		}
+
 		return $context;
 	}
 
