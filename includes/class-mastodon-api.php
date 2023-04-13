@@ -465,6 +465,16 @@ class Mastodon_API {
 			'post_status'      => array( 'publish', 'private' ),
 		);
 
+		$pinned = $request->get_param( 'pinned' );
+		if ( $pinned || 'true' === $pinned ) {
+			$args['pinned'] = true;
+			$args['post__in'] = get_option( 'sticky_posts' );
+			if ( empty( $args['post__in'] ) ) {
+				// No pinned posts, we need to find nothing.
+				$args['post__in'] = array( -1 );
+			}
+		}
+
 		if ( $this->app ) {
 			$args = $this->app->modify_wp_query_args( $args );
 		} else {
@@ -498,29 +508,44 @@ class Mastodon_API {
 		if ( $max_id ) {
 			remove_filter( 'posts_where', $filter_handler );
 		}
-		$ret = array();
+
+		$statuses = array();
 		foreach ( $posts as $post ) {
 			$status = $this->get_status_array( $post );
 			if ( $status ) {
-				$ret[ $post->post_date ] = $status;
+				$statuses[ $post->post_date ] = $status;
 			}
 		}
 
-		$comments = get_comments(
-			array(
-				'meta_key'   => 'protocol',
-				'meta_value' => 'activitypub',
-			)
-		);
+		if ( ! isset( $args['pinned'] ) || ! $args['pinned'] ) {
+			// Comments cannot be pinned for now.
+			$comments = get_comments(
+				array(
+					'meta_key'   => 'protocol',
+					'meta_value' => 'activitypub',
+				)
+			);
 
-		foreach ( $comments as $comment ) {
-			$status = $this->get_comment_status_array( $comment );
-			if ( $status ) {
-				$ret[ $comment->comment_date ] = $status;
+			foreach ( $comments as $comment ) {
+				$status = $this->get_comment_status_array( $comment );
+				if ( $status ) {
+					$statuses[ $comment->comment_date ] = $status;
+				}
 			}
 		}
-		krsort( $ret );
-		$ret = array_slice( array_values( $ret ), 0, $args['posts_per_page'] );
+		krsort( $statuses );
+
+		$ret = array();
+		$c = $args['posts_per_page'];
+		foreach ( $statuses as $status ) {
+			if ( $max_id && $status['id'] === $max_id ) {
+				break;
+			}
+			if ( $c-- <= 0 ) {
+				break;
+			}
+			$ret[] = $status;
+		}
 		return $ret;
 	}
 
@@ -596,7 +621,7 @@ class Mastodon_API {
 				'mentions'               => array(),
 				'tags'                   => array(),
 				'language'               => 'en',
-				'pinned'                 => false,
+				'pinned'                 => is_sticky( $post->ID ),
 				'card'                   => null,
 				'poll'                   => null,
 			),
@@ -665,8 +690,8 @@ class Mastodon_API {
 			if ( ! empty( $meta['attributedTo']['summary'] ) ) {
 				$data['reblog']['account']['note'] = $meta['attributedTo']['summary'];
 			}
-		} elseif ( $author_name !== $override_author_name ) {
-			$data['account_data']['display_name'] = $override_author_name;
+		} elseif ( $override_author_name && $author_name !== $override_author_name ) {
+			$data['account']['display_name'] = $override_author_name;
 		}
 
 		$reactions = apply_filters( 'friends_get_user_reactions', array(), $post->ID );
