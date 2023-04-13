@@ -508,7 +508,8 @@ class Mastodon_API {
 
 		$comments = get_comments(
 			array(
-				'user_id' => get_current_user_id(),
+				'meta_key'   => 'protocol',
+				'meta_value' => 'activitypub',
 			)
 		);
 
