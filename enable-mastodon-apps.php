@@ -3,7 +3,7 @@
  * Plugin name: Enable Mastodon Apps
  * Plugin author: Alex Kirk
  * Plugin URI: https://github.com/akirk/enable-mastodon-apps
- * Version: 0.1.1
+ * Version: 0.2.0
  *
  * Description: Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
  *
@@ -15,7 +15,7 @@
 
 defined( 'ABSPATH' ) || exit;
 define( 'MASTOAPI_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
-define( 'MASTOAPI_VERSION', '0.1.1' );
+define( 'MASTOAPI_VERSION', '0.2.0' );
 
 require __DIR__ . '/vendor/bshaffer/oauth2-server-php/src/OAuth2/Autoloader.php';
 OAuth2\Autoloader::register();

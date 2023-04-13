@@ -6,7 +6,7 @@
 - Tested up to: 6.2
 - Requires PHP: 5.2.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 0.1.1
+- Stable tag: 0.2.0
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -76,3 +76,14 @@ Endpoints around interacting with non-local users require the [Friends plugin](h
 
 1. You authorize Mastodon Apps through your own WordPress's login UI.
 2. The Mastodon Apps settings page.
+
+## Changelog
+
+### 0.2.0
+- Post replies as comments ([#3])
+- Fix a fatal when saving the default post format
+
+[#3]: https://github.com/akirk/enable-mastodon-apps/pull/3
+
+
+
