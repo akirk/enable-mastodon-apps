@@ -186,7 +186,7 @@ class Mastodon_API {
 		);
 		register_rest_route(
 			self::PREFIX,
-			'api/v1/accounts/verify_credentxials',
+			'api/v1/accounts/verify_credentials',
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_verify_credentials' ),
