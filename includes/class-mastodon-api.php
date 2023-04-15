@@ -71,7 +71,7 @@ class Mastodon_API {
 
 		$generic = array(
 			'api/v1/accounts/relationships',
-			'api/v1/accounts/verify_cxredentials',
+			'api/v1/accounts/verify_credentials',
 			'api/v1/announcements',
 			'api/v1/apps',
 			'api/v1/custom_emojis',
