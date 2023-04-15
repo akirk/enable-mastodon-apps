@@ -6,7 +6,7 @@
 - Tested up to: 6.2
 - Requires PHP: 5.2.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 0.2.0
+- Stable tag: 0.2.1
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -78,6 +78,10 @@ Endpoints around interacting with non-local users require the [Friends plugin](h
 2. The Mastodon Apps settings page.
 
 ## Changelog
+
+### 0.2.1
+- Improve compatibility of Swift based apps
+- Fix fatal error on admin page
 
 ### 0.2.0
 - Post replies as comments ([#3])

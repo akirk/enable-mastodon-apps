@@ -314,7 +314,7 @@ class Mastodon_Admin {
 								<td>
 									<?php
 									if ( isset( $apps[ $data['client_id'] ] ) ) {
-										echo esc_html( $apps[ $data['client_id'] ]->get_client_name() );
+										echo esc_html( $apps[ $data['client_id'] ]->get_client_id() . ' ' . $apps[ $data['client_id'] ]->get_client_secret() );
 									} else {
 										echo esc_html( 'Unknown: ' . $data['client_id'] );
 									}

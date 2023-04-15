@@ -52,14 +52,7 @@ class Mastodon_App {
 	}
 
 	public function get_redirect_uris() {
-		$redirect_uris = get_term_meta( $this->term->term_id, 'redirect_uris', true );
-		if ( ! $redirect_uris ) {
-			return array();
-		}
-		if ( ! is_array( $redirect_uris ) ) {
-			$redirect_uris = array( $redirect_uris );
-		}
-		return $redirect_uris;
+		return get_term_meta( $this->term->term_id, 'redirect_uris', true );
 	}
 
 	public function get_client_name() {
@@ -106,11 +99,12 @@ class Mastodon_App {
 	}
 
 	public function check_redirect_uri( $redirect_uri ) {
-		error_log( 'redirect_uri: ' . $redirect_uri );
 		$redirect_uris = $this->get_redirect_uris();
+		if ( ! is_array( $redirect_uris ) ) {
+			$redirect_uris = array( $redirect_uris );
+		}
 
 		foreach ( $redirect_uris as $uri ) {
-			error_log( 'compare: ' . $uri );
 			if ( $uri === $redirect_uri ) {
 				return true;
 			}
@@ -123,7 +117,11 @@ class Mastodon_App {
 		$allowed_scopes = explode( ' ', $this->get_scopes() );
 
 		foreach ( explode( ' ', $requested_scopes ) as $s ) {
-			list( $scope, $subscope ) = explode( ':', $s, 2 );
+			if ( false !== strpos( $s, ':' ) ) {
+				list( $scope, $subscope ) = explode( ':', $s, 2 );
+			} else {
+				$scope = $s;
+			}
 			if ( ! in_array( $scope, $allowed_scopes, true ) ) {
 				return false;
 			}

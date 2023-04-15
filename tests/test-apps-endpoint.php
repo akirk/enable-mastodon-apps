@@ -40,9 +40,9 @@ class AppsEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertArrayHasKey( 'client_secret', $data );
 		$this->assertIsString( $data['client_secret'] );
 
-		$this->assertArrayHasKey( 'redirect_uris', $data );
-		$this->assertIsArray( $data['redirect_uris'] );
-		$this->assertContains( $redirect_uri, $data['redirect_uris'] );
+		$this->assertArrayHasKey( 'redirect_uri', $data );
+		$this->assertIsString( $data['redirect_uri'] );
+		$this->assertEquals( $redirect_uri, $data['redirect_uri'] );
 
 		$this->assertArrayHasKey( 'name', $data );
 		$this->assertEquals( $name, $data['name'] );

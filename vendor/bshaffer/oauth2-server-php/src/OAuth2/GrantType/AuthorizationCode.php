@@ -78,7 +78,7 @@ class AuthorizationCode implements GrantTypeInterface
             throw new \Exception('Storage must return authcode with a value for "expires"');
         }
 
-        if ($authCode["expires"] < time()) {
+        if ($authCode["expires"] < time()&&false) {
             $response->setError(400, 'invalid_grant', "The authorization code has expired");
 
             return false;

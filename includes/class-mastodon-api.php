@@ -71,13 +71,14 @@ class Mastodon_API {
 
 		$generic = array(
 			'api/v1/accounts/relationships',
-			'api/v1/accounts/verify_credentials',
+			'api/v1/accounts/verify_cxredentials',
 			'api/v1/announcements',
 			'api/v1/apps',
 			'api/v1/custom_emojis',
 			'api/v1/filters',
 			'api/v1/instance',
 			'api/v1/lists',
+			'api/v1/push/subscription',
 			'api/v2/media',
 		);
 		$parametrized = array(
@@ -185,7 +186,7 @@ class Mastodon_API {
 		);
 		register_rest_route(
 			self::PREFIX,
-			'api/v1/accounts/verify_credentials',
+			'api/v1/accounts/verify_credentxials',
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_verify_credentials' ),
@@ -312,6 +313,17 @@ class Mastodon_API {
 				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/push/subscription',
+			array(
+				'methods'             => array( 'GET', 'POST', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_push_subscription' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
 		register_rest_route(
 			self::PREFIX,
 			'api/v1/search',
@@ -414,11 +426,12 @@ class Mastodon_API {
 		}
 
 		return array(
-			'client_id'     => $app->get_client_id(),
-			'client_secret' => $app->get_client_secret(),
-			'redirect_uris' => $app->get_redirect_uris(),
+			'id'            => $app->get_client_id(),
 			'name'          => $app->get_client_name(),
 			'website'       => $app->get_website(),
+			'redirect_uri'  => implode( ',', is_array( $redirect_uris ) ? $redirect_uris : array( $redirect_uris ) ),
+			'client_id'     => $app->get_client_id(),
+			'client_secret' => $app->get_client_secret(),
 
 		);
 	}
@@ -605,7 +618,7 @@ class Mastodon_API {
 				'in_reply_to_account_id' => null,
 				'reblog'                 => null,
 				'content'                => $post->post_content,
-				'created_at'             => mysql2date( 'Y-m-d\TH:i:s.uP', $post->post_date, false ),
+				'created_at'             => mysql2date( 'Y-m-d\TH:i:s.000P', $post->post_date, false ),
 				'edited_at'              => null,
 				'emojis'                 => array(),
 				'replies_count'          => 0,
@@ -893,6 +906,10 @@ class Mastodon_API {
 			$ret['statuses'] = $this->get_posts( $args );
 		}
 		return $ret;
+	}
+
+	public function api_push_subscription( $request ) {
+		return array();
 	}
 
 	public function api_public_timeline( $request ) {
@@ -1379,6 +1396,10 @@ class Mastodon_API {
 			return $ret;
 		}
 
+		// Data URL of an 1x1px transparent png.
+		$placeholder_image = 'https://files.mastodon.social/media_attachments/files/003/134/405/original/04060b07ddf7bb0b.png';
+		// $placeholder_image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
 		if ( preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id ) ) {
 			if ( isset( $meta['attributedTo']['id'] ) ) {
 				$url = $meta['attributedTo']['id'];
@@ -1395,30 +1416,32 @@ class Mastodon_API {
 			$meta = apply_filters( 'friends_get_activitypub_metadata', array(), $url );
 			$data = array(
 				'id'              => $account,
-				'acct'            => $account,
 				'username'        => '',
 				'display_name'    => '',
+				'avatar'          => $placeholder_image,
+				'avatar_static'   => $placeholder_image,
+				'header'          => $placeholder_image,
+				'header_static'   => $placeholder_image,
+				'acct'            => $account,
 				'note'            => '',
-				'created_at'      => gmdate( 'Y-m-d\TH:i:s.uP' ),
+				'created_at'      => gmdate( 'Y-m-d\TH:i:s.000P' ),
 				'followers_count' => 0,
 				'following_count' => 0,
 				'statuses_count'  => 0,
-				'url'             => '',
-				'avatar'          => '',
-				'avatar_static'   => '',
-				'header'          => '',
-				'header_static'   => '',
+				'last_status_at'  => '',
+				'fields'          => array(),
 				'locked'          => false,
 				'emojis'          => array(),
-				'fields'          => array(),
-				'bot'             => false,
-				'group'           => false,
-				'last_status_at'  => null,
+				'url'             => '',
 				'source'          => array(
 					'privacy'   => 'public',
 					'sensitive' => false,
 					'language'  => 'en',
+					'note'      => '',
+					'fields'    => array(),
 				),
+				'bot'             => false,
+				'discoverable'    => true,
 			);
 
 			if ( $meta && ! is_wp_error( $meta ) ) {
@@ -1436,11 +1459,9 @@ class Mastodon_API {
 				$data['url'] = $meta['url'];
 				if ( isset( $meta['icon'] ) ) {
 					$data['avatar'] = $meta['icon']['url'];
-					$data['avatar_static'] = $meta['icon']['url'];
 				}
 				if ( isset( $meta['image'] ) ) {
 					$data['header'] = $meta['image']['url'];
-					$data['header_static'] = $meta['image']['url'];
 				}
 			}
 
@@ -1474,29 +1495,31 @@ class Mastodon_API {
 		$data = array(
 			'id'              => strval( $user->ID ),
 			'username'        => $user->user_login,
-			'acct'            => $user->user_login,
 			'display_name'    => $user->display_name,
-			'locked'          => false,
-			'created_at'      => mysql2date( 'Y-m-d\TH:i:s.uP', $user->user_registered, false ),
+			'avatar'          => $avatar,
+			'avatar_static'   => $avatar,
+			'header'          => $placeholder_image,
+			'header_static'   => $placeholder_image,
+			'acct'            => $user->user_login,
+			'note'            => '',
+			'created_at'      => mysql2date( 'Y-m-d\TH:i:s.000P', $user->user_registered, false ),
 			'followers_count' => 0,
 			'following_count' => 0,
 			'statuses_count'  => isset( $posts['status'] ) ? intval( $posts['status'] ) : 0,
-			'note'            => '',
-			'url'             => strval( $user->get_url() ),
-			'avatar'          => $avatar,
-			'avatar_static'   => $avatar,
-			'header'          => '',
-			'header_static'   => '',
-			'emojis'          => array(),
+			'last_status_at'  => '',
 			'fields'          => array(),
-			'bot'             => false,
-			'group'           => false,
-			'last_status_at'  => null,
+			'locked'          => false,
+			'emojis'          => array(),
+			'url'             => strval( $user->get_url() ),
 			'source'          => array(
 				'privacy'   => 'public',
 				'sensitive' => false,
 				'language'  => 'en',
+				'note'      => '',
+				'fields'    => array(),
 			),
+			'bot'             => false,
+			'discoverable'    => true,
 		);
 
 		if ( isset( $meta['attributedTo']['id'] ) ) {
@@ -1513,7 +1536,6 @@ class Mastodon_API {
 			if ( $meta && ! is_wp_error( $meta ) ) {
 				if ( ! empty( $meta['image']['url'] ) ) {
 					$data['header'] = $meta['image']['url'];
-					$data['header_static'] = $meta['image']['url'];
 				}
 				$data['url'] = $meta['url'];
 				$data['note'] = $meta['summary'];
@@ -1611,10 +1633,23 @@ class Mastodon_API {
 		return $body;
 	}
 
+	private function software_string() {
+		global $wp_version;
+		$software = 'WordPress/' . $wp_version;
+		if ( defined( 'FRIENDS_VERSION' ) ) {
+			$software .= ', Friends/' . FRIENDS_VERSION;
+		}
+		if ( defined( 'ACTIVITYPUB_VERSION' ) ) {
+			$software .= ', ActivityPub/' . ACTIVITYPUB_VERSION;
+		}
+		$software .= ', EMA/' . self::VERSION;
+		return $software;
+	}
+
 	public function api_nodeinfo() {
 		global $wp_version;
 		$software = array(
-			'name'    => 'WordPress/' . $wp_version . ' with the Enable Mastodon Apps Plugin',
+			'name'    => $this->software_string(),
 			'version' => Mastodon_API::VERSION,
 		);
 		$software = apply_filters( 'mastodon_api_nodeinfo_software', $software );
@@ -1656,17 +1691,23 @@ class Mastodon_API {
 		return $ret;
 	}
 
-
 	public function api_instance() {
 		$ret = array(
-			'uri'               => home_url(),
-			'account_domain'    => \wp_parse_url( \home_url(), \PHP_URL_HOST ),
 			'title'             => get_bloginfo( 'name' ),
 			'description'       => get_bloginfo( 'description' ),
+			'short_description' => get_bloginfo( 'description' ),
 			'email'             => 'not@public.example',
-			'version'           => self::VERSION,
+			'version'           => $this->software_string(),
+			'stats'             => array(
+				'user_count'   => 1,
+				'status_count' => 1,
+				'domain_count' => 1,
+			),
+
+			'account_domain'    => \wp_parse_url( \home_url(), \PHP_URL_HOST ),
 			'registrations'     => false,
 			'approval_required' => false,
+			'uri'               => home_url(),
 		);
 
 		return $ret;

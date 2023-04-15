@@ -128,6 +128,7 @@ class AccessTokenStorage implements AccessTokenInterface {
 				$access_token[ $key ] = get_term_meta( $term->term_id, $meta_key, true );
 			}
 
+			$access_token['created_at'] = $access_token['expires'] - YEAR_IN_SECONDS * 2;
 			return $access_token;
 		}
 

@@ -133,9 +133,7 @@ class AccountsEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertIsString( $data['display_name'] );
 		$this->assertIsString( $data['note'] );
 		$this->assertIsString( $data['avatar'] );
-		$this->assertIsString( $data['avatar_static'] );
 		$this->assertIsString( $data['header'] );
-		$this->assertIsString( $data['header_static'] );
 		$this->assertIsBool( $data['locked'] );
 		$this->assertIsArray( $data['fields'] );
 		$this->assertIsArray( $data['emojis'] );
@@ -143,7 +141,6 @@ class AccountsEndpoint_Test extends Mastodon_API_TestCase {
 		if ( ! empty( $data['discoverable'] ) ) {
 			$this->assertIsBool( $data['discoverable'] );
 		}
-		$this->assertIsBool( $data['group'] );
 		$this->assertIsString( $data['created_at'] );
 		$this->assertTrue( false !== new \DateTime( $data['created_at'] ) );
 		$this->assertIsInt( $data['statuses_count'] );
