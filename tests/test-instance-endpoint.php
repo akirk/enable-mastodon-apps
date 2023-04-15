@@ -49,7 +49,7 @@ class InstanceEndpoint_Test extends Mastodon_API_TestCase {
 
 		$this->assertArrayHasKey( 'version', $data );
 		$this->assertIsString( $data['version'] );
-		$this->assertEquals( $data['version'], MASTOAPI_VERSION );
+		$this->assertEquals( $data['version'], ENABLE_MASTODON_APPS_VERSION );
 
 		$this->assertFalse( $data['registrations'], false );
 

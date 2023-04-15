@@ -19,7 +19,7 @@ namespace Enable_Mastodon_Apps;
  */
 class Mastodon_API {
 	const ACTIVITYPUB_USERNAME_REGEXP = '(?:([A-Za-z0-9_-]+)@((?:[A-Za-z0-9_-]+\.)+[A-Za-z]+))';
-	const VERSION = MASTOAPI_VERSION;
+	const VERSION = ENABLE_MASTODON_APPS_VERSION;
 	/**
 	 * The OAuth handler.
 	 *
