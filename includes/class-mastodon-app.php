@@ -52,7 +52,14 @@ class Mastodon_App {
 	}
 
 	public function get_redirect_uris() {
-		return get_term_meta( $this->term->term_id, 'redirect_uris', true );
+		$redirect_uris = get_term_meta( $this->term->term_id, 'redirect_uris', true );
+		if ( ! $redirect_uris ) {
+			return array();
+		}
+		if ( ! is_array( $redirect_uris ) ) {
+			$redirect_uris = array( $redirect_uris );
+		}
+		return $redirect_uris;
 	}
 
 	public function get_client_name() {
@@ -101,9 +108,6 @@ class Mastodon_App {
 	public function check_redirect_uri( $redirect_uri ) {
 		error_log( 'redirect_uri: ' . $redirect_uri );
 		$redirect_uris = $this->get_redirect_uris();
-		if ( ! is_array( $redirect_uris ) ) {
-			$redirect_uris = array( $redirect_uris );
-		}
 
 		foreach ( $redirect_uris as $uri ) {
 			error_log( 'compare: ' . $uri );
