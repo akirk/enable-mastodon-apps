@@ -76,14 +76,20 @@ class Mastodon_API {
 			'api/v1/apps',
 			'api/v1/custom_emojis',
 			'api/v1/filters',
+			'api/v1/follow_requests',
+			'api/v1/followed_tags',
+			'api/v1/instance/peers',
 			'api/v1/instance',
 			'api/v1/lists',
+			'api/v1/notifications',
 			'api/v1/preferences',
 			'api/v1/trends/statuses',
 			'api/v1/push/subscription',
+			'api/v1/streaming',
 			'api/v2/media',
 		);
 		$parametrized = array(
+			'api/v1/accounts/([^/+])/featured_tags'        => 'api/v1/accounts/$matches[1]/featured_tags',
 			'api/v1/accounts/([^/+])/follow'               => 'api/v1/accounts/$matches[1]/follow',
 			'api/v1/accounts/([^/+])/unfollow'             => 'api/v1/accounts/$matches[1]/unfollow',
 			'api/v1/accounts/([^/+])/statuses'             => 'api/v1/accounts/$matches[1]/statuses',
@@ -137,7 +143,7 @@ class Mastodon_API {
 			'api/v1/instance/peers',
 			array(
 				'methods'             => 'GET',
-				'callback'            => '__return_empty_array',
+				'callback'            => array( $this, 'api_instance_peers' ),
 				'permission_callback' => array( $this, 'public_api_permission' ),
 			)
 		);
@@ -170,6 +176,24 @@ class Mastodon_API {
 		);
 		register_rest_route(
 			self::PREFIX,
+			'api/v1/follow_requests',
+			array(
+				'methods'             => 'GET',
+				'callback'            => '__return_empty_array',
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/followed_tags',
+			array(
+				'methods'             => 'GET',
+				'callback'            => '__return_empty_array',
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+		register_rest_route(
+			self::PREFIX,
 			'api/v1/filters',
 			array(
 				'methods'             => 'GET',
@@ -188,10 +212,19 @@ class Mastodon_API {
 		);
 		register_rest_route(
 			self::PREFIX,
+			'api/v1/notifications',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'api_notifications' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+		register_rest_route(
+			self::PREFIX,
 			'api/v1/preferences',
 			array(
 				'methods'             => 'GET',
-				'callback'            => '__return_empty_array',
+				'callback'            => 'api_preferences',
 				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
@@ -345,6 +378,16 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
+			'api/v1/streaming(/public)?(/local)?',
+			array(
+				'methods'             => array( 'GET', 'OPTIONS' ),
+				'callback'            => '__return_empty_array',
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
 			'api/v1/push/subscription',
 			array(
 				'methods'             => array( 'GET', 'POST', 'OPTIONS' ),
@@ -373,6 +416,15 @@ class Mastodon_API {
 			)
 		);
 
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/accounts/(?P<user_id>[^/]+)/featured_tags',
+			array(
+				'methods'             => array( 'GET', 'OPTIONS' ),
+				'callback'            => '__return_empty_array',
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
 		register_rest_route(
 			self::PREFIX,
 			'api/v1/accounts/(?P<user_id>[^/]+)/follow',
@@ -613,6 +665,9 @@ class Mastodon_API {
 
 	private function get_status_array( $post, $data = array() ) {
 		$meta = get_post_meta( $post->ID, 'activitypub', true );
+		if ( ! $post->post_author ) {
+			return null;
+		}
 		$account_data = $this->get_friend_account_data( $post->post_author, $meta );
 		if ( is_wp_error( $account_data ) ) {
 			return null;
@@ -679,7 +734,7 @@ class Mastodon_API {
 				break;
 			}
 			$img = substr( $data['content'], $p, $e - $p + 19 );
-			if ( preg_match( '#<img(?:\s+src="(?P<url>[^"]+)"|\s+width="(?P<width>\d+)"|\s+height="(?P<height>\d+)"|\s+class="(?P<class>[^"]+))+"#', $img, $img_tag ) ) {
+			if ( preg_match( '#<img(?:\s+src="(?P<url>[^"]+)"|\s+width="(?P<width>\d+)"|\s+height="(?P<height>\d+)"|\s+class="(?P<class>[^"]+)|\s+.*="[^"]+)+"#i', $img, $img_tag ) ) {
 				$media_id = crc32( $img_tag['url'] );
 				foreach ( $attachments as $attachment_id => $attachment ) {
 					if ( $attachment->guid === $img_tag['url'] ) {
@@ -698,7 +753,7 @@ class Mastodon_API {
 					'height'      => $img_tag['height'],
 				);
 			}
-			$data['content'] = substr( $data['content'], 0, $p ) . substr( $data['content'], $e + 19 );
+			$data['content'] = trim( substr( $data['content'], 0, $p ) . substr( $data['content'], $e + 19 ) );
 			$p = strpos( $data['content'], '<!-- wp:image' );
 		}
 
@@ -1006,12 +1061,17 @@ class Mastodon_API {
 			$comment_id = intval( substr( $post_id, 8 ) );
 			$comment = get_comment( $comment_id );
 			$post_id = $comment->comment_post_ID;
-
-			$context['ancestors'][] = $this->get_status_array( get_post( $post_id ) );
+			$status = $this->get_status_array( get_post( $post_id ) );
+			if ( $status ) {
+				$context['ancestors'][] = $status;
+			}
 		}
 
 		foreach ( get_comments( array( 'post_id' => $post_id ) ) as $comment ) {
-			$context['descendants'][] = $this->get_comment_status_array( $comment );
+			$status = $this->get_comment_status_array( $comment );
+			if ( $status ) {
+				$context['descendants'][] = $status;
+			}
 		}
 
 		return $context;
@@ -1353,6 +1413,17 @@ class Mastodon_API {
 		return $relationships;
 	}
 
+	public function api_notifications( $request ) {
+		return array();
+	}
+
+	public function api_preferences( $request ) {
+		$preferences = array(
+			'posting:default:language' => get_user_locale(),
+		);
+		return $preferences;
+	}
+
 	public function api_account( $request ) {
 		return $this->get_friend_account_data( rawurldecode( $request->get_param( 'user_id' ) ) );
 	}
@@ -1512,6 +1583,8 @@ class Mastodon_API {
 			}
 		}
 
+		$followers_count = 0;
+		$following_count = 0;
 		$avatar = get_avatar_url( $user->ID );
 		if ( $user instanceof \Friends\User ) {
 			$posts = $user->get_post_count_by_post_format();
@@ -1521,6 +1594,12 @@ class Mastodon_API {
 				'status' => count_user_posts( $user->ID, 'post', true ),
 			);
 		}
+		if ( get_current_user_id() === $user->ID ) {
+			if ( class_exists( '\Activitypub\Peer\Followers' ) ) {
+				$followers_count = count( \Activitypub\Peer\Followers::get_followers( $user->ID ) );
+			}
+		}
+
 		$data = array(
 			'id'              => strval( $user->ID ),
 			'username'        => $user->user_login,
@@ -1532,8 +1611,8 @@ class Mastodon_API {
 			'acct'            => $user->user_login,
 			'note'            => '',
 			'created_at'      => mysql2date( 'Y-m-d\TH:i:s.000P', $user->user_registered, false ),
-			'followers_count' => 0,
-			'following_count' => 0,
+			'followers_count' => $followers_count,
+			'following_count' => $following_count,
 			'statuses_count'  => isset( $posts['status'] ) ? intval( $posts['status'] ) : 0,
 			'last_status_at'  => '',
 			'fields'          => array(),
@@ -1718,6 +1797,10 @@ class Mastodon_API {
 		);
 
 		return $ret;
+	}
+
+	public function api_instance_peers() {
+		return array();
 	}
 
 	public function api_instance() {

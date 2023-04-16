@@ -249,9 +249,11 @@ class TokenController implements TokenControllerInterface
         }
 
         $at = $grantType->createAccessToken($this->accessToken, $clientId, $grantType->getUserId(), $requestedScope);
+        if ( ! $at ) {
+            return $at;
+        }
         // Compatibility with the Mastodon Token format: https://docs.joinmastodon.org/entities/Token/.
         $at['created_at'] = time();
-        unset( $at['exipires_in'] );
         return $at;
     }
 

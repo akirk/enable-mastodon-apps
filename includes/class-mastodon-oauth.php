@@ -45,6 +45,16 @@ class Mastodon_OAuth {
 		$this->server->addStorage( new Oauth2\MastodonAppStorage(), 'client_credentials' );
 		$this->server->addStorage( new Oauth2\AccessTokenStorage(), 'access_token' );
 
+		if ( '/oauth/token' === strtok( $_SERVER['REQUEST_URI'], '?' ) ) {
+			// Avoid interference with private site plugins.
+			add_filter(
+				'pre_option_blog_public',
+				function() {
+					return 0;
+				}
+			);
+		}
+
 		add_action( 'template_redirect', array( $this, 'handle_oauth' ) );
 
 		/*
