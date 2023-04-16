@@ -78,6 +78,8 @@ class Mastodon_API {
 			'api/v1/filters',
 			'api/v1/instance',
 			'api/v1/lists',
+			'api/v1/preferences',
+			'api/v1/trends/statuses',
 			'api/v1/push/subscription',
 			'api/v2/media',
 		);
@@ -132,6 +134,15 @@ class Mastodon_API {
 		);
 		register_rest_route(
 			self::PREFIX,
+			'api/v1/instance/peers',
+			array(
+				'methods'             => 'GET',
+				'callback'            => '__return_empty_array',
+				'permission_callback' => array( $this, 'public_api_permission' ),
+			)
+		);
+		register_rest_route(
+			self::PREFIX,
 			'api/v1/instance',
 			array(
 				'methods'             => 'GET',
@@ -169,6 +180,24 @@ class Mastodon_API {
 		register_rest_route(
 			self::PREFIX,
 			'api/v1/lists',
+			array(
+				'methods'             => 'GET',
+				'callback'            => '__return_empty_array',
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/preferences',
+			array(
+				'methods'             => 'GET',
+				'callback'            => '__return_empty_array',
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/trends/statuses',
 			array(
 				'methods'             => 'GET',
 				'callback'            => '__return_empty_array',
@@ -660,7 +689,7 @@ class Mastodon_API {
 					}
 				}
 				$data['media_attachments'][] = array(
-					'id'          => $media_id,
+					'id'          => strval( $media_id ),
 					'type'        => 'image',
 					'url'         => $img_tag['url'],
 					'preview_url' => $img_tag['url'],
@@ -1510,7 +1539,7 @@ class Mastodon_API {
 			'fields'          => array(),
 			'locked'          => false,
 			'emojis'          => array(),
-			'url'             => strval( $user->get_url() ),
+			'url'             => get_author_posts_url( $user->ID ),
 			'source'          => array(
 				'privacy'   => 'public',
 				'sensitive' => false,
@@ -1554,7 +1583,7 @@ class Mastodon_API {
 	public function get_acct( $id_or_url ) {
 		$webfinger = $this->webfinger( $id_or_url );
 		if ( ! isset( $webfinger['subject'] ) ) {
-			return false;
+			return '';
 		}
 		if ( substr( $webfinger['subject'], 0, 5 ) === 'acct:' ) {
 			return substr( $webfinger['subject'], 5 );
