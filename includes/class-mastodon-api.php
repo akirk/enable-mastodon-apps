@@ -74,7 +74,9 @@ class Mastodon_API {
 			'api/v1/accounts/verify_credentials',
 			'api/v1/announcements',
 			'api/v1/apps',
+			'api/v1/bookmarks',
 			'api/v1/custom_emojis',
+			'api/v1/favourites',
 			'api/v1/filters',
 			'api/v1/follow_requests',
 			'api/v1/followed_tags',
@@ -186,6 +188,24 @@ class Mastodon_API {
 		register_rest_route(
 			self::PREFIX,
 			'api/v1/followed_tags',
+			array(
+				'methods'             => 'GET',
+				'callback'            => '__return_empty_array',
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/bookmarks',
+			array(
+				'methods'             => 'GET',
+				'callback'            => '__return_empty_array',
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/favourites',
 			array(
 				'methods'             => 'GET',
 				'callback'            => '__return_empty_array',
@@ -474,7 +494,15 @@ class Mastodon_API {
 
 	public function public_api_permission() {
 		$this->allow_cors();
-		return true;
+		// Optionally log in.
+		$token = $this->oauth->get_token();
+		if ( ! $token ) {
+			return true;
+		}
+		$this->app = Mastodon_App::get_by_client_id( $token['client_id'] );
+		$this->app->was_used();
+		wp_set_current_user( $token['user_id'] );
+		return is_user_logged_in();
 	}
 
 	public function api_apps( $request ) {
