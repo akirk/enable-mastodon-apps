@@ -314,7 +314,7 @@ class Mastodon_Admin {
 								<td>
 									<?php
 									if ( isset( $apps[ $data['client_id'] ] ) ) {
-										echo esc_html( $apps[ $data['client_id'] ]->get_client_id() . ' ' . $apps[ $data['client_id'] ]->get_client_secret() );
+										echo esc_html( $apps[ $data['client_id'] ]->get_client_name() );
 									} else {
 										echo esc_html( 'Unknown: ' . $data['client_id'] );
 									}
@@ -403,7 +403,7 @@ class Mastodon_Admin {
 									}
 									?>
 								</td>
-								<td><?php echo wp_kses( implode( '<br/>', $app->get_redirect_uris() ), array( 'br' => array() ) ); ?></td>
+								<td><?php echo wp_kses( implode( '<br/>', is_array( $app->get_redirect_uris() ) ? $app->get_redirect_uris() : explode( ',', $app->get_redirect_uris() ) ), array( 'br' => array() ) ); ?></td>
 								<td><?php echo esc_html( $app->get_scopes() ); ?></td>
 								<td>
 									<details>
