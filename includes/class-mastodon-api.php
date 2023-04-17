@@ -100,6 +100,7 @@ class Mastodon_API {
 			'api/v1/statuses/((?:comment-)?[0-9]+)/unfavourite' => 'api/v1/statuses/$matches[1]/unfavourite',
 			'api/v1/statuses/((?:comment-)?[0-9]+)/reblog' => 'api/v1/statuses/$matches[1]/reblog',
 			'api/v1/statuses/((?:comment-)?[0-9]+)/unreblog' => 'api/v1/statuses/$matches[1]/unreblog',
+			'api/v1/statuses/((?:comment-)?[0-9]+)/favourited_by' => 'api/v1/statuses/$matches[1]/favourited_by',
 			'api/nodeinfo/([0-9]+[.][0-9]+).json'          => 'api/nodeinfo/$matches[1].json',
 			'api/v1/media/([0-9]+)'                        => 'api/v1/media/$matches[1]',
 			'api/v1/statuses/((?:comment-)?[0-9]+)'        => 'api/v1/statuses/$matches[1]',
@@ -352,6 +353,16 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'POST', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_unreblog_post' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/statuses/(?P<post_id>(?:comment-)?[0-9]+)/favourited_by',
+			array(
+				'methods'             => array( 'GET', 'OPTIONS' ),
+				'callback'            => '__return_empty_array',
 				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
@@ -729,7 +740,7 @@ class Mastodon_API {
 				'in_reply_to_id'         => null,
 				'in_reply_to_account_id' => null,
 				'reblog'                 => null,
-				'content'                => $post->post_content,
+				'content'                => trim( $post->post_title . PHP_EOL . $post->post_content ),
 				'created_at'             => mysql2date( 'Y-m-d\TH:i:s.000P', $post->post_date, false ),
 				'edited_at'              => null,
 				'emojis'                 => array(),
@@ -1085,6 +1096,8 @@ class Mastodon_API {
 			}
 		}
 
+		$comment_id = false;
+
 		if ( substr( $post_id, 0, 8 ) === 'comment-' ) {
 			$comment_id = intval( substr( $post_id, 8 ) );
 			$comment = get_comment( $comment_id );
@@ -1096,6 +1109,9 @@ class Mastodon_API {
 		}
 
 		foreach ( get_comments( array( 'post_id' => $post_id ) ) as $comment ) {
+			if ( intval( $comment->comment_ID ) === $comment_id ) {
+				continue;
+			}
 			$status = $this->get_comment_status_array( $comment );
 			if ( $status ) {
 				$context['descendants'][] = $status;
@@ -1191,6 +1207,11 @@ class Mastodon_API {
 		$post_id = $request->get_param( 'post_id' );
 		if ( ! $post_id ) {
 			return false;
+		}
+
+		if ( substr( $post_id, 0, 8 ) === 'comment-' ) {
+			$comment_id = intval( substr( $post_id, 8 ) );
+			return $this->get_comment_status_array( get_comment( $comment_id ) );
 		}
 
 		return $this->get_status_array( get_post( $post_id ) );
@@ -1447,7 +1468,8 @@ class Mastodon_API {
 
 	public function api_preferences( $request ) {
 		$preferences = array(
-			'posting:default:language' => get_user_locale(),
+			'posting:default:language'   => self::get_mastodon_language( get_user_locale() ),
+			'posting:default:visibility' => apply_filters( 'mastodon_api_account_visibility', 'public', wp_get_current_user() ),
 		);
 		return $preferences;
 	}
@@ -1648,9 +1670,9 @@ class Mastodon_API {
 			'emojis'          => array(),
 			'url'             => get_author_posts_url( $user->ID ),
 			'source'          => array(
-				'privacy'   => 'public',
+				'privacy'   => apply_filters( 'mastodon_api_account_visibility', 'public', $user ),
 				'sensitive' => false,
-				'language'  => 'en',
+				'language'  => self::get_mastodon_language( get_user_locale( $user->ID ) ),
 				'note'      => '',
 				'fields'    => array(),
 			),
@@ -1681,6 +1703,13 @@ class Mastodon_API {
 
 		wp_cache_set( $cache_key, $data, 'enable-mastodon-apps' );
 		return $data;
+	}
+
+	public static function get_mastodon_language( $lang ) {
+		if ( false === strpos( $lang, '_' ) ) {
+			return $lang . '_' . strtoupper( $lang );
+		}
+		return $lang;
 	}
 
 	public function get_user_acct( $user ) {
