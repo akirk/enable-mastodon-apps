@@ -285,7 +285,7 @@ class Mastodon_Admin {
 						</td>
 					</tr>
 					<tr>
-						<th scope="row"><?php esc_html_e( 'Post Replies as Comments', 'enable-mastodon-apps' ); ?></th>
+						<th scope="row"><?php esc_html_e( 'Replies', 'enable-mastodon-apps' ); ?></th>
 						<td>
 							<fieldset>
 								<label for="mastodon_api_enable_logins">
