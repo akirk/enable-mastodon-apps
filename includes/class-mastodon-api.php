@@ -989,6 +989,9 @@ class Mastodon_API {
 			'statuses' => array(),
 		);
 		if ( $request->get_param( 'type' ) === 'accounts' ) {
+			if ( preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $request->get_param( 'q' ) ) && ! $request->get_param( 'offset' ) ) {
+				$ret['accounts'][] = $this->get_friend_account_data( $request->get_param( 'q' ) );
+			}
 			$query = new \WP_User_Query(
 				array(
 					'search'         => '*' . $request->get_param( 'q' ) . '*',
