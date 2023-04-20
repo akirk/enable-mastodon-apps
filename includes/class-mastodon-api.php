@@ -811,18 +811,7 @@ class Mastodon_API {
 
 		if ( isset( $meta['reblog'] ) && $meta['reblog'] ) {
 			$data['reblog'] = $data;
-			if ( ! empty( $meta['attributedTo']['icon'] ) ) {
-				$data['reblog']['account']['avatar'] = $meta['attributedTo']['icon'];
-			}
-			if ( ! empty( $meta['attributedTo']['preferredUsername'] ) ) {
-				$data['reblog']['account']['display_name'] = $meta['attributedTo']['preferredUsername'];
-			}
-			$data['reblog']['account']['acct'] = $this->get_acct( $meta['attributedTo']['id'] );
-			$data['reblog']['account']['username'] = $this->get_acct( $meta['attributedTo']['id'] );
-			$data['reblog']['account']['id'] = $this->get_acct( $meta['attributedTo']['id'] );
-			if ( ! empty( $meta['attributedTo']['summary'] ) ) {
-				$data['reblog']['account']['note'] = $meta['attributedTo']['summary'];
-			}
+			$data['reblog']['account'] = $this->get_friend_account_data( $this->get_acct( $meta['attributedTo']['id'] ), $meta );
 		} elseif ( $override_author_name && $author_name !== $override_author_name ) {
 			$data['account']['display_name'] = $override_author_name;
 		}
@@ -1266,42 +1255,49 @@ class Mastodon_API {
 				},
 				$activity['object']['attachment']
 			),
-			'mentions'               => array_map(
-				function( $mention ) {
-					return array(
-						'id'       => $mention['href'],
-						'username' => $mention['name'],
-						'acct'     => $mention['name'],
-						'url'      => $mention['href'],
-					);
-				},
-				array_filter(
-					$activity['object']['tag'],
-					function( $tag ) {
-						if ( isset( $tag['type'] ) ) {
-							return 'Mention' === $tag['type'];
+
+			'mentions'               => array_values(
+				array_map(
+					function( $mention ) {
+						return array(
+							'id'       => $mention['href'],
+							'username' => $mention['name'],
+							'acct'     => $mention['name'],
+							'url'      => $mention['href'],
+						);
+					},
+					array_filter(
+						$activity['object']['tag'],
+						function( $tag ) {
+							if ( isset( $tag['type'] ) ) {
+								return 'Mention' === $tag['type'];
+							}
+							return false;
 						}
-						return false;
-					}
+					)
 				)
 			),
-			'tags'                   => array_map(
-				function( $tag ) {
-					return array(
-						'name' => $tag['name'],
-						'url'  => $tag['href'],
-					);
-				},
-				array_filter(
-					$activity['object']['tag'],
+
+			'tags'                   => array_values(
+				array_map(
 					function( $tag ) {
-						if ( isset( $tag['type'] ) ) {
-							return 'Hashtag' === $tag['type'];
+						return array(
+							'name' => $tag['name'],
+							'url'  => $tag['href'],
+						);
+					},
+					array_filter(
+						$activity['object']['tag'],
+						function( $tag ) {
+							if ( isset( $tag['type'] ) ) {
+								return 'Hashtag' === $tag['type'];
+							}
+							return false;
 						}
-						return false;
-					}
+					)
 				)
 			),
+
 			'language'               => 'en',
 			'pinned'                 => false,
 			'card'                   => null,
@@ -1318,7 +1314,7 @@ class Mastodon_API {
 				$meta = apply_filters( 'friends_get_activitypub_metadata', array(), $url );
 				if ( $meta && ! is_wp_error( $meta ) ) {
 					$outbox = $this->get_json( $meta['outbox'], 'outbox-' . $account, array( 'first' => null ) );
-					$outbox_page = $this->get_json( $outbox['first'], 'outbox-' . $account, array( 'orderedItems' => array() ) );
+					$outbox_page = $this->get_json( $outbox['first'], 'outboxpage-' . $account, array( 'orderedItems' => array() ) );
 
 					$items = $this->convert_outbox_to_status( $outbox_page, $user_id );
 					return $items;
@@ -1477,7 +1473,7 @@ class Mastodon_API {
 	}
 
 	public function api_account( $request ) {
-		return $this->get_friend_account_data( rawurldecode( $request->get_param( 'user_id' ) ) );
+		return $this->get_friend_account_data( rawurldecode( $request->get_param( 'user_id' ) ), array(), true );
 	}
 
 	/**
@@ -1537,11 +1533,48 @@ class Mastodon_API {
 		$body = \wp_remote_retrieve_body( $response );
 		$body = \json_decode( $body, true );
 
+		\set_transient( $transient_key, $body, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
+
 		return $body;
 	}
 
+	private function update_account_data_with_meta( $data, $meta, $full_metadata = false ) {
+		if ( ! $meta || is_wp_error( $meta ) ) {
+			return $data;
+		}
+		if ( $full_metadata ) {
+			$followers = $this->get_json( $meta['followers'], 'followers-' . $data['acct'], array( 'totalItems' => 0 ) );
+			$following = $this->get_json( $meta['following'], 'following-' . $data['acct'], array( 'totalItems' => 0 ) );
+			$outbox = $this->get_json( $meta['outbox'], 'outbox-' . $data['acct'], array( 'totalItems' => 0 ) );
+			$data['followers_count'] = intval( $followers['totalItems'] );
+			$data['following_count'] = intval( $following['totalItems'] );
+			$data['statuses_count'] = intval( $outbox['totalItems'] );
+		}
 
-	private function get_friend_account_data( $user_id, $meta = array() ) {
+		$data['username'] = $meta['preferredUsername'];
+		$data['display_name'] = $meta['name'];
+		$data['note'] = $meta['summary'];
+		$data['created_at'] = $meta['published'];
+		$data['url'] = $meta['url'];
+		if ( isset( $meta['icon'] ) ) {
+			$data['avatar'] = $meta['icon']['url'];
+			$data['avatar_static'] = $meta['icon']['url'];
+		}
+		if ( isset( $meta['image'] ) ) {
+			$data['header'] = $meta['image']['url'];
+			$data['header_static'] = $meta['image']['url'];
+		}
+		$data['discoverable'] = $meta['discoverable'];
+		return $data;
+	}
+
+	private function get_friend_account_data( $user_id, $meta = array(), $full_metadata = false ) {
+
+		$external_user = apply_filters( 'friends_external_mentions_user', null );
+		$is_external_mention = $external_user && strval( $external_user->ID ) === strval( $user_id );
+		if ( $is_external_mention && isset( $meta['attributedTo']['id'] ) ) {
+			$user_id = $meta['attributedTo']['id'];
+		}
 		$cache_key = 'account-' . $user_id;
 		$ret = wp_cache_get( $cache_key, 'enable-mastodon-apps' );
 		if ( false !== $ret ) {
@@ -1595,27 +1628,7 @@ class Mastodon_API {
 				'bot'             => false,
 				'discoverable'    => true,
 			);
-
-			if ( $meta && ! is_wp_error( $meta ) ) {
-				$followers = $this->get_json( $meta['followers'], 'followers-' . $account, array( 'totalItems' => 0 ) );
-				$following = $this->get_json( $meta['following'], 'following-' . $account, array( 'totalItems' => 0 ) );
-				$outbox = $this->get_json( $meta['outbox'], 'outbox-' . $account, array( 'totalItems' => 0 ) );
-
-				$data['username'] = $meta['preferredUsername'];
-				$data['display_name'] = $meta['name'];
-				$data['note'] = $meta['summary'];
-				$data['created_at'] = $meta['published'];
-				$data['followers_count'] = intval( $followers['totalItems'] );
-				$data['following_count'] = intval( $following['totalItems'] );
-				$data['statuses_count'] = intval( $outbox['totalItems'] );
-				$data['url'] = $meta['url'];
-				if ( isset( $meta['icon'] ) ) {
-					$data['avatar'] = $meta['icon']['url'];
-				}
-				if ( isset( $meta['image'] ) ) {
-					$data['header'] = $meta['image']['url'];
-				}
-			}
+			$data = $this->update_account_data_with_meta( $data, $meta, $full_metadata );
 
 			wp_cache_set( $cache_key, $data, 'enable-mastodon-apps' );
 
@@ -1634,7 +1647,6 @@ class Mastodon_API {
 				return $data;
 			}
 		}
-
 		$followers_count = 0;
 		$following_count = 0;
 		$avatar = get_avatar_url( $user->ID );
@@ -1682,26 +1694,26 @@ class Mastodon_API {
 			'discoverable'    => true,
 		);
 
-		if ( isset( $meta['attributedTo']['id'] ) ) {
+		if ( isset( $meta['attributedTo']['id'] ) && $is_external_mention ) {
 			$data['acct'] = $this->get_acct( $meta['attributedTo']['id'] );
 			$data['id'] = $data['acct'];
 			$data['username'] = strtok( $data['acct'], '@' );
+
+			$meta = apply_filters( 'friends_get_activitypub_metadata', array(), $meta['attributedTo']['id'] );
+			$data = $this->update_account_data_with_meta( $data, $meta, $full_metadata );
 		} else {
 			$acct = $this->get_user_acct( $user );
 			if ( $acct ) {
 				$data['acct'] = $acct;
 			}
-		}
 
-		foreach ( apply_filters( 'friends_get_user_feeds', array(), $user ) as $feed ) {
-			$meta = apply_filters( 'friends_get_feed_metadata', array(), $feed );
-			if ( $meta && ! is_wp_error( $meta ) ) {
-				if ( ! empty( $meta['image']['url'] ) ) {
-					$data['header'] = $meta['image']['url'];
+			foreach ( apply_filters( 'friends_get_user_feeds', array(), $user ) as $feed ) {
+				$meta = apply_filters( 'friends_get_feed_metadata', array(), $feed );
+				if ( $meta && ! is_wp_error( $meta ) ) {
+					$data['acct'] = $this->get_acct( $meta['id'] );
+					$data = $this->update_account_data_with_meta( $data, $meta, $full_metadata );
+					break;
 				}
-				$data['url'] = $meta['url'];
-				$data['note'] = $meta['summary'];
-				$data['acct'] = $this->get_acct( $meta['id'] );
 			}
 		}
 
@@ -1775,7 +1787,7 @@ class Mastodon_API {
 
 		$transient_key = 'mastodon_api_webfinger_' . md5( $id_or_url );
 
-		// $body = \get_transient( $transient_key );
+		$body = \get_transient( $transient_key );
 		if ( $body ) {
 			if ( is_wp_error( $body ) ) {
 				return $id;
