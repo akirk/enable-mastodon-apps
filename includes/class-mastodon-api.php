@@ -1684,6 +1684,8 @@ class Mastodon_API {
 
 		if ( isset( $meta['attributedTo']['id'] ) ) {
 			$data['acct'] = $this->get_acct( $meta['attributedTo']['id'] );
+			$data['id'] = $data['acct'];
+			$data['username'] = strtok( $data['acct'], '@' );
 		} else {
 			$acct = $this->get_user_acct( $user );
 			if ( $acct ) {
