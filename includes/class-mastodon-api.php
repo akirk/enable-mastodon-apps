@@ -101,7 +101,7 @@ class Mastodon_API {
 			'api/v1/statuses/((?:comment-)?[0-9]+)/unfavourite' => 'api/v1/statuses/$matches[1]/unfavourite',
 			'api/v1/statuses/((?:comment-)?[0-9]+)/reblog' => 'api/v1/statuses/$matches[1]/reblog',
 			'api/v1/statuses/((?:comment-)?[0-9]+)/unreblog' => 'api/v1/statuses/$matches[1]/unreblog',
-			'api/v1/notifications/([^/]+)/dismiss' => 'api/v1/notifications/$matches[1]/dismiss',
+			'api/v1/notifications/([^/]+)/dismiss'         => 'api/v1/notifications/$matches[1]/dismiss',
 			'api/nodeinfo/([0-9]+[.][0-9]+).json'          => 'api/nodeinfo/$matches[1].json',
 			'api/v1/media/([0-9]+)'                        => 'api/v1/media/$matches[1]',
 			'api/v1/statuses/((?:comment-)?[0-9]+)'        => 'api/v1/statuses/$matches[1]',
@@ -859,7 +859,7 @@ class Mastodon_API {
 
 	private function get_notification_array( $type, $date, $account, $status = array() ) {
 		$notification = array(
-			'id' => $date,
+			'id'         => $date,
 			'created_at' => $date,
 		);
 		switch ( $type ) {
@@ -1548,7 +1548,7 @@ class Mastodon_API {
 		$all_notifications = $this->api_notifications( $request );
 		foreach ( $all_notifications as $notifications ) {
 			foreach ( $notifications as $notification ) {
-				if ( $request->get_param('id') !== $notification['id'] ) {
+				if ( $request->get_param( 'id' ) !== $notification['id'] ) {
 					continue;
 				}
 				if ( $notification['status'] ) {
@@ -1564,7 +1564,7 @@ class Mastodon_API {
 		$all_notifications = $this->api_notifications( $request );
 		foreach ( $all_notifications as $notifications ) {
 			foreach ( $notifications as $notification ) {
-				if ( $request->get_param('id') !== $notification['id'] ) {
+				if ( $request->get_param( 'id' ) !== $notification['id'] ) {
 					continue;
 				}
 				return $notification;
