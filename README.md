@@ -6,7 +6,7 @@
 - Tested up to: 6.2
 - Requires PHP: 5.2.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 0.2.1
+- Stable tag: 0.3.0
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -21,6 +21,7 @@ In combination with this plugin you can then enjoy the plurality of Mastodon cli
 - [Tusky](https://tusky.app/) (Android)
 - [Ivory](https://tapbots.com/ivory/) (macOS and iOS)
 - [Mona](https://mastodon.social/@MonaApp) (macOS)
+- [IceCubes](https://github.com/Dimillian/IceCubesApp) (macOS)
 
 Many more, see the [Third-party apps section on joinmastodon.org/apps](https://joinmastodon.org/apps).
 
@@ -76,7 +77,7 @@ Here is a list of endpoints and their implementation status:
 
 Unmentioned endpoints are not implemented. Contributions welcome!
 
-Endpoints around interacting with non-local users require the [Friends plugin](https://github.com/akirk/friends). Lists-related endpoints require the [Friends Roles plugin](https://github.com/akirk/friends-roles).
+Endpoints around interacting with non-local users require the [ActivityPub plugin](https://wordpress.org/plugins/activitypub). Following users requires the [Friends plugin](https://wordpress.org/plugins/friends). Lists-related endpoints require the [Friends Roles plugin](https://github.com/akirk/friends-roles).
 
 ## Screenshots
 
@@ -84,6 +85,12 @@ Endpoints around interacting with non-local users require the [Friends plugin](h
 2. The Mastodon Apps settings page.
 
 ## Changelog
+
+### 0.3.0
+- Implemented: search for a specific remote account to follow it
+- Implemented: Notifications for mentions
+- Added: Option whether replies should be posted as comments on the messages or as new posts
+- Fixed: Ivory should now be able to connect
 
 ### 0.2.1
 - Improve compatibility of Swift based apps
