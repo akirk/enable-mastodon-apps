@@ -52,6 +52,7 @@ class Mastodon_API {
 		add_action( 'query_vars', array( $this, 'query_vars' ) );
 		add_action( 'rest_api_init', array( $this, 'add_rest_routes' ) );
 		add_filter( 'rest_pre_serve_request', array( $this, 'allow_cors' ), 10, 4 );
+		add_filter( 'activitypub_post', array( $this, 'activitypub_post' ), 10, 2 );
 	}
 
 	function allow_cors() {
@@ -609,6 +610,14 @@ class Mastodon_API {
 		}
 
 		return true;
+	}
+
+	public function activitypub_post( $array, $post ) {
+		if ( $post->post_parent ) {
+			$parent_post = get_post( $post->post_parent );
+			$array['inReplyTo'] = $parent_post->guid;
+		}
+		return $array;
 	}
 
 	public function api_verify_credentials( $request ) {
