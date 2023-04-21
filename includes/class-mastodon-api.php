@@ -1031,7 +1031,14 @@ class Mastodon_API {
 			$app_post_formats = array( 'status' );
 		}
 		$post_format = apply_filters( 'mastodon_api_new_post_format', $app_post_formats[0] );
-		set_post_format( $post_id, $post_format );
+		if ( 'standard' === $post_format ) {
+			// Use the first line of a post as the post title if we're using a standard post format.
+			list( $post_title, $post_content ) = explode( PHP_EOL, $post_data['post_content'], 2 );
+			$post_data['post_title']   = $post_title;
+			$post_data['post_content'] = trim( $post_content );
+		} else {
+			set_post_format( $post_id, $post_format );
+		}
 
 		if ( ! empty( $media_ids ) ) {
 			foreach ( $media_ids as $media_id ) {
