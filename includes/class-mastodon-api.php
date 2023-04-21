@@ -1446,7 +1446,14 @@ class Mastodon_API {
 			$relationships = $this->api_account_relationships( $request );
 		} elseif ( preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id ) ) {
 			$url = $this->get_activitypub_url( $user_id );
-			$new_user_id = apply_filters( 'friends_create_and_follow', $user_id, $url, 'application/activity+json' );
+			$meta = apply_filters( 'friends_get_activitypub_metadata', array(), $url );
+
+			$vars = array();
+			if ( isset( $meta['name'] ) ) {
+				$vars['display_name'] = $meta['name'];
+			}
+
+			$new_user_id = apply_filters( 'friends_create_and_follow', $user_id, $url, 'application/activity+json', $vars );
 			if ( is_wp_error( $new_user_id ) ) {
 				return $new_user_id;
 			}

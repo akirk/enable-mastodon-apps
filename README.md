@@ -71,7 +71,7 @@ Here is a list of endpoints and their implementation status:
 - [x] `POST /api/v1/notifications/:id/dismiss` [Dismiss a single notification](https://docs.joinmastodon.org/methods/notifications/#dismiss)
 - [x] `GET /api/v1/timelines/home` [View home timeline](https://docs.joinmastodon.org/methods/timelines/#home)
 - [ ] `GET /api/v1/timelines/public` (implemented as empty) [View public timeline](https://docs.joinmastodon.org/methods/timelines/#public)
-- [ ] `GET /api/v1/markers` [Get saved timeline positions](https://docs.joinmastodon.org/methods/markers/#get)
+- [ ] `GET /api/v1/markers` (implemented as empty) [Get saved timeline positions](https://docs.joinmastodon.org/methods/markers/#get)
 - [ ] `POST /api/v1/markers` [Save your position in a timeline](https://docs.joinmastodon.org/methods/markers/#create)
 - [x] `GET /api/v2/search` (partial, accounts (local and exact match for remote) and statuses in the local db) [Perform a search](https://docs.joinmastodon.org/methods/search/#v2)
 
