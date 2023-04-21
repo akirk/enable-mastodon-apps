@@ -1566,7 +1566,9 @@ class Mastodon_API {
 			$data['header'] = $meta['image']['url'];
 			$data['header_static'] = $meta['image']['url'];
 		}
-		$data['discoverable'] = $meta['discoverable'];
+		if ( isset( $meta['discoverable'] ) ) {
+			$data['discoverable'] = $meta['discoverable'];
+		}
 		return $data;
 	}
 
