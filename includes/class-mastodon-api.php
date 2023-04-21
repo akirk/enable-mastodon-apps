@@ -993,6 +993,18 @@ class Mastodon_API {
 			'post_title'   => '',
 		);
 
+		$app_post_formats = $this->app->get_post_formats();
+		if ( empty( $app_post_formats ) ) {
+			$app_post_formats = array( 'status' );
+		}
+		$post_format = apply_filters( 'mastodon_api_new_post_format', $app_post_formats[0] );
+		if ( 'standard' === $post_format ) {
+			// Use the first line of a post as the post title if we're using a standard post format.
+			list( $post_title, $post_content ) = explode( PHP_EOL, $post_data['post_content'], 2 );
+			$post_data['post_title']   = $post_title;
+			$post_data['post_content'] = trim( $post_content );
+		}
+
 		if ( $parent_post ) {
 			$post_data['post_parent'] = $parent_post->ID;
 		}
@@ -1026,17 +1038,7 @@ class Mastodon_API {
 			return $post_id;
 		}
 
-		$app_post_formats = $this->app->get_post_formats();
-		if ( empty( $app_post_formats ) ) {
-			$app_post_formats = array( 'status' );
-		}
-		$post_format = apply_filters( 'mastodon_api_new_post_format', $app_post_formats[0] );
-		if ( 'standard' === $post_format ) {
-			// Use the first line of a post as the post title if we're using a standard post format.
-			list( $post_title, $post_content ) = explode( PHP_EOL, $post_data['post_content'], 2 );
-			$post_data['post_title']   = $post_title;
-			$post_data['post_content'] = trim( $post_content );
-		} else {
+		if ( 'standard' !== $post_format ) {
 			set_post_format( $post_id, $post_format );
 		}
 
