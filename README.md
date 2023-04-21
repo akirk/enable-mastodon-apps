@@ -12,9 +12,17 @@ Allow accessing your WordPress with Mastodon clients. Just enter your own blog U
 
 ## Description
 
-This plugin works best in combination with the [Friends](https://wordpress.org/plugins/friends/) and [ActivityPub](https://wordpress.org/plugins/activitypub/) plugins which connects your WordPress blog with the Fediverse through which you can follow people and be followed via the ActivityPub protiocol which is what Mastodon uses.
+Despite Mastodon implying that you would use this plugin for engaging on Mastodon (when you have enabled it for that, see below), the plugin is useful when installed on a plain WordPress.
 
-In combination with this plugin you can then enjoy the plurality of Mastodon clients to access the Fediverse through your blog. A few common Mastodon clients are:
+When you use a Mastodon app, you'll enter your own blog URL to connect and log in to your blog in the following screens.
+
+You'll then see just the posts on your blog which can already be useful in a multi-author environment (e.g. private blogs). You can also use that Mastodon app to create simple posts with a message + attachment(s) which can be better suited for your usecase than using the Gutenberg-capable WordPress mobile app.
+
+When used in combination with the [ActivityPub](https://wordpress.org/plugins/activitypub/) (for being followed via Mastodon) and [Friends](https://wordpress.org/plugins/friends/) (for following people on Mastodon or via RSS) plugins, the Enable Mastodon Apps plugin will show you your feed of people you follow and you can follow and unfollow people from within the app.
+
+Be aware that an app will have a post format associated (see the settings page). The plugin will check for the existance of the Friends plugin to find a resonable default (status with Friends plugin, standard otherwise). When you create a post with your Mastodon app, the post format that you selected for the app will be used.
+
+The plugin has been tested with quite a number of Mastodon clients, among them are:
 
 - [Elk](https://elk.zone/) (Web)
 - [Pinafore](https://pinafore.social/) (Web)
@@ -23,7 +31,7 @@ In combination with this plugin you can then enjoy the plurality of Mastodon cli
 - [Mona](https://mastodon.social/@MonaApp) (macOS)
 - [IceCubes](https://github.com/Dimillian/IceCubesApp) (macOS)
 
-Many more, see the [Third-party apps section on joinmastodon.org/apps](https://joinmastodon.org/apps).
+Many more, see the [Third-party apps section on joinmastodon.org/apps](https://joinmastodon.org/apps). Each app might have its quirks, [please report an issue when you have troubles[(https://github.com/akirk/enable-mastodon-apps/issues). There is also a chance that the API has not been implemented yet (see below.)
 
 ## Mastodon API Implementation
 
