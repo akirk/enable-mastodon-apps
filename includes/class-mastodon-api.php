@@ -855,7 +855,7 @@ class Mastodon_API {
 			if ( preg_match( '#<img(?:\s+src="(?P<url>[^"]+)"|\s+width="(?P<width>\d+)"|\s+height="(?P<height>\d+)"|\s+class="(?P<class>[^"]+)|\s+.*="[^"]+)+"#i', $img, $img_tag ) ) {
 				$media_id = crc32( $img_tag['url'] );
 				foreach ( $attachments as $attachment_id => $attachment ) {
-					if ( $attachment->guid === $img_tag['url'] ) {
+					if ( wp_get_attachment_url( $attachment_id ) === $img_tag['url'] ) {
 						$media_id = $attachment_id;
 						unset( $attachments[ $attachment_id ] );
 						break;
