@@ -101,6 +101,7 @@ class Mastodon_API {
 			'api/v1/statuses/((?:comment-)?[0-9]+)/unfavourite' => 'api/v1/statuses/$matches[1]/unfavourite',
 			'api/v1/statuses/((?:comment-)?[0-9]+)/reblog' => 'api/v1/statuses/$matches[1]/reblog',
 			'api/v1/statuses/((?:comment-)?[0-9]+)/unreblog' => 'api/v1/statuses/$matches[1]/unreblog',
+			'api/v1/notifications/([^/]+)/dismiss' => 'api/v1/notifications/$matches[1]/dismiss',
 			'api/nodeinfo/([0-9]+[.][0-9]+).json'          => 'api/nodeinfo/$matches[1].json',
 			'api/v1/media/([0-9]+)'                        => 'api/v1/media/$matches[1]',
 			'api/v1/statuses/((?:comment-)?[0-9]+)'        => 'api/v1/statuses/$matches[1]',
@@ -231,6 +232,37 @@ class Mastodon_API {
 				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/notifications/clear',
+			array(
+				'methods'             => array( 'POST', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_notification_clear' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/notifications/(?P<id>[^/]+)/dismiss',
+			array(
+				'methods'             => array( 'POST', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_notification_dismiss' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/notifications/(?P<id>[^/]+)',
+			array(
+				'methods'             => array( 'GET', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_notification_get' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
 		register_rest_route(
 			self::PREFIX,
 			'api/v1/notifications',
@@ -240,6 +272,7 @@ class Mastodon_API {
 				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
+
 		register_rest_route(
 			self::PREFIX,
 			'api/v1/preferences',
@@ -249,6 +282,7 @@ class Mastodon_API {
 				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
+
 		register_rest_route(
 			self::PREFIX,
 			'api/v1/trends/statuses',
@@ -821,6 +855,39 @@ class Mastodon_API {
 		}
 
 		return $data;
+	}
+
+	private function get_notification_array( $type, $date, $account, $status = array() ) {
+		$notification = array(
+			'id' => $date,
+			'created_at' => $date,
+		);
+		switch ( $type ) {
+			// As per https://docs.joinmastodon.org/entities/Notification/.
+			case 'mention': // Someone mentioned you in their status.
+			case 'status': // Someone you enabled notifications for has posted a status.
+			case 'reblog': // Someone boosted one of your statuses.
+			case 'follow': // Someone followed you.
+			case 'follow_request': // Someone requested to follow you.
+			case 'favourite': // Someone favourited one of your statuses.
+			case 'poll': // A poll you have voted in or created has ended.
+			case 'update': // A status you interacted with has been edited.
+				$notification['type'] = $type;
+				break;
+			default:
+				return array();
+		}
+
+		if ( $account ) {
+			$notification['account'] = $account;
+		}
+
+		if ( $status ) {
+			$notification['status'] = $status;
+			$notification['id'] .= $status['id'];
+		}
+
+		return $notification;
 	}
 
 	public function api_submit_post( $request ) {
@@ -1462,8 +1529,76 @@ class Mastodon_API {
 		return $relationships;
 	}
 
+	public function api_notification_clear( $request ) {
+		$notification_dismissed_tag = apply_filters( 'mastodon_api_notification_dismissed_tag', 'notification-dismissed' );
+		$all_notifications = $this->api_notifications( $request );
+		foreach ( $all_notifications as $notifications ) {
+			foreach ( $notifications as $notification ) {
+				if ( $notification['status'] ) {
+					wp_set_object_terms( $notification['status']['id'], $notification_dismissed_tag, 'post_tag', true );
+				}
+			}
+		}
+
+		return (object) array();
+	}
+
+	public function api_notification_dismiss( $request ) {
+		$notification_dismissed_tag = apply_filters( 'mastodon_api_notification_dismissed_tag', 'notification-dismissed' );
+		$all_notifications = $this->api_notifications( $request );
+		foreach ( $all_notifications as $notifications ) {
+			foreach ( $notifications as $notification ) {
+				if ( $request->get_param('id') !== $notification['id'] ) {
+					continue;
+				}
+				if ( $notification['status'] ) {
+					wp_set_object_terms( $notification['status']['id'], $notification_dismissed_tag, 'post_tag', true );
+					return (object) array();
+				}
+			}
+		}
+		return (object) array();
+	}
+
+	public function api_notification_get( $request ) {
+		$all_notifications = $this->api_notifications( $request );
+		foreach ( $all_notifications as $notifications ) {
+			foreach ( $notifications as $notification ) {
+				if ( $request->get_param('id') !== $notification['id'] ) {
+					continue;
+				}
+				return $notification;
+			}
+		}
+
+		return (object) array();
+	}
+
 	public function api_notifications( $request ) {
-		return array();
+		$notifications = array();
+		$types = $request->get_param( 'types' );
+		$exclude_types = $request->get_param( 'exclude_types' );
+		if ( ( ! is_array( $types ) || in_array( 'mention', $types, true ) ) && ( ! is_array( $exclude_types ) || ! in_array( 'exclude_types', $types, true ) ) ) {
+			$external_user = apply_filters( 'mastodon_api_external_mentions_user', null );
+			if ( $external_user && $external_user instanceof \WP_User ) {
+				$args = $this->get_posts_query_args( $request );
+				$args['author'] = $external_user->ID;
+
+				$notification_dismissed_tag = get_term_by( 'slug', apply_filters( 'mastodon_api_notification_dismissed_tag', 'notification-dismissed' ), 'post_tag' );
+				if ( $notification_dismissed_tag ) {
+					$args['tag__not_in'] = array( $notification_dismissed_tag->term_id );
+				}
+				foreach ( get_posts( $args ) as $post ) {
+					$meta = get_post_meta( $post->ID, 'activitypub', true );
+					if ( ! $meta ) {
+						continue;
+					}
+					$notifications[] = $this->get_notification_array( 'mention', mysql2date( 'Y-m-d\TH:i:s.000P', $post->post_date, false ), $this->get_friend_account_data( $post->post_author, $meta ), $this->get_status_array( $post ) );
+				}
+			}
+		}
+
+		return $notifications;
 	}
 
 	public function api_preferences( $request ) {
@@ -1574,7 +1709,7 @@ class Mastodon_API {
 
 	private function get_friend_account_data( $user_id, $meta = array(), $full_metadata = false ) {
 
-		$external_user = apply_filters( 'friends_external_mentions_user', null );
+		$external_user = apply_filters( 'mastodon_api_external_mentions_user', null );
 		$is_external_mention = $external_user && strval( $external_user->ID ) === strval( $user_id );
 		if ( $is_external_mention && isset( $meta['attributedTo']['id'] ) ) {
 			$user_id = $meta['attributedTo']['id'];
