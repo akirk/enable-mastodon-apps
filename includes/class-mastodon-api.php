@@ -53,6 +53,7 @@ class Mastodon_API {
 		add_action( 'rest_api_init', array( $this, 'add_rest_routes' ) );
 		add_filter( 'rest_pre_serve_request', array( $this, 'allow_cors' ), 10, 4 );
 		add_filter( 'activitypub_post', array( $this, 'activitypub_post' ), 10, 2 );
+		add_action( 'default_option_mastodon_api_default_post_formats', array( $this, 'default_option_mastodon_api_default_post_formats' ) );
 	}
 
 	function allow_cors() {
@@ -641,6 +642,24 @@ class Mastodon_API {
 		return $array;
 	}
 
+	/**
+	 * Set the default post format.
+	 *
+	 * @param mixed $default The default value to return if the option does not exist
+	 *                        in the database.
+	 *
+	 * @return     array   The potentially modified default value.
+	 */
+	public function default_option_mastodon_api_default_post_formats( $default ) {
+		if ( ! defined( 'FRIENDS_VERSION' ) ) {
+			$default = array(
+				'standard',
+			);
+		}
+
+		return $default;
+	}
+
 	public function api_verify_credentials( $request ) {
 		return $this->get_friend_account_data( get_current_user_id() );
 	}
@@ -1007,8 +1026,13 @@ class Mastodon_API {
 			return $post_id;
 		}
 
-		$post_format = apply_filters( 'mastodon_api_new_post_format', 'status' );
+		$app_post_formats = $this->app->get_post_formats();
+		if ( empty( $app_post_formats ) ) {
+			$app_post_formats = array( 'status' );
+		}
+		$post_format = apply_filters( 'mastodon_api_new_post_format', $app_post_formats[0] );
 		set_post_format( $post_id, $post_format );
+
 		if ( ! empty( $media_ids ) ) {
 			foreach ( $media_ids as $media_id ) {
 				wp_update_post(
