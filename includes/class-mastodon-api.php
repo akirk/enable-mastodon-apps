@@ -742,10 +742,10 @@ class Mastodon_API {
 	}
 
 	private function get_status_array( $post, $data = array() ) {
-		$meta = get_post_meta( $post->ID, 'activitypub', true );
 		if ( ! $post->post_author ) {
 			return null;
 		}
+		$meta = get_post_meta( $post->ID, 'activitypub', true );
 		$account_data = $this->get_friend_account_data( $post->post_author, $meta );
 		if ( is_wp_error( $account_data ) ) {
 			return null;
@@ -1587,7 +1587,7 @@ class Mastodon_API {
 		$notifications = array();
 		$types = $request->get_param( 'types' );
 		$exclude_types = $request->get_param( 'exclude_types' );
-		if ( ( ! is_array( $types ) || in_array( 'mention', $types, true ) ) && ( ! is_array( $exclude_types ) || ! in_array( 'exclude_types', $types, true ) ) ) {
+		if ( ( ! is_array( $types ) || in_array( 'mention', $types, true ) ) && ( ! is_array( $exclude_types ) || ! in_array( 'mention', $exclude_types, true ) ) ) {
 			$external_user = apply_filters( 'mastodon_api_external_mentions_user', null );
 			if ( $external_user && $external_user instanceof \WP_User ) {
 				$args = $this->get_posts_query_args( $request );
@@ -1700,7 +1700,9 @@ class Mastodon_API {
 		$data['username'] = $meta['preferredUsername'];
 		$data['display_name'] = $meta['name'];
 		$data['note'] = $meta['summary'];
-		$data['created_at'] = $meta['published'];
+		if ( isset( $meta['published'] ) ) {
+			$data['created_at'] = $meta['published'];
+		}
 		$data['url'] = $meta['url'];
 		if ( isset( $meta['icon'] ) ) {
 			$data['avatar'] = $meta['icon']['url'];
