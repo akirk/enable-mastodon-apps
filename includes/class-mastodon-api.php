@@ -57,7 +57,7 @@ class Mastodon_API {
 
 	function allow_cors() {
 		header( 'Access-Control-Allow-Origin: *' );
-		header( 'Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS' );
+		header( 'Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS' );
 		header( 'Access-Control-Allow-Headers: content-type, authorization' );
 		header( 'Access-Control-Allow-Credentials: true' );
 		if ( 'OPTIONS' === $_SERVER['REQUEST_METHOD'] ) {
@@ -335,10 +335,20 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
-			'api/v1/media/(?P<post_id>(?:comment-)?[0-9]+)',
+			'api/v1/media/(?P<post_id>[0-9]+)',
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_get_media' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/media/(?P<post_id>[0-9]+)',
+			array(
+				'methods'             => array( 'PUT', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_update_media' ),
 				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
@@ -840,6 +850,7 @@ class Mastodon_API {
 					'text_url'    => $img_tag['url'],
 					'width'       => $img_tag['width'],
 					'height'      => $img_tag['height'],
+					'description' => $attachment->post_excerpt,
 				);
 			}
 			$data['content'] = trim( substr( $data['content'], 0, $p ) . substr( $data['content'], $e + 19 ) );
@@ -857,6 +868,7 @@ class Mastodon_API {
 				'text_url'    => $url,
 				'width'       => $attachment_metadata['width'],
 				'height'      => $attachment_metadata['height'],
+				'description' => $attachment->post_excerpt,
 			);
 		}
 		$author_name = $data['account']['display_name'];
@@ -1028,6 +1040,7 @@ class Mastodon_API {
 			return new \WP_Error( 'mastodon_api_get_media', 'Invalid post ID', array( 'status' => 400 ) );
 		}
 		$attachment = wp_get_attachment_metadata( $post_id );
+		$post = get_post( $post_id );
 		return array(
 			'id'          => $post_id,
 			'type'        => 'image',
@@ -1035,6 +1048,7 @@ class Mastodon_API {
 			'preview_url' => wp_get_attachment_url( $post_id ),
 			'height'      => $attachment['height'],
 			'width'       => $attachment['width'],
+			'description' => $post->post_excerpt,
 		);
 	}
 
@@ -1050,13 +1064,42 @@ class Mastodon_API {
 
 		$attachment_id = \media_handle_sideload( $media['file'] );
 
+		$description = $request->get_param( 'description' );
+		if ( $description ) {
+			wp_update_post(
+				array(
+					'ID'           => $attachment_id,
+					'post_excerpt' => $description,
+				)
+			);
+		}
+
 		return array(
 			'id'          => $attachment_id,
 			'type'        => 'image',
 			'url'         => \wp_get_attachment_url( $attachment_id ),
 			'preview_url' => \wp_get_attachment_url( $attachment_id ),
 			'text_url'    => \wp_get_attachment_url( $attachment_id ),
+			'description' => $description,
 		);
+	}
+
+	public function api_update_media( $request ) {
+		$post_id = $request->get_param( 'post_id' );
+		if ( ! is_numeric( $post_id ) || $post_id < 0 ) {
+			return new \WP_Error( 'mastodon_api_get_media', 'Invalid post ID', array( 'status' => 400 ) );
+		}
+
+		$description = $request->get_param( 'description' );
+		if ( $description ) {
+			wp_update_post(
+				array(
+					'ID'           => $post_id,
+					'post_excerpt' => $description,
+				)
+			);
+		}
+		return $this->api_get_media( $request );
 	}
 
 	public function api_timelines( $request ) {
@@ -1340,6 +1383,7 @@ class Mastodon_API {
 						'text_url'    => $attachment['url'],
 						'width'       => $attachment['width'],
 						'height'      => $attachment['height'],
+						'description' => $attachment['description'],
 					);
 				},
 				$activity['object']['attachment']
