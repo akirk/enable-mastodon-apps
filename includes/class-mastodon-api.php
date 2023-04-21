@@ -533,7 +533,6 @@ class Mastodon_API {
 				$request->get_param( 'website' )
 			);
 		} catch ( \Exception $e ) {
-			error_log( print_r( $_REQUEST, true ) . PHP_EOL . $e->getMessage() );
 			list( $code, $message ) = explode( ',', $e->getMessage(), 2 );
 			$app = new \WP_Error( $code, $message, array( 'status' => 422 ) );
 		}
