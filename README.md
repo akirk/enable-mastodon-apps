@@ -6,7 +6,7 @@
 - Tested up to: 6.2
 - Requires PHP: 5.2.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 0.3.0
+- Stable tag: 0.3.1
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -93,6 +93,10 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 2. The Mastodon Apps settings page.
 
 ## Changelog
+
+### 0.3.1
+- Implemented: Attachment descriptions (and updates for it)
+- Use the first line of a post as the post title if we're using a standard post format
 
 ### 0.3.0
 - Implemented: search for a specific remote account to follow it
