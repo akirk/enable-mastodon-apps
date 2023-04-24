@@ -20,6 +20,7 @@ class AccessTokenStorage implements AccessTokenInterface {
 		'user_id'      => 'int',    // The WordPress user id.
 		'redirect_uri' => 'string', // redirect URI.
 		'expires'      => 'int',    // expires as unix timestamp.
+		'last_used'    => 'int',    // last used as unix timestamp.
 		'scope'        => 'string', // scope as space-separated string.
 	);
 
@@ -96,6 +97,28 @@ class AccessTokenStorage implements AccessTokenInterface {
 		return intval( $user_id );
 	}
 
+	/**
+	 * Sanitize the expires.
+	 *
+	 * @param      int $expires  The expires.
+	 *
+	 * @return     int  The sanitized expires.
+	 */
+	public static function sanitize_expires( $expires ) {
+		return intval( $expires );
+	}
+
+	/**
+	 * Sanitize the last used.
+	 *
+	 * @param      int $last_used  The last used.
+	 *
+	 * @return     int  The sanitized last used.
+	 */
+	public static function sanitize_last_used( $last_used ) {
+		return intval( $last_used );
+	}
+
 	public static function getAll() {
 		$tokens = array();
 
@@ -141,7 +164,9 @@ class AccessTokenStorage implements AccessTokenInterface {
 		$term = get_term_by( 'slug', $oauth_token, self::TAXONOMY );
 
 		if ( $term ) {
-			$access_token = array();
+			$access_token = array(
+				'access_token' => $oauth_token,
+			);
 			foreach ( array(
 				'client_id'    => 'client_id',
 				'user_id'      => 'user_id',
@@ -213,6 +238,23 @@ class AccessTokenStorage implements AccessTokenInterface {
 			wp_delete_term( $term->term_id, self::TAXONOMY );
 		}
 		return true;
+	}
+
+	/**
+	 * Access token was used.
+	 *
+	 * @param      string $access_token  The access token.
+	 */
+	public static function was_used( $access_token ) {
+		$term = get_term_by( 'slug', $access_token, self::TAXONOMY );
+
+		if ( $term ) {
+			$last_used = get_term_meta( $term->term_id, 'last_used', true );
+			if ( $last_used > time() - MINUTE_IN_SECONDS ) {
+				return;
+			}
+			update_term_meta( $term->term_id, 'last_used', time() );
+		}
 	}
 
 	/**

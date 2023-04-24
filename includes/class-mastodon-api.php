@@ -615,6 +615,8 @@ class Mastodon_API {
 		if ( ! $token ) {
 			return false;
 		}
+
+		OAuth2\AccessTokenStorage::was_used( $token['access_token'] );
 		$this->app = Mastodon_App::get_by_client_id( $token['client_id'] );
 		$this->app->was_used();
 		wp_set_current_user( $token['user_id'] );
@@ -627,6 +629,7 @@ class Mastodon_API {
 		if ( ! $token ) {
 			return false;
 		}
+		OAuth2\AccessTokenStorage::was_used( $token['access_token'] );
 		$this->app = Mastodon_App::get_by_client_id( $token['client_id'] );
 		$this->app->was_used();
 		return true;

@@ -126,6 +126,74 @@ class Mastodon_Admin {
 			return;
 		}
 
+		if ( isset( $_POST['delete-never-used'] ) ) {
+			$deleted = 0;
+			foreach ( Mastodon_App::get_all() as $app ) {
+				if ( ! $app->get_last_used() ) {
+					$deleted += 1;
+					$app->delete();
+				}
+			}
+
+			add_settings_error(
+				'enable-mastodon-apps',
+				'deleted-apps',
+				sprintf(
+				// translators: %d: number of deleted apps.
+					_n( 'Deleted %d app.', 'Deleted %d apps.', $deleted, 'enable-mastodon-apps' ),
+					$deleted
+				)
+			);
+
+			$deleted = 0;
+			foreach ( OAuth2\AccessTokenStorage::getAll() as $token => $data ) {
+				if ( empty( $data['last_used'] ) ) {
+					if ( $this->oauth->get_token_storage()->unsetAccessToken( $token ) ) {
+						$deleted += 1;
+					}
+				}
+			}
+
+			add_settings_error(
+				'enable-mastodon-apps',
+				'deleted-tokens',
+				sprintf(
+				// translators: %d: number of deleted tokens.
+					_n( 'Deleted %d token.', 'Deleted %d tokens.', $deleted, 'enable-mastodon-apps' ),
+					$deleted
+				)
+			);
+			return;
+		}
+
+		if ( isset( $_POST['delete-apps-without-tokens'] ) ) {
+			$app_tokens = array();
+			foreach ( OAuth2\AccessTokenStorage::getAll() as $token => $data ) {
+				if ( ! isset( $app_tokens[ $data['client_id'] ] ) ) {
+					$app_tokens[ $data['client_id'] ] = array();
+				}
+				$app_tokens[ $data['client_id'] ][] = $token;
+			}
+			$deleted = 0;
+			foreach ( Mastodon_App::get_all() as $app ) {
+				if ( empty( $app_tokens[ $app->get_client_id() ] ) ) {
+					$deleted += 1;
+					$app->delete();
+				}
+			}
+
+			add_settings_error(
+				'enable-mastodon-apps',
+				'deleted-apps',
+				sprintf(
+				// translators: %d: number of deleted apps.
+					_n( 'Deleted %d app.', 'Deleted %d apps.', $deleted, 'enable-mastodon-apps' ),
+					$deleted
+				)
+			);
+			return;
+		}
+
 		if ( isset( $_POST['mastodon_api_enable_logins'] ) ) {
 			delete_option( 'mastodon_api_disable_logins' );
 		} else {
@@ -356,6 +424,7 @@ class Mastodon_Admin {
 					<thead>
 						<th><?php esc_html_e( 'App', 'enable-mastodon-apps' ); ?></th>
 						<th><?php esc_html_e( 'User', 'enable-mastodon-apps' ); ?></th>
+						<th><?php esc_html_e( 'Last Used', 'enable-mastodon-apps' ); ?></th>
 						<th><?php esc_html_e( 'Expires', 'enable-mastodon-apps' ); ?></th>
 						<th><?php esc_html_e( 'Scope', 'enable-mastodon-apps' ); ?></th>
 						<th><?php esc_html_e( 'Actions', 'enable-mastodon-apps' ); ?></th>
@@ -367,9 +436,11 @@ class Mastodon_Admin {
 							if ( $data['user_id'] ) {
 								$userdata = get_user_by( 'ID', $data['user_id'] );
 								if ( $userdata ) {
-									$user = $userdata->user_login;
-								} elseif ( is_wp_error( $userdata ) ) {
-									$user = $userdata->get_error_message();
+									if ( is_wp_error( $userdata ) ) {
+										$user = $userdata->get_error_message();
+									} else {
+										$user = $userdata->user_login;
+									}
 								} else {
 									$user = 'error';
 								}
@@ -394,6 +465,7 @@ class Mastodon_Admin {
 									?>
 								</td>
 								<td><?php echo esc_html( $user ); ?></td>
+								<?php td_timestamp( $data['last_used'] ); ?>
 								<?php td_timestamp( $data['expires'], true ); ?>
 								<td><?php echo esc_html( $data['scope'] ); ?></td>
 								<td><button name="delete-token" value="<?php echo esc_attr( $token ); ?>" class="button"><?php esc_html_e( 'Delete' ); /* phpcs:ignore WordPress.WP.I18n.MissingArgDomain */ ?></button></td>
@@ -459,6 +531,8 @@ class Mastodon_Admin {
 			<?php if ( ! empty( $codes ) || ! empty( $tokens ) || ! empty( $apps ) ) : ?>
 				<h2><?php esc_html_e( 'Cleanup', 'enable-mastodon-apps' ); ?></h2>
 					<button name="delete-outdated" class="button"><?php esc_html_e( 'Delete outdated apps and tokens', 'enable-mastodon-apps' ); ?></button>
+					<button name="delete-never-used" class="button"><?php esc_html_e( 'Delete never used apps and tokens', 'enable-mastodon-apps' ); ?></button>
+					<button name="delete-apps-without-tokens" class="button"><?php esc_html_e( 'Delete apps without tokens', 'enable-mastodon-apps' ); ?></button>
 			<?php endif; ?>
 			</form>
 		</div>
