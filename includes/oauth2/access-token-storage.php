@@ -16,9 +16,11 @@ class AccessTokenStorage implements AccessTokenInterface {
 	const TAXONOMY = 'mastoapi-at';
 
 	private static $access_token_data = array(
-		'client_id' => 'string', // client identifier.
-		'expires'   => 'int',    // expires as unix timestamp.
-		'scope'     => 'string', // scope as space-separated string.
+		'client_id'    => 'string', // client identifier.
+		'user_id'      => 'int',    // The WordPress user id.
+		'redirect_uri' => 'string', // redirect URI.
+		'expires'      => 'int',    // expires as unix timestamp.
+		'scope'        => 'string', // scope as space-separated string.
 	);
 
 	public function __construct() {
@@ -70,6 +72,28 @@ class AccessTokenStorage implements AccessTokenInterface {
 	 */
 	public static function sanitize_redirect_uri( $redirect_uri ) {
 		return substr( $redirect_uri, 0, 2000 );
+	}
+
+	/**
+	 * Sanitize the scope.
+	 *
+	 * @param      string $scope  The scope.
+	 *
+	 * @return     string  The sanitized scope.
+	 */
+	public static function sanitize_scope( $scope ) {
+		return substr( $scope, 0, 100 );
+	}
+
+	/**
+	 * Sanitize the user id.
+	 *
+	 * @param      string $user_id  The user id.
+	 *
+	 * @return     string  The sanitized user id.
+	 */
+	public static function sanitize_user_id( $user_id ) {
+		return intval( $user_id );
 	}
 
 	public static function getAll() {

@@ -355,6 +355,7 @@ class Mastodon_Admin {
 				<table class="widefat striped">
 					<thead>
 						<th><?php esc_html_e( 'App', 'enable-mastodon-apps' ); ?></th>
+						<th><?php esc_html_e( 'User', 'enable-mastodon-apps' ); ?></th>
 						<th><?php esc_html_e( 'Expires', 'enable-mastodon-apps' ); ?></th>
 						<th><?php esc_html_e( 'Scope', 'enable-mastodon-apps' ); ?></th>
 						<th><?php esc_html_e( 'Actions', 'enable-mastodon-apps' ); ?></th>
@@ -362,6 +363,17 @@ class Mastodon_Admin {
 					<tbody>
 						<?php
 						foreach ( $tokens as $token => $data ) {
+							$user = 'app-level';
+							if ( $data['user_id'] ) {
+								$userdata = get_user_by( 'ID', $data['user_id'] );
+								if ( $userdata ) {
+									$user = $userdata->user_login;
+								} elseif ( is_wp_error( $userdata ) ) {
+									$user = $userdata->get_error_message();
+								} else {
+									$user = 'error';
+								}
+							}
 							?>
 							<tr id="token-<?php echo esc_attr( $token ); ?>" title="<?php echo esc_attr( $token ); ?>">
 								<td>
@@ -381,6 +393,7 @@ class Mastodon_Admin {
 									}
 									?>
 								</td>
+								<td><?php echo esc_html( $user ); ?></td>
 								<?php td_timestamp( $data['expires'], true ); ?>
 								<td><?php echo esc_html( $data['scope'] ); ?></td>
 								<td><button name="delete-token" value="<?php echo esc_attr( $token ); ?>" class="button"><?php esc_html_e( 'Delete' ); /* phpcs:ignore WordPress.WP.I18n.MissingArgDomain */ ?></button></td>

@@ -43,7 +43,7 @@ class MastodonAppStorage implements ClientCredentialsInterface {
 			return false;
 		}
 
-		return in_array( $grant_type, array( 'authorization_code' ), true );
+		return in_array( $grant_type, array( 'authorization_code', 'client_credentials' ), true );
 	}
 
 	public function checkClientCredentials( $client_id, $client_secret = null ) {
@@ -67,7 +67,7 @@ class MastodonAppStorage implements ClientCredentialsInterface {
 
 		$client = $this->get( $client_id );
 
-		return empty( $client->get_secret() );
+		return empty( $client->get_client_secret() );
 	}
 
 	/**
