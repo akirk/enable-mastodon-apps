@@ -795,6 +795,20 @@ class Mastodon_API {
 		);
 	}
 
+	/**
+	 * Strip empty whitespace
+	 *
+	 * @param      string $post_content  The post content.
+	 *
+	 * @return     string  The normalized content.
+	 */
+	private function normalize_whitespace( $post_content ) {
+		$post_content = preg_replace( '#<!-- /?wp:paragraph -->\s*<!-- /?wp:paragraph -->#', PHP_EOL, $post_content );
+		$post_content = preg_replace( '#\n\s*\n+#', PHP_EOL, $post_content );
+
+		return trim( $post_content );
+	}
+
 	private function get_status_array( $post, $data = array() ) {
 		if ( ! $post->post_author ) {
 			return null;
@@ -833,7 +847,7 @@ class Mastodon_API {
 				'in_reply_to_id'         => null,
 				'in_reply_to_account_id' => null,
 				'reblog'                 => null,
-				'content'                => trim( $post->post_title . PHP_EOL . $post->post_content ),
+				'content'                => $this->normalize_whitespace( $post->post_title . PHP_EOL . $post->post_content ),
 				'created_at'             => mysql2date( 'Y-m-d\TH:i:s.000P', $post->post_date, false ),
 				'edited_at'              => null,
 				'emojis'                 => array(),
@@ -867,39 +881,55 @@ class Mastodon_API {
 			}
 			$img = substr( $data['content'], $p, $e - $p + 19 );
 			if ( preg_match( '#<img(?:\s+src="(?P<url>[^"]+)"|\s+width="(?P<width>\d+)"|\s+height="(?P<height>\d+)"|\s+class="(?P<class>[^"]+)|\s+.*="[^"]+)+"#i', $img, $img_tag ) ) {
-				$media_id = crc32( $img_tag['url'] );
-				foreach ( $attachments as $attachment_id => $attachment ) {
-					if (
-						wp_get_attachment_url( $attachment_id ) === $img_tag['url']
+				if ( ! empty( $img_tag['url'] ) ) {
+					$url = $img_tag['url'];
+					$media_id = crc32( $url );
+					foreach ( $attachments as $attachment_id => $attachment ) {
+						if (
+						wp_get_attachment_url( $attachment_id ) === $url
 						|| ( isset( $img_tag['class'] ) && preg_match( '#\bwp-image-' . $attachment_id . '\b#', $img_tag['class'] ) )
 
-					) {
-						$media_id = $attachment_id;
-						unset( $attachments[ $attachment_id ] );
-						break;
+						) {
+							$media_id = $attachment_id;
+							$attachment_metadata = \wp_get_attachment_metadata( $attachment_id );
+							$img_tag['width'] = $attachment_metadata['width'];
+							$img_tag['height'] = $attachment_metadata['height'];
+							unset( $attachments[ $attachment_id ] );
+							break;
+						}
 					}
+					$data['media_attachments'][] = array(
+						'id'          => strval( $media_id ),
+						'type'        => 'image',
+						'url'         => $url,
+						'preview_url' => $url,
+						'text_url'    => $url,
+						'width'       => $img_tag['width'],
+						'height'      => $img_tag['height'],
+						'description' => $attachment->post_excerpt,
+					);
 				}
-				$data['media_attachments'][] = array(
-					'id'          => strval( $media_id ),
-					'type'        => 'image',
-					'url'         => $img_tag['url'],
-					'preview_url' => $img_tag['url'],
-					'text_url'    => $img_tag['url'],
-					'width'       => $img_tag['width'],
-					'height'      => $img_tag['height'],
-					'description' => $attachment->post_excerpt,
-				);
 			}
 			$data['content'] = trim( substr( $data['content'], 0, $p ) . substr( $data['content'], $e + 19 ) );
 			$p = strpos( $data['content'], '<!-- wp:image' );
 		}
 
 		foreach ( $attachments as $attachment_id => $attachment ) {
-			$attachment_metadata = \wp_get_attachment_metadata( $attachment_id );
 			$url = wp_get_attachment_url( $attachment_id );
+			$attachment_metadata = wp_get_attachment_metadata( $attachment_id );
+
+			$type = 'image';
+			if ( preg_match( '#^image/#', $attachment_metadata['mime-type'] ) || preg_match( '#\.(gif|png|jpe?g)$#i', $url ) ) {
+				$type = 'image';
+			} elseif ( preg_match( '#^audio/#', $attachment_metadata['mime-type'] ) || preg_match( '#\.(mp3|m4a|wav|aiff)$#i', $url ) ) {
+				$type = 'audio';
+			} elseif ( preg_match( '#^video/#', $attachment_metadata['mime-type'] ) || preg_match( '#\.(mov|mkv|mp4)$#i', $url ) ) {
+				$type = 'video';
+			}
+
 			$data['media_attachments'][] = array(
 				'id'          => $attachment_id,
-				'type'        => 'image',
+				'type'        => $type,
 				'url'         => $url,
 				'preview_url' => $url,
 				'text_url'    => $url,
@@ -966,6 +996,9 @@ class Mastodon_API {
 		}
 
 		$status = make_clickable( $status );
+		if ( class_exists( '\Activitypub\Mention' ) ) {
+			$status = \Activitypub\Mention::the_content( $status );
+		}
 
 		$visibility = $request->get_param( 'visibility' );
 		if ( empty( $visibility ) ) {
