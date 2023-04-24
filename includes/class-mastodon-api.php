@@ -490,7 +490,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_search' ),
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => array( $this, 'have_token_permission' ),
 			)
 		);
 
@@ -619,6 +619,17 @@ class Mastodon_API {
 		$this->app->was_used();
 		wp_set_current_user( $token['user_id'] );
 		return is_user_logged_in();
+	}
+
+	public function have_token_permission() {
+		$this->allow_cors();
+		$token = $this->oauth->get_token();
+		if ( ! $token ) {
+			return false;
+		}
+		$this->app = Mastodon_App::get_by_client_id( $token['client_id'] );
+		$this->app->was_used();
+		return true;
 	}
 
 	public function logged_in_for_private_permission( $request ) {
@@ -1146,11 +1157,12 @@ class Mastodon_API {
 	}
 
 	public function api_search( $request ) {
+		$type = $request->get_param( 'type' );
 		$ret = array(
 			'accounts' => array(),
 			'statuses' => array(),
 		);
-		if ( $request->get_param( 'type' ) === 'accounts' ) {
+		if ( ! $type || 'accounts' === $type ) {
 			if ( preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $request->get_param( 'q' ) ) && ! $request->get_param( 'offset' ) ) {
 				$ret['accounts'][] = $this->get_friend_account_data( $request->get_param( 'q' ) );
 			}
@@ -1173,16 +1185,35 @@ class Mastodon_API {
 				$ret['accounts'][] = $this->get_friend_account_data( $user->ID );
 			}
 		}
-		if ( $request->get_param( 'type' ) === 'statuses' ) {
+		if ( ! $type || 'statuses' === $type ) {
 			$args = $this->get_posts_query_args( $request );
 			if ( empty( $args ) ) {
 				return array();
 			}
 			$args = apply_filters( 'mastodon_api_timelines_args', $args, $request );
-			$args['s'] = $request->get_param( 'q' );
-			$args['offset'] = $request->get_param( 'offset' );
-			$args['posts_per_page'] = $request->get_param( 'limit' );
-			$ret['statuses'] = $this->get_posts( $args );
+			$valid_url = wp_parse_url( $request->get_param( 'q' ) );
+			if ( $valid_url && isset( $valid_url['host'] ) ) {
+				if ( ! $request->get_param( 'offset' ) ) {
+					$url = $request->get_param( 'q' );
+					$json = $this->get_json( $url, crc32( $url ) );
+					if ( ! is_wp_error( $json ) && isset( $json['id'], $json['attributedTo'] ) ) {
+						$user_id = $this->get_acct( $json['attributedTo'] );
+						$ret['statuses'][] = $this->convert_activity_to_status(
+							array(
+								'id'     => $json['id'] . '#create-activity',
+								'object' => $json,
+
+							),
+							$user_id
+						);
+					}
+				}
+			} elseif ( is_user_logged_in() ) {
+				$args['s'] = $request->get_param( 'q' );
+				$args['offset'] = $request->get_param( 'offset' );
+				$args['posts_per_page'] = $request->get_param( 'limit' );
+				$ret['statuses'] = array_merge( $ret['statuses'], $this->get_posts( $args ) );
+			}
 		}
 		return $ret;
 	}
