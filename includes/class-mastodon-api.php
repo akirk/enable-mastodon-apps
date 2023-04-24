@@ -965,6 +965,8 @@ class Mastodon_API {
 			return new \WP_Error( 'mastodon_api_submit_post', 'Status is empty', array( 'status' => 400 ) );
 		}
 
+		$status = make_clickable( $status );
+
 		$visibility = $request->get_param( 'visibility' );
 		if ( empty( $visibility ) ) {
 			$visibility = 'public';
