@@ -6,7 +6,7 @@
 - Tested up to: 6.2
 - Requires PHP: 5.2.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 0.3.1
+- Stable tag: 0.3.2
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -93,6 +93,13 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 2. The Mastodon Apps settings page.
 
 ## Changelog
+
+### 0.3.2
+- Ivory should work now.
+- Posting: wrap mentions and links in HTML tags
+- Attachments: try harder to deduplicate them, identify attachment types
+- Admin: More tools for cleaning out stale apps and tokens
+- Search: You can now search for URLs so that you can reply to them
 
 ### 0.3.1
 - Implemented: Attachment descriptions (and updates for it)
