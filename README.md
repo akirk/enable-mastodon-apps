@@ -6,7 +6,7 @@
 - Tested up to: 6.2
 - Requires PHP: 5.2.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 0.3.3
+- Stable tag: 0.3.4
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -93,6 +93,9 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 2. The Mastodon Apps settings page.
 
 ## Changelog
+
+### 0.3.4
+- Implement min_id to avoid double postings in the IceCubes app.
 
 ### 0.3.3
 - Fixes for Mastodon for iOS and Mammoth.
