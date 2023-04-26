@@ -65,6 +65,10 @@ class Mastodon_OAuth {
 	}
 
 	public function handle_oauth() {
+		if ( 'POST' === $_SERVER['REQUEST_METHOD'] && empty( $_POST ) && ! empty( $_REQUEST ) ) {
+			$_POST = $_REQUEST;
+		}
+
 		switch ( strtok( $_SERVER['REQUEST_URI'], '?' ) ) {
 			case '/oauth/authorize':
 				if ( get_option( 'mastodon_api_disable_logins' ) ) {

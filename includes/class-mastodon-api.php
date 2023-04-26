@@ -322,7 +322,7 @@ class Mastodon_API {
 			array(
 				'methods'             => 'GET',
 				'callback'            => '__return_empty_array',
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => array( $this, 'public_api_permission' ),
 			)
 		);
 		register_rest_route(
