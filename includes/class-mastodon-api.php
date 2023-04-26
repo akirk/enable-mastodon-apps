@@ -934,7 +934,7 @@ class Mastodon_API {
 						'text_url'    => $url,
 						'width'       => $img_tag['width'],
 						'height'      => $img_tag['height'],
-						'description' => $attachment->post_excerpt,
+						'description' => isset( $attachment ) && $attachment ? $attachment->post_excerpt : '',
 					);
 				}
 			}
