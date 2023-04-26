@@ -732,18 +732,29 @@ class Mastodon_API {
 		return $args;
 	}
 
-	private function get_posts( $args, $max_id = null ) {
+	private function get_posts( $args, $min_id = null, $max_id = null ) {
+		if ( $min_id ) {
+			$min_filter_handler = function( $where ) use ( $min_id ) {
+				global $wpdb;
+				return $where . $wpdb->prepare( " AND {$wpdb->posts}.ID > %d", $min_id );
+			};
+			add_filter( 'posts_where', $min_filter_handler );
+		}
+
 		if ( $max_id ) {
-			$filter_handler = function( $where ) use ( $max_id ) {
+			$max_filter_handler = function( $where ) use ( $max_id ) {
 				global $wpdb;
 				return $where . $wpdb->prepare( " AND {$wpdb->posts}.ID < %d", $max_id );
 			};
-			add_filter( 'posts_where', $filter_handler );
+			add_filter( 'posts_where', $max_filter_handler );
 		}
 
 		$posts = get_posts( $args );
+		if ( $min_id ) {
+			remove_filter( 'posts_where', $min_filter_handler );
+		}
 		if ( $max_id ) {
-			remove_filter( 'posts_where', $filter_handler );
+			remove_filter( 'posts_where', $max_filter_handler );
 		}
 
 		$statuses = array();
@@ -775,6 +786,12 @@ class Mastodon_API {
 		$ret = array();
 		$c = $args['posts_per_page'];
 		foreach ( $statuses as $status ) {
+			if ( $min_id ) {
+				if ( $status['id'] !== $min_id ) {
+					continue;
+				}
+				$min_id = null;
+			}
 			if ( $max_id && $status['id'] === $max_id ) {
 				break;
 			}
@@ -1209,7 +1226,7 @@ class Mastodon_API {
 		}
 		$args = apply_filters( 'mastodon_api_timelines_args', $args, $request );
 
-		return $this->get_posts( $args, $request->get_param( 'max_id' ) );
+		return $this->get_posts( $args, $request->get_param( 'min_id' ), $request->get_param( 'max_id' ) );
 	}
 
 	public function api_search( $request ) {
