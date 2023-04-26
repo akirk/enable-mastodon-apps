@@ -77,6 +77,7 @@ class Mastodon_API {
 			'api/v1/announcements',
 			'api/v1/apps',
 			'api/v1/bookmarks',
+			'api/v1/conversations',
 			'api/v1/custom_emojis',
 			'api/v1/favourites',
 			'api/v1/filters',
@@ -210,6 +211,16 @@ class Mastodon_API {
 		);
 		register_rest_route(
 			self::PREFIX,
+			'api/v1/conversations',
+			array(
+				'methods'             => 'GET',
+				'callback'            => '__return_empty_array',
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
 			'api/v1/favourites',
 			array(
 				'methods'             => 'GET',
@@ -302,7 +313,7 @@ class Mastodon_API {
 			array(
 				'methods'             => 'GET',
 				'callback'            => '__return_empty_array',
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => array( $this, 'public_api_permission' ),
 			)
 		);
 		register_rest_route(
@@ -941,9 +952,12 @@ class Mastodon_API {
 		$author_name = $data['account']['display_name'];
 		$override_author_name = get_post_meta( $post->ID, 'author', true );
 
-		if ( isset( $meta['reblog'] ) && $meta['reblog'] ) {
+		if ( isset( $meta['reblog'] ) && $meta['reblog'] && isset( $meta['attributedTo']['id'] ) ) {
 			$data['reblog'] = $data;
 			$data['reblog']['account'] = $this->get_friend_account_data( $this->get_acct( $meta['attributedTo']['id'] ), $meta );
+			if ( ! $data['reblog']['account']['acct'] ) {
+				$data['reblog'] = null;
+			}
 		} elseif ( $override_author_name && $author_name !== $override_author_name ) {
 			$data['account']['display_name'] = $override_author_name;
 		}
@@ -1870,6 +1884,9 @@ class Mastodon_API {
 		$data['note'] = $meta['summary'];
 		if ( isset( $meta['published'] ) ) {
 			$data['created_at'] = $meta['published'];
+			if ( ! $data['last_status_at'] ) {
+				$data['last_status_at'] = $data['created_at'];
+			}
 		}
 		$data['url'] = $meta['url'];
 		if ( isset( $meta['icon'] ) ) {
@@ -1931,7 +1948,7 @@ class Mastodon_API {
 				'followers_count' => 0,
 				'following_count' => 0,
 				'statuses_count'  => 0,
-				'last_status_at'  => '',
+				'last_status_at'  => gmdate( 'Y-m-d\TH:i:s.000P' ),
 				'fields'          => array(),
 				'locked'          => false,
 				'emojis'          => array(),
@@ -1996,7 +2013,7 @@ class Mastodon_API {
 			'followers_count' => $followers_count,
 			'following_count' => $following_count,
 			'statuses_count'  => isset( $posts['status'] ) ? intval( $posts['status'] ) : 0,
-			'last_status_at'  => '',
+			'last_status_at'  => mysql2date( 'Y-m-d\TH:i:s.000P', $user->user_registered, false ),
 			'fields'          => array(),
 			'locked'          => false,
 			'emojis'          => array(),
