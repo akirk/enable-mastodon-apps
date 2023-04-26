@@ -48,4 +48,14 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertIsInt( $data['favourites_count'] );
 	}
 
+	public function test_statuses_delete() {
+		global $wp_rest_server;
+		$request = new \WP_REST_Request( 'DELETE', '/' . Mastodon_API::PREFIX . '/api/v1/statuses/' . $this->post );
+		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
+		$response = $wp_rest_server->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$this->assertEquals( 'trash', get_post_status( $this->post ) );
+	}
+
 }

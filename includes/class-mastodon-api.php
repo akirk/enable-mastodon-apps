@@ -441,7 +441,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'DELETE', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_delete_post' ),
-				'permission_callback' => array( $this, 'logged_in_for_private_permission' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
 
