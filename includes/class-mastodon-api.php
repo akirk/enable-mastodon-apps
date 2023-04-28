@@ -664,6 +664,11 @@ class Mastodon_API {
 			$parent_post = get_post( $post->post_parent );
 			$array['inReplyTo'] = $parent_post->guid;
 		}
+
+		if ( get_post_meta( $post->ID, 'activitypub_in_reply_to', true ) ) {
+			$array['inReplyTo'] = get_post_meta( $post->ID, 'activitypub_in_reply_to', true );
+		}
+
 		return $array;
 	}
 
@@ -1035,6 +1040,7 @@ class Mastodon_API {
 		if ( empty( $visibility ) ) {
 			$visibility = 'public';
 		}
+		$post_data = array();
 
 		$parent_post    = false;
 		$parent_post_id = $request->get_param( 'in_reply_to_id' );
@@ -1068,14 +1074,18 @@ class Mastodon_API {
 
 				return $this->get_comment_status_array( get_comment( $id ) );
 			}
+
+			if ( ! $parent_post ) {
+				$post_data['post_meta_input'] = array(
+					'activitypub_in_reply_to' => $parent_post_id,
+				);
+			}
 		}
 
-		$post_data = array(
-			'post_content' => $status,
-			'post_status'  => 'public' === $visibility ? 'publish' : 'private',
-			'post_type'    => 'post',
-			'post_title'   => '',
-		);
+		$post_data['post_content'] = $status;
+		$post_data['post_status']  = 'public' === $visibility ? 'publish' : 'private';
+		$post_data['post_type']    = 'post';
+		$post_data['post_title']   = '';
 
 		$app_post_formats = $this->app->get_post_formats();
 		if ( empty( $app_post_formats ) ) {
