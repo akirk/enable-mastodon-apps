@@ -6,7 +6,7 @@
 - Tested up to: 6.2
 - Requires PHP: 5.2.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 0.3.4
+- Stable tag: 0.3.5
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -94,6 +94,10 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 
 ## Changelog
 
+### 0.3.5
+- Fix little inconsistencies with min_id and max_id.
+- Add a debug mode ([#23]).
+
 ### 0.3.4
 - Implement min_id to avoid double postings in the IceCubes app.
 
@@ -126,6 +130,7 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 - Post replies as comments ([#3])
 - Fix a fatal when saving the default post format
 
+[#23]: https://github.com/akirk/enable-mastodon-apps/pull/23
 [#3]: https://github.com/akirk/enable-mastodon-apps/pull/3
 
 
