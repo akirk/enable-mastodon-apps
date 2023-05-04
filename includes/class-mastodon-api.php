@@ -87,6 +87,7 @@ class Mastodon_API {
 			'api/v1/instance',
 			'api/v1/lists',
 			'api/v1/markers',
+			'api/v1/mutes',
 			'api/v1/notifications',
 			'api/v1/preferences',
 			'api/v1/trends/statuses',
@@ -250,6 +251,16 @@ class Mastodon_API {
 		register_rest_route(
 			self::PREFIX,
 			'api/v1/markers',
+			array(
+				'methods'             => 'GET',
+				'callback'            => '__return_empty_array',
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/mutes',
 			array(
 				'methods'             => 'GET',
 				'callback'            => '__return_empty_array',
