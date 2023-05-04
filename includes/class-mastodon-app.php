@@ -130,7 +130,45 @@ class Mastodon_App {
 		return false;
 	}
 
+	public function get_last_requests() {
+		$requests = array();
+		$all_requests = array();
+		foreach ( get_term_meta( $this->term->term_id, 'request' ) as $request ) {
+			if ( empty( $request ) || empty( $request['path'] ) ) {
+				delete_metadata( 'term', $this->term->term_id, 'request', $request );
+				continue;
+			}
+			$all_requests[] = $request;
+		}
+		$keep = 40;
+		if ( count( $all_requests ) > $keep ) {
+			foreach ( array_slice( $all_requests, 0, count( $requests ) - $keep ) as $request ) {
+				delete_metadata( 'term', $this->term->term_id, 'request', $request );
+			}
+			$all_requests = array_slice( $all_requests, count( $requests ) - $keep );
+		}
+
+		foreach ( $all_requests as $request ) {
+			$requests[ $request['timestamp'] * 10000 ] = $request['path'];
+		}
+
+		ksort( $requests );
+		return $requests;
+	}
+
 	public function was_used() {
+		if ( get_option( 'mastodon_api_debug_mode' ) ) {
+			add_metadata(
+				'term',
+				$this->term->term_id,
+				'request',
+				array(
+					'timestamp' => microtime( true ),
+					'path'      => $_SERVER['REQUEST_URI'],
+				)
+			);
+		}
+
 		if ( $this->get_last_used() > time() - MINUTE_IN_SECONDS ) {
 			return true;
 		}
@@ -370,6 +408,37 @@ class Mastodon_App {
 				},
 			)
 		);
+
+		if ( get_option( 'mastodon_api_debug_mode' ) ) {
+			register_term_meta(
+				self::TAXONOMY,
+				'request',
+				array(
+					'show_in_rest'      => false,
+					'single'            => false,
+					'type'              => 'array',
+					'sanitize_callback' => function( $value ) {
+						if ( ! is_array( $value ) ) {
+							return array();
+						}
+
+						foreach ( array_keys( $value ) as $key ) {
+							if ( 'path' === $key ) {
+								$value[ $key ] = preg_replace( '#[^A-Za-z0-9?&%=[\]+._/-]#', ' ', $value[ $key ] );
+								continue;
+							}
+							if ( 'timestamp' === $key ) {
+								$value[ $key ] = floatval( $value[ $key ] );
+								continue;
+							}
+							unset( $value[ $key ] );
+						}
+
+						return $value;
+					},
+				)
+			);
+		}
 	}
 
 	public function modify_wp_query_args( $args ) {

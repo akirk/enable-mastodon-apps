@@ -206,6 +206,12 @@ class Mastodon_Admin {
 			delete_option( 'mastodon_api_reply_as_comment' );
 		}
 
+		if ( isset( $_POST['mastodon_api_debug_mode'] ) ) {
+			update_option( 'mastodon_api_debug_mode', true );
+		} else {
+			delete_option( 'mastodon_api_debug_mode' );
+		}
+
 		if ( isset( $_POST['mastodon_api_default_post_formats'] ) && is_array( $_POST['mastodon_api_default_post_formats'] ) ) {
 			$default_post_formats = array_filter(
 				$_POST['mastodon_api_default_post_formats'],
@@ -356,12 +362,24 @@ class Mastodon_Admin {
 						<th scope="row"><?php esc_html_e( 'Replies', 'enable-mastodon-apps' ); ?></th>
 						<td>
 							<fieldset>
-								<label for="mastodon_api_enable_logins">
+								<label for="mastodon_api_reply_as_comment">
 									<input name="mastodon_api_reply_as_comment" type="checkbox" id="mastodon_api_reply_as_comment" value="1" <?php checked( get_option( 'mastodon_api_reply_as_comment' ) ); ?> />
 									<span><?php esc_html_e( 'Post replies to posts as comments.', 'enable-mastodon-apps' ); ?></span>
 								</label>
 							</fieldset>
 							<p class="description"><?php esc_html_e( 'Since the ActivityPub plugin handles incoming replies this way, you might want to do this for your own replies as well.', 'enable-mastodon-apps' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Debug Mode', 'enable-mastodon-apps' ); ?></th>
+						<td>
+							<fieldset>
+								<label for="mastodon_api_debug_mode">
+									<input name="mastodon_api_debug_mode" type="checkbox" id="mastodon_api_debug_mode" value="1" <?php checked( get_option( 'mastodon_api_debug_mode' ) ); ?> />
+									<span><?php esc_html_e( 'Log requests to the plugin and expose more information.', 'enable-mastodon-apps' ); ?></span>
+								</label>
+							</fieldset>
+							<p class="description"><?php esc_html_e( 'Please only enable it when your experiencing problems since this will cause degraded performance.', 'enable-mastodon-apps' ); ?></p>
 						</td>
 					</tr>
 					<tr>
@@ -480,7 +498,7 @@ class Mastodon_Admin {
 			<?php if ( ! empty( $apps ) ) : ?>
 				<h2><?php esc_html_e( 'Apps', 'enable-mastodon-apps' ); ?></h2>
 
-				<table class="widefat striped">
+				<table class="widefat">
 					<thead>
 						<th><?php esc_html_e( 'Name', 'enable-mastodon-apps' ); ?></th>
 						<th><?php esc_html_e( 'Redirect URI', 'enable-mastodon-apps' ); ?></th>
@@ -492,9 +510,11 @@ class Mastodon_Admin {
 					</thead>
 					<tbody>
 						<?php
+						$alternate = true;
 						foreach ( $apps as $app ) {
+							$alternate = ! $alternate;
 							?>
-							<tr id='app-<?php echo esc_attr( $app->get_client_id() ); ?>'>
+							<tr id='app-<?php echo esc_attr( $app->get_client_id() ); ?>' class="<?php echo $alternate ? 'alternate' : ''; ?>">
 								<td>
 									<?php
 									if ( $app->get_website() ) {
@@ -522,6 +542,29 @@ class Mastodon_Admin {
 								</td>
 							</tr>
 							<?php
+
+							if ( get_option( 'mastodon_api_debug_mode' ) ) {
+								$last_requests = $app->get_last_requests();
+								if ( $last_requests ) :
+									?>
+								<tr id='applog-<?php echo esc_attr( $app->get_client_id() ); ?>' class="<?php echo $alternate ? 'alternate' : ''; ?>">
+									<td colspan="7" style="font-family: monospace">
+										<details open><summary style="font-family: sans-serif">Requests</summary>
+										<?php
+										$rest_nonce = wp_create_nonce( 'wp_rest' );
+										foreach ( $last_requests as $timestamp => $path ) {
+											$date = \DateTimeImmutable::createFromFormat( 'U.u', $timestamp / 10000 );
+											?>
+											[<?php echo esc_html( $date->format( 'Y-m-d\TH:i:s.vP' ) ); ?>] <a href="<?php echo esc_url( add_query_arg( '_wpnonce', $rest_nonce, $path ) ); ?>"><?php echo esc_html( $path ); ?></a><br/>
+											<?php
+										}
+										?>
+										</details>
+									</td>
+								</tr>
+									<?php
+								endif;
+							}
 						}
 						?>
 					</tbody>
