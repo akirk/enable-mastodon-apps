@@ -25,6 +25,7 @@ class Mastodon_App {
 	 */
 	private $term;
 
+	const DEBUG_CLIENT_ID = 'enable-mastodon-apps';
 	const TAXONOMY = 'mastodon-app';
 	const VALID_SCOPES = array(
 		'read',
@@ -130,7 +131,43 @@ class Mastodon_App {
 		return false;
 	}
 
-	public function was_used() {
+	public function delete_last_requests() {
+		return delete_metadata( 'term', $this->term->term_id, 'request' );
+	}
+
+	public function get_last_requests() {
+		$requests = array();
+		foreach ( get_term_meta( $this->term->term_id, 'request' ) as $request ) {
+			if ( empty( $request ) || empty( $request['path'] ) ) {
+				delete_metadata( 'term', $this->term->term_id, 'request', $request );
+				continue;
+			}
+			$requests[ $request['timestamp'] * 10000 ] = $request;
+		}
+
+		ksort( $requests );
+		return $requests;
+	}
+
+	public function was_used( $additional_debug_data = array() ) {
+		if ( get_option( 'mastodon_api_debug_mode' ) > time() ) {
+			add_metadata(
+				'term',
+				$this->term->term_id,
+				'request',
+				array_merge(
+					array(
+						'timestamp' => microtime( true ),
+						'path'      => $_SERVER['REQUEST_URI'],
+						'method'    => $_SERVER['REQUEST_METHOD'],
+						'_post'     => $_POST,
+						'_files'    => $_FILES,
+					),
+					$additional_debug_data
+				)
+			);
+		}
+
 		if ( $this->get_last_used() > time() - MINUTE_IN_SECONDS ) {
 			return true;
 		}
@@ -370,6 +407,43 @@ class Mastodon_App {
 				},
 			)
 		);
+
+		if ( get_option( 'mastodon_api_debug_mode' ) > time() ) {
+			register_term_meta(
+				self::TAXONOMY,
+				'request',
+				array(
+					'show_in_rest'      => false,
+					'single'            => false,
+					'type'              => 'array',
+					'sanitize_callback' => function( $value ) {
+						if ( ! is_array( $value ) ) {
+							return array();
+						}
+
+						foreach ( array_keys( $value ) as $key ) {
+							if ( 'path' === $key || 'user_agent' === $key ) {
+								$value[ $key ] = preg_replace( '#[^A-Za-z0-9?&%=[\]+.:@_/-]#', ' ', $value[ $key ] );
+								continue;
+							}
+							if ( 'timestamp' === $key ) {
+								$value[ $key ] = floatval( $value[ $key ] );
+								continue;
+							}
+							if ( 'method' === $key && preg_match( '/^[A-Z]{3,15}$/', $value[ $key ] ) ) {
+								continue;
+							}
+							if ( ( '_files' === $key || '_post' === $key ) && ! empty( $value[ $key ] ) ) {
+								continue;
+							}
+							unset( $value[ $key ] );
+						}
+
+						return $value;
+					},
+				)
+			);
+		}
 	}
 
 	public function modify_wp_query_args( $args ) {
@@ -453,6 +527,20 @@ class Mastodon_App {
 			}
 		}
 		return $count;
+	}
+
+	public static function get_debug_app() {
+		$term = term_exists( self::DEBUG_CLIENT_ID, self::TAXONOMY );
+		if ( ! $term ) {
+			$term = wp_insert_term( self::DEBUG_CLIENT_ID, self::TAXONOMY );
+			add_metadata( 'term', $term['term_id'], 'client_name', 'Debugger', true );
+		}
+		$term = get_term( $term['term_id'] );
+		if ( is_wp_error( $term ) ) {
+			return $term;
+		}
+
+		return new self( $term );
 	}
 
 	public static function save( $client_name, array $redirect_uris, $scopes, $website ) {

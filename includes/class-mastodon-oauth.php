@@ -98,6 +98,11 @@ class Mastodon_OAuth {
 			return;
 		}
 
+		if ( get_option( 'mastodon_api_debug_mode' ) > time() ) {
+			$app = Mastodon_App::get_debug_app();
+			$app->was_used();
+		}
+
 		$request  = Request::createFromGlobals();
 		$response = new Response();
 		$response = $handler->handle( $request, $response );

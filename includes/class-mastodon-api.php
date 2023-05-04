@@ -87,6 +87,7 @@ class Mastodon_API {
 			'api/v1/instance',
 			'api/v1/lists',
 			'api/v1/markers',
+			'api/v1/mutes',
 			'api/v1/notifications',
 			'api/v1/preferences',
 			'api/v1/trends/statuses',
@@ -250,6 +251,16 @@ class Mastodon_API {
 		register_rest_route(
 			self::PREFIX,
 			'api/v1/markers',
+			array(
+				'methods'             => 'GET',
+				'callback'            => '__return_empty_array',
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/mutes',
 			array(
 				'methods'             => 'GET',
 				'callback'            => '__return_empty_array',
@@ -576,6 +587,14 @@ class Mastodon_API {
 		// Optionally log in.
 		$token = $this->oauth->get_token();
 		if ( ! $token ) {
+			if ( get_option( 'mastodon_api_debug_mode' ) > time() ) {
+				$app = Mastodon_App::get_debug_app();
+				$app->was_used(
+					array(
+						'user_agent' => $_SERVER['HTTP_USER_AGENT'],
+					)
+				);
+			}
 			return true;
 		}
 		$this->app = Mastodon_App::get_by_client_id( $token['client_id'] );
@@ -624,7 +643,7 @@ class Mastodon_API {
 		$this->allow_cors();
 		$token = $this->oauth->get_token();
 		if ( ! $token ) {
-			return false;
+			return is_user_logged_in();
 		}
 
 		OAuth2\AccessTokenStorage::was_used( $token['access_token'] );
@@ -638,7 +657,7 @@ class Mastodon_API {
 		$this->allow_cors();
 		$token = $this->oauth->get_token();
 		if ( ! $token ) {
-			return false;
+			return is_user_logged_in();
 		}
 		OAuth2\AccessTokenStorage::was_used( $token['access_token'] );
 		$this->app = Mastodon_App::get_by_client_id( $token['client_id'] );
@@ -1931,7 +1950,6 @@ class Mastodon_API {
 	}
 
 	private function get_friend_account_data( $user_id, $meta = array(), $full_metadata = false ) {
-
 		$external_user = apply_filters( 'mastodon_api_external_mentions_user', null );
 		$is_external_mention = $external_user && strval( $external_user->ID ) === strval( $user_id );
 		if ( $is_external_mention && isset( $meta['attributedTo']['id'] ) ) {
