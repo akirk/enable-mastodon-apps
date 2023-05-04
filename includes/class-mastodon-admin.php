@@ -90,13 +90,13 @@ class Mastodon_Admin {
 				add_settings_error(
 					'enable-mastodon-apps',
 					'clear-app-logs',
-					__( 'App logs were cleared.', 'enable-mastodon-apps' ),
+					__( 'App logs were cleared.', 'enable-mastodon-apps' )
 				);
 			} else {
 				add_settings_error(
 					'enable-mastodon-apps',
 					'clear-app-logs',
-					__( 'App logs could not be cleared.', 'enable-mastodon-apps' ),
+					__( 'App logs could not be cleared.', 'enable-mastodon-apps' )
 				);
 			}
 			return;
