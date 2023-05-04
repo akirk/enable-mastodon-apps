@@ -131,41 +131,39 @@ class Mastodon_App {
 		return false;
 	}
 
+	public function delete_last_requests() {
+		return delete_metadata( 'term', $this->term->term_id, 'request' );
+	}
+
 	public function get_last_requests() {
 		$requests = array();
-		$all_requests = array();
 		foreach ( get_term_meta( $this->term->term_id, 'request' ) as $request ) {
 			if ( empty( $request ) || empty( $request['path'] ) ) {
 				delete_metadata( 'term', $this->term->term_id, 'request', $request );
 				continue;
 			}
-			$all_requests[] = $request;
-		}
-		$keep = 40;
-		if ( count( $all_requests ) > $keep ) {
-			foreach ( array_slice( $all_requests, 0, count( $requests ) - $keep ) as $request ) {
-				delete_metadata( 'term', $this->term->term_id, 'request', $request );
-			}
-			$all_requests = array_slice( $all_requests, count( $requests ) - $keep );
-		}
-
-		foreach ( $all_requests as $request ) {
-			$requests[ $request['timestamp'] * 10000 ] = $request['path'];
+			$requests[ $request['timestamp'] * 10000 ] = $request;
 		}
 
 		ksort( $requests );
 		return $requests;
 	}
 
-	public function was_used() {
-		if ( get_option( 'mastodon_api_debug_mode' ) ) {
+	public function was_used( $additional_debug_data = array() ) {
+		if ( get_option( 'mastodon_api_debug_mode' ) > time() ) {
 			add_metadata(
 				'term',
 				$this->term->term_id,
 				'request',
-				array(
-					'timestamp' => microtime( true ),
-					'path'      => $_SERVER['REQUEST_URI'],
+				array_merge(
+					array(
+						'timestamp' => microtime( true ),
+						'path'      => $_SERVER['REQUEST_URI'],
+						'method'    => $_SERVER['REQUEST_METHOD'],
+						'_post'     => $_POST,
+						'_files'    => $_FILES,
+					),
+					$additional_debug_data
 				)
 			);
 		}
@@ -410,7 +408,7 @@ class Mastodon_App {
 			)
 		);
 
-		if ( get_option( 'mastodon_api_debug_mode' ) ) {
+		if ( get_option( 'mastodon_api_debug_mode' ) > time() ) {
 			register_term_meta(
 				self::TAXONOMY,
 				'request',
@@ -424,12 +422,18 @@ class Mastodon_App {
 						}
 
 						foreach ( array_keys( $value ) as $key ) {
-							if ( 'path' === $key ) {
-								$value[ $key ] = preg_replace( '#[^A-Za-z0-9?&%=[\]+._/-]#', ' ', $value[ $key ] );
+							if ( 'path' === $key || 'user_agent' === $key ) {
+								$value[ $key ] = preg_replace( '#[^A-Za-z0-9?&%=[\]+.:@_/-]#', ' ', $value[ $key ] );
 								continue;
 							}
 							if ( 'timestamp' === $key ) {
 								$value[ $key ] = floatval( $value[ $key ] );
+								continue;
+							}
+							if ( 'method' === $key && preg_match( '/^[A-Z]{3,15}$/', $value[ $key ] ) ) {
+								continue;
+							}
+							if ( ( '_files' === $key || '_post' === $key ) && ! empty( $value[ $key ] ) ) {
 								continue;
 							}
 							unset( $value[ $key ] );
@@ -526,14 +530,17 @@ class Mastodon_App {
 	}
 
 	public static function get_debug_app() {
-		if ( ! get_option( 'mastodon_api_debug_mode' ) ) {
-			return;
-		}
 		$term = term_exists( self::DEBUG_CLIENT_ID, self::TAXONOMY );
 		if ( ! $term ) {
 			$term = wp_insert_term( self::DEBUG_CLIENT_ID, self::TAXONOMY );
+			add_metadata( 'term', $term['term_id'], 'client_name', 'Debugger', true );
 		}
-		return $term;
+		$term = get_term( $term['term_id'] );
+		if ( is_wp_error( $term ) ) {
+			return $term;
+		}
+
+		return new self( $term );
 	}
 
 	public static function save( $client_name, array $redirect_uris, $scopes, $website ) {

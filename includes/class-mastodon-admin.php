@@ -48,7 +48,7 @@ class Mastodon_Admin {
 				'enable-mastodon-apps',
 				'deleted-codes',
 				sprintf(
-				// translators: %d: number of deleted codes.
+					// translators: %d: number of deleted codes.
 					_n( 'Deleted %d authorization code.', 'Deleted %d authorization codes.', $deleted ? 1 : 0, 'enable-mastodon-apps' ),
 					$deleted ? 1 : 0
 				)
@@ -62,7 +62,7 @@ class Mastodon_Admin {
 				'enable-mastodon-apps',
 				'deleted-tokens',
 				sprintf(
-				// translators: %d: number of deleted tokens.
+					// translators: %d: number of deleted tokens.
 					_n( 'Deleted %d access token.', 'Deleted %d access tokens.', $deleted ? 1 : 0, 'enable-mastodon-apps' ),
 					$deleted ? 1 : 0
 				)
@@ -76,11 +76,29 @@ class Mastodon_Admin {
 				'enable-mastodon-apps',
 				'deleted-apps',
 				sprintf(
-				// translators: %d: number of deleted apps.
+					// translators: %d: number of deleted apps.
 					_n( 'Deleted %d app.', 'Deleted %d apps.', $deleted ? 1 : 0, 'enable-mastodon-apps' ),
 					$deleted ? 1 : 0
 				)
 			);
+			return;
+		}
+
+		if ( isset( $_POST['clear-app-logs'] ) ) {
+			$deleted = Mastodon_App::get_by_client_id( $_POST['clear-app-logs'] )->delete_last_requests();
+			if ( $deleted ) {
+				add_settings_error(
+					'enable-mastodon-apps',
+					'clear-app-logs',
+					__( 'App logs were cleared.', 'enable-mastodon-apps' ),
+				);
+			} else {
+				add_settings_error(
+					'enable-mastodon-apps',
+					'clear-app-logs',
+					__( 'App logs could not be cleared.', 'enable-mastodon-apps' ),
+				);
+			}
 			return;
 		}
 
@@ -139,7 +157,7 @@ class Mastodon_Admin {
 				'enable-mastodon-apps',
 				'deleted-apps',
 				sprintf(
-				// translators: %d: number of deleted apps.
+					// translators: %d: number of deleted apps.
 					_n( 'Deleted %d app.', 'Deleted %d apps.', $deleted, 'enable-mastodon-apps' ),
 					$deleted
 				)
@@ -158,7 +176,7 @@ class Mastodon_Admin {
 				'enable-mastodon-apps',
 				'deleted-tokens',
 				sprintf(
-				// translators: %d: number of deleted tokens.
+					// translators: %d: number of deleted tokens.
 					_n( 'Deleted %d token.', 'Deleted %d tokens.', $deleted, 'enable-mastodon-apps' ),
 					$deleted
 				)
@@ -186,7 +204,7 @@ class Mastodon_Admin {
 				'enable-mastodon-apps',
 				'deleted-apps',
 				sprintf(
-				// translators: %d: number of deleted apps.
+					// translators: %d: number of deleted apps.
 					_n( 'Deleted %d app.', 'Deleted %d apps.', $deleted, 'enable-mastodon-apps' ),
 					$deleted
 				)
@@ -207,7 +225,7 @@ class Mastodon_Admin {
 		}
 
 		if ( isset( $_POST['mastodon_api_debug_mode'] ) ) {
-			update_option( 'mastodon_api_debug_mode', true );
+			update_option( 'mastodon_api_debug_mode', time() + 5 * MINUTE_IN_SECONDS );
 		} else {
 			delete_option( 'mastodon_api_debug_mode' );
 		}
@@ -246,7 +264,6 @@ class Mastodon_Admin {
 				$app->set_post_formats( $post_formats );
 			}
 		}
-
 	}
 
 	private function post_format_select( $name, $selected = array() ) {
@@ -323,7 +340,7 @@ class Mastodon_Admin {
 		<p><span><?php esc_html_e( 'On its own, this plugin allows you to publish status posts and show your own posts in the apps\' timelines.', 'enable-mastodon-apps' ); ?> <span><?php esc_html_e( 'To make the plugin more useful, you can install the following plugins:', 'enable-mastodon-apps' ); ?></span></p>
 
 		<?php if ( $activitypub_installed ) : ?>
-			<details><summary style="cursor: pointer;"><?php esc_html_e( 'The ActivityPub plugin is already installed.', 'enable-mastodon-apps' ); ?></summary>
+			<details><summary><?php esc_html_e( 'The ActivityPub plugin is already installed.', 'enable-mastodon-apps' ); ?></summary>
 		<?php endif; ?>
 		<p><?php esc_html_e( 'The ActivityPub plugin connects your blog to the fediverse: Other people can follow your WordPress using a Mastodon account. It also provides functionality for communicating with the ActivityPub protocol to other plugins.', 'enable-mastodon-apps' ); ?></p>
 		<p><a href="<?php echo \esc_url_raw( \admin_url( 'plugin-install.php?tab=plugin-information&plugin=activitypub&TB_iframe=true' ) ); ?>" class="thickbox open-plugin-details-modal button install-now" target="_blank"><?php \esc_html_e( 'Install the Activitypub Plugin', 'enable-mastodon-apps' ); ?></a></p>
@@ -332,7 +349,7 @@ class Mastodon_Admin {
 		<?php endif; ?>
 
 		<?php if ( $friends_installed ) : ?>
-			<details><summary style="cursor: pointer;"><?php esc_html_e( 'The Friends plugin is already installed.', 'enable-mastodon-apps' ); ?></summary>
+			<details><summary><?php esc_html_e( 'The Friends plugin is already installed.', 'enable-mastodon-apps' ); ?></summary>
 		<?php endif; ?>
 		<p><span><?php esc_html_e( 'The Friends plugin allows you to follow other blogs or, if the ActivityPub plugin is also installed, Mastodon accounts.', 'enable-mastodon-apps' ); ?></span> <span><?php esc_html_e( 'You can then see the posts of people you follow inside your Mastodon compatible app.', 'enable-mastodon-apps' ); ?></span></p>
 
@@ -342,6 +359,18 @@ class Mastodon_Admin {
 		<?php endif; ?>
 
 		</p>
+		<style type="text/css">
+			details.tt {
+				font-family: monospace;
+				word-wrap: break-word;
+			}
+			summary {
+				cursor: pointer;
+			}
+			td:last-child {
+				white-space: nowrap;
+			}
+		</style>
 		<form method="post">
 			<?php wp_nonce_field( 'enable-mastodon-apps' ); ?>
 			<table class="form-table">
@@ -375,18 +404,33 @@ class Mastodon_Admin {
 						<td>
 							<fieldset>
 								<label for="mastodon_api_debug_mode">
-									<input name="mastodon_api_debug_mode" type="checkbox" id="mastodon_api_debug_mode" value="1" <?php checked( get_option( 'mastodon_api_debug_mode' ) ); ?> />
+									<input name="mastodon_api_debug_mode" type="checkbox" id="mastodon_api_debug_mode" value="1" <?php checked( get_option( 'mastodon_api_debug_mode' ) > time() ); ?> />
 									<span><?php esc_html_e( 'Log requests to the plugin and expose more information.', 'enable-mastodon-apps' ); ?></span>
 								</label>
 							</fieldset>
-							<p class="description"><?php esc_html_e( 'Please only enable it when your experiencing problems since this will cause degraded performance.', 'enable-mastodon-apps' ); ?></p>
+							<p class="description">
+								<?php
+								if ( get_option( 'mastodon_api_debug_mode' ) > time() ) {
+									echo esc_html(
+										sprintf(
+											// translators: %1$s is a relative time, %2$s is a specific time.
+											__( 'Debug mode is active for %1$s (until %2$s).', 'enable-mastodon-apps' ),
+											human_time_diff( get_option( 'mastodon_api_debug_mode' ) ),
+											wp_date( 'H:i:s', get_option( 'mastodon_api_debug_mode' ) )
+										)
+									);
+								} else {
+									esc_html_e( 'Enable this to activate logging of requests.', 'enable-mastodon-apps' );
+								}
+								?>
+							</p>
 						</td>
 					</tr>
 					<tr>
 						<th scope="row"><?php esc_html_e( 'Default Post Formats', 'enable-mastodon-apps' ); ?></th>
 						<td>
 							<details>
-								<summary style="cursor: pointer"><?php esc_html_e( 'Change the post formats new apps will receive by default.', 'enable-mastodon-apps' ); ?></summary>
+								<summary><?php esc_html_e( 'Change the post formats new apps will receive by default.', 'enable-mastodon-apps' ); ?></summary>
 								<fieldset>
 									<label for="mastodon_api_default_post_formats">
 										<?php $this->post_format_select( 'mastodon_api_default_post_formats', get_option( 'mastodon_api_default_post_formats', array( 'status' ) ) ); ?>
@@ -530,7 +574,7 @@ class Mastodon_Admin {
 								<td><?php echo esc_html( $app->get_scopes() ); ?></td>
 								<td>
 									<details>
-										<summary style="cursor: pointer"><?php echo esc_html( implode( ', ', $app->get_post_formats() ) ); ?></summary>
+										<summary><?php echo esc_html( implode( ', ', $app->get_post_formats() ) ); ?></summary>
 										<?php $this->post_format_select( 'app_post_formats[' . $app->get_client_id() . ']', $app->get_post_formats() ); ?>
 									</details>
 								</td>
@@ -543,27 +587,59 @@ class Mastodon_Admin {
 							</tr>
 							<?php
 
-							if ( get_option( 'mastodon_api_debug_mode' ) ) {
-								$last_requests = $app->get_last_requests();
-								if ( $last_requests ) :
-									?>
+							$last_requests = $app->get_last_requests();
+							if ( $last_requests ) {
+								?>
 								<tr id='applog-<?php echo esc_attr( $app->get_client_id() ); ?>' class="<?php echo $alternate ? 'alternate' : ''; ?>">
-									<td colspan="7" style="font-family: monospace">
-										<details open><summary style="font-family: sans-serif">Requests</summary>
+									<td colspan="6">
+										<details class="tt"><summary>
+										<?php
+										echo esc_html(
+											sprintf(
+												// translators: %ds is the number of requests.
+												_n( '%d logged request', '%d logged requests', count( $last_requests ), 'enable-mastodon-apps' ),
+												count( $last_requests )
+											)
+										);
+										?>
+										</summary>
 										<?php
 										$rest_nonce = wp_create_nonce( 'wp_rest' );
-										foreach ( $last_requests as $timestamp => $path ) {
-											$date = \DateTimeImmutable::createFromFormat( 'U.u', $timestamp / 10000 );
+										foreach ( $last_requests as $request ) {
+											$date = \DateTimeImmutable::createFromFormat( 'U.u', $request['timestamp'] );
+											$url = add_query_arg(
+												array(
+													'_wpnonce' => $rest_nonce,
+													'_pretty'  => 1,
+												),
+												$request['path']
+											);
 											?>
-											[<?php echo esc_html( $date->format( 'Y-m-d\TH:i:s.vP' ) ); ?>] <a href="<?php echo esc_url( add_query_arg( '_wpnonce', $rest_nonce, $path ) ); ?>"><?php echo esc_html( $path ); ?></a><br/>
+											<details><summary>[<?php echo esc_html( $date->format( 'Y-m-d\TH:i:s.vP' ) ); ?>] <?php echo esc_html( $request['method'] ); ?> <a href="<?php echo esc_url( $url ); ?>"><?php echo esc_html( $request['path'] ); ?></a><br/></summary>
+											<?php
+											echo '<pre>';
+											if ( ! empty( $request['_post'] ) ) {
+												echo 'POST ', esc_html( var_export( $request['_post'], true ) ), '<br/>';
+											}
+											if ( ! empty( $request['_files'] ) ) {
+												echo 'FILES ', esc_html( var_export( $request['_files'], true ) ), '<br/>';
+											}
+											if ( ! empty( $request['user_agent'] ) ) {
+												echo 'User Agent: ', esc_html( $request['user_agent'] ), '<br/>';
+											}
+											echo '</pre>';
+											?>
+											</details>
 											<?php
 										}
 										?>
 										</details>
 									</td>
+									<td>
+										<button name="clear-app-logs" value="<?php echo esc_attr( $app->get_client_id() ); ?>" class="button button-link-delete"><?php esc_html_e( 'Clear logs', 'enable-mastodon-apps' ); ?></button>
+									</td>
 								</tr>
-									<?php
-								endif;
+								<?php
 							}
 						}
 						?>

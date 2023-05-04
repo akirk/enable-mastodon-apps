@@ -98,8 +98,8 @@ class Mastodon_OAuth {
 			return;
 		}
 
-		$app = Mastodon_App::get_debug_app();
-		if ( $app ) {
+		if ( get_option( 'mastodon_api_debug_mode' ) > time() ) {
+			$app = Mastodon_App::get_debug_app();
 			$app->was_used();
 		}
 

@@ -587,6 +587,14 @@ class Mastodon_API {
 		// Optionally log in.
 		$token = $this->oauth->get_token();
 		if ( ! $token ) {
+			if ( get_option( 'mastodon_api_debug_mode' ) > time() ) {
+				$app = Mastodon_App::get_debug_app();
+				$app->was_used(
+					array(
+						'user_agent' => $_SERVER['HTTP_USER_AGENT'],
+					)
+				);
+			}
 			return true;
 		}
 		$this->app = Mastodon_App::get_by_client_id( $token['client_id'] );
@@ -635,7 +643,7 @@ class Mastodon_API {
 		$this->allow_cors();
 		$token = $this->oauth->get_token();
 		if ( ! $token ) {
-			return false;
+			return is_user_logged_in();
 		}
 
 		OAuth2\AccessTokenStorage::was_used( $token['access_token'] );
@@ -649,7 +657,7 @@ class Mastodon_API {
 		$this->allow_cors();
 		$token = $this->oauth->get_token();
 		if ( ! $token ) {
-			return false;
+			return is_user_logged_in();
 		}
 		OAuth2\AccessTokenStorage::was_used( $token['access_token'] );
 		$this->app = Mastodon_App::get_by_client_id( $token['client_id'] );
@@ -1942,7 +1950,6 @@ class Mastodon_API {
 	}
 
 	private function get_friend_account_data( $user_id, $meta = array(), $full_metadata = false ) {
-
 		$external_user = apply_filters( 'mastodon_api_external_mentions_user', null );
 		$is_external_mention = $external_user && strval( $external_user->ID ) === strval( $user_id );
 		if ( $is_external_mention && isset( $meta['attributedTo']['id'] ) ) {
