@@ -774,6 +774,7 @@ class Mastodon_API {
 		}
 
 		$posts = get_posts( $args );
+		global $wpdb;
 		if ( $min_id ) {
 			remove_filter( 'posts_where', $min_filter_handler );
 		}
@@ -805,7 +806,22 @@ class Mastodon_API {
 				}
 			}
 		}
-		krsort( $statuses );
+		ksort( $statuses );
+
+		if ( $min_id ) {
+			$min_id = strval( $min_id );
+			$min_id_exists_in_statuses = false;
+			foreach ( $statuses as $status ) {
+				if ( $status['id'] === $min_id ) {
+					$min_id_exists_in_statuses = true;
+					break;
+				}
+			}
+			if ( ! $min_id_exists_in_statuses ) {
+				// We don't need to watch the min_id.
+				$min_id = null;
+			}
+		}
 
 		$ret = array();
 		$c = $args['posts_per_page'];
@@ -814,15 +830,17 @@ class Mastodon_API {
 				if ( $status['id'] !== $min_id ) {
 					continue;
 				}
+				// We can now include results but need to skip this one.
 				$min_id = null;
+				continue;
 			}
-			if ( $max_id && $status['id'] === $max_id ) {
+			if ( $max_id && strval( $max_id ) === $status['id'] ) {
 				break;
 			}
 			if ( $c-- <= 0 ) {
 				break;
 			}
-			$ret[] = $status;
+			array_unshift( $ret, $status );
 		}
 		return $ret;
 	}

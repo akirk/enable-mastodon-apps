@@ -41,7 +41,7 @@ class Mastodon_API_TestCase extends \WP_UnitTestCase {
 			array(
 				'post_author'  => $this->administrator,
 				'post_content' => 'Test post',
-				'post_title'   => 'Test post',
+				'post_title'   => '',
 				'post_status'  => 'publish',
 				'post_type'    => 'post',
 				'post_date'    => '2023-01-03 00:00:00',
@@ -58,11 +58,11 @@ class Mastodon_API_TestCase extends \WP_UnitTestCase {
 		$this->friend_post = wp_insert_post(
 			array(
 				'post_author'  => $this->friend,
-				'post_content' => 'Test post',
-				'post_title'   => 'Test post',
+				'post_content' => '',
+				'post_title'   => 'Friend title',
 				'post_status'  => 'publish',
 				'post_type'    => 'friend_post_cache',
-				'post_date'    => '2023-01-02 00:00:00',
+				'post_date'    => '2023-01-04 00:00:00',
 			)
 		);
 		set_post_format( $this->friend_post, 'status' );
