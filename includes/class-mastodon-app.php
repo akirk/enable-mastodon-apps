@@ -25,6 +25,7 @@ class Mastodon_App {
 	 */
 	private $term;
 
+	const DEBUG_CLIENT_ID = 'enable-mastodon-apps';
 	const TAXONOMY = 'mastodon-app';
 	const VALID_SCOPES = array(
 		'read',
@@ -522,6 +523,17 @@ class Mastodon_App {
 			}
 		}
 		return $count;
+	}
+
+	public static function get_debug_app() {
+		if ( ! get_option( 'mastodon_api_debug_mode' ) ) {
+			return;
+		}
+		$term = term_exists( self::DEBUG_CLIENT_ID, self::TAXONOMY );
+		if ( ! $term ) {
+			$term = wp_insert_term( self::DEBUG_CLIENT_ID, self::TAXONOMY );
+		}
+		return $term;
 	}
 
 	public static function save( $client_name, array $redirect_uris, $scopes, $website ) {

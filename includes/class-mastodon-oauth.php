@@ -98,6 +98,11 @@ class Mastodon_OAuth {
 			return;
 		}
 
+		$app = Mastodon_App::get_debug_app();
+		if ( $app ) {
+			$app->was_used();
+		}
+
 		$request  = Request::createFromGlobals();
 		$response = new Response();
 		$response = $handler->handle( $request, $response );
