@@ -149,7 +149,13 @@ class Mastodon_App {
 		return $requests;
 	}
 
-	public function was_used( $additional_debug_data = array() ) {
+	public function was_used( $request, $additional_debug_data = array() ) {
+		static $logged;
+		if ( isset( $logged ) && $logged ) {
+			// Prevent multiple calls.
+			return true;
+		}
+		$logged = true;
 		if ( get_option( 'mastodon_api_debug_mode' ) > time() ) {
 			add_metadata(
 				'term',
@@ -160,8 +166,9 @@ class Mastodon_App {
 						'timestamp' => microtime( true ),
 						'path'      => $_SERVER['REQUEST_URI'],
 						'method'    => $_SERVER['REQUEST_METHOD'],
-						'_post'     => $_POST,
-						'_files'    => $_FILES,
+						'params'    => $request->get_params(),
+						'json'      => $request->get_json_params(),
+						'files'     => $request->get_file_params(),
 					),
 					$additional_debug_data
 				)
@@ -388,7 +395,7 @@ class Mastodon_App {
 					$value = array_diff_key( $value, array( 'post_formats' ) );
 					if ( isset( $value['post_formats'] ) ) {
 						if ( ! is_array( $value['post_formats'] ) ) {
-							unset( $value['post_formats'] );
+							$value['post_formats'] = array( $value['post_formats'] );
 						}
 						$value['post_formats'] = array_filter(
 							$value['post_formats'],
@@ -417,6 +424,7 @@ class Mastodon_App {
 					'single'            => false,
 					'type'              => 'array',
 					'sanitize_callback' => function( $value ) {
+						error_log( var_export( $value, true ) );
 						if ( ! is_array( $value ) ) {
 							return array();
 						}
@@ -433,7 +441,7 @@ class Mastodon_App {
 							if ( 'method' === $key && preg_match( '/^[A-Z]{3,15}$/', $value[ $key ] ) ) {
 								continue;
 							}
-							if ( ( '_files' === $key || '_post' === $key ) && ! empty( $value[ $key ] ) ) {
+							if ( ( 'files' === $key || 'params' === $key || 'json' === $key ) && ! empty( $value[ $key ] ) ) {
 								continue;
 							}
 							unset( $value[ $key ] );

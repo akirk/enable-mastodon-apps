@@ -18,6 +18,7 @@ class Mastodon_API_TestCase extends \WP_UnitTestCase {
 	protected $friend_post;
 	protected $administrator;
 	protected $friend;
+	protected $app;
 	public function set_up() {
 		parent::set_up();
 
@@ -74,11 +75,11 @@ class Mastodon_API_TestCase extends \WP_UnitTestCase {
 			}
 		);
 
-		$app = Mastodon_App::save( 'Test App', array( 'https://test' ), 'read write follow push', 'https://mastodon.local' );
+		$this->app = Mastodon_App::save( 'Test App', array( 'https://test' ), 'read write follow push', 'https://mastodon.local' );
 		$oauth = new Mastodon_OAuth();
 		$this->token = wp_generate_password( 128, false );
 		$userdata = get_userdata( $this->administrator );
-		$oauth->get_token_storage()->setAccessToken( $this->token, $app->get_client_id(), $userdata->ID, time() + HOUR_IN_SECONDS, $app->get_scopes() );
+		$oauth->get_token_storage()->setAccessToken( $this->token, $this->app->get_client_id(), $userdata->ID, time() + HOUR_IN_SECONDS, $this->app->get_scopes() );
 		unset( $_SERVER['HTTP_AUTHORIZATION'] );
 
 		add_filter( 'pre_http_request', array( $this, 'block_http_requests' ), 10 );

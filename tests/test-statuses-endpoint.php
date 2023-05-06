@@ -58,4 +58,85 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertEquals( 'trash', get_post_status( $this->post ) );
 	}
 
+	public function test_status_post_empty() {
+		global $wp_rest_server;
+		$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/statuses' );
+		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
+		$response = $wp_rest_server->dispatch( $request );
+		$this->assertEquals( 422, $response->get_status() );
+	}
+
+	public function test_status_post_basic_status() {
+		global $wp_rest_server;
+		$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/statuses' );
+		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
+		$request->set_param( 'status', 'test' );
+		$response = $wp_rest_server->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertIsString( $data['id'] );
+		$this->assertIsNumeric( $data['id'] );
+		$p = get_post( $data['id'] );
+		$this->assertEquals( $p->post_content, 'test' );
+	}
+
+	public function test_status_post_multiline_status() {
+		global $wp_rest_server;
+		$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/statuses' );
+		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
+		$request->set_param( 'status', 'headline' . PHP_EOL . 'post_content' );
+		$response = $wp_rest_server->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertIsString( $data['id'] );
+		$this->assertIsNumeric( $data['id'] );
+		$p = get_post( $data['id'] );
+		$this->assertEquals( 'status', get_post_format( $p->ID ) );
+
+		$this->assertEquals( $p->post_title, '' );
+		$this->assertEquals( $p->post_content, 'headline' . PHP_EOL . 'post_content' );
+	}
+
+	public function test_status_post_multiline_standard() {
+		$this->app->set_post_formats( 'standard' );
+		global $wp_rest_server;
+		$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/statuses' );
+		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
+		$request->set_param( 'status', 'headline' . PHP_EOL . 'post_content' );
+		$response = $wp_rest_server->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertIsString( $data['id'] );
+		$this->assertIsNumeric( $data['id'] );
+		$p = get_post( $data['id'] );
+		$this->assertFalse( get_post_format( $p->ID ) );
+
+		$this->assertEquals( $p->post_title, 'headline' );
+		$this->assertEquals( $p->post_content, 'post_content' );
+	}
+
+	public function test_status_post_multiline_standard_html() {
+		$this->app->set_post_formats( 'standard' );
+		global $wp_rest_server;
+		$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/statuses' );
+		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
+		$request->set_param( 'status', '<p>headline</p>' . PHP_EOL . '<p>post_content</p>' );
+
+		$response = $wp_rest_server->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertIsString( $data['id'] );
+		$this->assertIsNumeric( $data['id'] );
+		$p = get_post( $data['id'] );
+		$this->assertFalse( get_post_format( $p->ID ) );
+
+		$this->assertEquals( $p->post_title, 'headline' );
+		$this->assertEquals( $p->post_content, 'post_content' );
+
+	}
+
 }

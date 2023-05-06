@@ -582,7 +582,7 @@ class Mastodon_API {
 		return $query_vars;
 	}
 
-	public function public_api_permission() {
+	public function public_api_permission( $request ) {
 		$this->allow_cors();
 		// Optionally log in.
 		$token = $this->oauth->get_token();
@@ -590,6 +590,7 @@ class Mastodon_API {
 			if ( get_option( 'mastodon_api_debug_mode' ) > time() ) {
 				$app = Mastodon_App::get_debug_app();
 				$app->was_used(
+					$request,
 					array(
 						'user_agent' => $_SERVER['HTTP_USER_AGENT'],
 					)
@@ -598,7 +599,7 @@ class Mastodon_API {
 			return true;
 		}
 		$this->app = Mastodon_App::get_by_client_id( $token['client_id'] );
-		$this->app->was_used();
+		$this->app->was_used( $request );
 		wp_set_current_user( $token['user_id'] );
 		return is_user_logged_in();
 	}
@@ -639,7 +640,7 @@ class Mastodon_API {
 		);
 	}
 
-	public function logged_in_permission() {
+	public function logged_in_permission( $request ) {
 		$this->allow_cors();
 		$token = $this->oauth->get_token();
 		if ( ! $token ) {
@@ -648,12 +649,12 @@ class Mastodon_API {
 
 		OAuth2\AccessTokenStorage::was_used( $token['access_token'] );
 		$this->app = Mastodon_App::get_by_client_id( $token['client_id'] );
-		$this->app->was_used();
+		$this->app->was_used( $request );
 		wp_set_current_user( $token['user_id'] );
 		return is_user_logged_in();
 	}
 
-	public function have_token_permission() {
+	public function have_token_permission( $request ) {
 		$this->allow_cors();
 		$token = $this->oauth->get_token();
 		if ( ! $token ) {
@@ -661,7 +662,7 @@ class Mastodon_API {
 		}
 		OAuth2\AccessTokenStorage::was_used( $token['access_token'] );
 		$this->app = Mastodon_App::get_by_client_id( $token['client_id'] );
-		$this->app->was_used();
+		$this->app->was_used( $request );
 		return true;
 	}
 
@@ -1065,13 +1066,14 @@ class Mastodon_API {
 	public function api_submit_post( $request ) {
 		$status = $request->get_param( 'status' );
 		if ( empty( $status ) ) {
-			return new \WP_Error( 'mastodon_api_submit_post', 'Status is empty', array( 'status' => 400 ) );
+			return new \WP_Error( 'mastodon_api_submit_post', 'Validation failed: Text can\'t be blank', array( 'status' => 422 ) );
 		}
 
 		$status = make_clickable( $status );
 		if ( class_exists( '\Activitypub\Mention' ) ) {
 			$status = \Activitypub\Mention::the_content( $status );
 		}
+		$status = trim( $status );
 
 		$visibility = $request->get_param( 'visibility' );
 		if ( empty( $visibility ) ) {

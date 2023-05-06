@@ -615,17 +615,11 @@ class Mastodon_Admin {
 												$request['path']
 											);
 											?>
-											<details><summary>[<?php echo esc_html( $date->format( 'Y-m-d\TH:i:s.vP' ) ); ?>] <?php echo esc_html( $request['method'] ); ?> <a href="<?php echo esc_url( $url ); ?>"><?php echo esc_html( $request['path'] ); ?></a><br/></summary>
+											<details><summary>[<?php echo esc_html( $date->format( 'Y-m-d H:i:s.v' ) ); ?>] <?php echo esc_html( $request['method'] ); ?> <a href="<?php echo esc_url( $url ); ?>"><?php echo esc_html( $request['path'] ); ?></a><br/></summary>
 											<?php
-											echo '<pre>';
-											if ( ! empty( $request['_post'] ) ) {
-												echo 'POST ', esc_html( var_export( $request['_post'], true ) ), '<br/>';
-											}
-											if ( ! empty( $request['_files'] ) ) {
-												echo 'FILES ', esc_html( var_export( $request['_files'], true ) ), '<br/>';
-											}
-											if ( ! empty( $request['user_agent'] ) ) {
-												echo 'User Agent: ', esc_html( $request['user_agent'] ), '<br/>';
+											echo '<pre style="padding-left: 1em; border-left: 3px solid #999; margin: 0">';
+											foreach ( array_diff_key( $request, array_flip( array( 'timestamp', 'path', 'method' ) ) ) as $key => $value ) {
+												echo esc_html( $key ), ' ', esc_html( var_export( $value, true ) ), '<br/>';
 											}
 											echo '</pre>';
 											?>
