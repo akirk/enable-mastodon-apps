@@ -134,8 +134,8 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$p = get_post( $data['id'] );
 		$this->assertFalse( get_post_format( $p->ID ) );
 
-		$this->assertEquals( $p->post_title, 'headline' );
-		$this->assertEquals( $p->post_content, 'post_content' );
+		$this->assertEquals( $p->post_title, '<p>headline</p>' );
+		$this->assertEquals( $p->post_content, '<p>post_content</p>' );
 
 	}
 
