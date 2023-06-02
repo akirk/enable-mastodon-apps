@@ -101,6 +101,33 @@ class Mastodon_Admin {
 			}
 			return;
 		}
+		if ( isset( $_POST['clear-all-app-logs'] ) ) {
+			$total_deleted = 0;
+			foreach ( Mastodon_App::get_all() as $app ) {
+				$deleted = $app->delete_last_requests();
+				if ( $deleted ) {
+					$total_deleted += 1;
+				}
+			}
+			if ( $total_deleted ) {
+				add_settings_error(
+					'enable-mastodon-apps',
+					'clear-all-app-logs',
+					sprintf(
+						// translators: %d: number of deleted apps.
+						_n( '%d app logs were cleared.', '%d app logs were cleared.', $total_deleted, 'enable-mastodon-apps' ),
+						$total_deleted
+					)
+				);
+			} else {
+				add_settings_error(
+					'enable-mastodon-apps',
+					'clear-app-logs',
+					__( 'App logs could not be cleared.', 'enable-mastodon-apps' )
+				);
+			}
+			return;
+		}
 
 		if ( isset( $_POST['delete-outdated'] ) ) {
 			$deleted = OAuth2\AccessTokenStorage::cleanupOldTokens();
@@ -445,200 +472,247 @@ class Mastodon_Admin {
 			<button class="button button-primary"><?php esc_html_e( 'Save' ); /* phpcs:ignore WordPress.WP.I18n.MissingArgDomain */ ?></button>
 			<?php if ( ! empty( $codes ) ) : ?>
 				<h2><?php esc_html_e( 'Authorization Codes', 'enable-mastodon-apps' ); ?></h2>
-
-				<table class="widefat striped">
-					<thead>
-						<th><?php esc_html_e( 'App', 'enable-mastodon-apps' ); ?></th>
-						<th><?php esc_html_e( 'Redirect URI', 'enable-mastodon-apps' ); ?></th>
-						<th><?php esc_html_e( 'Expires', 'enable-mastodon-apps' ); ?></th>
-						<th><?php esc_html_e( 'Scope', 'enable-mastodon-apps' ); ?></th>
-						<th><?php esc_html_e( 'Actions', 'enable-mastodon-apps' ); ?></th>
-					</thead>
-					<tbody>
+				<details>
+					<summary>
 						<?php
-						foreach ( $codes as $code => $data ) {
-							?>
-							<tr id="code-<?php echo esc_attr( $code ); ?>" title="<?php echo esc_attr( $code ); ?>">
-								<td>
-									<?php
-									if ( isset( $apps[ $data['client_id'] ] ) ) {
-										echo esc_html( $apps[ $data['client_id'] ]->get_client_name() );
-									} else {
-										echo esc_html( 'Unknown: ' . $data['client_id'] );
-									}
-									?>
-								</td>
-								<td><?php echo esc_html( $data['redirect_uri'] ); ?></td>
-								<?php td_timestamp( $data['expires'] ); ?>
-								<td><?php echo esc_html( $data['scope'] ); ?></td>
-								<td><button name="delete-code" value="<?php echo esc_attr( $code ); ?>" class="button"><?php esc_html_e( 'Delete' ); /* phpcs:ignore WordPress.WP.I18n.MissingArgDomain */ ?></button></td>
-							</tr>
-							<?php
-						}
+						echo esc_html(
+							sprintf(
+								// translators: %d is the number of authorization codes.
+								_n( '%d authorization code', '%d authorization codes', count( $codes ), 'enable-mastodon-apps' ),
+								count( $codes )
+							)
+						);
 						?>
-					</tbody>
-				</table>
+					</summary>
+					<table class="widefat striped">
+						<thead>
+							<th><?php esc_html_e( 'App', 'enable-mastodon-apps' ); ?></th>
+							<th><?php esc_html_e( 'Redirect URI', 'enable-mastodon-apps' ); ?></th>
+							<th><?php esc_html_e( 'Expires', 'enable-mastodon-apps' ); ?></th>
+							<th><?php esc_html_e( 'Scope', 'enable-mastodon-apps' ); ?></th>
+							<th><?php esc_html_e( 'Actions', 'enable-mastodon-apps' ); ?></th>
+						</thead>
+						<tbody>
+							<?php
+							foreach ( $codes as $code => $data ) {
+								?>
+								<tr id="code-<?php echo esc_attr( $code ); ?>" title="<?php echo esc_attr( $code ); ?>">
+									<td>
+										<?php
+										if ( isset( $apps[ $data['client_id'] ] ) ) {
+											echo esc_html( $apps[ $data['client_id'] ]->get_client_name() );
+										} else {
+											echo esc_html( 'Unknown: ' . $data['client_id'] );
+										}
+										?>
+									</td>
+									<td><?php echo esc_html( $data['redirect_uri'] ); ?></td>
+									<?php td_timestamp( $data['expires'] ); ?>
+									<td><?php echo esc_html( $data['scope'] ); ?></td>
+									<td><button name="delete-code" value="<?php echo esc_attr( $code ); ?>" class="button"><?php esc_html_e( 'Delete' ); /* phpcs:ignore WordPress.WP.I18n.MissingArgDomain */ ?></button></td>
+								</tr>
+								<?php
+							}
+							?>
+						</tbody>
+					</table>
+				</details>
 			<?php endif; ?>
 
 			<?php if ( ! empty( $tokens ) ) : ?>
 				<h2><?php esc_html_e( 'Access Tokens', 'enable-mastodon-apps' ); ?></h2>
-				<table class="widefat striped">
-					<thead>
-						<th><?php esc_html_e( 'App', 'enable-mastodon-apps' ); ?></th>
-						<th><?php esc_html_e( 'User', 'enable-mastodon-apps' ); ?></th>
-						<th><?php esc_html_e( 'Last Used', 'enable-mastodon-apps' ); ?></th>
-						<th><?php esc_html_e( 'Expires', 'enable-mastodon-apps' ); ?></th>
-						<th><?php esc_html_e( 'Scope', 'enable-mastodon-apps' ); ?></th>
-						<th><?php esc_html_e( 'Actions', 'enable-mastodon-apps' ); ?></th>
-					</thead>
-					<tbody>
+				<details>
+					<summary>
 						<?php
-						foreach ( $tokens as $token => $data ) {
-							$user = 'app-level';
-							if ( $data['user_id'] ) {
-								$userdata = get_user_by( 'ID', $data['user_id'] );
-								if ( $userdata ) {
-									if ( is_wp_error( $userdata ) ) {
-										$user = $userdata->get_error_message();
+						echo esc_html(
+							sprintf(
+								// translators: %d is the number of tokens.
+								_n( '%d token', '%d tokens', count( $tokens ), 'enable-mastodon-apps' ),
+								count( $tokens )
+							)
+						);
+						?>
+					</summary>
+					<table class="widefat striped">
+						<thead>
+							<th><?php esc_html_e( 'App', 'enable-mastodon-apps' ); ?></th>
+							<th><?php esc_html_e( 'User', 'enable-mastodon-apps' ); ?></th>
+							<th><?php esc_html_e( 'Last Used', 'enable-mastodon-apps' ); ?></th>
+							<th><?php esc_html_e( 'Expires', 'enable-mastodon-apps' ); ?></th>
+							<th><?php esc_html_e( 'Scope', 'enable-mastodon-apps' ); ?></th>
+							<th><?php esc_html_e( 'Actions', 'enable-mastodon-apps' ); ?></th>
+						</thead>
+						<tbody>
+							<?php
+							foreach ( $tokens as $token => $data ) {
+								$user = 'app-level';
+								if ( $data['user_id'] ) {
+									$userdata = get_user_by( 'ID', $data['user_id'] );
+									if ( $userdata ) {
+										if ( is_wp_error( $userdata ) ) {
+											$user = $userdata->get_error_message();
+										} else {
+											$user = $userdata->user_login;
+										}
 									} else {
-										$user = $userdata->user_login;
+										$user = 'error';
 									}
-								} else {
-									$user = 'error';
 								}
+								?>
+								<tr id="token-<?php echo esc_attr( $token ); ?>" title="<?php echo esc_attr( $token ); ?>">
+									<td>
+										<?php
+										if ( isset( $apps[ $data['client_id'] ] ) ) {
+											?>
+											<a href="#app-<?php echo esc_attr( $data['client_id'] ); ?>"><?php echo esc_html( $apps[ $data['client_id'] ]->get_client_name() ); ?></a>
+											<?php
+										} else {
+											echo esc_html(
+												sprintf(
+												// Translators: %s is the app ID.
+													__( 'Unknown App: %s', 'enable-mastodon-apps' ),
+													$data['client_id']
+												)
+											);
+										}
+										?>
+									</td>
+									<td><?php echo esc_html( $user ); ?></td>
+									<?php td_timestamp( $data['last_used'] ); ?>
+									<?php td_timestamp( $data['expires'], true ); ?>
+									<td><?php echo esc_html( $data['scope'] ); ?></td>
+									<td><button name="delete-token" value="<?php echo esc_attr( $token ); ?>" class="button"><?php esc_html_e( 'Delete' ); /* phpcs:ignore WordPress.WP.I18n.MissingArgDomain */ ?></button></td>
+								</tr>
+								<?php
 							}
 							?>
-							<tr id="token-<?php echo esc_attr( $token ); ?>" title="<?php echo esc_attr( $token ); ?>">
-								<td>
-									<?php
-									if ( isset( $apps[ $data['client_id'] ] ) ) {
-										?>
-										<a href="#app-<?php echo esc_attr( $data['client_id'] ); ?>"><?php echo esc_html( $apps[ $data['client_id'] ]->get_client_name() ); ?></a>
-										<?php
-									} else {
-										echo esc_html(
-											sprintf(
-											// Translators: %s is the app ID.
-												__( 'Unknown App: %s', 'enable-mastodon-apps' ),
-												$data['client_id']
-											)
-										);
-									}
-									?>
-								</td>
-								<td><?php echo esc_html( $user ); ?></td>
-								<?php td_timestamp( $data['last_used'] ); ?>
-								<?php td_timestamp( $data['expires'], true ); ?>
-								<td><?php echo esc_html( $data['scope'] ); ?></td>
-								<td><button name="delete-token" value="<?php echo esc_attr( $token ); ?>" class="button"><?php esc_html_e( 'Delete' ); /* phpcs:ignore WordPress.WP.I18n.MissingArgDomain */ ?></button></td>
-							</tr>
-							<?php
-						}
-						?>
-					</tbody>
-				</table>
+						</tbody>
+					</table>
+				</details>
 			<?php endif; ?>
 
 			<?php if ( ! empty( $apps ) ) : ?>
 				<h2><?php esc_html_e( 'Apps', 'enable-mastodon-apps' ); ?></h2>
 
-				<table class="widefat">
-					<thead>
-						<th><?php esc_html_e( 'Name', 'enable-mastodon-apps' ); ?></th>
-						<th><?php esc_html_e( 'Redirect URI', 'enable-mastodon-apps' ); ?></th>
-						<th><?php esc_html_e( 'Scope', 'enable-mastodon-apps' ); ?></th>
-						<th><?php esc_html_e( 'Post Formats', 'enable-mastodon-apps' ); ?></th>
-						<th><?php esc_html_e( 'Last Used', 'enable-mastodon-apps' ); ?></th>
-						<th><?php esc_html_e( 'Created', 'enable-mastodon-apps' ); ?></th>
-						<th><?php esc_html_e( 'Actions', 'enable-mastodon-apps' ); ?></th>
-					</thead>
-					<tbody>
+				<details>
+					<summary>
 						<?php
-						$alternate = true;
-						foreach ( $apps as $app ) {
-							$alternate = ! $alternate;
-							?>
-							<tr id='app-<?php echo esc_attr( $app->get_client_id() ); ?>' class="<?php echo $alternate ? 'alternate' : ''; ?>">
-								<td>
-									<?php
-									if ( $app->get_website() ) {
-										?>
-										<a href="<?php echo esc_url( $app->get_website() ); ?>"><?php echo esc_html( $app->get_client_name() ); ?></a>
-										<?php
-									} else {
-										echo esc_html( $app->get_client_name() );
-									}
-									?>
-								</td>
-								<td><?php echo wp_kses( implode( '<br/>', is_array( $app->get_redirect_uris() ) ? $app->get_redirect_uris() : explode( ',', $app->get_redirect_uris() ) ), array( 'br' => array() ) ); ?></td>
-								<td><?php echo esc_html( $app->get_scopes() ); ?></td>
-								<td>
-									<details>
-										<summary><?php echo esc_html( implode( ', ', $app->get_post_formats() ) ); ?></summary>
-										<?php $this->post_format_select( 'app_post_formats[' . $app->get_client_id() . ']', $app->get_post_formats() ); ?>
-									</details>
-								</td>
-								<?php td_timestamp( $app->get_last_used() ); ?>
-								<?php td_timestamp( $app->get_creation_date() ); ?>
-								<td>
-									<button name="save-app" value="<?php echo esc_attr( $app->get_client_id() ); ?>" class="button button-secondary"><?php esc_html_e( 'Save' ); /* phpcs:ignore WordPress.WP.I18n.MissingArgDomain */ ?></button>
-									<button name="delete-app" value="<?php echo esc_attr( $app->get_client_id() ); ?>" class="button button-link-delete"><?php esc_html_e( 'Delete' ); /* phpcs:ignore WordPress.WP.I18n.MissingArgDomain */ ?></button>
-								</td>
-							</tr>
+						echo esc_html(
+							sprintf(
+							// translators: %d is the number of apps.
+								_n( '%d apps', '%d apps', count( $apps ), 'enable-mastodon-apps' ),
+								count( $apps )
+							)
+						);
+						?>
+					</summary>
+					<table class="widefat">
+						<thead>
+							<th><?php esc_html_e( 'Name', 'enable-mastodon-apps' ); ?></th>
+							<th><?php esc_html_e( 'Redirect URI', 'enable-mastodon-apps' ); ?></th>
+							<th><?php esc_html_e( 'Scope', 'enable-mastodon-apps' ); ?></th>
+							<th><?php esc_html_e( 'Post Formats', 'enable-mastodon-apps' ); ?></th>
+							<th><?php esc_html_e( 'Last Used', 'enable-mastodon-apps' ); ?></th>
+							<th><?php esc_html_e( 'Created', 'enable-mastodon-apps' ); ?></th>
+							<th><?php esc_html_e( 'Actions', 'enable-mastodon-apps' ); ?></th>
+						</thead>
+						<tbody>
 							<?php
-
-							$last_requests = $app->get_last_requests();
-							if ( $last_requests ) {
+							$alternate = true;
+							foreach ( $apps as $app ) {
+								$alternate = ! $alternate;
 								?>
-								<tr id='applog-<?php echo esc_attr( $app->get_client_id() ); ?>' class="<?php echo $alternate ? 'alternate' : ''; ?>">
-									<td colspan="6">
-										<details class="tt"><summary>
+								<tr id='app-<?php echo esc_attr( $app->get_client_id() ); ?>' class="<?php echo $alternate ? 'alternate' : ''; ?>">
+									<td>
 										<?php
-										echo esc_html(
-											sprintf(
-												// translators: %ds is the number of requests.
-												_n( '%d logged request', '%d logged requests', count( $last_requests ), 'enable-mastodon-apps' ),
-												count( $last_requests )
-											)
-										);
-										?>
-										</summary>
-										<?php
-										$rest_nonce = wp_create_nonce( 'wp_rest' );
-										foreach ( $last_requests as $request ) {
-											$date = \DateTimeImmutable::createFromFormat( 'U.u', $request['timestamp'] );
-											$url = add_query_arg(
-												array(
-													'_wpnonce' => $rest_nonce,
-													'_pretty'  => 1,
-												),
-												$request['path']
-											);
+										if ( $app->get_website() ) {
 											?>
-											<details><summary>[<?php echo esc_html( $date->format( 'Y-m-d H:i:s.v' ) ); ?>] <?php echo esc_html( $request['method'] ); ?> <a href="<?php echo esc_url( $url ); ?>"><?php echo esc_html( $request['path'] ); ?></a><br/></summary>
+											<a href="<?php echo esc_url( $app->get_website() ); ?>"><?php echo esc_html( $app->get_client_name() ); ?></a>
 											<?php
-											echo '<pre style="padding-left: 1em; border-left: 3px solid #999; margin: 0">';
-											foreach ( array_diff_key( $request, array_flip( array( 'timestamp', 'path', 'method' ) ) ) as $key => $value ) {
-												echo esc_html( $key ), ' ', esc_html( var_export( $value, true ) ), '<br/>';
-											}
-											echo '</pre>';
-											?>
-											</details>
-											<?php
+										} else {
+											echo esc_html( $app->get_client_name() );
 										}
 										?>
+									</td>
+									<td><?php echo wp_kses( implode( '<br/>', is_array( $app->get_redirect_uris() ) ? $app->get_redirect_uris() : explode( ',', $app->get_redirect_uris() ) ), array( 'br' => array() ) ); ?></td>
+									<td><?php echo esc_html( $app->get_scopes() ); ?></td>
+									<td>
+										<details>
+											<summary><?php echo esc_html( implode( ', ', $app->get_post_formats() ) ); ?></summary>
+											<?php $this->post_format_select( 'app_post_formats[' . $app->get_client_id() . ']', $app->get_post_formats() ); ?>
 										</details>
 									</td>
+									<?php td_timestamp( $app->get_last_used() ); ?>
+									<?php td_timestamp( $app->get_creation_date() ); ?>
 									<td>
-										<button name="clear-app-logs" value="<?php echo esc_attr( $app->get_client_id() ); ?>" class="button button-link-delete"><?php esc_html_e( 'Clear logs', 'enable-mastodon-apps' ); ?></button>
+										<button name="save-app" value="<?php echo esc_attr( $app->get_client_id() ); ?>" class="button button-secondary"><?php esc_html_e( 'Save' ); /* phpcs:ignore WordPress.WP.I18n.MissingArgDomain */ ?></button>
+										<button name="delete-app" value="<?php echo esc_attr( $app->get_client_id() ); ?>" class="button button-link-delete"><?php esc_html_e( 'Delete' ); /* phpcs:ignore WordPress.WP.I18n.MissingArgDomain */ ?></button>
 									</td>
 								</tr>
 								<?php
+
+								$last_requests = $app->get_last_requests();
+								if ( $last_requests ) {
+									?>
+									<tr id='applog-<?php echo esc_attr( $app->get_client_id() ); ?>' class="<?php echo $alternate ? 'alternate' : ''; ?>">
+										<td colspan="6">
+											<details class="tt"><summary>
+											<?php
+											echo esc_html(
+												sprintf(
+													// translators: %ds is the number of requests.
+													_n( '%d logged request', '%d logged requests', count( $last_requests ), 'enable-mastodon-apps' ),
+													count( $last_requests )
+												)
+											);
+											?>
+											</summary>
+											<?php
+											$rest_nonce = wp_create_nonce( 'wp_rest' );
+											foreach ( $last_requests as $request ) {
+												$date = \DateTimeImmutable::createFromFormat( 'U.u', $request['timestamp'] );
+												$url = add_query_arg(
+													array(
+														'_wpnonce' => $rest_nonce,
+														'_pretty'  => 1,
+													),
+													$request['path']
+												);
+												$meta = array_diff_key( $request, array_flip( array( 'timestamp', 'path', 'method' ) ) );
+												if ( empty( $meta ) ) {
+													echo '<div style="margin-left: 1.5em">';
+												} else {
+													echo '<details><summary>';
+												}
+												?>
+												[<?php echo esc_html( $date->format( 'Y-m-d H:i:s.v' ) ); ?>] <?php echo esc_html( $request['method'] ); ?> <a href="<?php echo esc_url( $url ); ?>"><?php echo esc_html( $request['path'] ); ?></a>
+												<?php
+												if ( ! empty( $meta ) ) {
+													echo '</summary>';
+													echo '<pre style="padding-left: 1em; border-left: 3px solid #999; margin: 0">';
+													foreach ( $meta as $key => $value ) {
+														echo esc_html( $key ), ' ', esc_html( var_export( $value, true ) ), '<br/>';
+													}
+													echo '</pre>';
+													echo '</details>';
+												} else {
+													echo '</div>';
+												}
+											}
+											?>
+											</details>
+										</td>
+										<td>
+											<button name="clear-app-logs" value="<?php echo esc_attr( $app->get_client_id() ); ?>" class="button button-link-delete"><?php esc_html_e( 'Clear logs', 'enable-mastodon-apps' ); ?></button>
+										</td>
+									</tr>
+									<?php
+								}
 							}
-						}
-						?>
-					</tbody>
-				</table>
+							?>
+						</tbody>
+					</table>
+				</details>
 			<?php endif; ?>
 
 			<?php if ( ! empty( $codes ) || ! empty( $tokens ) || ! empty( $apps ) ) : ?>
@@ -646,6 +720,8 @@ class Mastodon_Admin {
 					<button name="delete-outdated" class="button"><?php esc_html_e( 'Delete outdated apps and tokens', 'enable-mastodon-apps' ); ?></button>
 					<button name="delete-never-used" class="button"><?php esc_html_e( 'Delete never used apps and tokens', 'enable-mastodon-apps' ); ?></button>
 					<button name="delete-apps-without-tokens" class="button"><?php esc_html_e( 'Delete apps without tokens', 'enable-mastodon-apps' ); ?></button>
+					<button name="clear-all-app-logs" value="<?php echo esc_attr( $app->get_client_id() ); ?>" class="button button-link-delete"><?php esc_html_e( 'Clear all logs', 'enable-mastodon-apps' ); ?></button>
+
 			<?php endif; ?>
 			</form>
 		</div>
