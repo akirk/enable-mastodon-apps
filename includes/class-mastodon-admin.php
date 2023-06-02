@@ -311,6 +311,7 @@ class Mastodon_Admin {
 		$codes = OAuth2\AuthorizationCodeStorage::getAll();
 		$tokens = OAuth2\AccessTokenStorage::getAll();
 		$apps = Mastodon_App::get_all();
+		$rest_nonce = wp_create_nonce( 'wp_rest' );
 
 		wp_enqueue_script( 'plugin-install' );
 		add_thickbox();
@@ -320,6 +321,42 @@ class Mastodon_Admin {
 		$activitypub_installed = isset( $plugins['activitypub/activitypub.php'] );
 		$friends_installed = isset( $plugins['friends/friends.php'] );
 
+		function output_request_log( $request, $rest_nonce ) {
+			$date = \DateTimeImmutable::createFromFormat( 'U.u', $request['timestamp'] );
+			$url = add_query_arg(
+				array(
+					'_wpnonce' => $rest_nonce,
+					'_pretty'  => 1,
+				),
+				$request['path']
+			);
+			$meta = array_diff_key( $request, array_flip( array( 'timestamp', 'path', 'method' ) ) );
+			if ( empty( $meta ) ) {
+				echo '<div style="margin-left: 1.5em">';
+			} else {
+				echo '<details><summary>';
+			}
+			if ( isset( $request['app'] ) ) {
+				echo esc_html( $request['app']->get_client_name() );
+			}
+			?>
+			[<?php echo esc_html( $date->format( 'Y-m-d H:i:s.v' ) ); ?>]
+			<?php echo esc_html( $request['status'] ? $request['status'] : 200 ); ?>
+			<?php echo esc_html( $request['method'] ); ?>
+			<a href="<?php echo esc_url( $url ); ?>"><?php echo esc_html( $request['path'] ); ?></a>
+			<?php
+			if ( ! empty( $meta ) ) {
+				echo '</summary>';
+				echo '<pre style="padding-left: 1em; border-left: 3px solid #999; margin: 0">';
+				foreach ( $meta as $key => $value ) {
+					echo esc_html( $key ), ' ', esc_html( var_export( $value, true ) ), '<br/>';
+				}
+				echo '</pre>';
+				echo '</details>';
+			} else {
+				echo '</div>';
+			}
+		}
 		function td_timestamp( $timestamp, $strikethrough_past = false ) {
 			?>
 			<td>
@@ -470,6 +507,38 @@ class Mastodon_Admin {
 			</table>
 
 			<button class="button button-primary"><?php esc_html_e( 'Save' ); /* phpcs:ignore WordPress.WP.I18n.MissingArgDomain */ ?></button>
+
+			<?php
+			if ( get_option( 'mastodon_api_debug_mode' ) > time() ) {
+				$debug_start_time = \DateTimeImmutable::createFromFormat( 'U', time() - HOUR_IN_SECONDS );
+				$all_last_requests = array();
+				foreach ( Mastodon_App::get_all() as $app ) {
+					$last_requests = $app->get_last_requests();
+					foreach ( $last_requests as $request ) {
+						$date = \DateTimeImmutable::createFromFormat( 'U.u', $request['timestamp'] );
+						if ( $date > $debug_start_time ) {
+							$request['app'] = $app;
+							$all_last_requests[ $request['timestamp'] ] = $request;
+						}
+					}
+				}
+				if ( $all_last_requests ) {
+					ksort( $all_last_requests );
+					?>
+					<h2><?php esc_html_e( 'Recently Logged Requests', 'enable-mastodon-apps' ); ?></h2>
+					<tt>
+					<?php
+
+					foreach ( $all_last_requests as $request ) {
+						output_request_log( $request, $rest_nonce );
+					}
+					?>
+				</tt>
+					<?php
+				}
+			}
+			?>
+
 			<?php if ( ! empty( $codes ) ) : ?>
 				<h2><?php esc_html_e( 'Authorization Codes', 'enable-mastodon-apps' ); ?></h2>
 				<details>
@@ -668,36 +737,8 @@ class Mastodon_Admin {
 											?>
 											</summary>
 											<?php
-											$rest_nonce = wp_create_nonce( 'wp_rest' );
 											foreach ( $last_requests as $request ) {
-												$date = \DateTimeImmutable::createFromFormat( 'U.u', $request['timestamp'] );
-												$url = add_query_arg(
-													array(
-														'_wpnonce' => $rest_nonce,
-														'_pretty'  => 1,
-													),
-													$request['path']
-												);
-												$meta = array_diff_key( $request, array_flip( array( 'timestamp', 'path', 'method' ) ) );
-												if ( empty( $meta ) ) {
-													echo '<div style="margin-left: 1.5em">';
-												} else {
-													echo '<details><summary>';
-												}
-												?>
-												[<?php echo esc_html( $date->format( 'Y-m-d H:i:s.v' ) ); ?>] <?php echo esc_html( $request['method'] ); ?> <a href="<?php echo esc_url( $url ); ?>"><?php echo esc_html( $request['path'] ); ?></a>
-												<?php
-												if ( ! empty( $meta ) ) {
-													echo '</summary>';
-													echo '<pre style="padding-left: 1em; border-left: 3px solid #999; margin: 0">';
-													foreach ( $meta as $key => $value ) {
-														echo esc_html( $key ), ' ', esc_html( var_export( $value, true ) ), '<br/>';
-													}
-													echo '</pre>';
-													echo '</details>';
-												} else {
-													echo '</div>';
-												}
+												output_request_log( $request, $rest_nonce );
 											}
 											?>
 											</details>
