@@ -52,6 +52,7 @@ class Mastodon_API {
 		add_action( 'query_vars', array( $this, 'query_vars' ) );
 		add_action( 'rest_api_init', array( $this, 'add_rest_routes' ) );
 		add_filter( 'rest_pre_serve_request', array( $this, 'allow_cors' ), 10, 4 );
+		add_filter( 'template_include', array( $this, 'log_404s' ) );
 		add_filter( 'activitypub_post', array( $this, 'activitypub_post' ), 10, 2 );
 		add_action( 'default_option_mastodon_api_default_post_formats', array( $this, 'default_option_mastodon_api_default_post_formats' ) );
 	}
@@ -604,6 +605,39 @@ class Mastodon_API {
 		return is_user_logged_in();
 	}
 
+	public function log_404s( $template ) {
+		if ( ! is_404() ) {
+			return $template;
+		}
+		if ( get_option( 'mastodon_api_debug_mode' ) <= time() ) {
+			return $template;
+		}
+		if ( 0 !== strpos( $_SERVER['REQUEST_URI'], '/api/v' ) ) {
+			return $template;
+		}
+		$request = new \WP_REST_Request( $_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI'] );
+		$request->set_query_params( $_GET );
+		$request->set_body_params( $_POST );
+		$request->set_headers( getallheaders() );
+		if ( ! empty( $_SERVER['HTTP_AUTHORIZATION'] ) ) {
+			$this->oauth->get_token();
+		}
+		$app = $this->app;
+		if ( ! $app ) {
+			$app = Mastodon_App::get_debug_app();
+		}
+		$app->was_used(
+			$request,
+			array(
+				'user_agent' => $_SERVER['HTTP_USER_AGENT'],
+				'status'     => 404,
+			)
+		);
+
+		return $template;
+
+	}
+
 	public function api_apps( $request ) {
 		if ( get_option( 'mastodon_api_disable_logins' ) ) {
 			return new \WP_Error( 'registation-disabled', __( 'App registration has been disabled.', 'enable-mastodon-apps' ), array( 'status' => 403 ) );
@@ -649,8 +683,8 @@ class Mastodon_API {
 
 		OAuth2\AccessTokenStorage::was_used( $token['access_token'] );
 		$this->app = Mastodon_App::get_by_client_id( $token['client_id'] );
-		$this->app->was_used( $request );
 		wp_set_current_user( $token['user_id'] );
+		$this->app->was_used( $request );
 		return is_user_logged_in();
 	}
 
@@ -673,7 +707,7 @@ class Mastodon_API {
 		}
 
 		if ( get_post_status( $post_id ) !== 'publish' ) {
-			return $this->logged_in_permission();
+			return $this->logged_in_permission( $request );
 		}
 
 		return true;

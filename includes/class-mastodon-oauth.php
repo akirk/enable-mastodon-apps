@@ -118,6 +118,7 @@ class Mastodon_OAuth {
 		}
 		return $this->server->getAccessTokenData( $request );
 	}
+
 	public function authenticate( $user_id ) {
 		$token = $this->get_token();
 		if ( is_array( $token ) && isset( $token['user_id'] ) ) {

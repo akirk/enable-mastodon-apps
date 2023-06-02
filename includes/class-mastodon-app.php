@@ -163,12 +163,13 @@ class Mastodon_App {
 				'request',
 				array_merge(
 					array(
-						'timestamp' => microtime( true ),
-						'path'      => $_SERVER['REQUEST_URI'],
-						'method'    => $_SERVER['REQUEST_METHOD'],
-						'params'    => $request->get_params(),
-						'json'      => $request->get_json_params(),
-						'files'     => $request->get_file_params(),
+						'timestamp'    => microtime( true ),
+						'path'         => $_SERVER['REQUEST_URI'],
+						'method'       => $_SERVER['REQUEST_METHOD'],
+						'params'       => $request->get_params(),
+						'json'         => $request->get_json_params(),
+						'files'        => $request->get_file_params(),
+						'current_user' => get_current_user_id(),
 					),
 					$additional_debug_data
 				)
@@ -424,7 +425,6 @@ class Mastodon_App {
 					'single'            => false,
 					'type'              => 'array',
 					'sanitize_callback' => function( $value ) {
-						error_log( var_export( $value, true ) );
 						if ( ! is_array( $value ) ) {
 							return array();
 						}
@@ -432,6 +432,10 @@ class Mastodon_App {
 						foreach ( array_keys( $value ) as $key ) {
 							if ( 'path' === $key || 'user_agent' === $key ) {
 								$value[ $key ] = preg_replace( '#[^A-Za-z0-9?&%=[\]+.:@_/-]#', ' ', $value[ $key ] );
+								continue;
+							}
+							if ( 'status' === $key || 'current_user' === $key ) {
+								$value[ $key ] = intval( $value[ $key ] );
 								continue;
 							}
 							if ( 'timestamp' === $key ) {
