@@ -85,6 +85,7 @@ class Mastodon_API {
 			'api/v1/follow_requests',
 			'api/v1/followed_tags',
 			'api/v1/instance/peers',
+			'api/v2/instance',
 			'api/v1/instance',
 			'api/v1/lists',
 			'api/v1/markers',
@@ -114,6 +115,7 @@ class Mastodon_API {
 			'api/v1/statuses'                              => 'api/v1/statuses',
 			'api/v1/accounts/(.+)'                         => 'api/v1/accounts/$matches[1]',
 			'api/v1/timelines/(home|public)'               => 'api/v1/timelines/$matches[1]',
+			'api/v1/timelines/tag/([^/|$]+)'               => 'api/v1/timelines/tag/$matches[1]',
 			'api/v2/search'                                => 'api/v1/search',
 		);
 
@@ -153,7 +155,7 @@ class Mastodon_API {
 			'api/v1/instance/peers',
 			array(
 				'methods'             => 'GET',
-				'callback'            => array( $this, 'api_instance_peers' ),
+				'callback'            => '__return_empty_array',
 				'permission_callback' => array( $this, 'public_api_permission' ),
 			)
 		);
@@ -163,6 +165,15 @@ class Mastodon_API {
 			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'api_instance' ),
+				'permission_callback' => array( $this, 'public_api_permission' ),
+			)
+		);
+		register_rest_route(
+			self::PREFIX,
+			'api/v2/instance',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'api_instance_v2' ),
 				'permission_callback' => array( $this, 'public_api_permission' ),
 			)
 		);
@@ -314,7 +325,7 @@ class Mastodon_API {
 			'api/v1/preferences',
 			array(
 				'methods'             => 'GET',
-				'callback'            => 'api_preferences',
+				'callback'            => array( $this, 'api_preferences' ),
 				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
@@ -473,6 +484,16 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_timelines' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/timelines/(tag)/(?P<hashtag>[^/]+)',
+			array(
+				'methods'             => array( 'GET', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_tag_timelines' ),
 				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
@@ -809,7 +830,6 @@ class Mastodon_API {
 		}
 
 		$posts = get_posts( $args );
-		global $wpdb;
 		if ( $min_id ) {
 			remove_filter( 'posts_where', $min_filter_handler );
 		}
@@ -1307,6 +1327,14 @@ class Mastodon_API {
 		if ( empty( $args ) ) {
 			return array();
 		}
+		$args = apply_filters( 'mastodon_api_timelines_args', $args, $request );
+
+		return $this->get_posts( $args, $request->get_param( 'min_id' ), $request->get_param( 'max_id' ) );
+	}
+
+	public function api_tag_timelines( $request ) {
+		$args = $this->get_posts_query_args( $request );
+		$args['tag'] = $request->get_param( 'hashtag' );
 		$args = apply_filters( 'mastodon_api_timelines_args', $args, $request );
 
 		return $this->get_posts( $args, $request->get_param( 'min_id' ), $request->get_param( 'max_id' ) );
@@ -2143,7 +2171,7 @@ class Mastodon_API {
 
 			foreach ( apply_filters( 'friends_get_user_feeds', array(), $user ) as $feed ) {
 				$meta = apply_filters( 'friends_get_feed_metadata', array(), $feed );
-				if ( $meta && ! is_wp_error( $meta ) ) {
+				if ( $meta && ! isset( $meta['error'] ) && ! is_wp_error( $meta ) ) {
 					$data['acct'] = $this->get_acct( $meta['id'] );
 					$data = $this->update_account_data_with_meta( $data, $meta, $full_metadata );
 					break;
@@ -2306,10 +2334,6 @@ class Mastodon_API {
 		return $ret;
 	}
 
-	public function api_instance_peers() {
-		return array();
-	}
-
 	public function api_instance() {
 		$ret = array(
 			'title'             => get_bloginfo( 'name' ),
@@ -2328,6 +2352,20 @@ class Mastodon_API {
 			'approval_required' => false,
 			'uri'               => home_url(),
 		);
+
+		return $ret;
+	}
+
+	public function api_instance_v2() {
+		$api_instance = $this->api_instance();
+		$ret = array_merge(
+			array(
+				'domain' => $api_instance['account_domain'],
+			),
+			$api_instance
+		);
+
+		unset( $ret['account_domain'] );
 
 		return $ret;
 	}
