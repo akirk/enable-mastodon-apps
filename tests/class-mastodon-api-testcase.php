@@ -67,14 +67,12 @@ class Mastodon_API_TestCase extends \WP_UnitTestCase {
 			)
 		);
 		set_post_format( $this->friend_post, 'status' );
-
 		add_filter(
 			'friends_frontend_post_types',
 			function( $post_types ) {
 				return array_merge( array( 'friend_post_cache' ), $post_types );
 			}
 		);
-
 		$this->app = Mastodon_App::save( 'Test App', array( 'https://test' ), 'read write follow push', 'https://mastodon.local' );
 		$oauth = new Mastodon_OAuth();
 		$this->token = wp_generate_password( 128, false );
