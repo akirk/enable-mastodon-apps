@@ -90,7 +90,7 @@ class Mastodon_API {
 			'api/v1/lists',
 			'api/v1/markers',
 			'api/v1/mutes',
-			'api/v1/notifications',
+			'api/v1/notifications/clear',
 			'api/v1/preferences',
 			'api/v1/trends/statuses',
 			'api/v1/push/subscription',
@@ -98,10 +98,10 @@ class Mastodon_API {
 			'api/v2/media',
 		);
 		$parametrized = array(
-			'api/v1/accounts/([^/+])/featured_tags'        => 'api/v1/accounts/$matches[1]/featured_tags',
-			'api/v1/accounts/([^/+])/follow'               => 'api/v1/accounts/$matches[1]/follow',
-			'api/v1/accounts/([^/+])/unfollow'             => 'api/v1/accounts/$matches[1]/unfollow',
-			'api/v1/accounts/([^/+])/statuses'             => 'api/v1/accounts/$matches[1]/statuses',
+			'api/v1/accounts/([^/]+)/featured_tags'        => 'api/v1/accounts/$matches[1]/featured_tags',
+			'api/v1/accounts/([^/]+)/follow'               => 'api/v1/accounts/$matches[1]/follow',
+			'api/v1/accounts/([^/]+)/unfollow'             => 'api/v1/accounts/$matches[1]/unfollow',
+			'api/v1/accounts/([^/]+)/statuses'             => 'api/v1/accounts/$matches[1]/statuses',
 			'api/v1/statuses/((?:comment-)?[0-9]+)/context' => 'api/v1/statuses/$matches[1]/context',
 			'api/v1/statuses/((?:comment-)?[0-9]+)/favourited_by' => 'api/v1/statuses/$matches[1]/favourited_by',
 			'api/v1/statuses/((?:comment-)?[0-9]+)/favourite' => 'api/v1/statuses/$matches[1]/favourite',
@@ -109,6 +109,8 @@ class Mastodon_API {
 			'api/v1/statuses/((?:comment-)?[0-9]+)/reblog' => 'api/v1/statuses/$matches[1]/reblog',
 			'api/v1/statuses/((?:comment-)?[0-9]+)/unreblog' => 'api/v1/statuses/$matches[1]/unreblog',
 			'api/v1/notifications/([^/]+)/dismiss'         => 'api/v1/notifications/$matches[1]/dismiss',
+			'api/v1/notifications/([^/|$]+)/?$'            => 'api/v1/notifications/$matches[1]',
+			'api/v1/notifications'                         => 'api/v1/notifications',
 			'api/nodeinfo/([0-9]+[.][0-9]+).json'          => 'api/nodeinfo/$matches[1].json',
 			'api/v1/media/([0-9]+)'                        => 'api/v1/media/$matches[1]',
 			'api/v1/statuses/((?:comment-)?[0-9]+)'        => 'api/v1/statuses/$matches[1]',
@@ -302,7 +304,7 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
-			'api/v1/notifications/(?P<id>[^/]+)',
+			'api/v1/notifications/(?P<id>.+)$',
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_notification_get' ),
@@ -930,6 +932,7 @@ class Mastodon_API {
 	private function normalize_whitespace( $post_content ) {
 		$post_content = preg_replace( '#<!-- /?wp:paragraph -->\s*<!-- /?wp:paragraph -->#', PHP_EOL, $post_content );
 		$post_content = preg_replace( '#\n\s*\n+#', PHP_EOL, $post_content );
+		$post_content = str_replace( '&#039;', "'", $post_content );
 
 		return trim( $post_content );
 	}
@@ -1086,7 +1089,7 @@ class Mastodon_API {
 
 	private function get_notification_array( $type, $date, $account, $status = array() ) {
 		$notification = array(
-			'id'         => $date,
+			'id'         => preg_replace( '/[^0-9]/', '', $date ),
 			'created_at' => $date,
 		);
 		switch ( $type ) {
@@ -1741,7 +1744,7 @@ class Mastodon_API {
 			$meta = apply_filters( 'friends_get_activitypub_metadata', array(), $url );
 
 			$vars = array();
-			if ( isset( $meta['name'] ) ) {
+			if ( ! empty( $meta['name'] ) ) {
 				$vars['display_name'] = $meta['name'];
 			}
 
@@ -1850,12 +1853,10 @@ class Mastodon_API {
 
 	public function api_notification_clear( $request ) {
 		$notification_dismissed_tag = apply_filters( 'mastodon_api_notification_dismissed_tag', 'notification-dismissed' );
-		$all_notifications = $this->api_notifications( $request );
-		foreach ( $all_notifications as $notifications ) {
-			foreach ( $notifications as $notification ) {
-				if ( $notification['status'] ) {
-					wp_set_object_terms( $notification['status']['id'], $notification_dismissed_tag, 'post_tag', true );
-				}
+		$notifications = $this->api_notifications( $request );
+		foreach ( $notifications as $notification ) {
+			if ( $notification['status'] ) {
+				wp_set_object_terms( $notification['status']['id'], $notification_dismissed_tag, 'post_tag', true );
 			}
 		}
 
@@ -1864,30 +1865,26 @@ class Mastodon_API {
 
 	public function api_notification_dismiss( $request ) {
 		$notification_dismissed_tag = apply_filters( 'mastodon_api_notification_dismissed_tag', 'notification-dismissed' );
-		$all_notifications = $this->api_notifications( $request );
-		foreach ( $all_notifications as $notifications ) {
-			foreach ( $notifications as $notification ) {
-				if ( $request->get_param( 'id' ) !== $notification['id'] ) {
-					continue;
-				}
-				if ( $notification['status'] ) {
-					wp_set_object_terms( $notification['status']['id'], $notification_dismissed_tag, 'post_tag', true );
-					return (object) array();
-				}
+		$notifications = $this->api_notifications( $request );
+		foreach ( $notifications as $notification ) {
+			if ( $request->get_param( 'id' ) !== $notification['id'] ) {
+				continue;
+			}
+			if ( $notification['status'] ) {
+				wp_set_object_terms( $notification['status']['id'], $notification_dismissed_tag, 'post_tag', true );
+				return (object) array();
 			}
 		}
 		return (object) array();
 	}
 
 	public function api_notification_get( $request ) {
-		$all_notifications = $this->api_notifications( $request );
-		foreach ( $all_notifications as $notifications ) {
-			foreach ( $notifications as $notification ) {
-				if ( $request->get_param( 'id' ) !== $notification['id'] ) {
-					continue;
-				}
-				return $notification;
+		$notifications = $this->api_notifications( $request );
+		foreach ( $notifications as $notification ) {
+			if ( $request->get_param( 'id' ) !== $notification['id'] ) {
+				continue;
 			}
+			return $notification;
 		}
 
 		return (object) array();
@@ -1917,7 +1914,39 @@ class Mastodon_API {
 			}
 		}
 
-		return $notifications;
+		$min_id = $request->get_param( 'min_id' );
+		$max_id = $request->get_param( 'max_id' );
+
+		$last_modified = $request->get_header( 'if-modified-since' );
+		if ( $last_modified ) {
+			$last_modified = gmdate( 'Y-m-d\TH:i:s.000P', strtotime( $last_modified ) );
+			if ( $last_modified > $max_id ) {
+				$max_id = $last_modified;
+			}
+		}
+
+		$ret = array();
+		$c = $args['posts_per_page'];
+		foreach ( array_reverse( $notifications ) as $notification ) {
+			if ( $min_id ) {
+				if ( $notification['id'] <= $min_id ) {
+					continue;
+				}
+				$min_id = null;
+			}
+			if ( $max_id && $max_id <= $notification['id'] ) {
+				break;
+			}
+			if ( $c-- <= 0 ) {
+				break;
+			}
+			array_unshift( $ret, $notification );
+		}
+
+		header( 'Link: </api/v1/notifications?min_id=' . $ret[0]['id'] . '>; rel="prev"', false );
+		header( 'Link: </api/v1/notifications?max_id=' . $ret[ count( $ret ) - 1 ]['id'] . '>; rel="next"', false );
+
+		return $ret;
 	}
 
 	public function api_preferences( $request ) {
@@ -1995,7 +2024,21 @@ class Mastodon_API {
 	}
 
 	private function update_account_data_with_meta( $data, $meta, $full_metadata = false ) {
-		if ( ! $meta || is_wp_error( $meta ) ) {
+		if ( ! $meta || is_wp_error( $meta ) || isset( $meta['error'] ) ) {
+			if ( empty( $data['username'] ) || ! $data['username'] ) {
+				$data['username'] = strtok( $data['id'], '@' );
+			}
+			if ( empty( $data['display_name'] ) || ! $data['display_name'] ) {
+				$data['display_name'] = $data['username'];
+			}
+
+			if ( empty( $data['created_at'] ) || ! $data['created_at'] ) {
+				$data['created_at'] = '1970-01-01T00:00:00Z';
+			}
+			if ( ! $data['last_status_at'] ) {
+				$data['last_status_at'] = $data['created_at'];
+			}
+
 			return $data;
 		}
 		if ( $full_metadata ) {
@@ -2006,15 +2049,33 @@ class Mastodon_API {
 			$data['following_count'] = intval( $following['totalItems'] );
 			$data['statuses_count'] = intval( $outbox['totalItems'] );
 		}
-
-		$data['username'] = $meta['preferredUsername'];
-		$data['display_name'] = $meta['name'];
-		$data['note'] = $meta['summary'];
-		if ( isset( $meta['published'] ) ) {
-			$data['created_at'] = $meta['published'];
-			if ( ! $data['last_status_at'] ) {
-				$data['last_status_at'] = $data['created_at'];
+		if ( ! isset( $meta['summary'] ) ) {
+			error_log( PHP_EOL . var_export( $meta, true ) . PHP_EOL, 3, '/tmp/wp' );
+		}
+		if ( empty( $data['username'] ) || ! $data['username'] ) {
+			if ( isset( $meta['preferredUsername'] ) && $meta['preferredUsername'] ) {
+				$data['username'] = $meta['preferredUsername'];
+			} else {
+				$data['username'] = strtok( $data['id'], '@' );
 			}
+		}
+		if ( empty( $data['display_name'] ) || ! $data['display_name'] ) {
+			if ( isset( $meta['name'] ) && $meta['name'] ) {
+				$data['display_name'] = $meta['name'];
+			} else {
+				$data['display_name'] = $data['username'];
+			}
+		}
+		$data['note'] = (string) $meta['summary'];
+		if ( empty( $data['created_at'] ) || ! $data['created_at'] ) {
+			if ( isset( $meta['published'] ) && $meta['published'] ) {
+				$data['created_at'] = $meta['published'];
+			} else {
+				$data['created_at'] = '1970-01-01T00:00:00Z';
+			}
+		}
+		if ( ! $data['last_status_at'] ) {
+			$data['last_status_at'] = $data['created_at'];
 		}
 		$data['url'] = $meta['url'];
 		if ( isset( $meta['icon'] ) ) {
@@ -2196,7 +2257,7 @@ class Mastodon_API {
 
 	public function get_acct( $id_or_url ) {
 		$webfinger = $this->webfinger( $id_or_url );
-		if ( ! isset( $webfinger['subject'] ) ) {
+		if ( is_wp_error( $webfinger ) || ! isset( $webfinger['subject'] ) ) {
 			return '';
 		}
 		if ( substr( $webfinger['subject'], 0, 5 ) === 'acct:' ) {

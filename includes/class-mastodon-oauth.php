@@ -100,7 +100,11 @@ class Mastodon_OAuth {
 
 		if ( get_option( 'mastodon_api_debug_mode' ) > time() ) {
 			$app = Mastodon_App::get_debug_app();
-			$app->was_used();
+			$request = new \WP_REST_Request( $_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI'] );
+			$request->set_query_params( $_GET );
+			$request->set_body_params( $_POST );
+			$request->set_headers( getallheaders() );
+			$app->was_used( $request );
 		}
 
 		$request  = Request::createFromGlobals();
