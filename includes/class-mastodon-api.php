@@ -1893,11 +1893,16 @@ class Mastodon_API {
 	public function api_notifications( $request ) {
 		$notifications = array();
 		$types = $request->get_param( 'types' );
+		$args = array(
+			'posts_per_page' => 15,
+		);
 		$exclude_types = $request->get_param( 'exclude_types' );
 		if ( ( ! is_array( $types ) || in_array( 'mention', $types, true ) ) && ( ! is_array( $exclude_types ) || ! in_array( 'mention', $exclude_types, true ) ) ) {
 			$external_user = apply_filters( 'mastodon_api_external_mentions_user', null );
 			if ( $external_user && $external_user instanceof \WP_User ) {
 				$args = $this->get_posts_query_args( $request );
+
+				$args['posts_per_page'] = 15;
 				$args['author'] = $external_user->ID;
 
 				$notification_dismissed_tag = get_term_by( 'slug', apply_filters( 'mastodon_api_notification_dismissed_tag', 'notification-dismissed' ), 'post_tag' );
@@ -1914,8 +1919,10 @@ class Mastodon_API {
 			}
 		}
 
-		$min_id = $request->get_param( 'min_id' );
-		$max_id = $request->get_param( 'max_id' );
+		$min_id   = $request->get_param( 'min_id' );
+		$max_id   = $request->get_param( 'max_id' );
+		$since_id = $request->get_param( 'since_id' );
+		$next_min_id = false;
 
 		$last_modified = $request->get_header( 'if-modified-since' );
 		if ( $last_modified ) {
@@ -1926,26 +1933,35 @@ class Mastodon_API {
 		}
 
 		$ret = array();
-		$c = $args['posts_per_page'];
-		foreach ( array_reverse( $notifications ) as $notification ) {
-			if ( $min_id ) {
-				if ( $notification['id'] <= $min_id ) {
+		$c = $request->get_param( 'limit' ) ? $request->get_param( 'limit' ) : 15;
+		foreach ( $notifications as $notification ) {
+			if ( $max_id ) {
+				if ( strval( $notification['id'] ) >= strval( $max_id ) ) {
 					continue;
 				}
-				$min_id = null;
+				$max_id = null;
 			}
-			if ( $max_id && $max_id <= $notification['id'] ) {
+			if ( false === $next_min_id ) {
+				$next_min_id = $notification['id'];
+			}
+			if ( $min_id && strval( $min_id ) >= strval( $notification['id'] ) ) {
+				break;
+			}
+			if ( $since_id && strval( $since_id ) > strval( $notification['id'] ) ) {
 				break;
 			}
 			if ( $c-- <= 0 ) {
 				break;
 			}
-			array_unshift( $ret, $notification );
+			$ret[] = $notification;
 		}
 
-		header( 'Link: </api/v1/notifications?min_id=' . $ret[0]['id'] . '>; rel="prev"', false );
-		header( 'Link: </api/v1/notifications?max_id=' . $ret[ count( $ret ) - 1 ]['id'] . '>; rel="next"', false );
-
+		if ( ! empty( $ret ) ) {
+			if ( $next_min_id ) {
+				header( 'Link: <' . add_query_arg( 'min_id', $next_min_id, home_url( '/api/v1/notifications' ) ) . '>; rel="prev"', false );
+			}
+			header( 'Link: <' . add_query_arg( 'max_id', $ret[ count( $ret ) - 1 ]['id'], home_url( '/api/v1/notifications' ) ) . '>; rel="next"', false );
+		}
 		return $ret;
 	}
 
@@ -2049,9 +2065,7 @@ class Mastodon_API {
 			$data['following_count'] = intval( $following['totalItems'] );
 			$data['statuses_count'] = intval( $outbox['totalItems'] );
 		}
-		if ( ! isset( $meta['summary'] ) ) {
-			error_log( PHP_EOL . var_export( $meta, true ) . PHP_EOL, 3, '/tmp/wp' );
-		}
+
 		if ( empty( $data['username'] ) || ! $data['username'] ) {
 			if ( isset( $meta['preferredUsername'] ) && $meta['preferredUsername'] ) {
 				$data['username'] = $meta['preferredUsername'];
