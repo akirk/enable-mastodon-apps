@@ -938,11 +938,16 @@ class Mastodon_API {
 	}
 
 	private function get_status_array( $post, $data = array() ) {
-		if ( ! $post->post_author ) {
+		$meta = get_post_meta( $post->ID, 'activitypub', true );
+		$user_id = $post->post_author;
+		if ( isset( $meta['attributedTo']['id'] ) && $meta['attributedTo']['id'] ) {
+			$user_id = $meta['attributedTo']['id'];
+		}
+
+		if ( ! $user_id ) {
 			return null;
 		}
-		$meta = get_post_meta( $post->ID, 'activitypub', true );
-		$account_data = $this->get_friend_account_data( $post->post_author, $meta );
+		$account_data = $this->get_friend_account_data( $user_id, $meta );
 		if ( is_wp_error( $account_data ) ) {
 			return null;
 		}
@@ -2122,7 +2127,7 @@ class Mastodon_API {
 		$placeholder_image = 'https://files.mastodon.social/media_attachments/files/003/134/405/original/04060b07ddf7bb0b.png';
 		// $placeholder_image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 
-		if ( preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id ) ) {
+		if ( preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id ) || isset( $meta['attributedTo']['id'] ) ) {
 			if ( isset( $meta['attributedTo']['id'] ) ) {
 				$url = $meta['attributedTo']['id'];
 				$user_id = $meta['attributedTo']['id'];
