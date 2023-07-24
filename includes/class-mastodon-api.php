@@ -938,11 +938,16 @@ class Mastodon_API {
 	}
 
 	private function get_status_array( $post, $data = array() ) {
-		if ( ! $post->post_author ) {
+		$meta = get_post_meta( $post->ID, 'activitypub', true );
+		$user_id = $post->post_author;
+		if ( isset( $meta['attributedTo']['id'] ) && $meta['attributedTo']['id'] ) {
+			$user_id = $meta['attributedTo']['id'];
+		}
+
+		if ( ! $user_id ) {
 			return null;
 		}
-		$meta = get_post_meta( $post->ID, 'activitypub', true );
-		$account_data = $this->get_friend_account_data( $post->post_author, $meta );
+		$account_data = $this->get_friend_account_data( $user_id, $meta );
 		if ( is_wp_error( $account_data ) ) {
 			return null;
 		}
@@ -1891,31 +1896,40 @@ class Mastodon_API {
 	}
 
 	public function api_notifications( $request ) {
+		$limit = $request->get_param( 'limit' ) ? $request->get_param( 'limit' ) : 15;
 		$notifications = array();
 		$types = $request->get_param( 'types' );
 		$args = array(
-			'posts_per_page' => 15,
+			'posts_per_page' => $limit + 2,
 		);
 		$exclude_types = $request->get_param( 'exclude_types' );
 		if ( ( ! is_array( $types ) || in_array( 'mention', $types, true ) ) && ( ! is_array( $exclude_types ) || ! in_array( 'mention', $exclude_types, true ) ) ) {
 			$external_user = apply_filters( 'mastodon_api_external_mentions_user', null );
-			if ( $external_user && $external_user instanceof \WP_User ) {
-				$args = $this->get_posts_query_args( $request );
-
-				$args['posts_per_page'] = 15;
-				$args['author'] = $external_user->ID;
-
-				$notification_dismissed_tag = get_term_by( 'slug', apply_filters( 'mastodon_api_notification_dismissed_tag', 'notification-dismissed' ), 'post_tag' );
-				if ( $notification_dismissed_tag ) {
-					$args['tag__not_in'] = array( $notification_dismissed_tag->term_id );
+			if ( ! $external_user || ! ( $external_user instanceof \WP_User ) ) {
+				return array();
+			}
+			$args = $this->get_posts_query_args( $request );
+			$args['posts_per_page'] = $limit + 2;
+			$args['author'] = $external_user->ID;
+			if ( class_exists( '\Friends\User' ) ) {
+				if (
+					$external_user instanceof \Friends\User
+					&& method_exists( $external_user, 'modify_get_posts_args_by_author' )
+				) {
+					$args = $external_user->modify_get_posts_args_by_author( $args );
 				}
-				foreach ( get_posts( $args ) as $post ) {
-					$meta = get_post_meta( $post->ID, 'activitypub', true );
-					if ( ! $meta ) {
-						continue;
-					}
-					$notifications[] = $this->get_notification_array( 'mention', mysql2date( 'Y-m-d\TH:i:s.000P', $post->post_date, false ), $this->get_friend_account_data( $post->post_author, $meta ), $this->get_status_array( $post ) );
+			}
+
+			$notification_dismissed_tag = get_term_by( 'slug', apply_filters( 'mastodon_api_notification_dismissed_tag', 'notification-dismissed' ), 'post_tag' );
+			if ( $notification_dismissed_tag ) {
+				$args['tag__not_in'] = array( $notification_dismissed_tag->term_id );
+			}
+			foreach ( get_posts( $args ) as $post ) {
+				$meta = get_post_meta( $post->ID, 'activitypub', true );
+				if ( ! $meta ) {
+					continue;
 				}
+				$notifications[] = $this->get_notification_array( 'mention', mysql2date( 'Y-m-d\TH:i:s.000P', $post->post_date, false ), $this->get_friend_account_data( $post->post_author, $meta ), $this->get_status_array( $post ) );
 			}
 		}
 
@@ -1933,7 +1947,7 @@ class Mastodon_API {
 		}
 
 		$ret = array();
-		$c = $request->get_param( 'limit' ) ? $request->get_param( 'limit' ) : 15;
+		$c = $limit;
 		foreach ( $notifications as $notification ) {
 			if ( $max_id ) {
 				if ( strval( $notification['id'] ) >= strval( $max_id ) ) {
@@ -2122,7 +2136,7 @@ class Mastodon_API {
 		$placeholder_image = 'https://files.mastodon.social/media_attachments/files/003/134/405/original/04060b07ddf7bb0b.png';
 		// $placeholder_image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 
-		if ( preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id ) ) {
+		if ( preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id ) || isset( $meta['attributedTo']['id'] ) ) {
 			if ( isset( $meta['attributedTo']['id'] ) ) {
 				$url = $meta['attributedTo']['id'];
 				$user_id = $meta['attributedTo']['id'];
