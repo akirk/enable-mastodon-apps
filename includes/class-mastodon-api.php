@@ -1904,23 +1904,24 @@ class Mastodon_API {
 		$exclude_types = $request->get_param( 'exclude_types' );
 		if ( ( ! is_array( $types ) || in_array( 'mention', $types, true ) ) && ( ! is_array( $exclude_types ) || ! in_array( 'mention', $exclude_types, true ) ) ) {
 			$external_user = apply_filters( 'mastodon_api_external_mentions_user', null );
-			if ( $external_user && $external_user instanceof \WP_User ) {
-				$args = $this->get_posts_query_args( $request );
+			if ( ! $external_user || $external_user instanceof \WP_User ) {
+				return array();
+			}
+			$args = $this->get_posts_query_args( $request );
 
-				$args['posts_per_page'] = 15;
-				$args['author'] = $external_user->ID;
+			$args['posts_per_page'] = 15;
+			$args['author'] = $external_user->ID;
 
-				$notification_dismissed_tag = get_term_by( 'slug', apply_filters( 'mastodon_api_notification_dismissed_tag', 'notification-dismissed' ), 'post_tag' );
-				if ( $notification_dismissed_tag ) {
-					$args['tag__not_in'] = array( $notification_dismissed_tag->term_id );
+			$notification_dismissed_tag = get_term_by( 'slug', apply_filters( 'mastodon_api_notification_dismissed_tag', 'notification-dismissed' ), 'post_tag' );
+			if ( $notification_dismissed_tag ) {
+				$args['tag__not_in'] = array( $notification_dismissed_tag->term_id );
+			}
+			foreach ( get_posts( $args ) as $post ) {
+				$meta = get_post_meta( $post->ID, 'activitypub', true );
+				if ( ! $meta ) {
+					continue;
 				}
-				foreach ( get_posts( $args ) as $post ) {
-					$meta = get_post_meta( $post->ID, 'activitypub', true );
-					if ( ! $meta ) {
-						continue;
-					}
-					$notifications[] = $this->get_notification_array( 'mention', mysql2date( 'Y-m-d\TH:i:s.000P', $post->post_date, false ), $this->get_friend_account_data( $post->post_author, $meta ), $this->get_status_array( $post ) );
-				}
+				$notifications[] = $this->get_notification_array( 'mention', mysql2date( 'Y-m-d\TH:i:s.000P', $post->post_date, false ), $this->get_friend_account_data( $post->post_author, $meta ), $this->get_status_array( $post ) );
 			}
 		}
 
