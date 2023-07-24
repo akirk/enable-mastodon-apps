@@ -1896,21 +1896,29 @@ class Mastodon_API {
 	}
 
 	public function api_notifications( $request ) {
+		$limit = $request->get_param( 'limit' ) ? $request->get_param( 'limit' ) : 15;
 		$notifications = array();
 		$types = $request->get_param( 'types' );
 		$args = array(
-			'posts_per_page' => 15,
+			'posts_per_page' => $limit + 2,
 		);
 		$exclude_types = $request->get_param( 'exclude_types' );
 		if ( ( ! is_array( $types ) || in_array( 'mention', $types, true ) ) && ( ! is_array( $exclude_types ) || ! in_array( 'mention', $exclude_types, true ) ) ) {
 			$external_user = apply_filters( 'mastodon_api_external_mentions_user', null );
-			if ( ! $external_user || $external_user instanceof \WP_User ) {
+			if ( ! $external_user || ! ( $external_user instanceof \WP_User ) ) {
 				return array();
 			}
 			$args = $this->get_posts_query_args( $request );
-
-			$args['posts_per_page'] = 15;
+			$args['posts_per_page'] = $limit + 2;
 			$args['author'] = $external_user->ID;
+			if ( class_exists( '\Friends\User' ) ) {
+				if (
+					$external_user instanceof \Friends\User
+					&& method_exists( $external_user, 'modify_get_posts_args_by_author' )
+				) {
+					$args = $external_user->modify_get_posts_args_by_author( $args );
+				}
+			}
 
 			$notification_dismissed_tag = get_term_by( 'slug', apply_filters( 'mastodon_api_notification_dismissed_tag', 'notification-dismissed' ), 'post_tag' );
 			if ( $notification_dismissed_tag ) {
@@ -1939,7 +1947,7 @@ class Mastodon_API {
 		}
 
 		$ret = array();
-		$c = $request->get_param( 'limit' ) ? $request->get_param( 'limit' ) : 15;
+		$c = $limit;
 		foreach ( $notifications as $notification ) {
 			if ( $max_id ) {
 				if ( strval( $notification['id'] ) >= strval( $max_id ) ) {
