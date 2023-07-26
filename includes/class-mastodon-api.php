@@ -939,9 +939,15 @@ class Mastodon_API {
 
 	private function get_status_array( $post, $data = array() ) {
 		$meta = get_post_meta( $post->ID, 'activitypub', true );
+		$feed_url = get_post_meta( $post->ID, 'feed_url', true );
 		$user_id = $post->post_author;
 		if ( isset( $meta['attributedTo']['id'] ) && $meta['attributedTo']['id'] ) {
-			$user_id = $meta['attributedTo']['id'];
+			// It's an ActivityPub post, so the feed_url is the ActivityPub URL.
+			if ( $feed_url ) {
+				$user_id = $feed_url;
+			} else {
+				$user_id = $meta['attributedTo']['id'];
+			}
 		}
 
 		if ( ! $user_id ) {
@@ -2136,12 +2142,22 @@ class Mastodon_API {
 		$placeholder_image = 'https://files.mastodon.social/media_attachments/files/003/134/405/original/04060b07ddf7bb0b.png';
 		// $placeholder_image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 
-		if ( preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id ) || isset( $meta['attributedTo']['id'] ) ) {
-			if ( isset( $meta['attributedTo']['id'] ) ) {
-				$url = $meta['attributedTo']['id'];
-				$user_id = $meta['attributedTo']['id'];
-			} else {
-				$url = $this->get_activitypub_url( $user_id );
+		$url = false;
+		if (
+			preg_match( '#^https?://[^/]+/@[a-z0-9-]+$#i', $user_id )
+			|| preg_match( '#^https?://[^/]+/(users|author)/[a-z0-9-]+$#i', $user_id )
+		) {
+			$url = $user_id;
+		}
+		if (
+			preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id ) || $url ) {
+			if ( ! $url ) {
+				if ( isset( $meta['attributedTo']['id'] ) ) {
+					$url = $meta['attributedTo']['id'];
+					$user_id = $meta['attributedTo']['id'];
+				} else {
+					$url = $this->get_activitypub_url( $user_id );
+				}
 			}
 			if ( ! $url ) {
 				$data = new \WP_Error( 'user-not-found', 'User not found.', array( 'status' => 404 ) );
