@@ -96,10 +96,13 @@ class Mastodon_API {
 			'api/v1/push/subscription',
 			'api/v1/streaming',
 			'api/v2/media',
+			'api/v2/suggestions',
 		);
 		$parametrized = array(
 			'api/v1/accounts/([^/]+)/featured_tags'        => 'api/v1/accounts/$matches[1]/featured_tags',
 			'api/v1/accounts/([^/]+)/follow'               => 'api/v1/accounts/$matches[1]/follow',
+			'api/v1/accounts/([^/]+)/followers'            => 'api/v1/accounts/$matches[1]/followers',
+			'api/v1/accounts/([^/]+)/following'            => 'api/v1/accounts/$matches[1]/following',
 			'api/v1/accounts/([^/]+)/unfollow'             => 'api/v1/accounts/$matches[1]/unfollow',
 			'api/v1/accounts/([^/]+)/statuses'             => 'api/v1/accounts/$matches[1]/statuses',
 			'api/v1/statuses/((?:comment-)?[0-9]+)/context' => 'api/v1/statuses/$matches[1]/context',
@@ -522,6 +525,16 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
+			'api/v2/suggestions',
+			array(
+				'methods'             => array( 'GET', 'OPTIONS' ),
+				'callback'            => '__return_empty_array',
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
 			'api/v1/push/subscription',
 			array(
 				'methods'             => array( 'GET', 'POST', 'OPTIONS' ),
@@ -559,6 +572,27 @@ class Mastodon_API {
 				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/accounts/(?P<user_id>[^/]+)/followers',
+			array(
+				'methods'             => array( 'GET', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_account_followers' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/accounts/(?P<user_id>[^/]+)/following',
+			array(
+				'methods'             => array( 'GET', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_account_following' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
 		register_rest_route(
 			self::PREFIX,
 			'api/v1/accounts/(?P<user_id>[^/]+)/follow',
@@ -1722,6 +1756,12 @@ class Mastodon_API {
 		return $this->get_posts( $args );
 	}
 
+	public function api_account_followers( $request ) {
+
+	}
+	public function api_account_following( $request ) {
+
+	}
 	public function api_account_follow( $request ) {
 		$user_id = $request->get_param( 'user_id' );
 		$relationships = array();
@@ -2208,9 +2248,12 @@ class Mastodon_API {
 			$posts = array(
 				'status' => count_user_posts( $user->ID, 'post', true ),
 			);
+			if ( class_exists( '\Friends\User_Query' ) && method_exists( '\Friends\User_Query', 'all_associated_users' ) ) {
+				$following_count = \Friends\User_Query::all_associated_users()->get_total();
+			}
 		}
 		if ( get_current_user_id() === $user->ID ) {
-			if ( class_exists( '\Activitypub\Peer\Followers' ) ) {
+			if ( class_exists( '\Activitypub\Peer\Followers' ) && method_exists( '\Activitypub\Peer\Followers', 'get_followers' ) ) {
 				$followers_count = count( \Activitypub\Peer\Followers::get_followers( $user->ID ) );
 			}
 		}
