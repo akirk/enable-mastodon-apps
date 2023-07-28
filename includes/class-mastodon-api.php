@@ -1289,14 +1289,31 @@ class Mastodon_API {
 	public function api_post_media( $request ) {
 		$media = $request->get_file_params();
 		if ( empty( $media ) ) {
-			return new \WP_Error( 'mastodon_api_post_media', 'Media is empty', array( 'status' => 400 ) );
+			return new \WP_Error( 'mastodon_api_post_media', 'Media is empty', array( 'status' => 422 ) );
 		}
 
 		require_once( ABSPATH . 'wp-admin/includes/media.php' );
 		require_once( ABSPATH . 'wp-admin/includes/file.php' );
 		require_once( ABSPATH . 'wp-admin/includes/image.php' );
 
+		if ( ! isset( $media['file']['name'] ) || false === strpos( $media['file']['name'], '.' ) ) {
+			error_log( 'setting name' . $media['file']['type'] );
+			switch ( $media['file']['type'] ) {
+				case 'image/png':
+					$media['file']['name'] = 'image.png';
+					break;
+				case 'image/jpeg':
+					$media['file']['name'] = 'image.jpg';
+					break;
+				case 'image/gif':
+					$media['file']['name'] = 'image.gif';
+					break;
+			}
+		}
 		$attachment_id = \media_handle_sideload( $media['file'] );
+		if ( is_wp_error( $attachment_id ) ) {
+			return new \WP_Error( 'mastodon_api_post_media', $attachment_id->get_error_message(), array( 'status' => 422 ) );
+		}
 
 		$description = $request->get_param( 'description' );
 		if ( $description ) {
@@ -1308,13 +1325,30 @@ class Mastodon_API {
 			);
 		}
 
+		$thumb = \wp_get_attachment_image_src( $attachment_id, 'thumbnail' );
+		$meta = \wp_get_attachment_metadata( $attachment_id );
+
 		return array(
-			'id'          => $attachment_id,
+			'id'          => strval( $attachment_id ),
 			'type'        => 'image',
 			'url'         => \wp_get_attachment_url( $attachment_id ),
-			'preview_url' => \wp_get_attachment_url( $attachment_id ),
+			'preview_url' => \wp_get_attachment_url( $attachment_id, 'small' ),
 			'text_url'    => \wp_get_attachment_url( $attachment_id ),
 			'description' => $description,
+			'meta'        => array(
+				'original' => array(
+					'width'  => $meta['width'],
+					'height' => $meta['height'],
+					'size'   => $meta['width'] . 'x' . $meta['height'],
+					'aspect' => $meta['width'] / $meta['height'],
+				),
+				'small'    => array(
+					'width'  => $thumb[1],
+					'height' => $thumb[2],
+					'size'   => $thumb[1] . 'x' . $thumb[2],
+					'aspect' => $thumb[1] / $thumb[2],
+				),
+			),
 		);
 	}
 
