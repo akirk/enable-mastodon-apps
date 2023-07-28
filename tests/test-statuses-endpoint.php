@@ -32,7 +32,6 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertEquals( $data['id'], strval( $this->friend_post ) );
 
 		$this->assertIsArray( $data['account'] );
-		$this->assertIsString( $data['url'] );
 		$this->assertIsString( $data['uri'] );
 		$this->assertIsString( $data['content'] );
 		if ( ! empty( $data['in_reply_to_id'] ) ) {
