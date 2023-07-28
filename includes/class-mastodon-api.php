@@ -980,38 +980,46 @@ class Mastodon_API {
 		$data = array_merge(
 			array(
 				'id'                     => strval( $post->ID ),
-				'uri'                    => $post->guid,
-				'url'                    => null,
-				'account'                => $account_data,
+				'created_at'             => mysql2date( 'Y-m-d\TH:i:s.000P', $post->post_date, false ),
 				'in_reply_to_id'         => null,
 				'in_reply_to_account_id' => null,
-				'reblog'                 => null,
-				'content'                => $this->normalize_whitespace( $post->post_title . PHP_EOL . $post->post_content ),
-				'created_at'             => mysql2date( 'Y-m-d\TH:i:s.000P', $post->post_date, false ),
-				'edited_at'              => null,
-				'emojis'                 => array(),
+				'sensitive'              => false,
+				'spoiler_text'           => '',
+				'visibility'             => 'publish' === $post->post_status ? 'public' : 'unlisted',
+				'language'               => null,
+				'uri'                    => $post->guid,
+				'url'                    => null,
 				'replies_count'          => 0,
 				'reblogs_count'          => 0,
 				'favourites_count'       => 0,
+				'edited_at'              => null,
+				'favourited'             => false,
 				'reblogged'              => $reblogged,
 				'reblogged_by'           => $reblogged_by,
 				'muted'                  => false,
-				'sensitive'              => false,
-				'favourited'             => false,
 				'bookmarked'             => false,
-				'spoiler_text'           => '',
-				'visibility'             => 'publish' === $post->post_status ? 'public' : 'unlisted',
-				'media_attachments'      => array(),
+				'content'                => $this->normalize_whitespace( $post->post_title . PHP_EOL . $post->post_content ),
 				'filtered'               => array(),
+				'reblog'                 => null,
+				'account'                => $account_data,
+				'media_attachments'      => array(),
 				'mentions'               => array(),
 				'tags'                   => array(),
-				'language'               => null,
+				'emojis'                 => array(),
 				'pinned'                 => is_sticky( $post->ID ),
 				'card'                   => null,
 				'poll'                   => null,
 			),
 			$data
 		);
+
+		if ( ! $reblogged ) {
+			unset( $data['reblogged_by'] );
+		}
+
+		if ( ! $data['pinned'] ) {
+			unset( $data['pinned'] );
+		}
 
 		// get the attachments for the post.
 		$attachments = get_attached_media( '', $post->ID );
@@ -1053,7 +1061,7 @@ class Mastodon_API {
 								'width'  => intval( $img_tag['width'] ),
 								'height' => intval( $img_tag['height'] ),
 								'size'   => $img_tag['width'] . 'x' . $img_tag['height'],
-								'aspect' => $img_tag['width'] / $img_tag['height'],
+								'aspect' => $img_tag['width'] / max( 1, $img_tag['height'] ),
 							),
 							'description' => isset( $attachment ) && $attachment ? $attachment->post_excerpt : '',
 						),
@@ -1093,9 +1101,11 @@ class Mastodon_API {
 
 		if ( isset( $meta['reblog'] ) && $meta['reblog'] && isset( $meta['attributedTo']['id'] ) ) {
 			$data['reblog'] = $data;
+			$data['reblog']['id'] = strval( crc32( $data['reblog']['id'] ) );
 			$data['media_attachments'] = array();
 			$data['mentions'] = array();
 			$data['tags'] = array();
+			unset( $data['pinned'] );
 			$data['content'] = '';
 			$data['reblog']['account'] = $this->get_friend_account_data( $this->get_acct( $meta['attributedTo']['id'] ), $meta );
 			if ( ! $data['reblog']['account']['acct'] ) {
@@ -2218,25 +2228,25 @@ class Mastodon_API {
 			$data = array(
 				'id'              => $account,
 				'username'        => '',
+				'acct'            => $account,
 				'display_name'    => '',
+				'locked'          => false,
+				'bot'             => false,
+				'discoverable'    => true,
+				'group'           => false,
+				'created_at'      => gmdate( 'Y-m-d\TH:i:s.000P' ),
+				'note'            => '',
+				'url'             => '',
 				'avatar'          => $placeholder_image,
 				'avatar_static'   => $placeholder_image,
 				'header'          => $placeholder_image,
 				'header_static'   => $placeholder_image,
-				'acct'            => $account,
-				'note'            => '',
-				'created_at'      => gmdate( 'Y-m-d\TH:i:s.000P' ),
 				'followers_count' => 0,
 				'following_count' => 0,
 				'statuses_count'  => 0,
-				'last_status_at'  => gmdate( 'Y-m-d\TH:i:s.000P' ),
-				'fields'          => array(),
-				'locked'          => false,
+				'last_status_at'  => gmdate( 'Y-m-d' ),
 				'emojis'          => array(),
-				'url'             => '',
-				'bot'             => false,
-				'group'           => false,
-				'discoverable'    => true,
+				'fields'          => array(),
 			);
 			$data = $this->update_account_data_with_meta( $data, $meta, $full_metadata );
 
