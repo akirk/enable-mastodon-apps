@@ -1332,7 +1332,7 @@ class Mastodon_API {
 			'id'          => strval( $attachment_id ),
 			'type'        => 'image',
 			'url'         => \wp_get_attachment_url( $attachment_id ),
-			'preview_url' => \wp_get_attachment_url( $attachment_id, 'small' ),
+			'preview_url' => $thumb[0],
 			'text_url'    => \wp_get_attachment_url( $attachment_id ),
 			'description' => $description,
 			'meta'        => array(
