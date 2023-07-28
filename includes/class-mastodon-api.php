@@ -36,6 +36,7 @@ class Mastodon_API {
 
 	const PREFIX = 'enable-mastodon-apps';
 	const APP_TAXONOMY = 'mastodon-app';
+	const REMOTE_USER_TAXONOMY = 'mastodon-api-remote-user';
 
 	/**
 	 * Constructor
@@ -44,6 +45,7 @@ class Mastodon_API {
 		Mastodon_App::register_taxonomy();
 		$this->oauth = new Mastodon_OAuth();
 		$this->register_hooks();
+		$this->register_taxonomy();
 		new Mastodon_Admin( $this->oauth );
 	}
 
@@ -68,6 +70,23 @@ class Mastodon_API {
 		}
 	}
 
+	public function register_taxonomy() {
+		$args = array(
+			'labels'       => array(
+				'name'          => 'Mastodon Remote Users',
+				'singular_name' => 'Mastodon Remote User',
+				'menu_name'     => 'Mastodon Remote Users',
+			),
+			'public'       => false,
+			'show_ui'      => false,
+			'show_in_menu' => false,
+			'show_in_rest' => false,
+			'rewrite'      => false,
+		);
+
+		register_taxonomy( self::REMOTE_USER_TAXONOMY, null, $args );
+	}
+
 	public function rewrite_rules() {
 		$existing_rules = get_option( 'rewrite_rules' );
 		$needs_flush = false;
@@ -75,6 +94,7 @@ class Mastodon_API {
 		$generic = array(
 			'api/v1/accounts/relationships',
 			'api/v1/accounts/verify_credentials',
+			'api/v1/accounts/familiar_followers',
 			'api/v1/announcements',
 			'api/v1/apps',
 			'api/v1/bookmarks',
@@ -348,6 +368,14 @@ class Mastodon_API {
 				'methods'             => 'GET',
 				'callback'            => '__return_empty_array',
 				'permission_callback' => array( $this, 'public_api_permission' ),
+			)
+		);      register_rest_route(
+			self::PREFIX,
+			'api/v1/accounts/familiar_followers',
+			array(
+				'methods'             => 'GET',
+				'callback'            => '__return_empty_array',
+				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
 		register_rest_route(
@@ -922,6 +950,19 @@ class Mastodon_API {
 		);
 	}
 
+	private function get_user_id_from_request( $request ) {
+		$user_id = $request->get_param( 'user_id' );
+
+		if ( $user_id > 1e10 ) {
+			$remote_user_id = get_term_by( 'id', $user_id - 1e10, self::REMOTE_USER_TAXONOMY );
+			if ( $remote_user_id ) {
+				return $remote_user_id->name;
+			}
+		}
+
+		return $user_id;
+	}
+
 	/**
 	 * Strip empty whitespace
 	 *
@@ -940,8 +981,12 @@ class Mastodon_API {
 	private function get_status_array( $post, $data = array() ) {
 		$meta = get_post_meta( $post->ID, 'activitypub', true );
 		$feed_url = get_post_meta( $post->ID, 'feed_url', true );
+
 		$user_id = $post->post_author;
-		if ( isset( $meta['attributedTo']['id'] ) && $meta['attributedTo']['id'] ) {
+		if ( class_exists( '\Friends\User' ) && $post instanceof \WP_Post ) {
+			$user = \Friends\User::get_post_author( $post );
+			$user_id = $user->ID;
+		} elseif ( isset( $meta['attributedTo']['id'] ) && $meta['attributedTo']['id'] ) {
 			// It's an ActivityPub post, so the feed_url is the ActivityPub URL.
 			if ( $feed_url ) {
 				$user_id = $feed_url;
@@ -1322,7 +1367,6 @@ class Mastodon_API {
 		require_once( ABSPATH . 'wp-admin/includes/image.php' );
 
 		if ( ! isset( $media['file']['name'] ) || false === strpos( $media['file']['name'], '.' ) ) {
-			error_log( 'setting name' . $media['file']['type'] );
 			switch ( $media['file']['type'] ) {
 				case 'image/png':
 					$media['file']['name'] = 'image.png';
@@ -1760,7 +1804,8 @@ class Mastodon_API {
 	}
 
 	public function api_account_statuses( $request ) {
-		$user_id = rawurldecode( $request->get_param( 'user_id' ) );
+		$user_id = $this->get_user_id_from_request( $request );
+
 		if ( preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id ) ) {
 			$url = $this->get_activitypub_url( $user_id );
 			if ( $url ) {
@@ -1777,6 +1822,7 @@ class Mastodon_API {
 		}
 
 		$args = $this->get_posts_query_args( $request );
+		var_dump( $args );
 		if ( empty( $args ) ) {
 			return array();
 		}
@@ -1788,15 +1834,11 @@ class Mastodon_API {
 	}
 
 	public function api_account_follow( $request ) {
-		$user_id = $request->get_param( 'user_id' );
+		$user_id = $this->get_user_id_from_request( $request );
 		$relationships = array();
 
-		if ( is_numeric( $user_id ) && class_exists( '\Friends\User' ) ) {
-			$user = \Friends\User::get_user_by_id( $user_id );
-			if ( ! $user || is_wp_error( $user ) ) {
-				return array();
-			}
-
+		$user = \Friends\User::get_user_by_id( $user_id );
+		if ( $user ) {
 			foreach ( $user->get_feeds() as $feed ) {
 				if ( $feed->get_parser() !== 'activitypub' ) {
 					continue;
@@ -1835,7 +1877,7 @@ class Mastodon_API {
 	}
 
 	public function api_account_unfollow( $request ) {
-		$user_id = $request->get_param( 'user_id' );
+		$user_id = $this->get_user_id_from_request( $request );
 		$relationships = array();
 
 		if ( is_numeric( $user_id ) && class_exists( '\Friends\User' ) ) {
@@ -1887,29 +1929,29 @@ class Mastodon_API {
 				'endorsed'             => false,
 				'note'                 => '',
 			);
-			if ( is_numeric( $user_id ) ) {
-				$user = new \WP_User( $user_id );
-				if ( ! $user || is_wp_error( $user ) ) {
-					continue;
+
+			if ( $user_id > 1e10 ) {
+				$remote_user_id = get_term_by( 'id', $user_id - 1e10, self::REMOTE_USER_TAXONOMY );
+				if ( $remote_user_id ) {
+					$user_id = $remote_user_id->name;
 				}
+			}
 
-				if ( $user->has_cap( 'friends_plugin' ) ) {
-					if ( class_exists( '\Friends\User' ) ) {
-						$user = new \Friends\User( $user->ID );
-
-						foreach ( $user->get_feeds() as $feed ) {
-							if ( $feed->get_parser() !== 'activitypub' ) {
-								continue;
-							}
-
-							if ( $feed->is_active() ) {
-								$relationship['following'] = true;
-							}
+			if ( class_exists( '\Friends\User' ) ) {
+				$user = \Friends\User::get_user_by_id( $user_id );
+				if ( $user ) {
+					foreach ( $user->get_feeds() as $feed ) {
+						if ( $feed->get_parser() !== 'activitypub' ) {
+							continue;
 						}
 
-						if ( $user->has_cap( 'friend_request' ) ) {
-							$relationship['requested'] = true;
+						if ( $feed->is_active() ) {
+							$relationship['following'] = true;
 						}
+					}
+
+					if ( $user->has_cap( 'friend_request' ) ) {
+						$relationship['requested'] = true;
 					}
 				}
 			} elseif ( preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id ) ) {
@@ -2053,7 +2095,8 @@ class Mastodon_API {
 	}
 
 	public function api_account( $request ) {
-		return $this->get_friend_account_data( rawurldecode( $request->get_param( 'user_id' ) ), array(), true );
+		$user_id = $this->get_user_id_from_request( $request );
+		return $this->get_friend_account_data( $user_id, array(), true );
 	}
 
 	/**
@@ -2191,9 +2234,10 @@ class Mastodon_API {
 		if ( $is_external_mention && isset( $meta['attributedTo']['id'] ) ) {
 			$user_id = $meta['attributedTo']['id'];
 		}
+
 		$cache_key = 'account-' . $user_id;
 		$ret = wp_cache_get( $cache_key, 'enable-mastodon-apps' );
-		if ( false !== $ret ) {
+		if ( false !== $ret && ! \str_starts_with( $user_id, 'friends-virtual-user' ) ) {
 			return $ret;
 		}
 
@@ -2208,8 +2252,11 @@ class Mastodon_API {
 		) {
 			$url = $user_id;
 		}
+
 		if (
-			preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id ) || $url ) {
+			preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id )
+			|| $url
+		) {
 			if ( ! $url ) {
 				if ( isset( $meta['attributedTo']['id'] ) ) {
 					$url = $meta['attributedTo']['id'];
@@ -2225,8 +2272,34 @@ class Mastodon_API {
 			}
 			$account = $this->get_acct( $user_id );
 			$meta = apply_filters( 'friends_get_activitypub_metadata', array(), $url );
+
+			if ( $account ) {
+				$remote_user_id = get_term_by( 'name', $account, self::REMOTE_USER_TAXONOMY );
+				if ( $remote_user_id ) {
+					$remote_user_id = $remote_user_id->term_id;
+				} else {
+					$remote_user_id = wp_insert_term( $account, self::REMOTE_USER_TAXONOMY );
+					if ( ! is_wp_error( $remote_user_id ) ) {
+						$remote_user_id = $remote_user_id['term_id'];
+					}
+				}
+			} elseif ( $user_id ) {
+				$remote_user_id = get_term_by( 'name', $user_id, self::REMOTE_USER_TAXONOMY );
+				if ( $remote_user_id ) {
+					$remote_user_id = $remote_user_id->term_id;
+				} else {
+					$remote_user_id = wp_insert_term( $user_id, self::REMOTE_USER_TAXONOMY );
+					if ( ! is_wp_error( $remote_user_id ) ) {
+						$remote_user_id = $remote_user_id['term_id'];
+					}
+				}
+			}
+
+			if ( ! $remote_user_id ) {
+				return null;
+			}
 			$data = array(
-				'id'              => $account,
+				'id'              => strval( 1e10 + $remote_user_id ),
 				'username'        => '',
 				'acct'            => $account,
 				'display_name'    => '',
@@ -2258,7 +2331,21 @@ class Mastodon_API {
 		$user = false;
 		if ( class_exists( '\Friends\User' ) ) {
 			$user = \Friends\User::get_user_by_id( $user_id );
+
+			if ( $user instanceof \Friends\Subscription ) {
+				$remote_user_id = get_term_by( 'name', $user->ID, self::REMOTE_USER_TAXONOMY );
+				if ( $remote_user_id ) {
+					$remote_user_id = $remote_user_id->term_id;
+				} else {
+					$remote_user_id = wp_insert_term( $user->ID, self::REMOTE_USER_TAXONOMY );
+					if ( ! is_wp_error( $remote_user_id ) ) {
+						$remote_user_id = $remote_user_id['term_id'];
+					}
+				}
+				$user->ID = 1e10 + $remote_user_id;
+			}
 		}
+
 		if ( ! $user || is_wp_error( $user ) ) {
 			$user = new \WP_User( $user_id );
 			if ( ! $user || is_wp_error( $user ) ) {
