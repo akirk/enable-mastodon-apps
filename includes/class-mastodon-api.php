@@ -126,7 +126,7 @@ class Mastodon_API {
 				// Add a specific rewrite rule so that we can also catch requests without our prefix.
 				$needs_flush = true;
 			}
-			add_rewrite_rule( $rule, 'index.php?rest_route=/' . self::PREFIX . '/' . $rule, 'top' );
+			add_rewrite_rule( '^' . $rule, 'index.php?rest_route=/' . self::PREFIX . '/' . $rule, 'top' );
 		}
 
 		foreach ( $parametrized as $rule => $rewrite ) {
@@ -134,7 +134,7 @@ class Mastodon_API {
 				// Add a specific rewrite rule so that we can also catch requests without our prefix.
 				$needs_flush = true;
 			}
-			add_rewrite_rule( $rule, 'index.php?rest_route=/' . self::PREFIX . '/' . $rewrite, 'top' );
+			add_rewrite_rule( '^' . $rule, 'index.php?rest_route=/' . self::PREFIX . '/' . $rewrite, 'top' );
 		}
 
 		if ( $needs_flush ) {
@@ -981,7 +981,7 @@ class Mastodon_API {
 			array(
 				'id'                     => strval( $post->ID ),
 				'uri'                    => $post->guid,
-				'url'                    => $post->guid,
+				'url'                    => null,
 				'account'                => $account_data,
 				'in_reply_to_id'         => null,
 				'in_reply_to_account_id' => null,
@@ -997,12 +997,15 @@ class Mastodon_API {
 				'reblogged_by'           => $reblogged_by,
 				'muted'                  => false,
 				'sensitive'              => false,
+				'favourited'             => false,
+				'bookmarked'             => false,
 				'spoiler_text'           => '',
 				'visibility'             => 'publish' === $post->post_status ? 'public' : 'unlisted',
 				'media_attachments'      => array(),
+				'filtered'               => array(),
 				'mentions'               => array(),
 				'tags'                   => array(),
-				'language'               => 'en',
+				'language'               => null,
 				'pinned'                 => is_sticky( $post->ID ),
 				'card'                   => null,
 				'poll'                   => null,
@@ -1038,14 +1041,22 @@ class Mastodon_API {
 						}
 					}
 					$data['media_attachments'][] = array(
-						'id'          => strval( $media_id ),
-						'type'        => 'image',
-						'url'         => $url,
-						'preview_url' => $url,
-						'text_url'    => $url,
-						'width'       => $img_tag['width'],
-						'height'      => $img_tag['height'],
-						'description' => isset( $attachment ) && $attachment ? $attachment->post_excerpt : '',
+						'id'                 => strval( $media_id ),
+						'type'               => 'image',
+						'url'                => $url,
+						'preview_remote_url' => $url,
+						'remote_url'         => $url,
+						'preview_url'        => $url,
+						'text_url'           => $url,
+						'meta'               => array(
+							'original'    => array(
+								'width'  => intval( $img_tag['width'] ),
+								'height' => intval( $img_tag['height'] ),
+								'size'   => $img_tag['width'] . 'x' . $img_tag['height'],
+								'aspect' => $img_tag['width'] / $img_tag['height'],
+							),
+							'description' => isset( $attachment ) && $attachment ? $attachment->post_excerpt : '',
+						),
 					);
 				}
 			}
@@ -1082,6 +1093,10 @@ class Mastodon_API {
 
 		if ( isset( $meta['reblog'] ) && $meta['reblog'] && isset( $meta['attributedTo']['id'] ) ) {
 			$data['reblog'] = $data;
+			$data['media_attachments'] = array();
+			$data['mentions'] = array();
+			$data['tags'] = array();
+			$data['content'] = '';
 			$data['reblog']['account'] = $this->get_friend_account_data( $this->get_acct( $meta['attributedTo']['id'] ), $meta );
 			if ( ! $data['reblog']['account']['acct'] ) {
 				$data['reblog'] = null;
@@ -2219,14 +2234,8 @@ class Mastodon_API {
 				'locked'          => false,
 				'emojis'          => array(),
 				'url'             => '',
-				'source'          => array(
-					'privacy'   => 'public',
-					'sensitive' => false,
-					'language'  => 'en',
-					'note'      => '',
-					'fields'    => array(),
-				),
 				'bot'             => false,
+				'group'           => false,
 				'discoverable'    => true,
 			);
 			$data = $this->update_account_data_with_meta( $data, $meta, $full_metadata );
