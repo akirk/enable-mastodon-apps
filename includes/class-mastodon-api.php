@@ -95,6 +95,7 @@ class Mastodon_API {
 			'api/v1/accounts/relationships',
 			'api/v1/accounts/verify_credentials',
 			'api/v1/accounts/familiar_followers',
+			'api/v1/accounts/search',
 			'api/v1/announcements',
 			'api/v1/apps',
 			'api/v1/bookmarks',
@@ -378,12 +379,23 @@ class Mastodon_API {
 				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
+
 		register_rest_route(
 			self::PREFIX,
 			'api/v1/accounts/verify_credentials',
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_verify_credentials' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/accounts/search',
+			array(
+				'methods'             => array( 'GET', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_accounts_search' ),
 				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
@@ -1457,6 +1469,12 @@ class Mastodon_API {
 		return $this->get_posts( $args, $request->get_param( 'min_id' ), $request->get_param( 'max_id' ) );
 	}
 
+	public function api_accounts_search( $request ) {
+		$request->set_param( 'type', 'accounts' );
+		$ret = $this->api_search( $request );
+		return $ret['accounts'];
+	}
+
 	public function api_search( $request ) {
 		$type = $request->get_param( 'type' );
 		$ret = array(
@@ -1465,7 +1483,7 @@ class Mastodon_API {
 		);
 		if ( ! $type || 'accounts' === $type ) {
 			if ( preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $request->get_param( 'q' ) ) && ! $request->get_param( 'offset' ) ) {
-				$ret['accounts'][] = $this->get_friend_account_data( $request->get_param( 'q' ) );
+				$ret['accounts'][] = $this->get_friend_account_data( $request->get_param( 'q' ), array(), true );
 			}
 			$query = new \WP_User_Query(
 				array(
@@ -1822,11 +1840,20 @@ class Mastodon_API {
 		}
 
 		$args = $this->get_posts_query_args( $request );
-		var_dump( $args );
 		if ( empty( $args ) ) {
 			return array();
 		}
 		$args['author'] = $user_id;
+		if ( class_exists( '\Friends\User' ) ) {
+			$user = \Friends\User::get_user_by_id( $user_id );
+
+			if (
+				$user instanceof \Friends\User
+				&& method_exists( $user, 'modify_get_posts_args_by_author' )
+			) {
+				$args = $user->modify_get_posts_args_by_author( $args );
+			}
+		}
 
 		$args = apply_filters( 'mastodon_api_account_statuses_args', $args, $request );
 
@@ -2237,7 +2264,7 @@ class Mastodon_API {
 
 		$cache_key = 'account-' . $user_id;
 		$ret = wp_cache_get( $cache_key, 'enable-mastodon-apps' );
-		if ( false !== $ret && ! \str_starts_with( $user_id, 'friends-virtual-user' ) ) {
+		if ( false !== $ret ) {
 			return $ret;
 		}
 
@@ -2321,6 +2348,7 @@ class Mastodon_API {
 				'emojis'          => array(),
 				'fields'          => array(),
 			);
+
 			$data = $this->update_account_data_with_meta( $data, $meta, $full_metadata );
 
 			wp_cache_set( $cache_key, $data, 'enable-mastodon-apps' );
@@ -2502,7 +2530,7 @@ class Mastodon_API {
 			return $body;
 		}
 
-		$url = \add_query_arg( 'resource', 'acct:' . $id, 'https://' . $host . '/.well-known/webfinger' );
+		$url = \add_query_arg( 'resource', 'acct:' . ltrim( $id, '@' ), 'https://' . $host . '/.well-known/webfinger' );
 		if ( ! self::check_url( $url ) ) {
 			$response = new \WP_Error( 'invalid_webfinger_url', null, $url );
 			\set_transient( $transient_key, $response, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
