@@ -966,7 +966,7 @@ class Mastodon_API {
 		$user_id = $request->get_param( 'user_id' );
 
 		if ( $user_id > 1e10 ) {
-			$remote_user_id = get_term_by( 'id', $user_id - 1e10, self::REMOTE_USER_TAXONOMY );
+			$remote_user_id = get_term_by( 'id', intval( $user_id ) - 1e10, self::REMOTE_USER_TAXONOMY );
 			if ( $remote_user_id ) {
 				return $remote_user_id->name;
 			}
