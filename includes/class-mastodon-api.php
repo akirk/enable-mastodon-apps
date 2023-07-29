@@ -1091,6 +1091,7 @@ class Mastodon_API {
 				if ( ! empty( $img_tag['url'] ) ) {
 					$url = $img_tag['url'];
 					$media_id = crc32( $url );
+					$img_meta = array();
 					foreach ( $attachments as $attachment_id => $attachment ) {
 						if (
 						wp_get_attachment_url( $attachment_id ) === $url
@@ -1102,6 +1103,14 @@ class Mastodon_API {
 							$img_tag['width'] = $attachment_metadata['width'];
 							$img_tag['height'] = $attachment_metadata['height'];
 							unset( $attachments[ $attachment_id ] );
+
+							$img_meta['original'] = array(
+								'width'  => intval( $img_tag['width'] ),
+								'height' => intval( $img_tag['height'] ),
+								'size'   => $img_tag['width'] . 'x' . $img_tag['height'],
+								'aspect' => $img_tag['width'] / max( 1, $img_tag['height'] ),
+							);
+
 							break;
 						}
 					}
@@ -1113,14 +1122,11 @@ class Mastodon_API {
 						'remote_url'         => $url,
 						'preview_url'        => $url,
 						'text_url'           => $url,
-						'meta'               => array(
-							'original'    => array(
-								'width'  => intval( $img_tag['width'] ),
-								'height' => intval( $img_tag['height'] ),
-								'size'   => $img_tag['width'] . 'x' . $img_tag['height'],
-								'aspect' => $img_tag['width'] / max( 1, $img_tag['height'] ),
-							),
-							'description' => isset( $attachment ) && $attachment ? $attachment->post_excerpt : '',
+						'meta'               => array_merge(
+							$img_meta,
+							array(
+								'description' => isset( $attachment ) && $attachment ? $attachment->post_excerpt : '',
+							)
 						),
 					);
 				}
@@ -1148,8 +1154,14 @@ class Mastodon_API {
 				'url'         => $url,
 				'preview_url' => $url,
 				'text_url'    => $url,
-				'width'       => $attachment_metadata['width'],
-				'height'      => $attachment_metadata['height'],
+				'meta'        => array(
+					'original' => array(
+						'width'  => intval( $attachment_metadata['width'] ),
+						'height' => intval( $attachment_metadata['height'] ),
+						'size'   => $attachment_metadata['width'] . 'x' . $attachment_metadata['height'],
+						'aspect' => $attachment_metadata['width'] / max( 1, $attachment_metadata['height'] ),
+					),
+				),
 				'description' => $attachment->post_excerpt,
 			);
 		}
@@ -1738,24 +1750,31 @@ class Mastodon_API {
 		if ( ! isset( $activity['object']['type'] ) || 'Note' !== $activity['object']['type'] ) {
 			return null;
 		}
+
+		$id_parts = explode( '/', $activity['object']['id'] );
 		return array(
-			'id'                     => $activity['id'],
-			'uri'                    => $activity['object']['id'],
-			'url'                    => $activity['object']['id'],
-			'account'                => $this->get_friend_account_data( $user_id ),
+			'id'                     => array_pop( $id_parts ),
+			'created_at'             => $activity['object']['published'],
 			'in_reply_to_id'         => $activity['object']['inReplyTo'],
 			'in_reply_to_account_id' => null,
-			'reblog'                 => null,
-			'content'                => $activity['object']['content'],
-			'created_at'             => $activity['object']['published'],
-			'emojis'                 => array(),
-			'favourites_count'       => 0,
-			'reblogged'              => false,
-			'reblogged_by'           => array(),
-			'muted'                  => false,
 			'sensitive'              => $activity['object']['sensitive'],
 			'spoiler_text'           => '',
-			'visibility'             => 'public',
+			'language'               => null,
+			'uri'                    => $activity['object']['id'],
+			'url'                    => $activity['object']['url'],
+			'muted'                  => false,
+			'replies_count'          => 0, // could be fetched.
+			'reblogs_count'          => 0,
+			'favourites_count'       => 0,
+			'edited_at'              => null,
+			'favourited'             => false,
+			'reblogged'              => false,
+			'muted'                  => false,
+			'bookmarked'             => false,
+			'content'                => $activity['object']['content'],
+			'filtered'               => array(),
+			'reblog'                 => null,
+			'account'                => $this->get_friend_account_data( $user_id ),
 			'media_attachments'      => array_map(
 				function( $attachment ) {
 					return array(
@@ -1764,14 +1783,19 @@ class Mastodon_API {
 						'url'         => $attachment['url'],
 						'preview_url' => $attachment['url'],
 						'text_url'    => $attachment['url'],
-						'width'       => $attachment['width'],
-						'height'      => $attachment['height'],
+						'meta'        => array(
+							'original' => array(
+								'width'  => intval( $attachment['width'] ),
+								'height' => intval( $attachment['height'] ),
+								'size'   => $attachment['width'] . 'x' . $attachment['height'],
+								'aspect' => $attachment['width'] / max( 1, $attachment['height'] ),
+							),
+						),
 						'description' => $attachment['description'],
 					);
 				},
 				$activity['object']['attachment']
 			),
-
 			'mentions'               => array_values(
 				array_map(
 					function( $mention ) {
@@ -1814,8 +1838,7 @@ class Mastodon_API {
 				)
 			),
 
-			'language'               => 'en',
-			'pinned'                 => false,
+			'emojis'                 => array(),
 			'card'                   => null,
 			'poll'                   => null,
 		);
@@ -2263,14 +2286,6 @@ class Mastodon_API {
 		}
 
 		$cache_key = 'account-' . $user_id;
-		$ret = wp_cache_get( $cache_key, 'enable-mastodon-apps' );
-		if ( false !== $ret ) {
-			return $ret;
-		}
-
-		// Data URL of an 1x1px transparent png.
-		$placeholder_image = 'https://files.mastodon.social/media_attachments/files/003/134/405/original/04060b07ddf7bb0b.png';
-		// $placeholder_image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 
 		$url = false;
 		if (
@@ -2284,21 +2299,7 @@ class Mastodon_API {
 			preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id )
 			|| $url
 		) {
-			if ( ! $url ) {
-				if ( isset( $meta['attributedTo']['id'] ) ) {
-					$url = $meta['attributedTo']['id'];
-					$user_id = $meta['attributedTo']['id'];
-				} else {
-					$url = $this->get_activitypub_url( $user_id );
-				}
-			}
-			if ( ! $url ) {
-				$data = new \WP_Error( 'user-not-found', 'User not found.', array( 'status' => 404 ) );
-				wp_cache_set( $cache_key, $data, 'enable-mastodon-apps' );
-				return $data;
-			}
 			$account = $this->get_acct( $user_id );
-			$meta = apply_filters( 'friends_get_activitypub_metadata', array(), $url );
 
 			if ( $account ) {
 				$remote_user_id = get_term_by( 'name', $account, self::REMOTE_USER_TAXONOMY );
@@ -2322,9 +2323,43 @@ class Mastodon_API {
 				}
 			}
 
+			if ( $remote_user_id ) {
+				$cache_key = 'account-' . ( 1e10 + $remote_user_id );
+			}
+		}
+
+		$ret = wp_cache_get( $cache_key, 'enable-mastodon-apps' );
+		if ( false !== $ret ) {
+			return $ret;
+		}
+
+		// Data URL of an 1x1px transparent png.
+		$placeholder_image = 'https://files.mastodon.social/media_attachments/files/003/134/405/original/04060b07ddf7bb0b.png';
+		// $placeholder_image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
+		if (
+			preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id )
+			|| $url
+		) {
 			if ( ! $remote_user_id ) {
 				return null;
 			}
+
+			if ( ! $url ) {
+				if ( isset( $meta['attributedTo']['id'] ) ) {
+					$url = $meta['attributedTo']['id'];
+					$user_id = $meta['attributedTo']['id'];
+				} else {
+					$url = $this->get_activitypub_url( $user_id );
+				}
+			}
+			if ( ! $url ) {
+				$data = new \WP_Error( 'user-not-found', 'User not found.', array( 'status' => 404 ) );
+				wp_cache_set( $cache_key, $data, 'enable-mastodon-apps' );
+				return $data;
+			}
+			$meta = apply_filters( 'friends_get_activitypub_metadata', array(), $url );
+
 			$data = array(
 				'id'              => strval( 1e10 + $remote_user_id ),
 				'username'        => '',
