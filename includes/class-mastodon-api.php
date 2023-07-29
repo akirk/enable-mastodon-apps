@@ -2086,7 +2086,12 @@ class Mastodon_API {
 				if ( ! $meta ) {
 					continue;
 				}
-				$notifications[] = $this->get_notification_array( 'mention', mysql2date( 'Y-m-d\TH:i:s.000P', $post->post_date, false ), $this->get_friend_account_data( $post->post_author, $meta ), $this->get_status_array( $post ) );
+				$user_id = $post->post_author;
+				if ( class_exists( '\Friends\User' ) && $post instanceof \WP_Post ) {
+					$user = \Friends\User::get_post_author( $post );
+					$user_id = $user->ID;
+				}
+				$notifications[] = $this->get_notification_array( 'mention', mysql2date( 'Y-m-d\TH:i:s.000P', $post->post_date, false ), $this->get_friend_account_data( $user_id, $meta ), $this->get_status_array( $post ) );
 			}
 		}
 
