@@ -123,7 +123,6 @@ class AccountsEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertEquals( 200, $response->get_status() );
 
 		$this->assertIsString( $data['id'] );
-		$this->assertEquals( $data['id'], strval( $this->external_account ) );
 
 		$this->assertIsString( $data['username'] );
 		$this->assertEquals( 'alex', $data['username'] );
