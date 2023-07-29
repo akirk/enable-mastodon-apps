@@ -6,7 +6,7 @@
 - Tested up to: 6.2
 - Requires PHP: 5.2.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 0.4.2
+- Stable tag: 0.5.0
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -94,6 +94,9 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 
 ## Changelog
 
+### 0.5.0
+- Major fixes for Ivory, now we're fullfilling (most of?) their assumptions ([#37])
+
 ### 0.4.2
 -  Fix media upload in Ice Cubes and potentially other clients ([#35])
 
@@ -143,6 +146,7 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 - Post replies as comments ([#3])
 - Fix a fatal when saving the default post format
 
+[#37]: https://github.com/akirk/enable-mastodon-apps/pull/37
 [#35]: https://github.com/akirk/enable-mastodon-apps/pull/35
 [#33]: https://github.com/akirk/enable-mastodon-apps/pull/33
 [#31]: https://github.com/akirk/enable-mastodon-apps/pull/31
