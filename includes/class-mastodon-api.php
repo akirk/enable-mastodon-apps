@@ -922,7 +922,11 @@ class Mastodon_API {
 
 		$ret = array();
 		$c = $args['posts_per_page'];
+		$next_max_id = false;
 		foreach ( $statuses as $status ) {
+			if ( false === $next_max_id ) {
+				$next_max_id = $status['id'];
+			}
 			if ( $min_id ) {
 				if ( $status['id'] !== $min_id ) {
 					continue;
@@ -939,6 +943,14 @@ class Mastodon_API {
 			}
 			array_unshift( $ret, $status );
 		}
+
+		if ( ! empty( $ret ) ) {
+			if ( $next_max_id ) {
+				header( 'Link: <' . add_query_arg( 'max_id', $next_max_id, home_url( strtok( $_SERVER['REQUEST_URI'], '?' ) ) ) . '>; rel="next"', false );
+			}
+			header( 'Link: <' . add_query_arg( 'min_id', $ret[0]['id'], home_url( strtok( $_SERVER['REQUEST_URI'], '?' ) ) ) . '>; rel="prev"', false );
+		}
+
 		return $ret;
 	}
 
