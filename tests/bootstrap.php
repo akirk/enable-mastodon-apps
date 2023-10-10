@@ -25,7 +25,10 @@ if ( ! file_exists( "{$_tests_dir}/includes/functions.php" ) ) {
 // Give access to tests_add_filter() function.
 require_once "{$_tests_dir}/includes/functions.php";
 
-require_once dirname( dirname( __DIR__ ) ) . '/vendor/yoast/phpunit-polyfills/phpunitpolyfills-autoload.php'; // phpcs:ignore
+$phpunitpolyfills = dirname( dirname( __DIR__ ) ) . '/vendor/yoast/phpunit-polyfills/phpunitpolyfills-autoload.php'; // phpcs:ignore
+if ( file_exists( $phpunitpolyfills ) ) {
+	require_once $phpunitpolyfills;
+}
 
 /**
  * Manually load the plugin being tested.
