@@ -158,5 +158,4 @@ class TimelineEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertEquals( $data[1]['id'], strval( $friend_post->ID ) );
 		$this->assertEquals( $data[2]['id'], strval( $post->ID ) );
 	}
-
 }

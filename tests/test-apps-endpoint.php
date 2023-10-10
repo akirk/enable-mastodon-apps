@@ -49,7 +49,6 @@ class AppsEndpoint_Test extends Mastodon_API_TestCase {
 
 		$this->assertArrayHasKey( 'website', $data );
 		$this->assertEquals( $website, $data['website'] );
-
 	}
 
 	public function test_apps_failures() {
@@ -204,5 +203,4 @@ class AppsEndpoint_Test extends Mastodon_API_TestCase {
 			$this->assertEquals( 200, $response->get_status() );
 		}
 	}
-
 }

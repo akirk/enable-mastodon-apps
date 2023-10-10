@@ -17,7 +17,6 @@ class AccountsEndpoint_Test extends Mastodon_API_TestCase {
 
 	public function set_up() {
 		parent::set_up();
-
 	}
 
 	public function mastodon_api_webfinger( $body, $url ) {
@@ -95,7 +94,6 @@ class AccountsEndpoint_Test extends Mastodon_API_TestCase {
 
 		$this->assertIsString( $data['username'] );
 		$this->assertEquals( $data['username'], strval( $userdata->user_login ) );
-
 	}
 
 	public function test_accounts_external() {
@@ -145,6 +143,5 @@ class AccountsEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertIsInt( $data['statuses_count'] );
 		$this->assertIsInt( $data['followers_count'] );
 		$this->assertIsInt( $data['following_count'] );
-
 	}
 }

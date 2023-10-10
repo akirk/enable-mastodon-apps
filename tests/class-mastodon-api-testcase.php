@@ -23,7 +23,7 @@ class Mastodon_API_TestCase extends \WP_UnitTestCase {
 		parent::set_up();
 
 		global $wp_rest_server;
-		$wp_rest_server = new \Spy_REST_Server;
+		$wp_rest_server = new \Spy_REST_Server();
 		do_action( 'rest_api_init', $wp_rest_server );
 
 		$this->administrator = $this->factory->user->create(
@@ -69,7 +69,7 @@ class Mastodon_API_TestCase extends \WP_UnitTestCase {
 		set_post_format( $this->friend_post, 'status' );
 		add_filter(
 			'friends_frontend_post_types',
-			function( $post_types ) {
+			function ( $post_types ) {
 				return array_merge( array( 'friend_post_cache' ), $post_types );
 			}
 		);
@@ -81,11 +81,9 @@ class Mastodon_API_TestCase extends \WP_UnitTestCase {
 		unset( $_SERVER['HTTP_AUTHORIZATION'] );
 
 		add_filter( 'pre_http_request', array( $this, 'block_http_requests' ), 10 );
-
 	}
 
-	function block_http_requests() {
+	public function block_http_requests() {
 		return new \WP_Error( 'http_request_failed', 'HTTP requests have been blocked.' );
 	}
-
 }

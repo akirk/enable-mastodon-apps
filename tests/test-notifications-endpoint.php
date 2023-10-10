@@ -23,13 +23,13 @@ class NotificationsEndpoint_Test extends Mastodon_API_TestCase {
 		$user = new \Friends\User( $user_id );
 		add_filter(
 			'mastodon_api_external_mentions_user',
-			function() use ( $user ) {
+			function () use ( $user ) {
 				return $user;
 			}
 		);
 		add_action(
 			'default_option_mastodon_api_default_post_formats',
-			function() {
+			function () {
 				return array( 'standard' );
 			}
 		);
@@ -149,7 +149,5 @@ class NotificationsEndpoint_Test extends Mastodon_API_TestCase {
 
 		$this->assertEquals( $post2_id, $data[0]['id'] );
 		$this->assertCount( 1, $data );
-
 	}
-
 }

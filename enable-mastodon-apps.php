@@ -55,7 +55,7 @@ add_filter( 'mastodon_api_new_app_post_formats', 'mastodon_api_pixelfed_post_for
 
 add_action(
 	'init',
-	function() {
+	function () {
 		new Enable_Mastodon_Apps\Mastodon_API();
 	}
 );

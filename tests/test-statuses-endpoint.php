@@ -135,7 +135,5 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 
 		$this->assertEquals( $p->post_title, '<p>headline</p>' );
 		$this->assertEquals( $p->post_content, '<p>post_content</p>' );
-
 	}
-
 }

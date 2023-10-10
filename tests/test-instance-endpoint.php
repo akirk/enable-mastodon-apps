@@ -55,5 +55,4 @@ class InstanceEndpoint_Test extends Mastodon_API_TestCase {
 
 		$this->assertFalse( $data['approval_required'], false );
 	}
-
 }

@@ -260,7 +260,7 @@ class Mastodon_Admin {
 		if ( isset( $_POST['mastodon_api_default_post_formats'] ) && is_array( $_POST['mastodon_api_default_post_formats'] ) ) {
 			$default_post_formats = array_filter(
 				$_POST['mastodon_api_default_post_formats'],
-				function( $post_format ) {
+				function ( $post_format ) {
 					if ( ! in_array( $post_format, get_post_format_slugs(), true ) ) {
 						return false;
 					}
@@ -279,7 +279,7 @@ class Mastodon_Admin {
 			foreach ( $_POST['app_post_formats'] as $client_id => $post_formats ) {
 				$post_formats = array_filter(
 					$post_formats,
-					function( $post_format ) {
+					function ( $post_format ) {
 						if ( ! in_array( $post_format, get_post_format_slugs(), true ) ) {
 							return false;
 						}
@@ -767,6 +767,5 @@ class Mastodon_Admin {
 			</form>
 		</div>
 		<?php
-
 	}
 }

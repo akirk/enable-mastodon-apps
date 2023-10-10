@@ -240,7 +240,7 @@ class Mastodon_App {
 				'show_in_rest'      => false,
 				'single'            => true,
 				'type'              => 'string',
-				'sanitize_callback' => function( $value ) {
+				'sanitize_callback' => function ( $value ) {
 					if ( ! is_string( $value ) || strlen( $value ) < 16 || strlen( $value ) > 200 ) {
 						throw new \Exception( 'invalid-client_secret,Client secret must be a string with a length between 16 and 200 chars.' );
 					}
@@ -256,7 +256,7 @@ class Mastodon_App {
 				'show_in_rest'      => false,
 				'single'            => true,
 				'type'              => 'array',
-				'sanitize_callback' => function( $value ) {
+				'sanitize_callback' => function ( $value ) {
 					if ( ! is_array( $value ) ) {
 						return array();
 					}
@@ -286,7 +286,7 @@ class Mastodon_App {
 				'show_in_rest'      => false,
 				'single'            => true,
 				'type'              => 'string',
-				'sanitize_callback' => function( $value ) {
+				'sanitize_callback' => function ( $value ) {
 					if ( ! is_string( $value ) || strlen( $value ) < 3 || strlen( $value ) > 200 ) {
 						throw new \Exception( 'invalid-client_name,Client name must be a string with a length between 3 and 200 chars.' );
 					}
@@ -302,7 +302,7 @@ class Mastodon_App {
 				'show_in_rest'      => false,
 				'single'            => true,
 				'type'              => 'string',
-				'sanitize_callback' => function( $value ) {
+				'sanitize_callback' => function ( $value ) {
 					if ( ! is_string( $value ) ) {
 						$value = '';
 					}
@@ -314,7 +314,7 @@ class Mastodon_App {
 						$scope_parts = explode( ':', $s, 2 );
 						$scope = array_shift( $scope_parts );
 						if ( ! in_array( $scope, self::VALID_SCOPES, true ) ) {
-							throw new \Exception( 'invalid-scopes,Invalid scope given: ' . $s );
+							throw new \Exception( 'invalid-scopes,Invalid scope given: ' . esc_html( $s ) );
 						}
 						$scopes[] = $s;
 					}
@@ -334,7 +334,7 @@ class Mastodon_App {
 				'show_in_rest'      => false,
 				'single'            => true,
 				'type'              => 'string',
-				'sanitize_callback' => function( $url ) {
+				'sanitize_callback' => function ( $url ) {
 					if ( ! $url ) {
 						return '';
 					}
@@ -357,7 +357,7 @@ class Mastodon_App {
 				'show_in_rest'      => false,
 				'single'            => true,
 				'type'              => 'int',
-				'sanitize_callback' => function( $value ) {
+				'sanitize_callback' => function ( $value ) {
 					if ( ! is_int( $value ) ) {
 						$value = time();
 					}
@@ -373,7 +373,7 @@ class Mastodon_App {
 				'show_in_rest'      => false,
 				'single'            => true,
 				'type'              => 'int',
-				'sanitize_callback' => function( $value ) {
+				'sanitize_callback' => function ( $value ) {
 					if ( ! is_int( $value ) ) {
 						$value = time();
 					}
@@ -389,7 +389,7 @@ class Mastodon_App {
 				'show_in_rest'      => false,
 				'single'            => true,
 				'type'              => 'array',
-				'sanitize_callback' => function( $value ) {
+				'sanitize_callback' => function ( $value ) {
 					if ( ! is_array( $value ) ) {
 						return array();
 					}
@@ -400,7 +400,7 @@ class Mastodon_App {
 						}
 						$value['post_formats'] = array_filter(
 							$value['post_formats'],
-							function( $post_format ) {
+							function ( $post_format ) {
 								if ( ! in_array( $post_format, get_post_format_slugs(), true ) ) {
 									return false;
 								}
@@ -424,7 +424,7 @@ class Mastodon_App {
 					'show_in_rest'      => false,
 					'single'            => false,
 					'type'              => 'array',
-					'sanitize_callback' => function( $value ) {
+					'sanitize_callback' => function ( $value ) {
 						if ( ! is_array( $value ) ) {
 							return array();
 						}
@@ -468,7 +468,7 @@ class Mastodon_App {
 		$post_formats = get_post_format_slugs();
 		$filter_by_post_format = array_filter(
 			$filter_by_post_format,
-			function( $post_format ) use ( $post_formats ) {
+			function ( $post_format ) use ( $post_formats ) {
 				return in_array( $post_format, $post_formats, true );
 			}
 		);
@@ -485,7 +485,7 @@ class Mastodon_App {
 				$post_format_query['operator'] = 'NOT IN';
 				$post_format_query['terms']    = array_values(
 					array_map(
-						function( $post_format ) {
+						function ( $post_format ) {
 							return 'post-format-' . $post_format;
 						},
 						array_diff( $post_formats, $filter_by_post_format )
@@ -494,7 +494,7 @@ class Mastodon_App {
 			} else {
 				$post_format_query['operator'] = 'IN';
 				$post_format_query['terms']    = array_map(
-					function( $post_format ) {
+					function ( $post_format ) {
 						return 'post-format-' . $post_format;
 					},
 					$filter_by_post_format

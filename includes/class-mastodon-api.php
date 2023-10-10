@@ -49,7 +49,7 @@ class Mastodon_API {
 		new Mastodon_Admin( $this->oauth );
 	}
 
-	function register_hooks() {
+	public function register_hooks() {
 		add_action( 'wp_loaded', array( $this, 'rewrite_rules' ) );
 		add_action( 'query_vars', array( $this, 'query_vars' ) );
 		add_action( 'rest_api_init', array( $this, 'add_rest_routes' ) );
@@ -59,7 +59,7 @@ class Mastodon_API {
 		add_action( 'default_option_mastodon_api_default_post_formats', array( $this, 'default_option_mastodon_api_default_post_formats' ) );
 	}
 
-	function allow_cors() {
+	public function allow_cors() {
 		header( 'Access-Control-Allow-Origin: *' );
 		header( 'Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS' );
 		header( 'Access-Control-Allow-Headers: content-type, authorization' );
@@ -638,7 +638,6 @@ class Mastodon_API {
 				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
-
 	}
 
 	public function query_vars( $query_vars ) {
@@ -698,7 +697,6 @@ class Mastodon_API {
 		);
 
 		return $template;
-
 	}
 
 	public function api_apps( $request ) {
@@ -776,35 +774,35 @@ class Mastodon_API {
 		return true;
 	}
 
-	public function activitypub_post( $array, $post ) {
+	public function activitypub_post( $data, $post ) {
 		if ( $post->post_parent ) {
 			$parent_post = get_post( $post->post_parent );
-			$array['inReplyTo'] = $parent_post->guid;
+			$data['inReplyTo'] = $parent_post->guid;
 		}
 
 		if ( get_post_meta( $post->ID, 'activitypub_in_reply_to', true ) ) {
-			$array['inReplyTo'] = get_post_meta( $post->ID, 'activitypub_in_reply_to', true );
+			$data['inReplyTo'] = get_post_meta( $post->ID, 'activitypub_in_reply_to', true );
 		}
 
-		return $array;
+		return $data;
 	}
 
 	/**
 	 * Set the default post format.
 	 *
-	 * @param mixed $default The default value to return if the option does not exist
+	 * @param mixed $post_formats The default value to return if the option does not exist
 	 *                        in the database.
 	 *
 	 * @return     array   The potentially modified default value.
 	 */
-	public function default_option_mastodon_api_default_post_formats( $default ) {
+	public function default_option_mastodon_api_default_post_formats( $post_formats ) {
 		if ( ! defined( 'FRIENDS_VERSION' ) ) {
-			$default = array(
+			$post_formats = array(
 				'standard',
 			);
 		}
 
-		return $default;
+		return $post_formats;
 	}
 
 	public function api_verify_credentials( $request ) {
@@ -856,7 +854,7 @@ class Mastodon_API {
 
 	private function get_posts( $args, $min_id = null, $max_id = null ) {
 		if ( $min_id ) {
-			$min_filter_handler = function( $where ) use ( $min_id ) {
+			$min_filter_handler = function ( $where ) use ( $min_id ) {
 				global $wpdb;
 				return $where . $wpdb->prepare( " AND {$wpdb->posts}.ID > %d", $min_id );
 			};
@@ -864,7 +862,7 @@ class Mastodon_API {
 		}
 
 		if ( $max_id ) {
-			$max_filter_handler = function( $where ) use ( $max_id ) {
+			$max_filter_handler = function ( $where ) use ( $max_id ) {
 				global $wpdb;
 				return $where . $wpdb->prepare( " AND {$wpdb->posts}.ID < %d", $max_id );
 			};
@@ -1036,7 +1034,7 @@ class Mastodon_API {
 			}
 			$reblog_user_ids = array_map( 'intval', $reblog_user_ids );
 			$reblogged_by = array_map(
-				function( $user_id ) {
+				function ( $user_id ) {
 					return $this->get_friend_account_data( $user_id );
 				},
 				$reblog_user_ids
@@ -1398,9 +1396,9 @@ class Mastodon_API {
 			return new \WP_Error( 'mastodon_api_post_media', 'Media is empty', array( 'status' => 422 ) );
 		}
 
-		require_once( ABSPATH . 'wp-admin/includes/media.php' );
-		require_once( ABSPATH . 'wp-admin/includes/file.php' );
-		require_once( ABSPATH . 'wp-admin/includes/image.php' );
+		require_once ABSPATH . 'wp-admin/includes/media.php';
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+		require_once ABSPATH . 'wp-admin/includes/image.php';
 
 		if ( ! isset( $media['file']['name'] ) || false === strpos( $media['file']['name'], '.' ) ) {
 			switch ( $media['file']['type'] ) {
@@ -1788,7 +1786,7 @@ class Mastodon_API {
 			'reblog'                 => null,
 			'account'                => $this->get_friend_account_data( $user_id ),
 			'media_attachments'      => array_map(
-				function( $attachment ) {
+				function ( $attachment ) {
 					return array(
 						'id'          => crc32( $attachment['url'] ),
 						'type'        => strtok( $attachment['mediaType'], '/' ),
@@ -1810,7 +1808,7 @@ class Mastodon_API {
 			),
 			'mentions'               => array_values(
 				array_map(
-					function( $mention ) {
+					function ( $mention ) {
 						return array(
 							'id'       => $mention['href'],
 							'username' => $mention['name'],
@@ -1820,7 +1818,7 @@ class Mastodon_API {
 					},
 					array_filter(
 						$activity['object']['tag'],
-						function( $tag ) {
+						function ( $tag ) {
 							if ( isset( $tag['type'] ) ) {
 								return 'Mention' === $tag['type'];
 							}
@@ -1832,7 +1830,7 @@ class Mastodon_API {
 
 			'tags'                   => array_values(
 				array_map(
-					function( $tag ) {
+					function ( $tag ) {
 						return array(
 							'name' => $tag['name'],
 							'url'  => $tag['href'],
@@ -1840,7 +1838,7 @@ class Mastodon_API {
 					},
 					array_filter(
 						$activity['object']['tag'],
-						function( $tag ) {
+						function ( $tag ) {
 							if ( isset( $tag['type'] ) ) {
 								return 'Hashtag' === $tag['type'];
 							}

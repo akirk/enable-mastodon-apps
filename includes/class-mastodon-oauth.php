@@ -49,7 +49,7 @@ class Mastodon_OAuth {
 			// Avoid interference with private site plugins.
 			add_filter(
 				'pre_option_blog_public',
-				function() {
+				function () {
 					return 0;
 				}
 			);
