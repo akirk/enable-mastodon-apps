@@ -25,21 +25,21 @@ if ( ! file_exists( "{$_tests_dir}/includes/functions.php" ) ) {
 // Give access to tests_add_filter() function.
 require_once "{$_tests_dir}/includes/functions.php";
 
-require_once dirname( __DIR__, 1 ) . '/vendor/yoast/phpunit-polyfills/phpunitpolyfills-autoload.php';
+require_once dirname( dirname( __DIR__ ) ) . '/vendor/yoast/phpunit-polyfills/phpunitpolyfills-autoload.php'; // phpcs:ignore
 
 /**
  * Manually load the plugin being tested.
  */
 function _manually_load_plugin() {
-	$friends_plugin = dirname( __DIR__, 2 ) . '/friends/friends.php';
-	$alternate_friends_plugin = dirname( __DIR__, 1 ) . '/friends/friends.php';
+	$friends_plugin = dirname( dirname( dirname( __DIR__ ) ) ) . '/friends/friends.php'; // phpcs:ignore
+	$alternate_friends_plugin = dirname( dirname( __DIR__ ) ) . '/friends/friends.php'; // phpcs:ignore
 	if ( file_exists( $friends_plugin ) ) {
 		require $friends_plugin;
 	} elseif ( file_exists( $alternate_friends_plugin ) ) {
 		require $alternate_friends_plugin;
 	}
 
-	require dirname( __DIR__, 1 ) . '/enable-mastodon-apps.php';
+	require dirname( dirname( __DIR__ ) ) . '/enable-mastodon-apps.php'; // phpcs:ignore
 }
 tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
 
