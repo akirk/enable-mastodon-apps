@@ -56,7 +56,7 @@ class Mastodon_API {
 		add_filter( 'rest_pre_serve_request', array( $this, 'allow_cors' ), 10, 4 );
 		add_filter( 'template_include', array( $this, 'log_404s' ) );
 		add_filter( 'activitypub_post', array( $this, 'activitypub_post' ), 10, 2 );
-		add_filter( 'enable_mastodon_apps_get_json', array( $this, 'get_json' ), 10, 3 );
+		add_filter( 'enable_mastodon_apps_get_json', array( $this, 'get_json' ), 10, 4 );
 		add_action( 'default_option_mastodon_api_default_post_formats', array( $this, 'default_option_mastodon_api_default_post_formats' ) );
 	}
 
@@ -2182,15 +2182,15 @@ class Mastodon_API {
 		return wp_http_validate_url( $url );
 	}
 
-	public function get_json( $url, $transient_key, $fallback = null ) {
+	public function get_json( $url, $transient_key, $fallback = null, $force_retrieval = false ) {
 		$expiry_key = $transient_key . '_expiry';
 		$transient_expiry = \get_transient( $expiry_key );
 		$response = \get_transient( $transient_key );
 		if ( $transient_expiry < time() ) {
 			// Re-retrieve it later.
-			wp_schedule_single_event( time(), 'enable_mastodon_apps_get_json', array( $url, $transient_key, $fallback ) );
+			wp_schedule_single_event( time(), 'enable_mastodon_apps_get_json', array( $url, $transient_key, $fallback, true ) );
 		}
-		if ( $response ) {
+		if ( $response && ! $force_retrieval ) {
 			if ( is_wp_error( $response ) ) {
 				if ( $fallback && 'http_request_failed' !== $response->get_error_code() ) {
 					return $fallback;

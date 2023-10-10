@@ -341,7 +341,7 @@ class Mastodon_Admin {
 			}
 			?>
 			[<?php echo esc_html( $date->format( 'Y-m-d H:i:s.v' ) ); ?>]
-			<?php echo esc_html( $request['status'] ? $request['status'] : 200 ); ?>
+			<?php echo esc_html( ! empty( $request['status'] ) ? $request['status'] : 200 ); ?>
 			<?php echo esc_html( $request['method'] ); ?>
 			<a href="<?php echo esc_url( $url ); ?>"><?php echo esc_html( $request['path'] ); ?></a>
 			<?php
