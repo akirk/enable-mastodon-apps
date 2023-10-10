@@ -2275,7 +2275,9 @@ class Mastodon_API {
 				$data['display_name'] = $data['username'];
 			}
 		}
-		$data['note'] = (string) $meta['summary'];
+		if ( ! empty( $meta['summary'] ) ) {
+			$data['note'] = (string) $meta['summary'];
+		}
 		if ( empty( $data['created_at'] ) || ! $data['created_at'] ) {
 			if ( isset( $meta['published'] ) && $meta['published'] ) {
 				$data['created_at'] = $meta['published'];
@@ -2502,7 +2504,7 @@ class Mastodon_API {
 
 			foreach ( apply_filters( 'friends_get_user_feeds', array(), $user ) as $feed ) {
 				$meta = apply_filters( 'friends_get_feed_metadata', array(), $feed );
-				if ( $meta && ! isset( $meta['error'] ) && ! is_wp_error( $meta ) ) {
+				if ( $meta && ! is_wp_error( $meta ) && ! isset( $meta['error'] ) ) {
 					$data['acct'] = $this->get_acct( $meta['id'] );
 					$data = $this->update_account_data_with_meta( $data, $meta, $full_metadata );
 					break;
@@ -2526,6 +2528,9 @@ class Mastodon_API {
 	}
 
 	public function get_acct( $id_or_url ) {
+		if ( is_wp_error( $id_or_url ) ) {
+			return '';
+		}
 		$webfinger = $this->webfinger( $id_or_url );
 		if ( is_wp_error( $webfinger ) || ! isset( $webfinger['subject'] ) ) {
 			return '';
