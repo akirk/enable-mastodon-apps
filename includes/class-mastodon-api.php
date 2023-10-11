@@ -1802,7 +1802,7 @@ class Mastodon_API {
 								'aspect' => $attachment['width'] / max( 1, $attachment['height'] ),
 							),
 						),
-						'description' => $attachment['description'],
+						'description' => ! empty( $attachment['description'] ) ? $attachment['description'] : '',
 					);
 				},
 				$activity['object']['attachment']
