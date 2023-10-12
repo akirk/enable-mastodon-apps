@@ -37,6 +37,7 @@ class Mastodon_API {
 	const PREFIX = 'enable-mastodon-apps';
 	const APP_TAXONOMY = 'mastodon-app';
 	const REMOTE_USER_TAXONOMY = 'mastodon-api-remote-user';
+	const CPT = 'enable-mastodon-apps';
 
 	/**
 	 * Constructor
@@ -46,6 +47,7 @@ class Mastodon_API {
 		$this->oauth = new Mastodon_OAuth();
 		$this->register_hooks();
 		$this->register_taxonomy();
+		$this->register_custom_post_type();
 		new Mastodon_Admin( $this->oauth );
 	}
 
@@ -88,6 +90,24 @@ class Mastodon_API {
 		register_taxonomy( self::REMOTE_USER_TAXONOMY, null, $args );
 	}
 
+	public function register_custom_post_type() {
+		$args = array(
+			'labels'       => array(
+				'name'          => 'Mapping',
+				'singular_name' => 'Mapping',
+				'menu_name'     => 'Mappings',
+			),
+			'public'       => false,
+			'show_ui'      => false,
+			'show_in_menu' => false,
+			'show_in_rest' => false,
+			'rewrite'      => false,
+		);
+
+		register_post_type( self::CPT, $args );
+	}
+
+
 	public function rewrite_rules() {
 		$existing_rules = get_option( 'rewrite_rules' );
 		$needs_flush = false;
@@ -120,27 +140,27 @@ class Mastodon_API {
 			'api/v2/media',
 		);
 		$parametrized = array(
-			'api/v1/accounts/([^/]+)/featured_tags'        => 'api/v1/accounts/$matches[1]/featured_tags',
-			'api/v1/accounts/([^/]+)/follow'               => 'api/v1/accounts/$matches[1]/follow',
-			'api/v1/accounts/([^/]+)/unfollow'             => 'api/v1/accounts/$matches[1]/unfollow',
-			'api/v1/accounts/([^/]+)/statuses'             => 'api/v1/accounts/$matches[1]/statuses',
-			'api/v1/statuses/((?:comment-)?[0-9]+)/context' => 'api/v1/statuses/$matches[1]/context',
-			'api/v1/statuses/((?:comment-)?[0-9]+)/favourited_by' => 'api/v1/statuses/$matches[1]/favourited_by',
-			'api/v1/statuses/((?:comment-)?[0-9]+)/favourite' => 'api/v1/statuses/$matches[1]/favourite',
-			'api/v1/statuses/((?:comment-)?[0-9]+)/unfavourite' => 'api/v1/statuses/$matches[1]/unfavourite',
-			'api/v1/statuses/((?:comment-)?[0-9]+)/reblog' => 'api/v1/statuses/$matches[1]/reblog',
-			'api/v1/statuses/((?:comment-)?[0-9]+)/unreblog' => 'api/v1/statuses/$matches[1]/unreblog',
-			'api/v1/notifications/([^/]+)/dismiss'         => 'api/v1/notifications/$matches[1]/dismiss',
-			'api/v1/notifications/([^/|$]+)/?$'            => 'api/v1/notifications/$matches[1]',
-			'api/v1/notifications'                         => 'api/v1/notifications',
-			'api/nodeinfo/([0-9]+[.][0-9]+).json'          => 'api/nodeinfo/$matches[1].json',
-			'api/v1/media/([0-9]+)'                        => 'api/v1/media/$matches[1]',
-			'api/v1/statuses/((?:comment-)?[0-9]+)'        => 'api/v1/statuses/$matches[1]',
-			'api/v1/statuses'                              => 'api/v1/statuses',
-			'api/v1/accounts/(.+)'                         => 'api/v1/accounts/$matches[1]',
-			'api/v1/timelines/(home|public)'               => 'api/v1/timelines/$matches[1]',
-			'api/v1/timelines/tag/([^/|$]+)'               => 'api/v1/timelines/tag/$matches[1]',
-			'api/v2/search'                                => 'api/v1/search',
+			'api/v1/accounts/([^/]+)/featured_tags'  => 'api/v1/accounts/$matches[1]/featured_tags',
+			'api/v1/accounts/([^/]+)/follow'         => 'api/v1/accounts/$matches[1]/follow',
+			'api/v1/accounts/([^/]+)/unfollow'       => 'api/v1/accounts/$matches[1]/unfollow',
+			'api/v1/accounts/([^/]+)/statuses'       => 'api/v1/accounts/$matches[1]/statuses',
+			'api/v1/statuses/([0-9]+)/context'       => 'api/v1/statuses/$matches[1]/context',
+			'api/v1/statuses/([0-9]+)/favourited_by' => 'api/v1/statuses/$matches[1]/favourited_by',
+			'api/v1/statuses/([0-9]+)/favourite'     => 'api/v1/statuses/$matches[1]/favourite',
+			'api/v1/statuses/([0-9]+)/unfavourite'   => 'api/v1/statuses/$matches[1]/unfavourite',
+			'api/v1/statuses/([0-9]+)/reblog'        => 'api/v1/statuses/$matches[1]/reblog',
+			'api/v1/statuses/([0-9]+)/unreblog'      => 'api/v1/statuses/$matches[1]/unreblog',
+			'api/v1/notifications/([^/]+)/dismiss'   => 'api/v1/notifications/$matches[1]/dismiss',
+			'api/v1/notifications/([^/|$]+)/?$'      => 'api/v1/notifications/$matches[1]',
+			'api/v1/notifications'                   => 'api/v1/notifications',
+			'api/nodeinfo/([0-9]+[.][0-9]+).json'    => 'api/nodeinfo/$matches[1].json',
+			'api/v1/media/([0-9]+)'                  => 'api/v1/media/$matches[1]',
+			'api/v1/statuses/([0-9]+)'               => 'api/v1/statuses/$matches[1]',
+			'api/v1/statuses'                        => 'api/v1/statuses',
+			'api/v1/accounts/(.+)'                   => 'api/v1/accounts/$matches[1]',
+			'api/v1/timelines/(home|public)'         => 'api/v1/timelines/$matches[1]',
+			'api/v1/timelines/tag/([^/|$]+)'         => 'api/v1/timelines/tag/$matches[1]',
+			'api/v2/search'                          => 'api/v1/search',
 		);
 
 		foreach ( $generic as $rule ) {
@@ -443,7 +463,7 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
-			'api/v1/statuses/(?P<post_id>(?:comment-)?[0-9]+)/context',
+			'api/v1/statuses/(?P<post_id>[0-9]+)/context',
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_get_post_context' ),
@@ -453,7 +473,7 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
-			'api/v1/statuses/(?P<post_id>(?:comment-)?[0-9]+)/favourited_by',
+			'api/v1/statuses/(?P<post_id>[0-9]+)/favourited_by',
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => '__return_empty_array',
@@ -463,7 +483,7 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
-			'api/v1/statuses/(?P<post_id>(?:comment-)?[0-9]+)/favourite',
+			'api/v1/statuses/(?P<post_id>[0-9]+)/favourite',
 			array(
 				'methods'             => array( 'POST', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_favourite_post' ),
@@ -473,7 +493,7 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
-			'api/v1/statuses/(?P<post_id>(?:comment-)?[0-9]+)/unfavourite',
+			'api/v1/statuses/(?P<post_id>[0-9]+)/unfavourite',
 			array(
 				'methods'             => array( 'POST', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_unfavourite_post' ),
@@ -483,7 +503,7 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
-			'api/v1/statuses/(?P<post_id>(?:comment-)?[0-9]+)/reblog',
+			'api/v1/statuses/(?P<post_id>[0-9]+)/reblog',
 			array(
 				'methods'             => array( 'POST', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_reblog_post' ),
@@ -493,7 +513,7 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
-			'api/v1/statuses/(?P<post_id>(?:comment-)?[0-9]+)/unreblog',
+			'api/v1/statuses/(?P<post_id>[0-9]+)/unreblog',
 			array(
 				'methods'             => array( 'POST', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_unreblog_post' ),
@@ -503,7 +523,7 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
-			'api/v1/statuses/(?P<post_id>(?:comment-)?[0-9]+)',
+			'api/v1/statuses/(?P<post_id>[0-9]+)',
 			array(
 				'methods'             => array( 'DELETE', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_delete_post' ),
@@ -513,7 +533,7 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
-			'api/v1/statuses/(?P<post_id>(?:comment-)?[0-9]+)',
+			'api/v1/statuses/(?P<post_id>[0-9]+)',
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_get_post' ),
@@ -955,7 +975,7 @@ class Mastodon_API {
 
 	private function get_comment_status_array( \WP_Comment $comment ) {
 		$post = (object) array(
-			'ID'           => 'comment-' . $comment->comment_ID,
+			'ID'           => $this->remap_comment_id( $comment->comment_ID ),
 			'guid'         => $comment->guid . '#comment-' . $comment->comment_ID,
 			'post_author'  => $comment->user_id,
 			'post_content' => $comment->comment_content,
@@ -1181,7 +1201,7 @@ class Mastodon_API {
 
 		if ( isset( $meta['reblog'] ) && $meta['reblog'] && isset( $meta['attributedTo']['id'] ) ) {
 			$data['reblog'] = $data;
-			$data['reblog']['id'] = strval( crc32( $data['reblog']['id'] ) ); // ensure that the id is different from the post as it might crash some clients (Ivory).
+			$data['reblog']['id'] = $this->remap_reblog_id( $data['reblog']['id'] ); // ensure that the id is different from the post as it might crash some clients (Ivory).
 			$data['media_attachments'] = array();
 			$data['mentions'] = array();
 			$data['tags'] = array();
@@ -1573,6 +1593,9 @@ class Mastodon_API {
 		if ( ! $post_id ) {
 			return false;
 		}
+
+		$post_id = $this->maybe_get_remapped_reblog_id( $post_id );
+
 		$context = array(
 			'ancestors'   => array(),
 			'descendants' => array(),
@@ -1625,10 +1648,8 @@ class Mastodon_API {
 			}
 		}
 
-		$comment_id = false;
-
-		if ( substr( $post_id, 0, 8 ) === 'comment-' ) {
-			$comment_id = intval( substr( $post_id, 8 ) );
+		$comment_id = $this->get_remapped_comment_id( $post_id );
+		if ( $comment_id ) {
 			$comment = get_comment( $comment_id );
 			$post_id = $comment->comment_post_ID;
 			$status = $this->get_status_array( get_post( $post_id ) );
@@ -1656,6 +1677,8 @@ class Mastodon_API {
 			return false;
 		}
 
+		$post_id = $this->maybe_get_remapped_reblog_id( $post_id );
+
 		// 2b50 = star
 		// 2764 = heart
 		do_action( 'mastodon_api_react', $post_id, '2b50' );
@@ -1670,6 +1693,8 @@ class Mastodon_API {
 		if ( ! $post_id ) {
 			return false;
 		}
+
+		$post_id = $this->maybe_get_remapped_reblog_id( $post_id );
 
 		// 2b50 = star
 		// 2764 = heart
@@ -1686,7 +1711,10 @@ class Mastodon_API {
 			return false;
 		}
 
+		$post_id = $this->maybe_get_remapped_reblog_id( $post_id );
+
 		$post = get_post( $post_id );
+
 		if ( $post ) {
 			do_action( 'mastodon_api_reblog', $post );
 		}
@@ -1700,6 +1728,8 @@ class Mastodon_API {
 		if ( ! $post_id ) {
 			return false;
 		}
+
+		$post_id = $this->maybe_get_remapped_reblog_id( $post_id );
 
 		$post = get_post( $post_id );
 		if ( $post ) {
@@ -1715,8 +1745,9 @@ class Mastodon_API {
 		if ( ! $post_id ) {
 			return false;
 		}
-		if ( substr( $post_id, 0, 8 ) === 'comment-' ) {
-			$comment_id = intval( substr( $post_id, 8 ) );
+
+		$comment_id = $this->get_remapped_comment_id( $post_id );
+		if ( $comment_id ) {
 			$comment = get_comment( $comment_id );
 			if ( intval( $comment->user_id ) === get_current_user_id() ) {
 				wp_trash_comment( $comment_id );
@@ -1738,8 +1769,8 @@ class Mastodon_API {
 			return false;
 		}
 
-		if ( substr( $post_id, 0, 8 ) === 'comment-' ) {
-			$comment_id = intval( substr( $post_id, 8 ) );
+		$comment_id = $this->get_remapped_comment_id( $post_id );
+		if ( $comment_id ) {
 			return $this->get_comment_status_array( get_comment( $comment_id ) );
 		}
 
@@ -2610,6 +2641,62 @@ class Mastodon_API {
 
 		\set_transient( $transient_key, $body, WEEK_IN_SECONDS );
 		return $body;
+	}
+
+	private function remap_reblog_id( $post_id ) {
+		$remapped_post_id = get_post_meta( $post_id, 'mastodon_reblog_id', true );
+		if ( ! $remapped_post_id ) {
+			$remapped_post_id = wp_insert_post(
+				array(
+					'post_type'   => self::CPT,
+					'post_author' => 0,
+					'post_status' => 'publish',
+					'post_title'  => 'Reblog of ' . $post_id,
+					'meta_input'  => array(
+						'mastodon_reblog_id' => $post_id,
+					),
+				)
+			);
+
+			update_post_meta( $post_id, 'mastodon_reblog_id', $remapped_post_id );
+		}
+		return $remapped_post_id;
+	}
+
+	private function maybe_get_remapped_reblog_id( $remapped_post_id ) {
+		$post_id = get_post_meta( $remapped_post_id, 'mastodon_reblog_id', true );
+		if ( $post_id ) {
+			return $post_id;
+		}
+		return $remapped_post_id;
+	}
+
+	private function remap_comment_id( $comment_id ) {
+		$remapped_comment_id = get_comment_meta( $comment_id, 'mastodon_comment_id', true );
+		if ( ! $remapped_comment_id ) {
+			$remapped_comment_id = wp_insert_post(
+				array(
+					'post_type'   => self::CPT,
+					'post_author' => 0,
+					'post_status' => 'publish',
+					'post_title'  => 'Comment ' . $comment_id,
+					'meta_input'  => array(
+						'mastodon_comment_id' => $comment_id,
+					),
+				)
+			);
+
+			update_comment_meta( $comment_id, 'mastodon_comment_id', $remapped_comment_id );
+		}
+		return $remapped_comment_id;
+	}
+
+	private function get_remapped_comment_id( $remapped_comment_id ) {
+		$comment_id = get_post_meta( $remapped_comment_id, 'mastodon_comment_id', true );
+		if ( $comment_id ) {
+			return $comment_id;
+		}
+		return false;
 	}
 
 	private function software_string() {
