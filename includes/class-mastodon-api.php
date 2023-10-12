@@ -56,6 +56,7 @@ class Mastodon_API {
 		add_filter( 'rest_pre_serve_request', array( $this, 'allow_cors' ), 10, 4 );
 		add_filter( 'template_include', array( $this, 'log_404s' ) );
 		add_filter( 'activitypub_post', array( $this, 'activitypub_post' ), 10, 2 );
+		add_filter( 'enable_mastodon_apps_get_json', array( $this, 'get_json' ), 10, 4 );
 		add_action( 'default_option_mastodon_api_default_post_formats', array( $this, 'default_option_mastodon_api_default_post_formats' ) );
 	}
 
@@ -1180,7 +1181,7 @@ class Mastodon_API {
 
 		if ( isset( $meta['reblog'] ) && $meta['reblog'] && isset( $meta['attributedTo']['id'] ) ) {
 			$data['reblog'] = $data;
-			$data['reblog']['id'] = strval( crc32( $data['reblog']['id'] ) );
+			$data['reblog']['id'] = strval( crc32( $data['reblog']['id'] ) ); // ensure that the id is different from the post as it might crash some clients (Ivory).
 			$data['media_attachments'] = array();
 			$data['mentions'] = array();
 			$data['tags'] = array();
@@ -1801,7 +1802,7 @@ class Mastodon_API {
 								'aspect' => $attachment['width'] / max( 1, $attachment['height'] ),
 							),
 						),
-						'description' => $attachment['description'],
+						'description' => ! empty( $attachment['description'] ) ? $attachment['description'] : '',
 					);
 				},
 				$activity['object']['attachment']
@@ -2181,9 +2182,15 @@ class Mastodon_API {
 		return wp_http_validate_url( $url );
 	}
 
-	private function get_json( $url, $transient_key, $fallback = null ) {
+	public function get_json( $url, $transient_key, $fallback = null, $force_retrieval = false ) {
+		$expiry_key = $transient_key . '_expiry';
+		$transient_expiry = \get_transient( $expiry_key );
 		$response = \get_transient( $transient_key );
-		if ( $response ) {
+		if ( $transient_expiry < time() ) {
+			// Re-retrieve it later.
+			wp_schedule_single_event( time(), 'enable_mastodon_apps_get_json', array( $url, $transient_key, $fallback, true ) );
+		}
+		if ( $response && ! $force_retrieval ) {
 			if ( is_wp_error( $response ) ) {
 				if ( $fallback && 'http_request_failed' !== $response->get_error_code() ) {
 					return $fallback;
@@ -2221,7 +2228,8 @@ class Mastodon_API {
 		$body = \wp_remote_retrieve_body( $response );
 		$body = \json_decode( $body, true );
 
-		\set_transient( $transient_key, $body, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
+		\set_transient( $transient_key, $body, YEAR_IN_SECONDS );
+		\set_transient( $expiry_key, time() + HOUR_IN_SECONDS );
 
 		return $body;
 	}
@@ -2267,7 +2275,9 @@ class Mastodon_API {
 				$data['display_name'] = $data['username'];
 			}
 		}
-		$data['note'] = (string) $meta['summary'];
+		if ( ! empty( $meta['summary'] ) ) {
+			$data['note'] = (string) $meta['summary'];
+		}
 		if ( empty( $data['created_at'] ) || ! $data['created_at'] ) {
 			if ( isset( $meta['published'] ) && $meta['published'] ) {
 				$data['created_at'] = $meta['published'];
@@ -2494,7 +2504,7 @@ class Mastodon_API {
 
 			foreach ( apply_filters( 'friends_get_user_feeds', array(), $user ) as $feed ) {
 				$meta = apply_filters( 'friends_get_feed_metadata', array(), $feed );
-				if ( $meta && ! isset( $meta['error'] ) && ! is_wp_error( $meta ) ) {
+				if ( $meta && ! is_wp_error( $meta ) && ! isset( $meta['error'] ) ) {
 					$data['acct'] = $this->get_acct( $meta['id'] );
 					$data = $this->update_account_data_with_meta( $data, $meta, $full_metadata );
 					break;
@@ -2518,6 +2528,9 @@ class Mastodon_API {
 	}
 
 	public function get_acct( $id_or_url ) {
+		if ( is_wp_error( $id_or_url ) ) {
+			return '';
+		}
 		$webfinger = $this->webfinger( $id_or_url );
 		if ( is_wp_error( $webfinger ) || ! isset( $webfinger['subject'] ) ) {
 			return '';
