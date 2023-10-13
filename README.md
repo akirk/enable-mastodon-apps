@@ -6,7 +6,7 @@
 - Tested up to: 6.2
 - Requires PHP: 5.2.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 0.5.0
+- Stable tag: 0.6.0
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -94,6 +94,10 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 
 ## Changelog
 
+### 0.6.0
+- Use a Custom Post Type to for mapping post ids ([#42])
+- Improve response time after transients expired ([#41])
+
 ### 0.5.0
 - Major fixes for Ivory, now we're fullfilling (most of?) their assumptions ([#37])
 
@@ -146,6 +150,8 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 - Post replies as comments ([#3])
 - Fix a fatal when saving the default post format
 
+[#42]: https://github.com/akirk/enable-mastodon-apps/pull/42
+[#41]: https://github.com/akirk/enable-mastodon-apps/pull/41
 [#37]: https://github.com/akirk/enable-mastodon-apps/pull/37
 [#35]: https://github.com/akirk/enable-mastodon-apps/pull/35
 [#33]: https://github.com/akirk/enable-mastodon-apps/pull/33
