@@ -2759,24 +2759,32 @@ class Mastodon_API {
 	}
 
 	public function api_announcements() {
-		$ret   = array();
+		$ret = array();
+
+		$content   = array();
+		$content[] = sprintf(
+			// Translators: %s is the post formats.
+			_n( 'The following post format has been set for this app: %s', 'The following post formats have been set for this app: %s', count( $this->app->get_post_formats() ), 'enable-mastodon-apps' ),
+			implode( ', ', $this->app->get_post_formats() )
+		);
+
+		$content[] = __( 'If you want to create a post in WordPress with a title, add a new line after the title.', 'enable-mastodon-apps' );
+
 		$ret[] = array(
-			'id'      => 1,
-			'content' => '<h1>' . __( 'Settings for this app', 'enable-mastodon-apps' ) . '</h1>' .
-			'<p>' .
-			sprintf(
-				// Translators: %s is the post formats.
-				_n( 'Post Format: %s', 'Post Formats: %s', count( $this->app->get_post_formats() ), 'enable-mastodon-apps' ),
-				implode( ', ', $this->app->get_post_formats() )
-			) .
-			'</p>' . PHP_EOL .
-			'<p>' .
-			sprintf(
-				// Translators: %s is the client name.
-				__( 'Client: %s', 'enable-mastodon-apps' ),
-				$this->app->get_client_id()
-			) .
-			'</p>',
+			'id'           => 1,
+			'content'      => '<h1><strong>' . __( 'Settings for this app', 'enable-mastodon-apps' ) . '</strong></h1><p>' . implode( '</p><p>' . PHP_EOL, $content ) . '</p>',
+			'published_at' => $this->app->get_creation_date(),
+			'updated_at'   => $this->app->get_creation_date(),
+			'starts_at'    => null,
+			'ends_at'      => null,
+			'all_day'      => false,
+			'read'         => true,
+			'mentions'     => array(),
+			'statuses'     => array(),
+			'tags'         => array(),
+			'emojis'       => array(),
+			'reactions'    => array(),
+
 		);
 
 		return $ret;
