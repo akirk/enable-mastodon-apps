@@ -196,6 +196,15 @@ class Mastodon_API {
 		);
 		register_rest_route(
 			self::PREFIX,
+			'api/v1/announcements',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'api_announcements' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+		register_rest_route(
+			self::PREFIX,
 			'api/v1/instance/peers',
 			array(
 				'methods'             => 'GET',
@@ -212,6 +221,7 @@ class Mastodon_API {
 				'permission_callback' => array( $this, 'public_api_permission' ),
 			)
 		);
+
 		register_rest_route(
 			self::PREFIX,
 			'api/v2/instance',
@@ -228,15 +238,6 @@ class Mastodon_API {
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'api_nodeinfo' ),
 				'permission_callback' => array( $this, 'public_api_permission' ),
-			)
-		);
-		register_rest_route(
-			self::PREFIX,
-			'api/v1/announcements',
-			array(
-				'methods'             => 'GET',
-				'callback'            => '__return_empty_array',
-				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
 		register_rest_route(
@@ -2752,6 +2753,30 @@ class Mastodon_API {
 
 			'software'          => $software,
 			'openRegistrations' => false,
+		);
+
+		return $ret;
+	}
+
+	public function api_announcements() {
+		$ret   = array();
+		$ret[] = array(
+			'id'      => 1,
+			'content' => '<h1>' . __( 'Settings for this app', 'enable-mastodon-apps' ) . '</h1>' .
+			'<p>' .
+			sprintf(
+				// Translators: %s is the post formats.
+				_n( 'Post Format: %s', 'Post Formats: %s', count( $this->app->get_post_formats() ), 'enable-mastodon-apps' ),
+				implode( ', ', $this->app->get_post_formats() )
+			) .
+			'</p>' . PHP_EOL .
+			'<p>' .
+			sprintf(
+				// Translators: %s is the client name.
+				__( 'Client: %s', 'enable-mastodon-apps' ),
+				$this->app->get_client_id()
+			) .
+			'</p>',
 		);
 
 		return $ret;
