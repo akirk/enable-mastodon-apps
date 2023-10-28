@@ -154,6 +154,7 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 - Post replies as comments ([#3])
 - Fix a fatal when saving the default post format
 
+[#44]: https://github.com/akirk/enable-mastodon-apps/pull/44
 [#42]: https://github.com/akirk/enable-mastodon-apps/pull/42
 [#41]: https://github.com/akirk/enable-mastodon-apps/pull/41
 [#37]: https://github.com/akirk/enable-mastodon-apps/pull/37
