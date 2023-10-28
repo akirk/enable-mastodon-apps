@@ -94,6 +94,10 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 
 ## Changelog
 
+### 0.6.1
+- Communicate the current settings inside Mastodon using an Announcement ([#44])
+- Bring back library adaptations which hopefully solves the "No client id supplied" problem
+
 ### 0.6.0
 - Use a Custom Post Type to for mapping post ids ([#42])
 - Improve response time after transients expired ([#41])
