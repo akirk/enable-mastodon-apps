@@ -247,8 +247,13 @@ class TokenController implements TokenControllerInterface
 
             $requestedScope = $defaultScope;
         }
-
-        return $grantType->createAccessToken($this->accessToken, $clientId, $grantType->getUserId(), $requestedScope);
+        $at = $grantType->createAccessToken($this->accessToken, $clientId, $grantType->getUserId(), $requestedScope);
+        if ( ! $at ) {
+            return $at;
+        }
+        // Compatibility with the Mastodon Token format: https://docs.joinmastodon.org/entities/Token/.
+        $at['created_at'] = time();
+        return $at;
     }
 
     /**
