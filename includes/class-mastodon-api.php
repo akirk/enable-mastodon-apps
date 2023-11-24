@@ -2755,7 +2755,7 @@ class Mastodon_API {
 			'openRegistrations' => false,
 		);
 
-		return $ret;
+		return apply_filters( 'mastodon_api_nodeinfo', $ret );
 	}
 
 	public function api_announcements() {
@@ -2826,7 +2826,7 @@ class Mastodon_API {
 			'uri'               => home_url(),
 		);
 
-		return $ret;
+		return apply_filters( 'mastodon_api_instance_v1', $ret );
 	}
 
 	public function api_instance_v2() {
@@ -2840,6 +2840,6 @@ class Mastodon_API {
 
 		unset( $ret['account_domain'] );
 
-		return $ret;
+		return apply_filters( 'mastodon_api_instance_v2', $ret );
 	}
 }
