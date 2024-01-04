@@ -731,9 +731,12 @@ class Mastodon_API {
 			if ( ! $redirect_uris ) {
 				$redirect_uris = '';
 			}
+			if ( ! is_array( $redirect_uris ) ) {
+				$redirect_uris = explode( ',', $redirect_uris );
+			}
 			$app = Mastodon_App::save(
 				$request->get_param( 'client_name' ),
-				explode( ',', $redirect_uris ),
+				$redirect_uris,
 				$request->get_param( 'scopes' ),
 				$request->get_param( 'website' )
 			);
