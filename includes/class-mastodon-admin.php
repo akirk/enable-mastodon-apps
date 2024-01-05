@@ -465,7 +465,7 @@ class Mastodon_Admin {
 									<span><?php esc_html_e( 'Implicitly re-register the next unknown client.', 'enable-mastodon-apps' ); ?></span>
 								</label>
 							</fieldset>
-							<p class="description"><?php esc_html_e( 'When you (accidentally) delete an app, this allows to use the app when it tries to authorize again.', 'enable-mastodon-apps' ); ?> <?php esc_html_e( 'This setting will turn itself off again as soon as an app has done so.', 'enable-mastodon-apps' ); ?></p>
+							<p class="description"><?php esc_html_e( 'When you (accidentally) delete an app, this allows to use the app when it tries to authorize again.', 'enable-mastodon-apps' ); ?><br/><?php esc_html_e( 'This setting will turn itself off again as soon as an app has done so.', 'enable-mastodon-apps' ); ?></p>
 						</td>
 					</tr>
 					<tr>
