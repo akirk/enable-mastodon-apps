@@ -203,4 +203,140 @@ class AppsEndpoint_Test extends Mastodon_API_TestCase {
 			$this->assertEquals( 200, $response->get_status() );
 		}
 	}
+
+
+	public function test_apps_auto_reregister() {
+		global $wp_rest_server;
+		$old_get = $_GET;
+		$old_post = $_POST;
+		$old_request = $_REQUEST;
+		$old_request_method = $_SERVER['REQUEST_METHOD'];
+		$old_request_uri = $_SERVER['REQUEST_URI'];
+
+		$client_name = 'newapp1';
+
+		// Create a new app.
+		$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/apps' );
+		$request->set_param( 'client_name', $client_name );
+		$request->set_param( 'redirect_uris', 'https://test' );
+		$request->set_param( 'scopes', 'read write follow push' );
+		$response = $wp_rest_server->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+		$data = $response->get_data();
+
+		// Access the authorize endpoint.
+		$_REQUEST = array(
+			'client_id'     => $data['client_id'],
+			'redirect_uri'  => 'https://test',
+			'response_type' => 'code',
+			'scope'         => 'read write follow push',
+		);
+		$_GET = $_REQUEST;
+		$_POST = array();
+		$_SERVER['REQUEST_METHOD'] = 'GET';
+		$_SERVER['REQUEST_URI'] = add_query_arg( $_REQUEST, '/oauth/authorize' );
+		$oauth = new Mastodon_OAuth();
+		$response = $oauth->handle_oauth( 'response' );
+		$this->assertEquals( 302, $response->getStatusCode() );
+
+		// And pretend the user clicked authorize.
+		$handler = $oauth->handle_oauth( 'handler' );
+		$request  = \OAuth2\Request::createFromGlobals();
+		$response = $handler->test_authorize( $request, $this->administrator );
+		$this->assertEquals( 302, $response->getStatusCode() );
+
+		// Now use the code to get an access token.
+		$location = $response->getHttpHeader( 'Location' );
+		$_REQUEST = array(
+			'client_id'     => $data['client_id'],
+			'client_secret' => $data['client_secret'],
+			'grant_type'    => 'authorization_code',
+			'code'          => wp_parse_args( wp_parse_url( $location, PHP_URL_QUERY ) )['code'],
+			'redirect_uri'  => 'https://test',
+		);
+		$_POST = $_REQUEST;
+		$_GET = array();
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_SERVER['REQUEST_URI'] = '/oauth/token';
+
+		$response = $oauth->handle_oauth( 'response' );
+		$this->assertEquals( 200, $response->getStatusCode() );
+		$this->assertNotEmpty( $response->getParameter( 'access_token' ) );
+
+		// Now delete the app.
+		$app = Mastodon_App::get_by_client_id( $data['client_id'] );
+		$app->delete();
+
+		delete_option( 'mastodon_api_auto_app_reregister' );
+
+		// Ensure that we no longer are able to authorize.
+		$_REQUEST = array(
+			'client_id'     => $data['client_id'],
+			'redirect_uri'  => 'https://test',
+			'response_type' => 'code',
+			'scope'         => 'read write follow push',
+		);
+		$_GET = $_REQUEST;
+		$_POST = array();
+		$_SERVER['REQUEST_METHOD'] = 'GET';
+		$_SERVER['REQUEST_URI'] = add_query_arg( $_REQUEST, '/oauth/authorize' );
+		$response = $oauth->handle_oauth( 'response' );
+		$this->assertEquals( 400, $response->getStatusCode() );
+
+		// Now enable the admin setting to allow adding the app upon authorize.
+		$this->assertFalse( get_option( 'mastodon_api_auto_app_reregister' ) );
+		update_option( 'mastodon_api_auto_app_reregister', 1 );
+		$this->assertEquals( 1, get_option( 'mastodon_api_auto_app_reregister' ) );
+
+		// Ensure that we now able to authorize again.
+		$oauth = new Mastodon_OAuth();
+		$response = $oauth->handle_oauth( 'response' );
+		$this->assertEquals( 302, $response->getStatusCode() );
+
+		// The option has been updated so that the next token request will set the secret.
+		$this->assertEquals( $data['client_id'], get_option( 'mastodon_api_auto_app_reregister' ) );
+
+		// The app now exists (again).
+		$app = Mastodon_App::get_by_client_id( $data['client_id'] );
+		$this->assertNotEmpty( $app );
+		$this->assertEquals( array( 'https://test' ), $app->get_redirect_uris() );
+		$this->assertEmpty( $app->get_client_secret() );
+
+		// The app name cannot be the same.
+		$this->assertNotEquals( $client_name, $app->get_client_name() );
+
+		// And pretend the user clicked authorize.
+		$handler = $oauth->handle_oauth( 'handler' );
+		$request  = \OAuth2\Request::createFromGlobals();
+		$response = $handler->test_authorize( $request, $this->administrator );
+		$this->assertEquals( 302, $response->getStatusCode() );
+
+		// Now use the code to get an access token.
+		$location = $response->getHttpHeader( 'Location' );
+		$_REQUEST = array(
+			'client_id'     => $data['client_id'],
+			'client_secret' => $data['client_secret'],
+			'grant_type'    => 'authorization_code',
+			'code'          => wp_parse_args( wp_parse_url( $location, PHP_URL_QUERY ) )['code'],
+			'redirect_uri'  => 'https://test',
+		);
+		$_POST = $_REQUEST;
+		$_GET = array();
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_SERVER['REQUEST_URI'] = '/oauth/token';
+
+		$response = $oauth->handle_oauth( 'response' );
+		$this->assertEquals( 200, $response->getStatusCode() );
+		$this->assertNotEmpty( $response->getParameter( 'access_token' ) );
+
+		// Ensur that the app now has the secret again.
+		$this->assertEquals( $data['client_secret'], $app->get_client_secret() );
+		$this->assertFalse( get_option( 'mastodon_api_auto_app_reregister' ) );
+
+		$_GET = $old_get;
+		$_POST = $old_post;
+		$_REQUEST = $old_request;
+		$_SERVER['REQUEST_METHOD'] = $old_request_method;
+		$_SERVER['REQUEST_URI'] = $old_request_uri;
+	}
 }

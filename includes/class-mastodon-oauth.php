@@ -64,7 +64,7 @@ class Mastodon_OAuth {
 		add_action( 'login_form_enable-mastodon-apps-authenticate', array( $this, 'authenticate_handler' ) );
 	}
 
-	public function handle_oauth() {
+	public function handle_oauth( $return_value = false ) {
 		if ( 'POST' === $_SERVER['REQUEST_METHOD'] && empty( $_POST ) && ! empty( $_REQUEST ) ) {
 			$_POST = $_REQUEST;
 		}
@@ -72,7 +72,7 @@ class Mastodon_OAuth {
 		switch ( strtok( $_SERVER['REQUEST_URI'], '?' ) ) {
 			case '/oauth/authorize':
 				if ( get_option( 'mastodon_api_disable_logins' ) ) {
-					return;
+					return null;
 				}
 				$handler = new OAuth2\AuthorizeHandler( $this->server );
 				break;
@@ -91,11 +91,11 @@ class Mastodon_OAuth {
 
 			case '/oauth/revoke':
 				$handler = new OAuth2\RevokationHandler( $this->server );
-				exit;
+				break;
 		}
 
 		if ( ! isset( $handler ) ) {
-			return;
+			return null;
 		}
 
 		if ( get_option( 'mastodon_api_debug_mode' ) > time() ) {
@@ -109,7 +109,15 @@ class Mastodon_OAuth {
 
 		$request  = Request::createFromGlobals();
 		$response = new Response();
+		if ( 'handler' === $return_value ) {
+			return $handler;
+		}
+
 		$response = $handler->handle( $request, $response );
+		if ( 'response' === $return_value ) {
+			return $response;
+		}
+
 		$response->send();
 		exit;
 	}

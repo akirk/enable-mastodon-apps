@@ -245,6 +245,12 @@ class Mastodon_Admin {
 			update_option( 'mastodon_api_disable_logins', true );
 		}
 
+		if ( isset( $_POST['mastodon_api_auto_app_reregister'] ) ) {
+			update_option( 'mastodon_api_auto_app_reregister', true );
+		} else {
+			delete_option( 'mastodon_api_auto_app_reregister' );
+		}
+
 		if ( isset( $_POST['mastodon_api_reply_as_comment'] ) ) {
 			update_option( 'mastodon_api_reply_as_comment', true );
 		} else {
@@ -311,6 +317,12 @@ class Mastodon_Admin {
 		$codes = OAuth2\AuthorizationCodeStorage::getAll();
 		$tokens = OAuth2\AccessTokenStorage::getAll();
 		$apps = Mastodon_App::get_all();
+		$unapproved_apps = 0;
+		foreach ( $apps as $app ) {
+			if ( $app->is_unapproved() ) {
+				$unapproved_apps += 1;
+			}
+		}
 		$rest_nonce = wp_create_nonce( 'wp_rest' );
 
 		wp_enqueue_script( 'plugin-install' );
@@ -440,7 +452,7 @@ class Mastodon_Admin {
 			<table class="form-table">
 				<tbody>
 					<tr>
-						<th scope="row"><?php esc_html_e( 'Enable Logins', 'enable-mastodon-apps' ); ?></th>
+						<th scope="row" rowspan="2"><?php esc_html_e( 'Enable Logins', 'enable-mastodon-apps' ); ?></th>
 						<td>
 							<fieldset>
 								<label for="mastodon_api_enable_logins">
@@ -449,6 +461,17 @@ class Mastodon_Admin {
 								</label>
 							</fieldset>
 							<p class="description"><?php esc_html_e( 'New apps can register on their own, so the list might grow if you keep this enabled.', 'enable-mastodon-apps' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<fieldset>
+								<label for="mastodon_api_auto_app_reregister">
+									<input name="mastodon_api_auto_app_reregister" type="checkbox" id="mastodon_api_auto_app_reregister" value="1" <?php checked( '1', get_option( 'mastodon_api_auto_app_reregister' ) ); ?> />
+									<span><?php esc_html_e( 'Allow the next invalid_client to re-register.', 'enable-mastodon-apps' ); ?></span>
+								</label>
+							</fieldset>
+							<p class="description"><?php esc_html_e( 'When you (accidentally) delete an app, re-add the app when it tries to authorize again.', 'enable-mastodon-apps' ); ?> <?php esc_html_e( 'This setting will turn itself off again as soon as an app has done so.', 'enable-mastodon-apps' ); ?></p>
 						</td>
 					</tr>
 					<tr>
@@ -673,6 +696,16 @@ class Mastodon_Admin {
 								count( $apps )
 							)
 						);
+
+						if ( ! empty( $unapproved_apps ) ) {
+							echo esc_html(
+								sprintf(
+								// translators: %d is the number of apps.
+									_n( '%d unapproved apps', '%d unapproved apps', count( $apps ), 'enable-mastodon-apps' ),
+									count( $apps )
+								)
+							);
+						}
 						?>
 					</summary>
 					<table class="widefat">
