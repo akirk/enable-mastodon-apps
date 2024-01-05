@@ -65,6 +65,7 @@ class Mastodon_OAuth {
 	}
 
 	public function handle_oauth( $return_value = false ) {
+		global $wp_query;
 		if ( 'POST' === $_SERVER['REQUEST_METHOD'] && empty( $_POST ) && ! empty( $_REQUEST ) ) {
 			$_POST = $_REQUEST;
 		}
@@ -73,7 +74,6 @@ class Mastodon_OAuth {
 				if ( get_option( 'mastodon_api_disable_logins' ) ) {
 					return null;
 				}
-				global $wp_query;
 				$wp_query->is_404 = false;
 				$handler = new OAuth2\AuthorizeHandler( $this->server );
 				break;
@@ -87,13 +87,11 @@ class Mastodon_OAuth {
 					exit;
 				}
 				header( 'Access-Control-Allow-Origin: *' );
-				global $wp_query;
 				$wp_query->is_404 = false;
 				$handler = new OAuth2\TokenHandler( $this->server );
 				break;
 
 			case '/oauth/revoke':
-				global $wp_query;
 				$wp_query->is_404 = false;
 				$handler = new OAuth2\RevokationHandler( $this->server );
 				break;
