@@ -40,17 +40,25 @@ class AuthorizeHandler {
 		// The initial request will come without a nonce, thus unauthenticated.
 		if ( ! is_user_logged_in() || ! current_user_can( 'edit_private_posts' ) || ! isset( $_POST['authorize'] ) ) {
 			// This is handled by a hook in wp-login.php which will display a form asking the user to consent.
-			// TODO: Redirect with $response->setRedirect().
-			header( 'Location: ' . add_query_arg( array_map( 'rawurlencode', array_merge( $request->getAllQueryParameters(), array( 'action' => 'enable-mastodon-apps-authenticate' ) ) ), wp_login_url() ) );
-			exit;
+			$response->setRedirect( 302, add_query_arg( array_map( 'rawurlencode', array_merge( $request->getAllQueryParameters(), array( 'action' => 'enable-mastodon-apps-authenticate' ) ) ), wp_login_url() ) );
+			return $response;
 		}
 
 		$user = wp_get_current_user();
 		if ( ! isset( $_POST['authorize'] ) || 'Authorize' !== $_POST['authorize'] ) {
-			$response->send();
-			exit;
+			$response->setError( 403, 'user_authorization_required', 'This application requires your consent.' );
+			return $response;
 		}
 
 		return $this->server->handleAuthorizeRequest( $request, $response, true, $user->ID );
+	}
+
+	public function test_authorize( Request $request, $user_id ) {
+		$response = new Response();
+		if ( ! $this->server->validateAuthorizeRequest( $request, $response ) ) {
+			$response->setError( 403, 'invalid_test_client', 'This test client is invalid.' );
+			return $response;
+		}
+		return $this->server->handleAuthorizeRequest( $request, $response, true, $user_id );
 	}
 }

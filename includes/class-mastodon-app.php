@@ -52,6 +52,10 @@ class Mastodon_App {
 		return get_term_meta( $this->term->term_id, 'client_secret', true );
 	}
 
+	public function set_client_secret( $client_secret ) {
+		return update_term_meta( $this->term->term_id, 'client_secret', $client_secret );
+	}
+
 	public function get_redirect_uris() {
 		return get_term_meta( $this->term->term_id, 'redirect_uris', true );
 	}
@@ -196,6 +200,7 @@ class Mastodon_App {
 		return true;
 	}
 
+
 	public function delete() {
 		return wp_delete_term( $this->term->term_id, self::TAXONOMY );
 	}
@@ -258,7 +263,7 @@ class Mastodon_App {
 				'type'              => 'array',
 				'sanitize_callback' => function ( $value ) {
 					if ( ! is_array( $value ) ) {
-						return array();
+						$value = array( $value );
 					}
 					$urls = array();
 					foreach ( $value as $url ) {
