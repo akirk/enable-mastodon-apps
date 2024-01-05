@@ -6,7 +6,7 @@
 - Tested up to: 6.2
 - Requires PHP: 5.2.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 0.6.1
+- Stable tag: 0.6.2
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -94,6 +94,10 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 
 ## Changelog
 
+### 0.6.2
+- Add a setting to implicitly re-register the next unknown client ([#48])
+- Add Instance-Endpoint Filters ([#45]) props @pfefferle
+
 ### 0.6.1
 - Communicate the current settings inside Mastodon using an Announcement ([#44])
 - Bring back library adaptations which hopefully solves the "No client id supplied" problem
@@ -154,6 +158,8 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 - Post replies as comments ([#3])
 - Fix a fatal when saving the default post format
 
+[#48]: https://github.com/akirk/enable-mastodon-apps/pull/48
+[#45]: https://github.com/akirk/enable-mastodon-apps/pull/45
 [#44]: https://github.com/akirk/enable-mastodon-apps/pull/44
 [#42]: https://github.com/akirk/enable-mastodon-apps/pull/42
 [#41]: https://github.com/akirk/enable-mastodon-apps/pull/41
