@@ -317,12 +317,6 @@ class Mastodon_Admin {
 		$codes = OAuth2\AuthorizationCodeStorage::getAll();
 		$tokens = OAuth2\AccessTokenStorage::getAll();
 		$apps = Mastodon_App::get_all();
-		$unapproved_apps = 0;
-		foreach ( $apps as $app ) {
-			if ( $app->is_unapproved() ) {
-				$unapproved_apps += 1;
-			}
-		}
 		$rest_nonce = wp_create_nonce( 'wp_rest' );
 
 		wp_enqueue_script( 'plugin-install' );
@@ -696,16 +690,6 @@ class Mastodon_Admin {
 								count( $apps )
 							)
 						);
-
-						if ( ! empty( $unapproved_apps ) ) {
-							echo esc_html(
-								sprintf(
-								// translators: %d is the number of apps.
-									_n( '%d unapproved apps', '%d unapproved apps', count( $apps ), 'enable-mastodon-apps' ),
-									count( $apps )
-								)
-							);
-						}
 						?>
 					</summary>
 					<table class="widefat">

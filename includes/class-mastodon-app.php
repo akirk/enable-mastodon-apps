@@ -80,10 +80,6 @@ class Mastodon_App {
 		return get_term_meta( $this->term->term_id, 'creation_date', true );
 	}
 
-	public function is_unapproved() {
-		return ! ! get_term_meta( $this->term->term_id, 'unapproved', true );
-	}
-
 	public function get_query_args() {
 		return get_term_meta( $this->term->term_id, 'query_args', true );
 	}
@@ -385,22 +381,6 @@ class Mastodon_App {
 				'sanitize_callback' => function ( $value ) {
 					if ( ! is_int( $value ) ) {
 						$value = time();
-					}
-					return $value;
-				},
-			)
-		);
-
-		register_term_meta(
-			self::TAXONOMY,
-			'unapproved',
-			array(
-				'show_in_rest'      => false,
-				'single'            => true,
-				'type'              => 'boolean',
-				'sanitize_callback' => function ( $value ) {
-					if ( ! is_bool( $value ) ) {
-						$value = false;
 					}
 					return $value;
 				},
