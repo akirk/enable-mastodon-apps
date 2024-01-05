@@ -462,10 +462,10 @@ class Mastodon_Admin {
 							<fieldset>
 								<label for="mastodon_api_auto_app_reregister">
 									<input name="mastodon_api_auto_app_reregister" type="checkbox" id="mastodon_api_auto_app_reregister" value="1" <?php checked( '1', get_option( 'mastodon_api_auto_app_reregister' ) ); ?> />
-									<span><?php esc_html_e( 'Allow the next invalid_client to re-register.', 'enable-mastodon-apps' ); ?></span>
+									<span><?php esc_html_e( 'Implicitly re-register the next unknown client.', 'enable-mastodon-apps' ); ?></span>
 								</label>
 							</fieldset>
-							<p class="description"><?php esc_html_e( 'When you (accidentally) delete an app, re-add the app when it tries to authorize again.', 'enable-mastodon-apps' ); ?> <?php esc_html_e( 'This setting will turn itself off again as soon as an app has done so.', 'enable-mastodon-apps' ); ?></p>
+							<p class="description"><?php esc_html_e( 'When you (accidentally) delete an app, this allows to use the app when it tries to authorize again.', 'enable-mastodon-apps' ); ?> <?php esc_html_e( 'This setting will turn itself off again as soon as an app has done so.', 'enable-mastodon-apps' ); ?></p>
 						</td>
 					</tr>
 					<tr>
