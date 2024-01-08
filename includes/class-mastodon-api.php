@@ -1574,10 +1574,16 @@ class Mastodon_API {
 						);
 					}
 				}
-			} elseif ( is_user_logged_in() ) {
-				$args['s'] = $request->get_param( 'q' );
-				$args['offset'] = $request->get_param( 'offset' );
-				$args['posts_per_page'] = $request->get_param( 'limit' );
+			} elseif ( is_user_logged_in() || $this->oauth->get_token() ) {
+				$q_param = $request->get_param( 'q' );
+				if( $q_param != null ) { $args['s'] = $q_param; }
+
+				$offset_param = $request->get_param( 'offset' );
+				if( $offset_param != null ) { $args['offset'] = $offset_param; }
+
+				$ppp_param = $request->get_param( 'limit' );
+				if( $ppp_param != null ) { $args['posts_per_page'] = $ppp_param; }
+
 				$ret['statuses'] = array_merge( $ret['statuses'], $this->get_posts( $args ) );
 			}
 		}
