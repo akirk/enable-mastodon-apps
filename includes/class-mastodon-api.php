@@ -1524,6 +1524,10 @@ class Mastodon_API {
 	public function api_tag_timelines( $request ) {
 		$args = $this->get_posts_query_args( $request );
 		$args['tag'] = $request->get_param( 'hashtag' );
+
+		$ppp_param = $request->get_param( 'limit' );
+		if( $ppp_param != null ) { $args['posts_per_page'] = $ppp_param; }
+
 		$args = apply_filters( 'mastodon_api_timelines_args', $args, $request );
 
 		return $this->get_posts( $args, $request->get_param( 'min_id' ), $request->get_param( 'max_id' ) );
