@@ -1261,6 +1261,10 @@ class Mastodon_API {
 	}
 
 	public function api_submit_post( $request ) {
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			return new \WP_Error( 'mastodon_api_submit_post', 'The access token is invalid', array( 'status' => 401 ) );
+		}
+
 		$status = $request->get_param( 'status' );
 		if ( empty( $status ) ) {
 			return new \WP_Error( 'mastodon_api_submit_post', 'Validation failed: Text can\'t be blank', array( 'status' => 422 ) );
