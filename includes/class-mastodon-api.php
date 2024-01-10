@@ -2725,8 +2725,8 @@ class Mastodon_API {
 		$software = apply_filters( 'mastodon_api_nodeinfo_software', $software );
 		$ret = array(
 			'metadata'          => array(
-				'nodeName'        => get_bloginfo( 'name' ),
-				'nodeDescription' => get_bloginfo( 'description' ),
+				'nodeName'        => html_entity_decode( get_bloginfo( 'name' ), ENT_QUOTES ),
+				'nodeDescription' => html_entity_decode( get_bloginfo( 'description' ), ENT_QUOTES ),
 				'software'        => $software,
 				'config'          => array(
 					'features' => array(
@@ -2812,9 +2812,9 @@ class Mastodon_API {
 
 	public function api_instance() {
 		$ret = array(
-			'title'             => get_bloginfo( 'name' ),
-			'description'       => get_bloginfo( 'description' ),
-			'short_description' => get_bloginfo( 'description' ),
+			'title'             => html_entity_decode( get_bloginfo( 'name' ), ENT_QUOTES ),
+			'description'       => html_entity_decode( get_bloginfo( 'description' ), ENT_QUOTES ),
+			'short_description' => html_entity_decode( get_bloginfo( 'description' ), ENT_QUOTES ),
 			'email'             => 'not@public.example',
 			'version'           => $this->software_string(),
 			'stats'             => array(
