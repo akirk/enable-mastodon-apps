@@ -2826,7 +2826,7 @@ class Mastodon_API {
 			'account_domain'    => \wp_parse_url( \home_url(), \PHP_URL_HOST ),
 			'registrations'     => false,
 			'approval_required' => false,
-			'uri'               => home_url(),
+			'uri'               => \wp_parse_url( \home_url(), \PHP_URL_HOST ),
 		);
 
 		return apply_filters( 'mastodon_api_instance_v1', $ret );
