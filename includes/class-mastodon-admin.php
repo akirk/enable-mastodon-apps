@@ -517,6 +517,9 @@ class Mastodon_Admin {
 										<?php $this->post_format_select( 'mastodon_api_default_post_formats', get_option( 'mastodon_api_default_post_formats', array( 'status' ) ) ); ?>
 									</label>
 								</fieldset>
+								<p class="description">
+									<?php esc_html_e( 'Note: If you change this post format after applications have already connected to your site you must manually change the post format for each individual application below in the "Apps" section.', 'enable-mastodon-apps' ); ?>
+								</p>
 							</details>
 						</td>
 					</tr>
