@@ -1027,7 +1027,6 @@ class Mastodon_API {
 		// Finally remove all remaining line breaks.
 		$post_content = str_replace( PHP_EOL, '', $post_content );
 
-		// Decode single quotes?  Is this necessary?  HTML entities should be fine in content.
 		$post_content = str_replace( '&#039;', "'", $post_content );
 
 		return trim( $post_content );
