@@ -1589,7 +1589,17 @@ class Mastodon_API {
 	}
 
 	public function api_public_timeline( $request ) {
-		return array();
+		$args = $this->get_posts_query_args( $request );
+		if ( empty( $args ) ) {
+			return array();
+		}
+
+		// Only get the published posts for the public timeline.
+		$args['post_status'] = array( 'publish' );
+
+		$args = apply_filters( 'mastodon_api_timelines_args', $args, $request );
+
+		return $this->get_posts( $args, $request->get_param( 'min_id' ), $request->get_param( 'max_id' ) );
 	}
 
 	public function api_get_post_context( $request ) {
