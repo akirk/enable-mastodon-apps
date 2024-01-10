@@ -1027,8 +1027,6 @@ class Mastodon_API {
 		// Finally remove all remaining line breaks.
 		$post_content = str_replace( PHP_EOL, '', $post_content );
 
-		$post_content = str_replace( '&#039;', "'", $post_content );
-
 		return trim( $post_content );
 	}
 
