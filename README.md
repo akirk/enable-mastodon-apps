@@ -6,7 +6,7 @@
 - Tested up to: 6.2
 - Requires PHP: 5.2.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 0.6.2
+- Stable tag: 0.6.3
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -78,7 +78,7 @@ Here is a list of endpoints and their implementation status:
 - [x] `POST /api/v1/notifications/clear` [Dismiss all notification](https://docs.joinmastodon.org/methods/notifications/#clear)
 - [x] `POST /api/v1/notifications/:id/dismiss` [Dismiss a single notification](https://docs.joinmastodon.org/methods/notifications/#dismiss)
 - [x] `GET /api/v1/timelines/home` [View home timeline](https://docs.joinmastodon.org/methods/timelines/#home)
-- [ ] `GET /api/v1/timelines/public` (implemented as empty) [View public timeline](https://docs.joinmastodon.org/methods/timelines/#public)
+- [x] `GET /api/v1/timelines/public` [View public timeline](https://docs.joinmastodon.org/methods/timelines/#public)
 - [ ] `GET /api/v1/markers` (implemented as empty) [Get saved timeline positions](https://docs.joinmastodon.org/methods/markers/#get)
 - [ ] `POST /api/v1/markers` [Save your position in a timeline](https://docs.joinmastodon.org/methods/markers/#create)
 - [x] `GET /api/v2/search` (partial, accounts (local and exact match for remote) and statuses in the local db) [Perform a search](https://docs.joinmastodon.org/methods/search/#v2)
@@ -93,6 +93,16 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 2. The Mastodon Apps settings page.
 
 ## Changelog
+
+### 0.6.3
+- Thanks @toolstack for lots of PRs with small fixes and enhancements!
+- Fixed compatibility with version 2.0.0 of the ActivityPub plugin ([#60]) thanks @toolstack!
+- Strip the protocol from the home_url ([#52]) props @toolstack
+- Add additional warning about changing the default post format ([#53]) props @toolstack
+- Make sure to decode html_entities for blog_info() ([#51]) props @toolstack
+- Enable local/public timeline ([#62]) props @toolstack
+- Check to make sure the current user has edit_post posting ([#61]) props @toolstack
+- Fix duplicate line generation in whitespace code ([#55]) props @toolstack
 
 ### 0.6.2
 - Add a setting to implicitly re-register the next unknown client ([#48])
@@ -158,6 +168,13 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 - Post replies as comments ([#3])
 - Fix a fatal when saving the default post format
 
+[#60]: https://github.com/akirk/enable-mastodon-apps/pull/60
+[#52]: https://github.com/akirk/enable-mastodon-apps/pull/52
+[#53]: https://github.com/akirk/enable-mastodon-apps/pull/53
+[#51]: https://github.com/akirk/enable-mastodon-apps/pull/51
+[#62]: https://github.com/akirk/enable-mastodon-apps/pull/62
+[#61]: https://github.com/akirk/enable-mastodon-apps/pull/61
+[#55]: https://github.com/akirk/enable-mastodon-apps/pull/55
 [#48]: https://github.com/akirk/enable-mastodon-apps/pull/48
 [#45]: https://github.com/akirk/enable-mastodon-apps/pull/45
 [#44]: https://github.com/akirk/enable-mastodon-apps/pull/44
