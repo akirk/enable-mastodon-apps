@@ -2489,8 +2489,11 @@ class Mastodon_API {
 			);
 		}
 		if ( get_current_user_id() === $user->ID ) {
-			if ( class_exists( '\Activitypub\Peer\Followers' ) ) {
+			if ( class_exists( '\Activitypub\Peer\Followers', false ) ) {
 				$followers_count = count( \Activitypub\Peer\Followers::get_followers( $user->ID ) );
+			}
+			if ( class_exists( '\Activitypub\Collection\Followers', false ) ) {
+				$followers_count = count( \Activitypub\Collection\Followers::get_followers( $user->ID ) );
 			}
 		}
 
