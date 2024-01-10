@@ -1018,9 +1018,14 @@ class Mastodon_API {
 	 * @return     string  The normalized content.
 	 */
 	private function normalize_whitespace( $post_content ) {
-		$post_content = preg_replace( '#<!-- /?wp:paragraph -->\s*<!-- /?wp:paragraph -->#', PHP_EOL, $post_content );
-		$post_content = preg_replace( '#\n\s*\n+#', PHP_EOL, $post_content );
-		$post_content = str_replace( '&#039;', "'", $post_content );
+		// First remove any Gutenberg tags with whitespace between them.
+		$post_content = preg_replace( '#<!-- /?wp:paragraph -->\s*<!-- /?wp:paragraph -->#', '', $post_content );
+		// Then remove *all* remaining Gutenberg tags.
+		$post_content = preg_replace( '#<!-- /?wp:[a-zA-Z]+? -->#', '', $post_content );
+		// Now remove any line breaks with whitespaces between them.
+		$post_content = preg_replace( '#' . PHP_EOL . '\s*' . PHP_EOL . '+#', '', $post_content );
+		// Finally remove all remaining line breaks.
+		$post_content = str_replace( PHP_EOL, '', $post_content );
 
 		return trim( $post_content );
 	}
