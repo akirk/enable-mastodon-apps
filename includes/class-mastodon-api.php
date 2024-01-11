@@ -598,7 +598,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_search' ),
-				'permission_callback' => array( $this, 'have_token_permission' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
 
@@ -772,18 +772,6 @@ class Mastodon_API {
 		wp_set_current_user( $token['user_id'] );
 		$this->app->was_used( $request );
 		return is_user_logged_in();
-	}
-
-	public function have_token_permission( $request ) {
-		$this->allow_cors();
-		$token = $this->oauth->get_token();
-		if ( ! $token ) {
-			return is_user_logged_in();
-		}
-		OAuth2\AccessTokenStorage::was_used( $token['access_token'] );
-		$this->app = Mastodon_App::get_by_client_id( $token['client_id'] );
-		$this->app->was_used( $request );
-		return true;
 	}
 
 	public function logged_in_for_private_permission( $request ) {
@@ -1574,15 +1562,21 @@ class Mastodon_API {
 						);
 					}
 				}
-			} elseif ( is_user_logged_in() || $this->oauth->get_token() ) {
+			} elseif ( is_user_logged_in() ) {
 				$q_param = $request->get_param( 'q' );
-				if( $q_param != null ) { $args['s'] = $q_param; }
+				if ( null !== $q_param ) {
+					$args['s'] = $q_param;
+				}
 
 				$offset_param = $request->get_param( 'offset' );
-				if( $offset_param != null ) { $args['offset'] = $offset_param; }
+				if ( null !== $offset_param ) {
+					$args['offset'] = $offset_param;
+				}
 
 				$ppp_param = $request->get_param( 'limit' );
-				if( $ppp_param != null ) { $args['posts_per_page'] = $ppp_param; }
+				if ( null !== $ppp_param ) {
+					$args['posts_per_page'] = $ppp_param;
+				}
 
 				$ret['statuses'] = array_merge( $ret['statuses'], $this->get_posts( $args ) );
 			}
