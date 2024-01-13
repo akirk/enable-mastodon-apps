@@ -45,7 +45,7 @@ class AuthorizeHandler {
 		}
 
 		$user = wp_get_current_user();
-		if ( ! isset( $_POST['authorize'] ) || 'Authorize' !== $_POST['authorize'] ) {
+		if ( ! isset( $_POST['authorize'] ) || __( 'Authorize', 'enable-mastodon-apps' ) !== $_POST['authorize'] ) {
 			$response->setError( 403, 'user_authorization_required', 'This application requires your consent.' );
 			return $response;
 		}
