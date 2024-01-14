@@ -1797,6 +1797,8 @@ class Mastodon_API {
 			return $this->get_comment_status_array( get_comment( $comment_id ) );
 		}
 
+		$post_id = $this->maybe_get_remapped_reblog_id( $post_id );
+
 		return $this->get_status_array( get_post( $post_id ) );
 	}
 
