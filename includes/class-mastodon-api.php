@@ -978,6 +978,10 @@ class Mastodon_API {
 	}
 
 	private function get_comment_status_array( \WP_Comment $comment ) {
+		if ( ! $comment ) {
+			return new \WP_Error( 'record-not-found', 'Record not found', array( 'status' => 404 ) );
+		}
+
 		$post = (object) array(
 			'ID'           => $this->remap_comment_id( $comment->comment_ID ),
 			'guid'         => $comment->guid . '#comment-' . $comment->comment_ID,
@@ -1030,7 +1034,7 @@ class Mastodon_API {
 		return trim( $post_content );
 	}
 
-	private function get_status_array( $post, $data = array() ) {
+	private function get_status_array( \WP_Post $post, $data = array() ) {
 		$meta = get_post_meta( $post->ID, 'activitypub', true );
 		$feed_url = get_post_meta( $post->ID, 'feed_url', true );
 
@@ -1801,7 +1805,7 @@ class Mastodon_API {
 	public function api_get_post( $request ) {
 		$post_id = $request->get_param( 'post_id' );
 		if ( ! $post_id ) {
-			return false;
+			return new \WP_REST_Response( array( 'error' => 'Record not found' ), 404 );
 		}
 
 		$comment_id = $this->get_remapped_comment_id( $post_id );
@@ -1810,8 +1814,13 @@ class Mastodon_API {
 		}
 
 		$post_id = $this->maybe_get_remapped_reblog_id( $post_id );
+		$post = get_post( $post_id );
 
-		return $this->get_status_array( get_post( $post_id ) );
+		if ( ! $post ) {
+			return new \WP_REST_Response( array( 'error' => 'Record not found' ), 404 );
+		}
+
+		return $this->get_status_array( $post );
 	}
 
 	private function convert_outbox_to_status( $outbox, $user_id ) {
@@ -1999,7 +2008,7 @@ class Mastodon_API {
 		}
 
 		if ( empty( $relationships ) ) {
-			return new \WP_Error( 'invalid-user', 'Invalid user', array( 'status' => 404 ) );
+			return new \WP_REST_Response( array( 'error' => 'Invalid user' ), 404 );
 		}
 
 		return $relationships[0];
