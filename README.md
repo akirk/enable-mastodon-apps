@@ -6,7 +6,7 @@
 - Tested up to: 6.2
 - Requires PHP: 5.2.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 0.6.3
+- Stable tag: 0.6.4
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -94,6 +94,9 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 
 ## Changelog
 
+### 0.6.4
+- Address an incompatibility with the IndieAuth plugin ([#65])
+
 ### 0.6.3
 - Thanks @toolstack for lots of PRs with small fixes and enhancements!
 - Fixed compatibility with version 2.0.0 of the ActivityPub plugin ([#60]) thanks @toolstack!
@@ -168,6 +171,7 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 - Post replies as comments ([#3])
 - Fix a fatal when saving the default post format
 
+[#65]: https://github.com/akirk/enable-mastodon-apps/pull/65
 [#60]: https://github.com/akirk/enable-mastodon-apps/pull/60
 [#52]: https://github.com/akirk/enable-mastodon-apps/pull/52
 [#53]: https://github.com/akirk/enable-mastodon-apps/pull/53
