@@ -1034,7 +1034,7 @@ class Mastodon_API {
 		return trim( $post_content );
 	}
 
-	private function get_status_array( \WP_Post $post, $data = array() ) {
+	private function get_status_array( $post, $data = array() ) {
 		$meta = get_post_meta( $post->ID, 'activitypub', true );
 		$feed_url = get_post_meta( $post->ID, 'feed_url', true );
 
