@@ -20,6 +20,12 @@ namespace Enable_Mastodon_Apps;
 class Mastodon_API {
 	const ACTIVITYPUB_USERNAME_REGEXP = '(?:([A-Za-z0-9_-]+)@((?:[A-Za-z0-9_-]+\.)+[A-Za-z]+))';
 	const VERSION = ENABLE_MASTODON_APPS_VERSION;
+
+	/**
+	 * The default term for bookmarking a status.
+	 */
+	const DEFAULT_BOOKMARK = 'bookmark';
+
 	/**
 	 * The OAuth handler.
 	 *
@@ -38,6 +44,7 @@ class Mastodon_API {
 	const APP_TAXONOMY = 'mastodon-app';
 	const REMOTE_USER_TAXONOMY = 'mastodon-api-remote-user';
 	const CPT = 'enable-mastodon-apps';
+	const BOOKMARKS_TAXONOMY_PREFIX = 'mastodon-api-bookmarks-';
 
 	/**
 	 * Constructor
@@ -150,6 +157,8 @@ class Mastodon_API {
 			'api/v1/statuses/([0-9]+)/unfavourite'   => 'api/v1/statuses/$matches[1]/unfavourite',
 			'api/v1/statuses/([0-9]+)/reblog'        => 'api/v1/statuses/$matches[1]/reblog',
 			'api/v1/statuses/([0-9]+)/unreblog'      => 'api/v1/statuses/$matches[1]/unreblog',
+			'api/v1/statuses/([0-9]+)/bookmark'      => 'api/v1/statuses/$matches[1]/bookmark',
+			'api/v1/statuses/([0-9]+)/unbookmark'    => 'api/v1/statuses/$matches[1]/unbookmark',
 			'api/v1/notifications/([^/]+)/dismiss'   => 'api/v1/notifications/$matches[1]/dismiss',
 			'api/v1/notifications/([^/|$]+)/?$'      => 'api/v1/notifications/$matches[1]',
 			'api/v1/notifications'                   => 'api/v1/notifications',
@@ -263,7 +272,7 @@ class Mastodon_API {
 			'api/v1/bookmarks',
 			array(
 				'methods'             => 'GET',
-				'callback'            => '__return_empty_array',
+				'callback'            => array( $this, 'api_bookmarks' ),
 				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
@@ -518,6 +527,26 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'POST', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_unreblog_post' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/statuses/(?P<post_id>[0-9]+)/bookmark',
+			array(
+				'methods'             => array( 'POST', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_bookmark_post' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/statuses/(?P<post_id>[0-9]+)/unbookmark',
+			array(
+				'methods'             => array( 'POST', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_unbookmark_post' ),
 				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
@@ -1098,7 +1127,7 @@ class Mastodon_API {
 				'reblogged'              => $reblogged,
 				'reblogged_by'           => $reblogged_by,
 				'muted'                  => false,
-				'bookmarked'             => false,
+				'bookmarked'             => $this->check_if_status_bookmarked( $user_id, $post->ID ),
 				'content'                => $this->normalize_whitespace( $post->post_title . PHP_EOL . $post->post_content ),
 				'filtered'               => array(),
 				'reblog'                 => null,
@@ -1858,7 +1887,7 @@ class Mastodon_API {
 			'favourited'             => false,
 			'reblogged'              => false,
 			'muted'                  => false,
-			'bookmarked'             => false,
+			'bookmarked'             => $this->check_if_status_bookmarked( $user_id, $id_parts ),
 			'content'                => $activity['object']['content'],
 			'filtered'               => array(),
 			'reblog'                 => null,
@@ -2889,5 +2918,114 @@ class Mastodon_API {
 		unset( $ret['account_domain'] );
 
 		return apply_filters( 'mastodon_api_instance_v2', $ret );
+	}
+
+	public function api_bookmarks( $request ) {
+		$user_id = get_current_user_id();
+		if ( ! $user_id ) {
+			return array();
+		}
+
+		$args = $this->get_posts_query_args( $request );
+		if ( empty( $args ) ) {
+			return array();
+		}
+		$args = apply_filters( 'mastodon_api_timelines_args', $args, $request );
+
+		$this->register_bookmarks_taxonomy( $user_id );
+
+		$args['numberposts'] = -1;
+		$args['post_type'] = apply_filters( 'friends_frontend_post_types', array( 'post' ) );
+		$args['tax_query'] = array(
+			array(
+				'taxonomy' => self::BOOKMARKS_TAXONOMY_PREFIX . $user_id,
+				'field'    => 'slug',
+				'terms'    => self::DEFAULT_BOOKMARK,
+			),
+		);
+
+		return $this->get_posts( $args );
+	}
+
+	public function api_bookmark_post( $request ) {
+		$user_id = get_current_user_id();
+		$post_id = $request->get_param( 'post_id' );
+		if ( ! $post_id || ! $post_id ) {
+			return false;
+		}
+
+		$post_id = $this->maybe_get_remapped_reblog_id( $post_id );
+
+		do_action( 'mastodon_api_bookmark', $post_id );
+
+		$this->register_bookmarks_taxonomy( $user_id );
+
+		wp_set_object_terms( $post_id, self::DEFAULT_BOOKMARK, self::BOOKMARKS_TAXONOMY_PREFIX . $user_id, true );
+
+		$post = get_post( $post_id );
+
+		return $this->get_status_array( $post );
+	}
+
+	public function api_unbookmark_post( $request ) {
+		$user_id = get_current_user_id();
+		$post_id = $request->get_param( 'post_id' );
+		if ( ! $post_id ) {
+			return false;
+		}
+
+		$post_id = $this->maybe_get_remapped_reblog_id( $post_id );
+
+		do_action( 'mastodon_api_unbookmark', $post_id );
+
+		$this->register_bookmarks_taxonomy( $user_id );
+
+		wp_remove_object_terms( $post_id, self::DEFAULT_BOOKMARK, self::BOOKMARKS_TAXONOMY_PREFIX . $user_id, true );
+
+		$post = get_post( $post_id );
+
+		return $this->get_status_array( $post );
+	}
+
+	private function check_if_status_bookmarked( $user_id, $post_id ) {
+		if ( ! $post_id || ! $user_id ) {
+			return false;
+		}
+
+		$this->register_bookmarks_taxonomy( $user_id );
+
+		$term = false;
+		$terms = wp_get_object_terms( $post_id, self::BOOKMARKS_TAXONOMY_PREFIX . $user_id );
+		if ( is_array( $terms ) ) {
+			foreach ( $terms as $t ) {
+				if ( self::DEFAULT_BOOKMARK === $t->slug ) {
+					return true;
+				}
+			}
+		}
+	}
+
+	private function register_bookmarks_taxonomy( $user_id ) {
+		if ( false === $user_id ) {
+			return;
+		}
+		$args = array(
+			'labels'       => array(
+				'name'          => 'Mastodon Bookmarks',
+				'singular_name' => 'Mastodon Bookmark',
+				'menu_name'     => 'Mastodon Bookmarks',
+			),
+			'public'       => false,
+			'show_ui'      => false,
+			'show_in_menu' => false,
+			'show_in_rest' => false,
+			'rewrite'      => false,
+		);
+
+		register_taxonomy( self::BOOKMARKS_TAXONOMY_PREFIX . $user_id, null, $args );
+
+		if ( is_wp_error( get_term( self::DEFAULT_BOOKMARK, self::BOOKMARKS_TAXONOMY_PREFIX . $user_id ) ) ) {
+			$result = wp_insert_term( self::DEFAULT_BOOKMARK, self::BOOKMARKS_TAXONOMY_PREFIX . $user_id );
+		}
 	}
 }
