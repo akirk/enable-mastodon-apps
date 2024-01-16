@@ -39,6 +39,8 @@ class Mastodon_API {
 	const REMOTE_USER_TAXONOMY = 'mastodon-api-remote-user';
 	const CPT = 'enable-mastodon-apps';
 
+	const FOLLOW_HASHTAG_USER_META_KEY = 'enable-mastodon-apps-tags-followed';
+
 	/**
 	 * Constructor
 	 */
@@ -161,6 +163,9 @@ class Mastodon_API {
 			'api/v1/timelines/(home|public)'         => 'api/v1/timelines/$matches[1]',
 			'api/v1/timelines/tag/([^/|$]+)'         => 'api/v1/timelines/tag/$matches[1]',
 			'api/v2/search'                          => 'api/v1/search',
+			'api/v1/tags/(.+)'                       => 'api/v1/tags/$matches[1]',
+			'api/v1/tags/([^/]+)/follow'             => 'api/v1/tags/$matches[1]/follow',
+			'api/v1/tags/([^/]+)/unfollow'           => 'api/v1/tags/$matches[1]/unfollow',
 		);
 
 		foreach ( $generic as $rule ) {
@@ -254,7 +259,7 @@ class Mastodon_API {
 			'api/v1/followed_tags',
 			array(
 				'methods'             => 'GET',
-				'callback'            => '__return_empty_array',
+				'callback'            => array( $this, 'api_followed_tags' ),
 				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
@@ -657,6 +662,36 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_account' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/tags/(?P<id>[^/]+)',
+			array(
+				'methods'             => array( 'GET', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_tags' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/tags/(?P<id>[^/]+)/follow',
+			array(
+				'methods'             => array( 'POST', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_tags_follow' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/tags/(?P<id>[^/]+)/unfollow',
+			array(
+				'methods'             => array( 'POST', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_tags_unfollow' ),
 				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
@@ -2930,5 +2965,150 @@ class Mastodon_API {
 		unset( $ret['account_domain'] );
 
 		return apply_filters( 'mastodon_api_instance_v2', $ret );
+	}
+
+	public function api_tags( $request ) {
+		$token = $this->oauth->get_token();
+		$user_id = $token['user_id'];
+		$hashtag = $request->get_param( 'id' );
+		$followed = $this->check_if_hashtag_followed( $user_id, $hashtag );
+
+		$term = $this->find_hashtag_term( $hashtag );
+		return $this->generate_hashtag_array( $term, array(), $followed );
+	}
+
+	public function api_tags_follow( $request ) {
+		$token = $this->oauth->get_token();
+		$user_id = $token['user_id'];
+
+		$tags_followed = get_user_meta( $user_id, self::FOLLOW_HASHTAG_USER_META_KEY, true );
+
+		if ( false === $tags_followed ) {
+			$tags_followed = array();
+		} else {
+			$tags_followed = unserialize( $tags_followed );
+		}
+
+		$hashtag = $request->get_param( 'id' );
+		$term = $this->find_hashtag_term( $hashtag );
+
+		$tags_followed[ $hashtag ] = true;
+
+		update_user_meta( $user_id, self::FOLLOW_HASHTAG_USER_META_KEY, serialize( $tags_followed ) );
+
+		if ( null === $term ) {
+			return $this->generate_hashtag_array( '' );
+		}
+
+		return $this->generate_hashtag_array( $term, array(), true );
+	}
+
+	public function api_tags_unfollow( $request ) {
+		$token = $this->oauth->get_token();
+		$user_id = $token['user_id'];
+
+		$tags_followed = get_user_meta( $user_id, self::FOLLOW_HASHTAG_USER_META_KEY, true );
+
+		if ( false === $tags_followed ) {
+			$tags_followed = array();
+		} else {
+			$tags_followed = unserialize( $tags_followed );
+		}
+
+		$hashtag = $request->get_param( 'id' );
+		$term = $this->find_hashtag_term( $hashtag );
+
+		unset( $tags_followed[ $hashtag ] );
+
+		update_user_meta( $user_id, self::FOLLOW_HASHTAG_USER_META_KEY, serialize( $tags_followed ) );
+
+		if ( null === $term ) {
+			return $this->generate_hashtag_array( '' );
+		}
+
+		return $this->generate_hashtag_array( $term, array() );
+	}
+
+	public function api_followed_tags( $request ) {
+		$token = $this->oauth->get_token();
+		$user_id = $token['user_id'];
+
+		$tags_followed = get_user_meta( $user_id, self::FOLLOW_HASHTAG_USER_META_KEY, true );
+
+		if ( false === $tags_followed ) {
+			$tags_followed = array();
+		} else {
+			$tags_followed = unserialize( $tags_followed );
+		}
+
+		$ret = array();
+		foreach ( $tags_followed as $key => $value ) {
+			$term = $this->find_hashtag_term( $key );
+			$ret[] = $this->generate_hashtag_array( $term, array(), true );
+		}
+
+		return $ret;
+	}
+
+	private function generate_hashtag_array( $term, $history = array(), $following = false ) {
+		$ret = array(
+			'name'    => $term->name,
+			'url'     => get_term_link( $term ),
+			'history' => $history,
+		);
+		if ( $following ) {
+			$ret['following'] = true;
+		}
+		return $ret;
+	}
+
+	private function get_categories() {
+		$args = array(
+			'orderby'    => 'name',
+			'hide_empty' => false,
+		);
+		return get_categories( $args );
+	}
+
+	private function get_tags() {
+		$args = array(
+			'orderby'    => 'name',
+			'hide_empty' => false,
+		);
+		return get_tags( $args );
+	}
+
+	private function find_hashtag_term( $hashtag ) {
+		$tags = $this->get_tags();
+		$post_data['tags_input'] = array();
+		foreach ( $tags as $tag ) {
+			if ( strcmp( $hashtag, $tag->name ) === 0 ) {
+				return $tag;
+			}
+		}
+		$categories = $this->get_categories();
+		$post_data['post_category'] = array();
+		foreach ( $categories as $category ) {
+			if ( strcmp( $hashtag, $category->name ) === 0 ) {
+				return $category;
+			}
+		}
+		return null;
+	}
+
+	private function check_if_hashtag_followed( $user_id, $hashtag ) {
+		$tags_followed = get_user_meta( $user_id, self::FOLLOW_HASHTAG_USER_META_KEY, true );
+
+		if ( false === $tags_followed ) {
+			$tags_followed = array();
+		} else {
+			$tags_followed = unserialize( $tags_followed );
+		}
+
+		if ( array_key_exists( $hashtag, $tags_followed ) ) {
+			return true;
+		}
+
+		return false;
 	}
 }
