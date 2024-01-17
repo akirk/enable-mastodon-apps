@@ -263,6 +263,24 @@ class Mastodon_Admin {
 			delete_option( 'mastodon_api_debug_mode' );
 		}
 
+		if ( isset( $_POST['mastodon_api_announcements_group'] ) ) {
+			$announcement_types = array(
+				'page'     => 'page',
+				'post'     => 'post',
+				'category' => 'category',
+				'tag'      => 'tag',
+			);
+			if ( $announcement_types[ $_POST['mastodon_api_announcements_group'] ] === $_POST['mastodon_api_announcements_group'] ) {
+				update_option( 'mastodon_api_announcement_type', $announcement_types[ $_POST['mastodon_api_announcements_group'] ] );
+			} else {
+				update_option( 'mastodon_api_announcement_type', 'default' );
+			}
+		}
+
+		if ( isset( $_POST['mastodon_api_announcements_id'] ) ) {
+			update_option( 'mastodon_api_announcement_id', sanitize_text_field( $_POST['mastodon_api_announcements_id'] ) );
+		}
+
 		if ( isset( $_POST['mastodon_api_default_post_formats'] ) && is_array( $_POST['mastodon_api_default_post_formats'] ) ) {
 			$default_post_formats = array_filter(
 				$_POST['mastodon_api_default_post_formats'],
@@ -326,6 +344,13 @@ class Mastodon_Admin {
 		$plugins = get_plugins();
 		$activitypub_installed = isset( $plugins['activitypub/activitypub.php'] );
 		$friends_installed = isset( $plugins['friends/friends.php'] );
+
+		$announcements_type = get_option( 'mastodon_api_announcement_type', 'default' );
+		$announcements_id = get_option( 'mastodon_api_announcement_id', false );
+
+		if ( false === $announcements_type ) {
+			$announcements_type = 'default';
+		}
 
 		function output_request_log( $request, $rest_nonce ) {
 			$date = \DateTimeImmutable::createFromFormat( 'U.u', $request['timestamp'] );
@@ -521,6 +546,37 @@ class Mastodon_Admin {
 									<?php esc_html_e( 'Note: If you change this post format after applications have already connected to your site you must manually change the post format for each individual application below in the "Apps" section.', 'enable-mastodon-apps' ); ?>
 								</p>
 							</details>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Announcements Type', 'enable-mastodon-apps' ); ?></th>
+						<td>
+							<fieldset>
+								<input type="radio" value="default" name="mastodon_api_announcements_group" id="mastodon_api_annoucments_default"<?php checked( $announcements_type, 'default' ); ?>>
+								<label for="mastodon_api_announcements_group"><?php esc_html_e( 'Default', 'enable-mastodon-apps' ); ?></label><br>
+								<input type="radio" value="post" name="mastodon_api_announcements_group" id="mastodon_api_annoucments_post"<?php checked( $announcements_type, 'post' ); ?>>
+								<label for="mastodon_api_announcements_group"><?php esc_html_e( 'Single Post', 'enable-mastodon-apps' ); ?></label><br>
+								<input type="radio" value="page" name="mastodon_api_announcements_group" id="mastodon_api_annoucments_page"<?php checked( $announcements_type, 'page' ); ?>>
+								<label for="mastodon_api_announcements_group"><?php esc_html_e( 'Single Page', 'enable-mastodon-apps' ); ?></label><br>
+								<input type="radio" value="category" name="mastodon_api_announcements_group" id="mastodon_api_annoucments_category"<?php checked( $announcements_type, 'category' ); ?>>
+								<label for="mastodon_api_announcements_group"><?php esc_html_e( 'All posts in a category', 'enable-mastodon-apps' ); ?></label><br>
+								<input type="radio" value="tag" name="mastodon_api_announcements_group" id="mastodon_api_annoucments_tag"<?php checked( $announcements_type, 'tag' ); ?>>
+								<label for="mastodon_api_announcements_group"><?php esc_html_e( 'All posts with a tag', 'enable-mastodon-apps' ); ?></label><br>
+							</fieldset>
+							<p class="description">
+								<?php esc_html_e( 'Select one of the above to use for the Mastodon annoucments tab.', 'enable-mastodon-apps' ); ?>
+							</p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Announcements ID', 'enable-mastodon-apps' ); ?></th>
+						<td>
+							<fieldset>
+								<input type="text" id="mastodon_api_announcements_id" name="mastodon_api_announcements_id" value="<?php echo sanitize_text_field( $announcements_id ); ?>">
+							</fieldset>
+							<p class="description">
+								<?php esc_html_e( 'Enter the post id, page id, category slug, or tag slug to use for annoucments as selected above.', 'enable-mastodon-apps' ); ?>
+							</p>
 						</td>
 					</tr>
 				</tbody>
