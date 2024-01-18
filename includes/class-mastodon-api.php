@@ -86,7 +86,7 @@ class Mastodon_API {
 	public function reformat_error_response( $result ) {
 		if ( ! empty( $result['code'] ) && ! empty( $result['message'] ) ) {
 			return array(
-				'error' => $result['code'],
+				'error'             => $result['code'],
 				'error_description' => $result['message'],
 			);
 		}
