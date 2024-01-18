@@ -538,7 +538,7 @@ class Mastodon_Admin {
 						$date = \DateTimeImmutable::createFromFormat( 'U.u', $request['timestamp'] );
 						if ( $date > $debug_start_time ) {
 							$request['app'] = $app;
-							$all_last_requests[ $request['timestamp'] ] = $request;
+							$all_last_requests[ $request['timestamp'] * 10000 ] = $request;
 						}
 					}
 				}
