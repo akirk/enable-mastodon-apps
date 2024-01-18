@@ -79,7 +79,9 @@ class Mastodon_API {
 	 *
 	 * @see https://docs.joinmastodon.org/entities/Error/
 	 *
-	 * @param array $result The API result.
+	 * @param array           $result  The API result.
+	 * @param WP_REST_Server  $server  The REST server instance.
+	 * @param WP_REST_Request $request The REST request instance.
 	 *
 	 * @return array The reformatted result.
 	 */
