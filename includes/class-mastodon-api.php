@@ -141,6 +141,7 @@ class Mastodon_API {
 		);
 		$parametrized = array(
 			'api/v1/accounts/([^/]+)/featured_tags'  => 'api/v1/accounts/$matches[1]/featured_tags',
+			'api/v1/accounts/([^/]+)/followers'      => 'api/v1/accounts/$matches[1]/followers',
 			'api/v1/accounts/([^/]+)/follow'         => 'api/v1/accounts/$matches[1]/follow',
 			'api/v1/accounts/([^/]+)/unfollow'       => 'api/v1/accounts/$matches[1]/unfollow',
 			'api/v1/accounts/([^/]+)/statuses'       => 'api/v1/accounts/$matches[1]/statuses',
@@ -621,6 +622,17 @@ class Mastodon_API {
 				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/accounts/(?P<user_id>[^/]+)/followers',
+			array(
+				'methods'             => array( 'GET', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_account_followers' ),
+				'permission_callback' => array( $this, 'logged_in_permission' ),
+			)
+		);
+
 		register_rest_route(
 			self::PREFIX,
 			'api/v1/accounts/(?P<user_id>[^/]+)/follow',
@@ -1969,6 +1981,17 @@ class Mastodon_API {
 		$args = apply_filters( 'mastodon_api_account_statuses_args', $args, $request );
 
 		return $this->get_posts( $args );
+	}
+
+	public function api_account_followers( $request ) {
+		$user_id   = $this->get_user_id_from_request( $request );
+		$followers = \apply_filters( 'mastodon_api_account_followers', array(), $user_id, $request );
+
+		if ( is_wp_error( $followers ) ) {
+			return $followers;
+		}
+
+		return new \WP_REST_Response( $followers );
 	}
 
 	public function api_account_follow( $request ) {
