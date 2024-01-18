@@ -56,7 +56,7 @@ class Mastodon_API {
 		add_action( 'query_vars', array( $this, 'query_vars' ) );
 		add_action( 'rest_api_init', array( $this, 'add_rest_routes' ) );
 		add_filter( 'rest_pre_serve_request', array( $this, 'allow_cors' ), 10, 4 );
-		add_filter( 'rest_pre_echo_response', array( $this, 'reformat_error_response' ) );
+		add_filter( 'rest_pre_echo_response', array( $this, 'reformat_error_response' ), 10, 3 );
 		add_filter( 'template_include', array( $this, 'log_404s' ) );
 		add_filter( 'activitypub_post', array( $this, 'activitypub_post' ), 10, 2 );
 		add_filter( 'enable_mastodon_apps_get_json', array( $this, 'get_json' ), 10, 4 );
@@ -79,11 +79,17 @@ class Mastodon_API {
 	 *
 	 * @see https://docs.joinmastodon.org/entities/Error/
 	 *
-	 * @param array $result The API result.
+	 * @param array           $result  The API result.
+	 * @param WP_REST_Server  $server  The REST server instance.
+	 * @param WP_REST_Request $request The REST request instance.
 	 *
 	 * @return array The reformatted result.
 	 */
-	public function reformat_error_response( $result ) {
+	public function reformat_error_response( $result, $server, $request ) {
+		if ( 0 !== strpos( $request->get_route(), '/' . self::PREFIX ) ) {
+			return $result;
+		}
+
 		if ( http_response_code() < 400 ) {
 			return $result;
 		}
