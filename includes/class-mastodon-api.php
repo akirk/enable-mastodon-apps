@@ -86,7 +86,7 @@ class Mastodon_API {
 	 * @return array The reformatted result.
 	 */
 	public function reformat_error_response( $result, $server, $request ) {
-		if ( 0 !== strpos( $request->get_route(), '/enable-mastodon-apps' ) ) {
+		if ( 0 !== strpos( $request->get_route(), '/' . self::PREFIX ) ) {
 			return $result;
 		}
 
