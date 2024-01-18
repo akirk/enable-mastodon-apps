@@ -56,7 +56,7 @@ class Mastodon_API {
 		add_action( 'query_vars', array( $this, 'query_vars' ) );
 		add_action( 'rest_api_init', array( $this, 'add_rest_routes' ) );
 		add_filter( 'rest_pre_serve_request', array( $this, 'allow_cors' ), 10, 4 );
-		add_filter( 'rest_pre_echo_response', array( $this, 'reformat_error_response' ), 10, 3 );
+		add_filter( 'rest_pre_echo_response', array( $this, 'reformat_error_response' ) );
 		add_filter( 'template_include', array( $this, 'log_404s' ) );
 		add_filter( 'activitypub_post', array( $this, 'activitypub_post' ), 10, 2 );
 		add_filter( 'enable_mastodon_apps_get_json', array( $this, 'get_json' ), 10, 4 );
@@ -84,14 +84,14 @@ class Mastodon_API {
 	 * @return array The reformatted result.
 	 */
 	public function reformat_error_response( $result ) {
-		if ( ! empty( $result['code'] ) && ! empty( $result['message'] ) ) {
-			return array(
-				'error'             => $result['code'],
-				'error_description' => $result['message'],
-			);
+		if ( http_response_code() < 400 ) {
+			return $result;
 		}
 
-		return $result;
+		return array(
+			'error'             => empty( $result['code'] ) ? __( 'unknown_error', 'enable-mastodon-apps' ) : $result['code'],
+			'error_description' => empty( $result['message'] ) ? __( 'Unknown error', 'enable-mastodon-apps' ) : $result['message'],
+		);
 	}
 
 	public function register_taxonomy() {
