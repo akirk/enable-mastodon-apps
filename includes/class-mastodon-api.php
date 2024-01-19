@@ -49,6 +49,9 @@ class Mastodon_API {
 		$this->register_taxonomy();
 		$this->register_custom_post_type();
 		new Mastodon_Admin( $this->oauth );
+
+		// Register Handlers.
+		new Handler\Account();
 	}
 
 	public function register_hooks() {
