@@ -1232,7 +1232,7 @@ class Mastodon_API {
 			}
 
 			$data['media_attachments'][] = array(
-				'id'          => $attachment_id,
+				'id'          => strval( $attachment_id ),
 				'type'        => $type,
 				'url'         => $url,
 				'preview_url' => $url,
