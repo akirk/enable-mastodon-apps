@@ -22,32 +22,46 @@ class Account {
 	}
 
 	public function register_hooks() {
-		add_action( 'mastodon_api_account', array( $this, 'api_account' ) );
+		add_action( 'mastodon_api_account', array( $this, 'api_account' ), 10, 2 );
 	}
 
-	public function api_account( $user_id ) {
+	public function api_account( $user_data, $user_id ) {
+		$user = get_user_by( 'ID', $user_id );
+
+		if ( ! $user ) {
+			return $user_data;
+		}
+
 		$data = array(
-			'id'              => strval( 1e10 + $remote_user_id ),
-			'username'        => '',
-			'acct'            => $account,
-			'display_name'    => '',
-			'locked'          => false,
-			'bot'             => false,
-			'discoverable'    => true,
-			'group'           => false,
-			'created_at'      => gmdate( 'Y-m-d\TH:i:s.000P' ),
-			'note'            => '',
-			'url'             => '',
-			'avatar'          => $placeholder_image,
-			'avatar_static'   => $placeholder_image,
+			'id'              => strval( $user->ID ),
+			'username'        => $user->user_login,
+			'display_name'    => $user->display_name,
+			'avatar'          => $avatar,
+			'avatar_static'   => $avatar,
 			'header'          => $placeholder_image,
 			'header_static'   => $placeholder_image,
-			'followers_count' => 0,
-			'following_count' => 0,
-			'statuses_count'  => 0,
-			'last_status_at'  => gmdate( 'Y-m-d' ),
-			'emojis'          => array(),
+			'acct'            => $user->user_login,
+			'note'            => '',
+			'created_at'      => mysql2date( 'Y-m-d\TH:i:s.000P', $user->user_registered, false ),
+			'followers_count' => $followers_count,
+			'following_count' => $following_count,
+			'statuses_count'  => isset( $posts['status'] ) ? intval( $posts['status'] ) : 0,
+			'last_status_at'  => mysql2date( 'Y-m-d\TH:i:s.000P', $user->user_registered, false ),
 			'fields'          => array(),
+			'locked'          => false,
+			'emojis'          => array(),
+			'url'             => get_author_posts_url( $user->ID ),
+			'source'          => array(
+				'privacy'   => apply_filters( 'mastodon_api_account_visibility', 'public', $user ),
+				'sensitive' => false,
+				'language'  => self::get_mastodon_language( get_user_locale( $user->ID ) ),
+				'note'      => '',
+				'fields'    => array(),
+			),
+			'bot'             => false,
+			'discoverable'    => true,
 		);
+
+		return $data;
 	}
 }
