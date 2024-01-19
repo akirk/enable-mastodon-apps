@@ -20,6 +20,15 @@ namespace Enable_Mastodon_Apps;
 class Mastodon_API {
 	const ACTIVITYPUB_USERNAME_REGEXP = '(?:([A-Za-z0-9_-]+)@((?:[A-Za-z0-9_-]+\.)+[A-Za-z]+))';
 	const VERSION = ENABLE_MASTODON_APPS_VERSION;
+
+	/**
+	 * The default reaction for favouriting a status.
+	 *
+	 * 2b50 = star
+	 * 2764 = heart
+	 */
+	const DEFAULT_REACT = '2b50';
+
 	/**
 	 * The OAuth handler.
 	 *
@@ -38,6 +47,7 @@ class Mastodon_API {
 	const APP_TAXONOMY = 'mastodon-app';
 	const REMOTE_USER_TAXONOMY = 'mastodon-api-remote-user';
 	const CPT = 'enable-mastodon-apps';
+	const FAVOURITES_TAXONOMY_PREFIX = 'mastodon-api-favourites-';
 
 	/**
 	 * Constructor
@@ -310,7 +320,7 @@ class Mastodon_API {
 			'api/v1/favourites',
 			array(
 				'methods'             => 'GET',
-				'callback'            => '__return_empty_array',
+				'callback'            => array( $this, 'api_favourites' ),
 				'permission_callback' => array( $this, 'logged_in_permission' ),
 			)
 		);
@@ -1131,9 +1141,9 @@ class Mastodon_API {
 				'url'                    => null,
 				'replies_count'          => 0,
 				'reblogs_count'          => 0,
-				'favourites_count'       => 0,
+				'favourites_count'       => $this->get_post_favourite_count( $post->ID ),
 				'edited_at'              => null,
-				'favourited'             => false,
+				'favourited'             => $this->check_if_status_favourited( $user_id, $post->ID ),
 				'reblogged'              => $reblogged,
 				'reblogged_by'           => $reblogged_by,
 				'muted'                  => false,
@@ -1750,16 +1760,21 @@ class Mastodon_API {
 	}
 
 	public function api_favourite_post( $request ) {
+		$user_id = get_current_user_id();
 		$post_id = $request->get_param( 'post_id' );
-		if ( ! $post_id ) {
+		if ( ! $post_id || ! $user_id ) {
 			return false;
 		}
 
 		$post_id = $this->maybe_get_remapped_reblog_id( $post_id );
 
-		// 2b50 = star
-		// 2764 = heart
-		do_action( 'mastodon_api_react', $post_id, '2b50' );
+		do_action( 'mastodon_api_react', $post_id, self::DEFAULT_REACT );
+
+		$this->register_favourites_taxonomy( $user_id );
+
+		$term = wp_set_object_terms( $post_id, self::DEFAULT_REACT, self::FAVOURITES_TAXONOMY_PREFIX . $user_id, true );
+
+		$this->update_favourite_count_on_post( $post_id, 1 );
 
 		$post = get_post( $post_id );
 
@@ -1767,16 +1782,21 @@ class Mastodon_API {
 	}
 
 	public function api_unfavourite_post( $request ) {
+		$user_id = get_current_user_id();
 		$post_id = $request->get_param( 'post_id' );
-		if ( ! $post_id ) {
+		if ( ! $post_id || ! $user_id ) {
 			return false;
 		}
 
 		$post_id = $this->maybe_get_remapped_reblog_id( $post_id );
 
-		// 2b50 = star
-		// 2764 = heart
-		do_action( 'mastodon_api_unreact', $post_id, '2b50' );
+		do_action( 'mastodon_api_unreact', $post_id, self::DEFAULT_REACT );
+
+		$this->register_favourites_taxonomy( $user_id );
+
+		$term = wp_remove_object_terms( $post_id, self::DEFAULT_REACT, self::FAVOURITES_TAXONOMY_PREFIX . $user_id, true );
+
+		$this->update_favourite_count_on_post( $post_id, -1 );
 
 		$post = get_post( $post_id );
 
@@ -1892,9 +1912,9 @@ class Mastodon_API {
 			'muted'                  => false,
 			'replies_count'          => 0, // could be fetched.
 			'reblogs_count'          => 0,
-			'favourites_count'       => 0,
+			'favourites_count'       => $this->get_post_favourite_count( $post->ID ),
 			'edited_at'              => null,
-			'favourited'             => false,
+			'favourited'             => $this->check_if_status_favourited( $user_id, $id_parts ),
 			'reblogged'              => false,
 			'muted'                  => false,
 			'bookmarked'             => false,
@@ -2939,5 +2959,100 @@ class Mastodon_API {
 		unset( $ret['account_domain'] );
 
 		return apply_filters( 'mastodon_api_instance_v2', $ret );
+	}
+
+	private function check_if_status_favourited( $user_id, $post_id ) {
+		if ( ! $post_id || ! $user_id ) {
+			return false;
+		}
+
+		$this->register_favourites_taxonomy( $user_id );
+
+		$term = false;
+		$terms = wp_get_object_terms( $post_id, self::FAVOURITES_TAXONOMY_PREFIX . $user_id );
+		if ( is_array( $terms ) ) {
+			foreach ( $terms as $t ) {
+				if ( self::DEFAULT_REACT === $t->slug ) {
+					return true;
+				}
+			}
+		}
+	}
+
+	private function get_post_favourite_count( $post_id ) {
+		// Use the Friends plugin reaction count if it's installed.
+		if ( class_exists( '\Friends\Reactions' ) ) {
+			$reactions = \Friends\Reactions::get_post_reactions( $post_id );
+			$count = 0;
+			if ( array_key_exists( self::DEFAULT_REACT, $reactions ) ) {
+				$count = $reactions[ self::DEFAULT_REACT ]->count;
+			}
+			return $count;
+		}
+
+		return intval( get_post_meta( $post_id, 'enable-mastodon-apps-favourite-count', true ) );
+	}
+
+	public function api_favourites( $request ) {
+		$user_id = get_current_user_id();
+		if ( ! $user_id ) {
+			return array();
+		}
+
+		$args = $this->get_posts_query_args( $request );
+		if ( empty( $args ) ) {
+			return array();
+		}
+		$args = apply_filters( 'mastodon_api_timelines_args', $args, $request );
+
+		$this->register_favourites_taxonomy( $user_id );
+
+		$args['numberposts'] = -1;
+		$args['post_type'] = apply_filters( 'friends_frontend_post_types', array( 'post' ) );
+		$args['tax_query'] = array(
+			array(
+				'taxonomy' => self::FAVOURITES_TAXONOMY_PREFIX . $user_id,
+				'field'    => 'slug',
+				'terms'    => self::DEFAULT_REACT,
+			),
+		);
+
+		return $this->get_posts( $args );
+	}
+
+	private function update_favourite_count_on_post( $post_id, $increment ) {
+		$favourite_count = get_post_meta( $post_id, 'enable-mastodon-apps-favourite-count', true );
+
+		$favourite_count += $increment;
+
+		if ( $favourite_count < 0 ) {
+			$favourite_count = 0;
+		}
+
+		update_post_meta( $post_id, 'enable-mastodon-apps-favourite-count', $favourite_count );
+	}
+
+	private function register_favourites_taxonomy( $user_id ) {
+		if ( false === $user_id ) {
+			return;
+		}
+		$args = array(
+			'labels'       => array(
+				'name'          => 'Mastodon Favourites',
+				'singular_name' => 'Mastodon Favourite',
+				'menu_name'     => 'Mastodon Favourites',
+			),
+			'public'       => false,
+			'show_ui'      => false,
+			'show_in_menu' => false,
+			'show_in_rest' => false,
+			'rewrite'      => false,
+		);
+
+		register_taxonomy( self::FAVOURITES_TAXONOMY_PREFIX . $user_id, null, $args );
+
+		if ( is_wp_error( get_term( self::DEFAULT_REACT, self::FAVOURITES_TAXONOMY_PREFIX . $user_id ) ) ) {
+			$result = wp_insert_term( self::DEFAULT_REACT, self::FAVOURITES_TAXONOMY_PREFIX . $user_id );
+		}
 	}
 }
