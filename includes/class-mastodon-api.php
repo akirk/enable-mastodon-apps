@@ -2283,7 +2283,8 @@ class Mastodon_API {
 
 	public function api_account( $request ) {
 		$user_id = $this->get_user_id_from_request( $request );
-		return $this->get_friend_account_data( $user_id, array(), true );
+
+		return \apply_filters( 'mastodon_api_account', array(), $user_id, $request );
 	}
 
 	/**

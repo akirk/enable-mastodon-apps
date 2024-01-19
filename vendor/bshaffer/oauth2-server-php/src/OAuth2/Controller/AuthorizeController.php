@@ -359,10 +359,6 @@ class AuthorizeController implements AuthorizeControllerInterface
     private function buildUri($uri, $params)
     {
         $parse_url = parse_url($uri);
-        if ( false === $parse_url && preg_match( '#^[a-z0-9.-]+://$#i', $uri ) ) {
-            $parse_url = parse_url($uri . 'fakehost');
-            unset( $parse_url["host"] );
-        }
 
         // Add our params to the parsed uri
         foreach ($params as $k => $v) {
