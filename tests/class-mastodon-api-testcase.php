@@ -59,7 +59,21 @@ class Mastodon_API_TestCase extends \WP_UnitTestCase {
 		$this->friend_post = wp_insert_post(
 			array(
 				'post_author'  => $this->friend,
-				'post_content' => '',
+				'post_content' => '<!-- wp:paragraph -->
+<p>Hello test</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>Another paragraph</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:image {"id":1919066,"sizeSlug":"large","linkDestination":"none"} -->
+<figure class="wp-block-image size-large"><img src="https://example.org/image.png" alt="" class="wp-image-1919066"/></figure>
+<!-- /wp:image -->
+
+<!-- wp:paragraph -->
+<p>Last paragrah</p>
+<!-- /wp:paragraph -->',
 				'post_title'   => 'Friend title',
 				'post_status'  => 'publish',
 				'post_type'    => 'friend_post_cache',
