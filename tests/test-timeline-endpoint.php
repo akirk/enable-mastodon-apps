@@ -31,6 +31,10 @@ class TimelineEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertIsString( $data[0]['id'] );
 		$this->assertEquals( $data[0]['id'], strval( $this->friend_post ) );
 
+		$this->assertArrayHasKey( 'media_attachments', $data[0] );
+		$this->assertArrayHasKey( 0, $data[0]['media_attachments'] );
+		$this->assertEquals( '513722435', $data[0]['media_attachments'][0]['id'] );
+
 		$this->assertArrayHasKey( 1, $data );
 		$this->assertArrayHasKey( 'id', $data[1] );
 		$this->assertIsString( $data[1]['id'] );
