@@ -26,11 +26,42 @@ require_once __DIR__ . '/includes/oauth2/authorization-code-storage.php';
 require_once __DIR__ . '/includes/oauth2/authorize-handler.php';
 require_once __DIR__ . '/includes/oauth2/mastodon-app-storage.php';
 require_once __DIR__ . '/includes/oauth2/token-handler.php';
-require_once __DIR__ . '/includes/class-mastodon-oauth.php';
 
-require_once __DIR__ . '/includes/class-mastodon-admin.php';
-require_once __DIR__ . '/includes/class-mastodon-api.php';
-require_once __DIR__ . '/includes/class-mastodon-app.php';
+/**
+ * Class Autoloader
+ */
+\spl_autoload_register(
+	function ( $full_class ) {
+		$base_dir = __DIR__ . '/includes/';
+		$base     = 'Enable_Mastodon_Apps\\';
+
+		if ( strncmp( $full_class, $base, strlen( $base ) ) === 0 ) {
+			$maybe_uppercase = str_replace( $base, '', $full_class );
+			$class = strtolower( $maybe_uppercase );
+			// All classes should be capitalized. If this is instead looking for a lowercase method, we ignore that.
+			if ( $maybe_uppercase === $class ) {
+				return;
+			}
+
+			if ( false !== strpos( $class, '\\' ) ) {
+				$parts    = explode( '\\', $class );
+				$class    = array_pop( $parts );
+				$sub_dir  = strtr( implode( '/', $parts ), '_', '-' );
+				$base_dir = $base_dir . $sub_dir . '/';
+			}
+
+			$filename = 'class-' . strtr( $class, '_', '-' );
+			$file     = $base_dir . $filename . '.php';
+
+			if ( file_exists( $file ) && is_readable( $file ) ) {
+				require_once $file;
+			} else {
+				// translators: %s is the class name
+				\wp_die( sprintf( esc_html__( 'Required class not found or not readable: %s', 'enable-mastodon-apps' ), esc_html( $full_class ) ) );
+			}
+		}
+	}
+);
 
 function mastodon_api_pixelfed_nodeinfo_software( $software ) {
 	if ( 'okhttp/4.9.2' === $_SERVER['HTTP_USER_AGENT'] ) {
