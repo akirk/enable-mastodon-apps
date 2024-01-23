@@ -56,7 +56,7 @@ require_once __DIR__ . '/includes/oauth2/token-handler.php';
 			if ( file_exists( $file ) && is_readable( $file ) ) {
 				require_once $file;
 			} else {
-				// translators: %s is the class name
+				// translators: %s is the class name.
 				\wp_die( sprintf( esc_html__( 'Required class not found or not readable: %s', 'enable-mastodon-apps' ), esc_html( $full_class ) ) );
 			}
 		}
