@@ -46,7 +46,7 @@ class Account extends Entity {
 		'fields'          => 'array',
 		'emojis'          => 'array',
 
-		'moved'           => 'object',
+		'moved'           => 'Account',
 	);
 	/**
 	 * The account id.
