@@ -873,7 +873,8 @@ class Mastodon_API {
 	}
 
 	public function api_verify_credentials( $request ) {
-		return $this->get_friend_account_data( get_current_user_id() );
+		$request->set_param( 'user_id', get_current_user_id() );
+		return $this->api_account( $request );
 	}
 
 	private function get_posts_query_args( $request ) {
@@ -2292,7 +2293,7 @@ class Mastodon_API {
 		if ( ! $account instanceof Entity\Account ) {
 			return new \WP_Error( 'invalid-user', 'Invalid user', array( 'status' => 404 ) );
 		}
-		return $account->to_json();
+		return $account->to_array();
 	}
 
 	/**

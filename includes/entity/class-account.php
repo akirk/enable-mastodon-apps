@@ -17,7 +17,7 @@ namespace Enable_Mastodon_Apps\Entity;
  * @package Enable_Mastodon_Apps
  */
 class Account extends Entity {
-	private $_types = array(
+	protected $_types = array(
 		'id'              => 'string',
 		'username'        => 'string',
 		'acct'            => 'string',
@@ -28,8 +28,6 @@ class Account extends Entity {
 		'avatar_static'   => 'string',
 		'header'          => 'string',
 		'header_static'   => 'string',
-		'created_at'      => 'string',
-		'last_status_at'  => 'string',
 
 		'locked'          => 'bool',
 		'bot'             => 'bool',
@@ -47,6 +45,9 @@ class Account extends Entity {
 		'emojis'          => 'array',
 
 		'moved'           => 'Account',
+
+		'created_at'      => 'DateTime',
+		'last_status_at'  => 'DateTime',
 	);
 	/**
 	 * The account id.

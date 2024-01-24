@@ -39,23 +39,24 @@ class Account {
 		$account->id             = strval( $user->ID );
 		$account->username       = $user->user_login;
 		$account->display_name   = $user->display_name;
-		$account->avatar         = $avatar;
-		$account->avatar_static  = $avatar;
-		$account->header         = $placeholder_image;
-		$account->header_static  = $placeholder_image;
+		$account->avatar         = get_avatar_url( $user->ID );
+		$account->avatar_static  = get_avatar_url( $user->ID );
 		$account->acct           = $user->user_login;
 		$account->note           = '';
-		$account->created_at     = mysql2date( 'Y-m-d\TH:i:s.000P', $user->user_registered, false );
+		$account->created_at     = new \DateTime( $user->user_registered );
 		$account->statuses_count = isset( $posts['status'] ) ? intval( $posts['status'] ) : 0;
-		$account->last_status_at = mysql2date( 'Y-m-d\TH:i:s.000P', $user->user_registered, false );
+		$account->last_status_at = new \DateTime( $user->user_registered );
 		$account->url            = get_author_posts_url( $user->ID );
+
+		/*
 		$account->source         = array(
 			'privacy'   => 'public',
 			'sensitive' => false,
-			'language'  => self::get_mastodon_language( get_user_locale( $user->ID ) ),
+			'language'  => get_user_locale( $user->ID ),
 			'note'      => '',
 			'fields'    => array(),
 		);
+		*/
 
 		return $account;
 	}

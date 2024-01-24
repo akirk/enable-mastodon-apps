@@ -10,24 +10,36 @@ namespace Enable_Mastodon_Apps\Entity;
 /**
  * Class Entity
  */
-class Entity {
-	private $_types = array();
-	public function to_json() {
+abstract class Entity {
+	protected $_types;
+	public function to_array() {
 		foreach ( $this->_types as $var => $type ) {
-			if ( strtoupper( substr( $type, 0, 1 ) ) === substr( $type, 0, 1 ) ) {
-				if ( $this->$var instanceof $type ) {
+			if ( 'DateTime' === $type ) {
+				$this->$var = $this->$var->format( 'Y-m-d\TH:i:s.000P' );
+				continue;
+			}
+			if ( in_array( $type, array( 'string', 'int', 'bool', 'array' ) ) ) {
+				settype( $this->$var, $type );
+				continue;
+			}
+
+			if ( class_exists( $type ) ) {
+				if ( $this->$var instanceof Entity ) {
 					$this->$var = $this->$var->to_array();
 				} else {
 					$this->$var = null;
 				}
-			} else {
-				if ( $this->$var ) {
-					settype( $this->$var, $type );
-				}
+				continue;
 			}
 		}
 
-		return wp_json_encode( $this );
+		$array = get_object_vars( $this );
+		unset( $array['_types'] );
+		return $array;
+	}
+
+	public function to_json() {
+		return wp_json_encode( $this->to_array() );
 	}
 
 	public function is_valid() {
