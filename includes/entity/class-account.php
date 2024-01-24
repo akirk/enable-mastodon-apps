@@ -44,7 +44,7 @@ class Account extends Entity {
 		'fields'          => 'array',
 		'emojis'          => 'array',
 
-		'moved'           => 'Account',
+		'moved'           => 'Account?',
 
 		'created_at'      => 'DateTime',
 		'last_status_at'  => 'DateTime',

@@ -13,28 +13,46 @@ namespace Enable_Mastodon_Apps\Entity;
 abstract class Entity {
 	protected $_types;
 	public function to_array() {
+		$array = array();
 		foreach ( $this->_types as $var => $type ) {
-			if ( 'DateTime' === $type && $this->$var instanceof \DateTime ) {
-				$this->$var = $this->$var->format( 'Y-m-d\TH:i:s.000P' );
-				continue;
-			}
 			if ( in_array( $type, array( 'string', 'int', 'bool', 'array' ) ) ) {
 				settype( $this->$var, $type );
+				$array[ $var ] = $this->$var;
 				continue;
 			}
 
-			if ( class_exists( $type ) ) {
-				if ( $this->$var instanceof Entity ) {
-					$this->$var = $this->$var->to_array();
-				} else {
-					$this->$var = null;
+			$object = trim( $type, '?' );
+			$required = strlen( $object ) === strlen( $type );
+
+			if ( 'DateTime' === $object ) {
+				if ( $this->$var instanceof \DateTime ) {
+					$array[ $var ] = $this->$var->format( 'Y-m-d\TH:i:s.000P' );
+					continue;
 				}
-				continue;
+
+				if ( ! $required ) {
+					continue;
+				}
+
+				// A required object is missing, we need to dismiss this object so that the response stays valid.
+				return null;
+			}
+
+			if ( class_exists( '\\Enable_Mastodon_Apps\\Entity\\' . $object ) ) {
+				if ( $this->$var instanceof Entity ) {
+					$array[ $var ] = $this->$var->to_array();
+					continue;
+				}
+
+				if ( ! $required ) {
+					continue;
+				}
+
+				// A required object is missing, we need to dismiss this object so that the response stays valid.
+				return null;
 			}
 		}
 
-		$array = get_object_vars( $this );
-		unset( $array['_types'] );
 		return $array;
 	}
 

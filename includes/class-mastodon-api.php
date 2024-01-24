@@ -2293,7 +2293,13 @@ class Mastodon_API {
 		if ( ! $account instanceof Entity\Account ) {
 			return new \WP_Error( 'invalid-user', 'Invalid user', array( 'status' => 404 ) );
 		}
-		return $account->to_array();
+
+		$array = $account->to_array();
+		if ( ! $array ) {
+			return new \WP_Error( 'integrity-error', 'Integrity Error', array( 'status' => 500 ) );
+		}
+
+		return $array;
 	}
 
 	/**
