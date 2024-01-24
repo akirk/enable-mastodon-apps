@@ -12,6 +12,14 @@ namespace Enable_Mastodon_Apps\Entity;
  */
 abstract class Entity implements \JsonSerializable {
 	protected $_types;
+
+	/**
+	 * Provide the data that should be serialized as JSON.
+	 *
+	 * The annotation is necessary for PHP 5.6 compatibility, when we are PHP 7+, we need to add mixed as the return type.
+	 *
+	 * @return array
+	 */
 	#[\ReturnTypeWillChange]
 	public function jsonSerialize() {
 		$array = array();
