@@ -38,10 +38,6 @@ abstract class Entity {
 		return $array;
 	}
 
-	public function to_json() {
-		return wp_json_encode( $this->to_array() );
-	}
-
 	public function is_valid() {
 		$attributes = get_object_vars( $this );
 
