@@ -2289,6 +2289,9 @@ class Mastodon_API {
 
 		$account = \apply_filters( 'mastodon_api_account', null, $user_id, $request );
 
+		if ( ! $account instanceof Entity\Account ) {
+			return new \WP_Error( 'invalid-user', 'Invalid user', array( 'status' => 404 ) );
+		}
 		return $account->to_json();
 	}
 
