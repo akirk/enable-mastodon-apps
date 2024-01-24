@@ -14,7 +14,7 @@ abstract class Entity {
 	protected $_types;
 	public function to_array() {
 		foreach ( $this->_types as $var => $type ) {
-			if ( 'DateTime' === $type ) {
+			if ( 'DateTime' === $type && $this->$var instanceof \DateTime ) {
 				$this->$var = $this->$var->format( 'Y-m-d\TH:i:s.000P' );
 				continue;
 			}
