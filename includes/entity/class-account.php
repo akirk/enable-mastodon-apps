@@ -22,70 +22,70 @@ class Account extends Entity {
 	 *
 	 * @var string
 	 */
-	public string $id;
+	public $id;
 
 	/**
 	 * The username of the account, not including domain.
 	 *
 	 * @var string
 	 */
-	public string $username;
+	public $username;
 
 	/**
 	 * The Webfinger account URI. Equal to username for local users, or username@domain for remote users.
 	 *
 	 * @var string
 	 */
-	public string $acct;
+	public $acct;
 
 	/**
 	 * The location of the user’s profile page.
 	 *
 	 * @var string
 	 */
-	public string $url;
+	public $url;
 
 	/**
 	 * The profile’s display name.
 	 *
 	 * @var string
 	 */
-	public string $display_name;
+	public $display_name;
 
 	/**
 	 * The profile’s bio or description.
 	 *
 	 * @var string
 	 */
-	public string $note = '';
+	public $note = '';
 
 	/**
 	 * An image icon that is shown next to statuses and in the profile.
 	 *
 	 * @var string
 	 */
-	public string $avatar = '';
+	public $avatar = '';
 
 	/**
 	 * A static version of the avatar. Equal to avatar if its value is a static image; different if avatar is an animated GIF.
 	 *
 	 * @var string
 	 */
-	public string $avatar_static = '';
+	public $avatar_static = '';
 
 	/**
 	 * An image banner that is shown above the profile and in profile cards.
 	 *
 	 * @var string
 	 */
-	public string $header = '';
+	public $header = '';
 
 	/**
 	 * A static version of the header. Equal to header if its value is a static image; different if header is an animated GIF.
 	 *
 	 * @var string
 	 */
-	public string $header_static = '';
+	public $header_static = '';
 
 	/**
 	 * Whether the account manually approves follow requests.
@@ -163,7 +163,7 @@ class Account extends Entity {
 	 *
 	 * @var string
 	 */
-	public string $created_at;
+	public $created_at;
 
 	/**
 	 * When the most recent status was posted.
