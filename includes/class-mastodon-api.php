@@ -2294,12 +2294,11 @@ class Mastodon_API {
 			return new \WP_Error( 'invalid-user', 'Invalid user', array( 'status' => 404 ) );
 		}
 
-		$array = $account->to_array();
-		if ( ! $array ) {
+		if ( ! $account->is_valid() ) {
 			return new \WP_Error( 'integrity-error', 'Integrity Error', array( 'status' => 500 ) );
 		}
 
-		return $array;
+		return $account;
 	}
 
 	/**

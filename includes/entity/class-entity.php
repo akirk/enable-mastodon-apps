@@ -10,9 +10,10 @@ namespace Enable_Mastodon_Apps\Entity;
 /**
  * Class Entity
  */
-abstract class Entity {
+abstract class Entity implements \JsonSerializable {
 	protected $_types;
-	public function to_array() {
+	#[\ReturnTypeWillChange]
+	public function jsonSerialize() {
 		$array = array();
 		foreach ( $this->_types as $var => $type ) {
 			if ( in_array( $type, array( 'string', 'int', 'bool', 'array' ) ) ) {
@@ -57,14 +58,6 @@ abstract class Entity {
 	}
 
 	public function is_valid() {
-		$attributes = get_object_vars( $this );
-
-		foreach ( $attributes as $attribute ) {
-			if ( is_null( $attribute ) ) {
-				return false;
-			}
-		}
-
-		return true;
+		return ! is_null( $this->jsonSerialize() );
 	}
 }
