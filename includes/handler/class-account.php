@@ -42,7 +42,7 @@ class Account {
 		$account->avatar         = get_avatar_url( $user->ID );
 		$account->avatar_static  = get_avatar_url( $user->ID );
 		$account->acct           = $user->user_login;
-		$account->note           = '';
+		$account->note           = get_user_meta( $user->ID, 'description', true );
 		$account->created_at     = new \DateTime( $user->user_registered );
 		$account->statuses_count = isset( $posts['status'] ) ? intval( $posts['status'] ) : 0;
 		$account->last_status_at = new \DateTime( $user->user_registered );
