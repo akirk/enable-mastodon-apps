@@ -99,14 +99,14 @@ class Account extends Entity {
 	 *
 	 * @var array
 	 */
-	public array $fields = array();
+	public $fields = array();
 
 	/**
 	 * Custom emoji entities to be used when rendering the profile.
 	 *
 	 * @var array
 	 */
-	public array $emojis = array();
+	public $emojis = array();
 
 	/**
 	 * Indicates that the account may perform automated actions, may not be monitored, or identifies as a robot.
@@ -219,6 +219,9 @@ class Account extends Entity {
 			'statuses_count'  => 'int',
 			'followers_count' => 'int',
 			'following_count' => 'int',
+
+			'fields'          => 'array',
+			'emojis'          => 'array',
 		) as $var => $type ) {
 			if ( $this->$var ) {
 				settype( $this->$var, $type );
