@@ -130,7 +130,7 @@ class Mastodon_Admin {
 		}
 
 		if ( isset( $_POST['delete-outdated'] ) ) {
-			$deleted = OAuth2\AccessTokenStorage::cleanupOldTokens();
+			$deleted = OAuth2\Access_Token_Storage::cleanupOldTokens();
 			if ( $deleted ) {
 				add_settings_error(
 					'enable-mastodon-apps',
@@ -143,7 +143,7 @@ class Mastodon_Admin {
 				);
 			}
 
-			$deleted = OAuth2\AuthorizationCodeStorage::cleanupOldCodes();
+			$deleted = OAuth2\Authorization_Code_Storage::cleanupOldCodes();
 			if ( $deleted ) {
 				add_settings_error(
 					'enable-mastodon-apps',
@@ -191,7 +191,7 @@ class Mastodon_Admin {
 			);
 
 			$deleted = 0;
-			foreach ( OAuth2\AccessTokenStorage::getAll() as $token => $data ) {
+			foreach ( OAuth2\Access_Token_Storage::getAll() as $token => $data ) {
 				if ( empty( $data['last_used'] ) ) {
 					if ( $this->oauth->get_token_storage()->unsetAccessToken( $token ) ) {
 						$deleted += 1;
@@ -213,7 +213,7 @@ class Mastodon_Admin {
 
 		if ( isset( $_POST['delete-apps-without-tokens'] ) ) {
 			$app_tokens = array();
-			foreach ( OAuth2\AccessTokenStorage::getAll() as $token => $data ) {
+			foreach ( OAuth2\Access_Token_Storage::getAll() as $token => $data ) {
 				if ( ! isset( $app_tokens[ $data['client_id'] ] ) ) {
 					$app_tokens[ $data['client_id'] ] = array();
 				}
@@ -314,8 +314,8 @@ class Mastodon_Admin {
 	}
 
 	public function admin_page() {
-		$codes = OAuth2\AuthorizationCodeStorage::getAll();
-		$tokens = OAuth2\AccessTokenStorage::getAll();
+		$codes = OAuth2\Authorization_Code_Storage::getAll();
+		$tokens = OAuth2\Access_Token_Storage::getAll();
 		$apps = Mastodon_App::get_all();
 		$rest_nonce = wp_create_nonce( 'wp_rest' );
 

@@ -16,7 +16,7 @@ use OAuth2\Server as OAuth2Server;
 /**
  * This class handles the revokation of a token.
  */
-class RevokationHandler {
+class Revokation_Handler {
 	private $server;
 
 	public function __construct( OAuth2Server $server ) {

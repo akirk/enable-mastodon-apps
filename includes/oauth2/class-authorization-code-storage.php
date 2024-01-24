@@ -14,7 +14,7 @@ use OAuth2\Storage\AuthorizationCodeInterface;
 /**
  * This class implements the OAuth2 authorization code storage.
  */
-class AuthorizationCodeStorage implements AuthorizationCodeInterface {
+class Authorization_Code_Storage implements AuthorizationCodeInterface {
 	const TAXONOMY = 'mastoapi-ac';
 
 	private static $authorization_code_data = array(

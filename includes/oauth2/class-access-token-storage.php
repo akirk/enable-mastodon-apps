@@ -1,6 +1,6 @@
 <?php
 /**
- * OAuth2 Storage: AccessTokenStorage class
+ * OAuth2 Storage: Access_Token_Storage class
  *
  * @package Friends
  */
@@ -12,7 +12,7 @@ use OAuth2\Storage\AccessTokenInterface;
 /**
  * This class describes an access token storage.
  */
-class AccessTokenStorage implements AccessTokenInterface {
+class Access_Token_Storage implements AccessTokenInterface {
 	const TAXONOMY = 'mastoapi-at';
 
 	private static $access_token_data = array(

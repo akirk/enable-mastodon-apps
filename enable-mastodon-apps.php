@@ -20,13 +20,6 @@ define( 'ENABLE_MASTODON_APPS_VERSION', '0.6.5' );
 require __DIR__ . '/vendor/bshaffer/oauth2-server-php/src/OAuth2/Autoloader.php';
 OAuth2\Autoloader::register();
 
-require_once __DIR__ . '/includes/oauth2/access-token-storage.php';
-require_once __DIR__ . '/includes/oauth2/authenticate-handler.php';
-require_once __DIR__ . '/includes/oauth2/authorization-code-storage.php';
-require_once __DIR__ . '/includes/oauth2/authorize-handler.php';
-require_once __DIR__ . '/includes/oauth2/mastodon-app-storage.php';
-require_once __DIR__ . '/includes/oauth2/token-handler.php';
-
 /**
  * Class Autoloader
  */
@@ -46,7 +39,7 @@ require_once __DIR__ . '/includes/oauth2/token-handler.php';
 			if ( false !== strpos( $class, '\\' ) ) {
 				$parts    = explode( '\\', $class );
 				$class    = array_pop( $parts );
-				$sub_dir  = strtr( implode( '/', $parts ), '_', '-' );
+				$sub_dir  = strtolower( strtr( implode( '/', $parts ), '_', '-' ) );
 				$base_dir = $base_dir . $sub_dir . '/';
 			}
 

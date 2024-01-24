@@ -16,7 +16,7 @@ use OAuth2\Response;
 /**
  * This class implements the Authentication handler.
  */
-class AuthenticateHandler {
+class Authenticate_Handler {
 	public function handle( Request $request, Response $response ) {
 		if ( ! is_user_logged_in() ) {
 			auth_redirect();
