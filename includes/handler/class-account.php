@@ -7,7 +7,7 @@
  * @package Enable_Mastodon_Apps
  */
 
-namespace Enable_Mastodon_Apps;
+namespace Enable_Mastodon_Apps\Handler;
 
 use Enable_Mastodon_Apps\Entity\Account as Account_Entity;
 
@@ -24,7 +24,7 @@ class Account {
 	}
 
 	public function register_hooks() {
-		add_action( 'mastodon_api_account', array( $this, 'api_account' ), 10, 2 );
+		add_filter( 'mastodon_api_account', array( $this, 'api_account' ), 10, 2 );
 	}
 
 	public function api_account( $user_data, $user_id ) {
