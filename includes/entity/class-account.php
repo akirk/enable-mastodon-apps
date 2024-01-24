@@ -92,7 +92,7 @@ class Account extends Entity {
 	 *
 	 * @var bool
 	 */
-	public bool $locked = false;
+	public $locked = false;
 
 	/**
 	 * Additional metadata attached to a profile as name-value pairs.
@@ -113,42 +113,42 @@ class Account extends Entity {
 	 *
 	 * @var bool
 	 */
-	public bool $bot = false;
+	public $bot = false;
 
 	/**
 	 * Indicates that the account represents a Group actor.
 	 *
 	 * @var bool
 	 */
-	public bool $group = false;
+	public $group = false;
 
 	/**
 	 * Whether the account has opted into discovery features such as the profile directory.
 	 *
 	 * @var bool
 	 */
-	public bool $discoverable = true;
+	public $discoverable = true;
 
 	/**
 	 * Whether the local user has opted out of being indexed by search engines.
 	 *
 	 * @var bool
 	 */
-	public bool $noindex = false;
+	public $noindex = false;
 
 	/**
 	 * Indicates that the profile is currently inactive and that its user has moved to a new account.
 	 *
 	 * @var Account|null
 	 */
-	public ?Account $moved;
+	public $moved;
 
 	/**
 	 * An extra attribute returned only when an account is suspended.
 	 *
 	 * @var bool
 	 */
-	public bool $suspended = false;
+	public $suspended = false;
 
 	/**
 	 * An extra attribute returned only when an account is silenced.
@@ -156,7 +156,7 @@ class Account extends Entity {
 	 *
 	 * @var bool
 	 */
-	public bool $limited = false;
+	public $limited = false;
 
 	/**
 	 * When the account was created.
@@ -170,26 +170,69 @@ class Account extends Entity {
 	 *
 	 * @var string|null
 	 */
-	public ?string $last_status_at;
+	public $last_status_at;
 
 	/**
 	 * How many statuses are attached to this account.
 	 *
 	 * @var int
 	 */
-	public int $statuses_count = 0;
+	public $statuses_count = 0;
 
 	/**
 	 * The reported followers of this profile.
 	 *
 	 * @var int
 	 */
-	public int $followers_count = 0;
+	public $followers_count = 0;
 
 	/**
 	 * The reported follows of this profile.
 	 *
 	 * @var int
 	 */
-	public int $following_count = 0;
+	public $following_count = 0;
+
+	public function to_json() {
+		foreach ( array(
+			'id'              => 'string',
+			'username'        => 'string',
+			'acct'            => 'string',
+			'url'             => 'string',
+			'display_name'    => 'string',
+			'note'            => 'string',
+			'avatar'          => 'string',
+			'avatar_static'   => 'string',
+			'header'          => 'string',
+			'header_static'   => 'string',
+			'created_at'      => 'string',
+			'last_status_at'  => 'string',
+
+			'locked'          => 'bool',
+			'bot'             => 'bool',
+			'group'           => 'bool',
+			'discoverable'    => 'bool',
+			'noindex'         => 'bool',
+			'suspended'       => 'bool',
+			'limited'         => 'bool',
+
+			'statuses_count'  => 'int',
+			'followers_count' => 'int',
+			'following_count' => 'int',
+		) as $var => $type ) {
+			if ( $this->$var ) {
+				settype( $this->$var, $type );
+			}
+		}
+
+		foreach ( array( 'moved' ) as $var ) {
+			if ( $this->$var instanceof Account ) {
+				$this->$var = $this->$var->to_array();
+			} else {
+				$this->$var = null;
+			}
+		}
+
+		return parent::to_json();
+	}
 }
