@@ -17,6 +17,37 @@ namespace Enable_Mastodon_Apps\Entity;
  * @package Enable_Mastodon_Apps
  */
 class Account extends Entity {
+	private $_types = array(
+		'id'              => 'string',
+		'username'        => 'string',
+		'acct'            => 'string',
+		'url'             => 'string',
+		'display_name'    => 'string',
+		'note'            => 'string',
+		'avatar'          => 'string',
+		'avatar_static'   => 'string',
+		'header'          => 'string',
+		'header_static'   => 'string',
+		'created_at'      => 'string',
+		'last_status_at'  => 'string',
+
+		'locked'          => 'bool',
+		'bot'             => 'bool',
+		'group'           => 'bool',
+		'discoverable'    => 'bool',
+		'noindex'         => 'bool',
+		'suspended'       => 'bool',
+		'limited'         => 'bool',
+
+		'statuses_count'  => 'int',
+		'followers_count' => 'int',
+		'following_count' => 'int',
+
+		'fields'          => 'array',
+		'emojis'          => 'array',
+
+		'moved'           => 'object',
+	);
 	/**
 	 * The account id.
 	 *
@@ -192,50 +223,4 @@ class Account extends Entity {
 	 * @var int
 	 */
 	public $following_count = 0;
-
-	public function to_json() {
-		foreach ( array(
-			'id'              => 'string',
-			'username'        => 'string',
-			'acct'            => 'string',
-			'url'             => 'string',
-			'display_name'    => 'string',
-			'note'            => 'string',
-			'avatar'          => 'string',
-			'avatar_static'   => 'string',
-			'header'          => 'string',
-			'header_static'   => 'string',
-			'created_at'      => 'string',
-			'last_status_at'  => 'string',
-
-			'locked'          => 'bool',
-			'bot'             => 'bool',
-			'group'           => 'bool',
-			'discoverable'    => 'bool',
-			'noindex'         => 'bool',
-			'suspended'       => 'bool',
-			'limited'         => 'bool',
-
-			'statuses_count'  => 'int',
-			'followers_count' => 'int',
-			'following_count' => 'int',
-
-			'fields'          => 'array',
-			'emojis'          => 'array',
-		) as $var => $type ) {
-			if ( $this->$var ) {
-				settype( $this->$var, $type );
-			}
-		}
-
-		foreach ( array( 'moved' ) as $var ) {
-			if ( $this->$var instanceof Account ) {
-				$this->$var = $this->$var->to_array();
-			} else {
-				$this->$var = null;
-			}
-		}
-
-		return parent::to_json();
-	}
 }
