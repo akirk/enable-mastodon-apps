@@ -2287,7 +2287,9 @@ class Mastodon_API {
 	public function api_account( $request ) {
 		$user_id = $this->get_user_id_from_request( $request );
 
-		return \apply_filters( 'mastodon_api_account', array(), $user_id, $request );
+		$account = \apply_filters( 'mastodon_api_account', null, $user_id, $request );
+
+		return $account->to_json();
 	}
 
 	/**
