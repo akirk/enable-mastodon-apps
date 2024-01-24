@@ -18,7 +18,7 @@ use OAuth2\Server as OAuth2Server;
  *
  * This class implements handling the issuance of the token.
  */
-class TokenHandler {
+class Token_Handler {
 	private $server;
 
 	public function __construct( OAuth2Server $server ) {

@@ -13,7 +13,7 @@ use OAuth2\Storage\ClientCredentialsInterface;
 /**
  * This class describes a mastodon application storage.
  */
-class MastodonAppStorage implements ClientCredentialsInterface {
+class Mastodon_App_Storage implements ClientCredentialsInterface {
 	public function getClientDetails( $client_id ) {
 		if ( ! $this->has( $client_id ) ) {
 			return false;

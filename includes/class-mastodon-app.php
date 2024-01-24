@@ -187,12 +187,12 @@ class Mastodon_App {
 	}
 
 	public function is_outdated() {
-		foreach ( OAuth2\AccessTokenStorage::getAll() as $token ) {
+		foreach ( OAuth2\Access_Token_Storage::getAll() as $token ) {
 			if ( $token['client_id'] === $this->get_client_id() && ! $token['expired'] ) {
 				return false;
 			}
 		}
-		foreach ( OAuth2\AuthorizationCodeStorage::getAll() as $code ) {
+		foreach ( OAuth2\Authorization_Code_Storage::getAll() as $code ) {
 			if ( $code['client_id'] === $this->get_client_id() && ! $code['expired'] ) {
 				return false;
 			}

@@ -41,9 +41,9 @@ class Mastodon_OAuth {
 			'access_lifetime' => YEAR_IN_SECONDS * 2,
 		);
 
-		$this->server = new Server( new Oauth2\AuthorizationCodeStorage(), $config );
-		$this->server->addStorage( new Oauth2\MastodonAppStorage(), 'client_credentials' );
-		$this->server->addStorage( new Oauth2\AccessTokenStorage(), 'access_token' );
+		$this->server = new Server( new Oauth2\Authorization_Code_Storage(), $config );
+		$this->server->addStorage( new Oauth2\Mastodon_App_Storage(), 'client_credentials' );
+		$this->server->addStorage( new Oauth2\Access_Token_Storage(), 'access_token' );
 
 		if ( '/oauth/token' === strtok( $_SERVER['REQUEST_URI'], '?' ) ) {
 			// Avoid interference with private site plugins.
@@ -72,7 +72,7 @@ class Mastodon_OAuth {
 					return null;
 				}
 				$wp_query->is_404 = false;
-				$handler = new OAuth2\AuthorizeHandler( $this->server );
+				$handler = new OAuth2\Authorize_Handler( $this->server );
 				break;
 
 			case '/oauth/token':
@@ -85,12 +85,12 @@ class Mastodon_OAuth {
 				}
 				header( 'Access-Control-Allow-Origin: *' );
 				$wp_query->is_404 = false;
-				$handler = new OAuth2\TokenHandler( $this->server );
+				$handler = new OAuth2\Token_Handler( $this->server );
 				break;
 
 			case '/oauth/revoke':
 				$wp_query->is_404 = false;
-				$handler = new OAuth2\RevokationHandler( $this->server );
+				$handler = new OAuth2\Revokation_Handler( $this->server );
 				break;
 		}
 
@@ -143,7 +143,7 @@ class Mastodon_OAuth {
 		$request  = Request::createFromGlobals();
 		$response = new Response();
 
-		$authenticate_handler = new OAuth2\AuthenticateHandler();
+		$authenticate_handler = new OAuth2\Authenticate_Handler();
 		$authenticate_handler->handle( $request, $response );
 		exit;
 	}
