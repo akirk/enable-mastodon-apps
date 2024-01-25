@@ -24,6 +24,10 @@ abstract class Entity implements \JsonSerializable {
 	public function jsonSerialize() {
 		$array = array();
 		foreach ( $this->_types as $var => $type ) {
+			if ( is_wp_error( $this->$var ) ) {
+				continue;
+			}
+
 			if ( in_array( $type, array( 'string', 'int', 'bool', 'array' ) ) ) {
 				settype( $this->$var, $type );
 				$array[ $var ] = $this->$var;
@@ -43,8 +47,9 @@ abstract class Entity implements \JsonSerializable {
 					continue;
 				}
 
-				// A required object is missing, we need to dismiss this object so that the response stays valid.
-				return null;
+				return array(
+					'error' => 'Required object is missing: ' . $var,
+				);
 			}
 
 			if ( class_exists( '\\Enable_Mastodon_Apps\\Entity\\' . $object ) ) {
@@ -57,8 +62,9 @@ abstract class Entity implements \JsonSerializable {
 					continue;
 				}
 
-				// A required object is missing, we need to dismiss this object so that the response stays valid.
-				return null;
+				return array(
+					'error' => 'Required object is missing: ' . $var,
+				);
 			}
 		}
 
@@ -66,6 +72,7 @@ abstract class Entity implements \JsonSerializable {
 	}
 
 	public function is_valid() {
-		return ! is_null( $this->jsonSerialize() );
+		$array = $this->jsonSerialize();
+		return empty( $array['error'] );
 	}
 }
