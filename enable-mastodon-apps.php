@@ -15,7 +15,7 @@
 
 defined( 'ABSPATH' ) || exit;
 define( 'ENABLE_MASTODON_APPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
-define( 'ENABLE_MASTODON_APPS_VERSION', '0.6.5' );
+define( 'ENABLE_MASTODON_APPS_VERSION', get_mastodon_api_version() );
 
 require __DIR__ . '/vendor/bshaffer/oauth2-server-php/src/OAuth2/Autoloader.php';
 OAuth2\Autoloader::register();
@@ -83,3 +83,42 @@ add_action(
 		new Enable_Mastodon_Apps\Mastodon_API();
 	}
 );
+
+/**
+ * `get_plugin_data` wrapper.
+ *
+ * @param array $default_headers The default headers to pass to `get_file_data`.
+ *
+ * @return array The plugin metadata array.
+ */
+function get_mastodon_api_meta( $default_headers = array() ) {
+	if ( ! $default_headers ) {
+		$default_headers = array(
+			'Name'        => 'Plugin Name',
+			'PluginURI'   => 'Plugin URI',
+			'Version'     => 'Version',
+			'Description' => 'Description',
+			'Author'      => 'Author',
+			'AuthorURI'   => 'Author URI',
+			'TextDomain'  => 'Text Domain',
+			'DomainPath'  => 'Domain Path',
+			'Network'     => 'Network',
+			'RequiresWP'  => 'Requires at least',
+			'RequiresPHP' => 'Requires PHP',
+			'UpdateURI'   => 'Update URI',
+		);
+	}
+
+	return \get_file_data( __FILE__, $default_headers, 'plugin' );
+}
+
+/**
+ * Plugin Version Number used for caching.
+ *
+ * @return string The plugin version number.
+ */
+function get_mastodon_api_version() {
+	$meta = get_mastodon_api_meta( array( 'Version' => 'Version' ) );
+
+	return $meta['Version'];
+}
