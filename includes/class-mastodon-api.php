@@ -708,31 +708,35 @@ class Mastodon_API {
 		return $query_vars;
 	}
 
-	public function required_scope( $scopes, $also_public = false ) {
-		return function ( $request ) use ( $scopes, $also_public ) {
-			if ( $also_public ) {
-				if ( ! $this->logged_in_for_private_permission( $request ) ) {
-					return new \WP_Error( 'token-required', 'Token required', array( 'status' => 401 ) );
-				}
-			} elseif ( ! $this->logged_in_permission( $request ) ) {
+	public function ensure_required_scope( $request, $scopes, $also_public ) {
+		if ( $also_public ) {
+			if ( ! $this->logged_in_for_private_permission( $request ) ) {
 				return new \WP_Error( 'token-required', 'Token required', array( 'status' => 401 ) );
 			}
+		} elseif ( ! $this->logged_in_permission( $request ) ) {
+			return new \WP_Error( 'token-required', 'Token required', array( 'status' => 401 ) );
+		}
 
-			$has_scope = false;
-			$token = $this->oauth->get_token();
-			if ( $token && isset( $token['scope'] ) ) {
-				foreach ( explode( ',', $scopes ) as $scope ) {
-					if ( OAuth2\Scope_Util::checkSingleScope( $scope, $token['scope'] ) ) {
-						$has_scope = true;
-					}
+		$has_scope = false;
+		$token = $this->oauth->get_token();
+		if ( $token && isset( $token['scope'] ) ) {
+			foreach ( explode( ',', $scopes ) as $scope ) {
+				if ( OAuth2\Scope_Util::checkSingleScope( $scope, $token['scope'] ) ) {
+					$has_scope = true;
 				}
 			}
+		}
 
-			if ( ! $has_scope && ! $also_public ) {
-				return new \WP_Error( 'insufficient-permissions', 'Insufficient permissions', array( 'status' => 401 ) );
-			}
+		if ( ! $has_scope && ! $also_public ) {
+			return new \WP_Error( 'insufficient-permissions', 'Insufficient permissions', array( 'status' => 401 ) );
+		}
 
-			return true;
+		return true;
+	}
+
+	public function required_scope( $scopes, $also_public = false ) {
+		return function ( $request ) use ( $scopes, $also_public ) {
+			return $this->ensure_required_scope( $request, $scopes, $also_public );
 		};
 	}
 
