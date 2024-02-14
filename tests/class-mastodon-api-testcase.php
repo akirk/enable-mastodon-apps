@@ -16,6 +16,7 @@ class Mastodon_API_TestCase extends \WP_UnitTestCase {
 	protected $token;
 	protected $post;
 	protected $friend_post;
+	protected $private_post;
 	protected $administrator;
 	protected $friend;
 	protected $app;
@@ -44,6 +45,18 @@ class Mastodon_API_TestCase extends \WP_UnitTestCase {
 				'post_content' => 'Test post',
 				'post_title'   => '',
 				'post_status'  => 'publish',
+				'post_type'    => 'post',
+				'post_date'    => '2023-01-03 00:00:00',
+			)
+		);
+		set_post_format( $this->post, 'status' );
+
+		$this->private_post = wp_insert_post(
+			array(
+				'post_author'  => $this->administrator,
+				'post_content' => 'Private post',
+				'post_title'   => '',
+				'post_status'  => 'private',
 				'post_type'    => 'post',
 				'post_date'    => '2023-01-03 00:00:00',
 			)

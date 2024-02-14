@@ -118,23 +118,6 @@ class Mastodon_App {
 		return false;
 	}
 
-	public function check_scopes( $requested_scopes ) {
-		$allowed_scopes = explode( ' ', $this->get_scopes() );
-
-		foreach ( explode( ' ', $requested_scopes ) as $s ) {
-			if ( false !== strpos( $s, ':' ) ) {
-				list( $scope, $subscope ) = explode( ':', $s, 2 );
-			} else {
-				$scope = $s;
-			}
-			if ( ! in_array( $scope, $allowed_scopes, true ) ) {
-				return false;
-			}
-		}
-
-		return false;
-	}
-
 	public function delete_last_requests() {
 		return delete_metadata( 'term', $this->term->term_id, 'request' );
 	}
@@ -510,6 +493,10 @@ class Mastodon_App {
 		$args['tax_query'] = $tax_query;
 
 		return $args;
+	}
+
+	public function has_scope( $requested_scope ) {
+		return OAuth2\Scope_Util::checkSingleScope( $requested_scope, $this->get_scopes() );
 	}
 
 	/**
