@@ -219,7 +219,7 @@ class Mastodon_API {
 			array(
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'api_apps' ),
-				'permission_callback' => $this->required_scope( false ),
+				'permission_callback' => array( $this, 'public_api_permission' ),
 			)
 		);
 		register_rest_route(
@@ -237,7 +237,7 @@ class Mastodon_API {
 			array(
 				'methods'             => 'GET',
 				'callback'            => '__return_empty_array',
-				'permission_callback' => $this->required_scope( false ),
+				'permission_callback' => array( $this, 'public_api_permission' ),
 			)
 		);
 		register_rest_route(
@@ -246,7 +246,7 @@ class Mastodon_API {
 			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'api_instance' ),
-				'permission_callback' => $this->required_scope( false ),
+				'permission_callback' => array( $this, 'public_api_permission' ),
 			)
 		);
 
@@ -256,7 +256,7 @@ class Mastodon_API {
 			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'api_instance_v2' ),
-				'permission_callback' => $this->required_scope( false ),
+				'permission_callback' => array( $this, 'public_api_permission' ),
 			)
 		);
 		register_rest_route(
@@ -265,7 +265,7 @@ class Mastodon_API {
 			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'api_nodeinfo' ),
-				'permission_callback' => $this->required_scope( false ),
+				'permission_callback' => array( $this, 'public_api_permission' ),
 			)
 		);
 		register_rest_route(
@@ -409,7 +409,7 @@ class Mastodon_API {
 			array(
 				'methods'             => 'GET',
 				'callback'            => '__return_empty_array',
-				'permission_callback' => $this->required_scope( false ),
+				'permission_callback' => array( $this, 'public_api_permission' ),
 			)
 		);
 		register_rest_route(
@@ -418,7 +418,7 @@ class Mastodon_API {
 			array(
 				'methods'             => 'GET',
 				'callback'            => '__return_empty_array',
-				'permission_callback' => $this->required_scope( false ),
+				'permission_callback' => array( $this, 'public_api_permission' ),
 			)
 		);
 
@@ -598,7 +598,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_public_timeline' ),
-				'permission_callback' => $this->required_scope( false ),
+				'permission_callback' => array( $this, 'public_api_permission' ),
 			)
 		);
 
@@ -648,7 +648,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => '__return_empty_array',
-				'permission_callback' => $this->required_scope( false ),
+				'permission_callback' => array( $this, 'public_api_permission' ),
 			)
 		);
 
@@ -658,7 +658,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_account_followers' ),
-				'permission_callback' => $this->required_scope( false ),
+				'permission_callback' => array( $this, 'public_api_permission' ),
 			)
 		);
 
@@ -698,7 +698,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_account' ),
-				'permission_callback' => $this->required_scope( false ),
+				'permission_callback' => array( $this, 'public_api_permission' ),
 			)
 		);
 	}
@@ -709,10 +709,6 @@ class Mastodon_API {
 	}
 
 	public function required_scope( $scopes, $also_public = false ) {
-		if ( false === $scopes ) {
-			return array( $this, 'public_api_permission' );
-		}
-
 		return function ( $request ) use ( $scopes, $also_public ) {
 			if ( $also_public ) {
 				if ( ! $this->logged_in_for_private_permission( $request ) ) {
