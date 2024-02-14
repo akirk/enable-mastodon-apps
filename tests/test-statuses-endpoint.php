@@ -47,6 +47,18 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertIsInt( $data['favourites_count'] );
 	}
 
+	public function test_statuses_private_id() {
+		global $wp_rest_server;
+
+		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/statuses/' . $this->private_post );
+		$response = $wp_rest_server->dispatch( $request );
+		$this->assertEquals( 401, $response->get_status() );
+
+		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
+		$response = $wp_rest_server->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+	}
+
 	public function test_statuses_delete() {
 		global $wp_rest_server;
 		$request = new \WP_REST_Request( 'DELETE', '/' . Mastodon_API::PREFIX . '/api/v1/statuses/' . $this->post );

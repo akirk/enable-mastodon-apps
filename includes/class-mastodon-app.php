@@ -512,6 +512,22 @@ class Mastodon_App {
 		return $args;
 	}
 
+	public function has_scope( $requested_scope ) {
+		$requested_main_scope = strtok( $requested_scope, ':' );
+
+		foreach ( explode( ' ', $this->get_scopes() ) as $scope ) {
+			if ( $scope === $requested_scope ) {
+				return true;
+			}
+
+			if ( $scope === $requested_main_scope ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	/**
 	 * Get an app via client_id.
 	 *

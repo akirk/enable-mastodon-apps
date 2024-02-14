@@ -219,7 +219,7 @@ class Mastodon_API {
 			array(
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'api_apps' ),
-				'permission_callback' => array( $this, 'public_api_permission' ),
+				'permission_callback' => $this->required_scope( false ),
 			)
 		);
 		register_rest_route(
@@ -228,7 +228,7 @@ class Mastodon_API {
 			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'api_announcements' ),
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'read:announcements' ),
 			)
 		);
 		register_rest_route(
@@ -237,7 +237,7 @@ class Mastodon_API {
 			array(
 				'methods'             => 'GET',
 				'callback'            => '__return_empty_array',
-				'permission_callback' => array( $this, 'public_api_permission' ),
+				'permission_callback' => $this->required_scope( false ),
 			)
 		);
 		register_rest_route(
@@ -246,7 +246,7 @@ class Mastodon_API {
 			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'api_instance' ),
-				'permission_callback' => array( $this, 'public_api_permission' ),
+				'permission_callback' => $this->required_scope( false ),
 			)
 		);
 
@@ -256,7 +256,7 @@ class Mastodon_API {
 			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'api_instance_v2' ),
-				'permission_callback' => array( $this, 'public_api_permission' ),
+				'permission_callback' => $this->required_scope( false ),
 			)
 		);
 		register_rest_route(
@@ -265,7 +265,7 @@ class Mastodon_API {
 			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'api_nodeinfo' ),
-				'permission_callback' => array( $this, 'public_api_permission' ),
+				'permission_callback' => $this->required_scope( false ),
 			)
 		);
 		register_rest_route(
@@ -274,7 +274,7 @@ class Mastodon_API {
 			array(
 				'methods'             => 'GET',
 				'callback'            => '__return_empty_array',
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'read:follows,follow' ),
 			)
 		);
 		register_rest_route(
@@ -283,7 +283,7 @@ class Mastodon_API {
 			array(
 				'methods'             => 'GET',
 				'callback'            => '__return_empty_array',
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'read:follows' ),
 			)
 		);
 		register_rest_route(
@@ -292,7 +292,7 @@ class Mastodon_API {
 			array(
 				'methods'             => 'GET',
 				'callback'            => '__return_empty_array',
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'read:bookmarks' ),
 			)
 		);
 		register_rest_route(
@@ -301,7 +301,7 @@ class Mastodon_API {
 			array(
 				'methods'             => 'GET',
 				'callback'            => '__return_empty_array',
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'read:statuses' ),
 			)
 		);
 
@@ -311,7 +311,7 @@ class Mastodon_API {
 			array(
 				'methods'             => 'GET',
 				'callback'            => '__return_empty_array',
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'read:favourites' ),
 			)
 		);
 		register_rest_route(
@@ -320,7 +320,7 @@ class Mastodon_API {
 			array(
 				'methods'             => 'GET',
 				'callback'            => '__return_empty_array',
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'read:filters' ),
 			)
 		);
 		register_rest_route(
@@ -329,7 +329,7 @@ class Mastodon_API {
 			array(
 				'methods'             => 'GET',
 				'callback'            => '__return_empty_array',
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'read:lists' ),
 			)
 		);
 
@@ -339,7 +339,7 @@ class Mastodon_API {
 			array(
 				'methods'             => 'GET',
 				'callback'            => '__return_empty_array',
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'read:statuses' ),
 			)
 		);
 
@@ -349,7 +349,7 @@ class Mastodon_API {
 			array(
 				'methods'             => 'GET',
 				'callback'            => '__return_empty_array',
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'read:mutes' ),
 			)
 		);
 
@@ -359,7 +359,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'POST', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_notification_clear' ),
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'write:notifications' ),
 			)
 		);
 
@@ -369,7 +369,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'POST', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_notification_dismiss' ),
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'write:notifications' ),
 			)
 		);
 
@@ -379,7 +379,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_notification_get' ),
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'read:notifications' ),
 			)
 		);
 
@@ -389,7 +389,7 @@ class Mastodon_API {
 			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'api_notifications' ),
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'read:notifications' ),
 			)
 		);
 
@@ -399,7 +399,7 @@ class Mastodon_API {
 			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'api_preferences' ),
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'read:accounts' ),
 			)
 		);
 
@@ -409,7 +409,7 @@ class Mastodon_API {
 			array(
 				'methods'             => 'GET',
 				'callback'            => '__return_empty_array',
-				'permission_callback' => array( $this, 'public_api_permission' ),
+				'permission_callback' => $this->required_scope( false ),
 			)
 		);
 		register_rest_route(
@@ -418,15 +418,17 @@ class Mastodon_API {
 			array(
 				'methods'             => 'GET',
 				'callback'            => '__return_empty_array',
-				'permission_callback' => array( $this, 'public_api_permission' ),
+				'permission_callback' => $this->required_scope( false ),
 			)
-		);      register_rest_route(
+		);
+
+		register_rest_route(
 			self::PREFIX,
 			'api/v1/accounts/familiar_followers',
 			array(
 				'methods'             => 'GET',
 				'callback'            => '__return_empty_array',
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'read:follows' ),
 			)
 		);
 
@@ -436,7 +438,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_verify_credentials' ),
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'read:accounts' ),
 			)
 		);
 
@@ -446,7 +448,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_accounts_search' ),
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'read:accounts' ),
 			)
 		);
 
@@ -456,7 +458,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'POST', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_post_media' ),
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'write:media' ),
 			)
 		);
 
@@ -466,7 +468,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_get_media' ),
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'write:media' ),
 			)
 		);
 
@@ -476,7 +478,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'PUT', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_update_media' ),
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'write:media' ),
 			)
 		);
 
@@ -486,7 +488,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'POST', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_submit_post' ),
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'write:statuses' ),
 			)
 		);
 
@@ -496,7 +498,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_get_post_context' ),
-				'permission_callback' => array( $this, 'logged_in_for_private_permission' ),
+				'permission_callback' => $this->required_scope( 'read:statuses', true ),
 			)
 		);
 
@@ -506,7 +508,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => '__return_empty_array',
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'read:statuses', true ),
 			)
 		);
 
@@ -516,7 +518,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'POST', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_favourite_post' ),
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'write:favourites' ),
 			)
 		);
 
@@ -526,7 +528,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'POST', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_unfavourite_post' ),
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'write:favourites' ),
 			)
 		);
 
@@ -536,7 +538,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'POST', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_reblog_post' ),
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'write:statuses' ),
 			)
 		);
 
@@ -546,7 +548,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'POST', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_unreblog_post' ),
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'write:statuses' ),
 			)
 		);
 
@@ -556,7 +558,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'DELETE', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_delete_post' ),
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'write:statuses' ),
 			)
 		);
 
@@ -566,7 +568,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_get_post' ),
-				'permission_callback' => array( $this, 'logged_in_for_private_permission' ),
+				'permission_callback' => $this->required_scope( 'read:statuses', true ),
 			)
 		);
 
@@ -576,7 +578,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_timelines' ),
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'read:statuses' ),
 			)
 		);
 
@@ -586,7 +588,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_tag_timelines' ),
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'read:statuses' ),
 			)
 		);
 
@@ -596,7 +598,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_public_timeline' ),
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( false ),
 			)
 		);
 
@@ -606,7 +608,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => '__return_empty_array',
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'read:statuses' ),
 			)
 		);
 
@@ -616,7 +618,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'GET', 'POST', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_push_subscription' ),
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'push' ),
 			)
 		);
 
@@ -636,7 +638,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_account_relationships' ),
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'read:follows' ),
 			)
 		);
 
@@ -646,7 +648,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => '__return_empty_array',
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( false ),
 			)
 		);
 
@@ -656,7 +658,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_account_followers' ),
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( false ),
 			)
 		);
 
@@ -666,7 +668,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'POST', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_account_follow' ),
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'write:follows' ),
 			)
 		);
 
@@ -676,7 +678,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'POST', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_account_unfollow' ),
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'write:follows' ),
 			)
 		);
 
@@ -686,7 +688,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_account_statuses' ),
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( 'read:statuses', true ),
 			)
 		);
 
@@ -696,7 +698,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_account' ),
-				'permission_callback' => array( $this, 'logged_in_permission' ),
+				'permission_callback' => $this->required_scope( false ),
 			)
 		);
 	}
@@ -704,6 +706,37 @@ class Mastodon_API {
 	public function query_vars( $query_vars ) {
 		$query_vars[] = 'enable-mastodon-apps';
 		return $query_vars;
+	}
+
+	public function required_scope( $scopes, $also_public = false ) {
+		if ( false === $scopes ) {
+			return array( $this, 'public_api_permission' );
+		}
+
+		return function ( $request ) use ( $scopes, $also_public ) {
+			if ( $also_public ) {
+				if ( ! $this->logged_in_for_private_permission( $request ) ) {
+					return new \WP_Error( 'token-required', 'Token required', array( 'status' => 401 ) );
+				}
+			} elseif ( ! $this->logged_in_permission( $request ) ) {
+				return new \WP_Error( 'token-required', 'Token required', array( 'status' => 401 ) );
+			}
+
+			$has_scope = false;
+			if ( $this->app ) {
+				foreach ( explode( ',', $scopes ) as $scope ) {
+					if ( $this->app->has_scope( $scope ) ) {
+						$has_scope = true;
+					}
+				}
+			}
+
+			if ( ! $has_scope && ! $also_public ) {
+				return new \WP_Error( 'insufficient-permissions', 'Insufficient permissions', array( 'status' => 401 ) );
+			}
+
+			return true;
+		};
 	}
 
 	public function public_api_permission( $request ) {
@@ -1018,7 +1051,7 @@ class Mastodon_API {
 
 	private function get_comment_status_array( \WP_Comment $comment ) {
 		if ( ! $comment ) {
-			return new \WP_Error( 'record-not-found', 'Record not found', array( 'status' => 404 ) );
+			return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Record not found', array( 'status' => 404 ) );
 		}
 
 		$post = (object) array(
@@ -1304,12 +1337,12 @@ class Mastodon_API {
 
 	public function api_submit_post( $request ) {
 		if ( ! current_user_can( 'edit_posts' ) ) {
-			return new \WP_Error( 'mastodon_api_submit_post', 'The access token is invalid', array( 'status' => 401 ) );
+			return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Insufficient permissions', array( 'status' => 401 ) );
 		}
 
 		$status = $request->get_param( 'status' );
 		if ( empty( $status ) ) {
-			return new \WP_Error( 'mastodon_api_submit_post', 'Validation failed: Text can\'t be blank', array( 'status' => 422 ) );
+			return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Validation failed: Text can\'t be blank', array( 'status' => 422 ) );
 		}
 
 		$status = make_clickable( $status );
@@ -1396,10 +1429,10 @@ class Mastodon_API {
 			foreach ( $media_ids as $media_id ) {
 				$media = get_post( $media_id );
 				if ( ! $media ) {
-					return new \WP_Error( 'mastodon_api_submit_post', 'Media not found', array( 'status' => 400 ) );
+					return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Media not found', array( 'status' => 400 ) );
 				}
 				if ( 'attachment' !== $media->post_type ) {
-					return new \WP_Error( 'mastodon_api_submit_post', 'Media not found', array( 'status' => 400 ) );
+					return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Media not found', array( 'status' => 400 ) );
 				}
 				$attachment = \wp_get_attachment_metadata( $media_id );
 				$post_data['post_content'] .= PHP_EOL;
@@ -1838,6 +1871,10 @@ class Mastodon_API {
 	public function api_get_post( $request ) {
 		$post_id = $request->get_param( 'post_id' );
 		if ( ! $post_id ) {
+			return new \WP_REST_Response( array( 'error' => 'Record not found' ), 404 );
+		}
+
+		if ( get_post_status( $post_id ) !== 'publish' && ! current_user_can( 'edit_post', $post_id ) ) {
 			return new \WP_REST_Response( array( 'error' => 'Record not found' ), 404 );
 		}
 
@@ -2445,6 +2482,9 @@ class Mastodon_API {
 			preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id )
 			|| $url
 		) {
+			if ( ! is_user_logged_in() ) {
+				return new \WP_Error( 'not-logged-in', 'Not logged in', array( 'status' => 401 ) );
+			}
 			$account = $this->get_acct( $user_id );
 
 			if ( $account ) {
