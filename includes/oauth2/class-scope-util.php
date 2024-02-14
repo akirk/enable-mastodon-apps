@@ -1,6 +1,15 @@
 <?php
+/**
+ * OAuth2 Scope Util
+ *
+ * @package Friends
+ */
+
 namespace Enable_Mastodon_Apps\OAuth2;
 
+/**
+ * This class overrides the scope checking to allow for fine grained scopes.
+ */
 class Scope_Util extends \OAuth2\Scope {
 	public static function checkSingleScope( $required_scope, $available_scope ) {
 		$required_main_scope = strtok( $required_scope, ':' );

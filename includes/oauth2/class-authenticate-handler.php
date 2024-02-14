@@ -168,17 +168,21 @@ class Authenticate_Handler {
 							if ( ! isset( $scope_explanations[ $main_scope ] ) ) {
 								continue;
 							}
-							echo '<li style="margin-top: .5em" title="', esc_attr( $main_scope ), '">', esc_html( $scope_explanations[ $main_scope ] ), '</li>';
-							if ( ! empty( $subscopes ) ) {
+							echo '<li style="margin-top: .5em" title="', esc_attr( $main_scope ), '">', esc_html( $scope_explanations[ $main_scope ] );
+							$all = isset( $subscopes['all'] ) && $subscopes['all'];
+							unset( $subscopes['all'] );
+							if ( ! empty( $subscopes ) && ! $all ) {
+								echo ' ', __( 'Only the following sub-permissions:', 'enable-mastodon-apps' );
 								echo '<ul style="margin-left: 1em">';
 								foreach ( $subscopes as $subscope => $true ) {
 									if ( ! isset( $scope_explanations[ $main_scope . ':' . $subscope ] ) ) {
-										$scope_explanations[ $main_scope . ':' . $subscope ] = $main_scope . ':' . $subscope;
+										$scope_explanations[ $main_scope . ':' . $subscope ] = ucwords( $subscope ) . ' (' . $main_scope . ':' . $subscope . ')';
 									}
 									echo '<li style="margin-top: .5em" title="', esc_attr( $main_scope . ':' . $subscope ), '">', esc_html( $scope_explanations[ $main_scope . ':' . $subscope ] ), '</li>';
 								}
 								echo '</ul>';
 							}
+							echo '</li>';
 						}
 						?>
 					</ul>
