@@ -35,14 +35,21 @@ class Authenticate_Handler {
 			return $redirect_uri;
 		}
 
-		$scopes = $app->check_scopes( $_GET['scope'] );
-		if ( is_wp_error( $scopes ) ) {
-			return $scopes;
+		$scopes = array();
+		foreach ( explode( ' ', $_GET['scope'] ) as $scope ) {
+			if ( $app->has_scope( $scope ) ) {
+				$scopes[] = $scope;
+			}
+		}
+		if ( empty( $scopes ) ) {
+			$response->setError( 403, 'invalid_scopes', 'Invalid scope was requested.' );
+			return $response;
 		}
 
 		$data = array(
 			'user'            => wp_get_current_user(),
 			'client_name'     => $client_name,
+			'scopes'          => implode( ' ', $scopes ),
 			'body_class_attr' => implode( ' ', array_diff( get_body_class(), array( 'error404' ) ) ),
 			'cancel_url'      => $this->get_cancel_url( $request ),
 			'form_url'        => home_url( '/oauth/authorize' ),
@@ -96,6 +103,13 @@ class Authenticate_Handler {
 	}
 
 	private function render_consent_screen( $data ) {
+		$scope_explanations = array(
+			'read'   => __( 'Read information from your account, for example read your statuses.', 'enable-mastodon-apps' ),
+			'write'  => __( 'Write information to your account, for example post a status on your behalf.', 'enable-mastodon-apps' ),
+			'follow' => __( 'Follow other accounts using your account.', 'enable-mastodon-apps' ),
+			'push'   => __( 'Subscribe to push events for your account.', 'enable-mastodon-apps' ),
+		);
+
 		?>
 		<div id="openid-connect-authenticate">
 			<div id="openid-connect-authenticate-form-container" class="login">
@@ -113,22 +127,37 @@ class Authenticate_Handler {
 					</h2>
 					<br/>
 					<p>
-						<label>
-							<?php
-							echo wp_kses(
-								sprintf(
+						<?php
+						echo wp_kses(
+							sprintf(
 								// translators: %1$s is the site name, %2$s is the username.
-									__( 'Do you want to log in to <em>%1$s</em> with your <em>%2$s</em> account?', 'enable-mastodon-apps' ),
-									$data['client_name'],
-									get_bloginfo( 'name' )
-								),
-								array(
-									'em' => array(),
-								)
-							);
-							?>
-						</label>
+								__( 'Do you want to log in to <strong>%1$s</strong> with your <strong>%2$s</strong> account?', 'enable-mastodon-apps' ),
+								$data['client_name'],
+								get_bloginfo( 'name' )
+							),
+							array(
+								'strong' => array(),
+							)
+						);
+						?>
 					</p>
+					<br/>
+					<p>
+					<?php
+					esc_html_e( 'Requested permissions:', 'enable-mastodon-apps' );
+					?>
+						</p>
+					<ul style="margin-left: 1em">
+
+						<?php
+						foreach ( array_unique( explode( ' ', $data['scopes'] ) ) as $scope ) {
+							if ( ! isset( $scope_explanations[ $scope ] ) ) {
+								continue;
+							}
+							echo '<li style="margin-top: .5em" title="', esc_attr( $scope ), '">', esc_html( $scope_explanations[ $scope ] ), '</li>';
+						}
+						?>
+					</ul>
 					<br/>
 					<?php wp_nonce_field( 'wp_rest' ); /* The nonce will give the REST call the userdata. */ ?>
 					<?php foreach ( $data['form_fields'] as $key => $value ) : ?>

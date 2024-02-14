@@ -723,9 +723,10 @@ class Mastodon_API {
 			}
 
 			$has_scope = false;
-			if ( $this->app ) {
+			$token = $this->oauth->get_token();
+			if ( $token && isset( $token['scope'] ) ) {
 				foreach ( explode( ',', $scopes ) as $scope ) {
-					if ( $this->app->has_scope( $scope ) ) {
+					if ( Mastodon_App::check_scope( $token['scope'], $scope ) ) {
 						$has_scope = true;
 					}
 				}

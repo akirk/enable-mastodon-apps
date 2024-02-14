@@ -167,14 +167,8 @@ class Access_Token_Storage implements AccessTokenInterface {
 			$access_token = array(
 				'access_token' => $oauth_token,
 			);
-			foreach ( array(
-				'client_id'    => 'client_id',
-				'user_id'      => 'user_id',
-				'expires'      => 'expires',
-				'redirect_uri' => 'redirect_uri',
-				'scope'        => 'scope',
-			) as $key => $meta_key ) {
-				$access_token[ $key ] = get_term_meta( $term->term_id, $meta_key, true );
+			foreach ( array_keys( self::$access_token_data ) as $meta_key ) {
+				$access_token[ $meta_key ] = get_term_meta( $term->term_id, $meta_key, true );
 			}
 
 			$access_token['created_at'] = $access_token['expires'] - YEAR_IN_SECONDS * 2;
