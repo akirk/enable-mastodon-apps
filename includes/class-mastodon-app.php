@@ -495,24 +495,8 @@ class Mastodon_App {
 		return $args;
 	}
 
-	public static function check_scope( $existing_scopes, $requested_scope ) {
-		$requested_main_scope = strtok( $requested_scope, ':' );
-
-		foreach ( explode( ' ', $existing_scopes ) as $scope ) {
-			if ( $scope === $requested_scope ) {
-				return true;
-			}
-
-			if ( $scope === $requested_main_scope ) {
-				return true;
-			}
-		}
-
-		return false;
-	}
-
 	public function has_scope( $requested_scope ) {
-		return self::check_scope( $this->get_scopes(), $requested_scope );
+		return OAuth2\Scope_Util::checkSingleScope( $requested_scope, $this->get_scopes() );
 	}
 
 	/**

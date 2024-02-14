@@ -438,7 +438,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_verify_credentials' ),
-				'permission_callback' => $this->required_scope( 'read:accounts' ),
+				'permission_callback' => $this->required_scope( 'follow:accounts' ),
 			)
 		);
 
@@ -726,7 +726,7 @@ class Mastodon_API {
 			$token = $this->oauth->get_token();
 			if ( $token && isset( $token['scope'] ) ) {
 				foreach ( explode( ',', $scopes ) as $scope ) {
-					if ( Mastodon_App::check_scope( $token['scope'], $scope ) ) {
+					if ( OAuth2\Scope_Util::checkSingleScope( $scope, $token['scope'] ) ) {
 						$has_scope = true;
 					}
 				}

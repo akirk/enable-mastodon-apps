@@ -44,6 +44,7 @@ class Mastodon_OAuth {
 		$this->server = new Server( new Oauth2\Authorization_Code_Storage(), $config );
 		$this->server->addStorage( new Oauth2\Mastodon_App_Storage(), 'client_credentials' );
 		$this->server->addStorage( new Oauth2\Access_Token_Storage(), 'access_token' );
+		$this->server->setScopeUtil( new Oauth2\Scope_Util() );
 
 		if ( '/oauth/token' === strtok( $_SERVER['REQUEST_URI'], '?' ) ) {
 			// Avoid interference with private site plugins.

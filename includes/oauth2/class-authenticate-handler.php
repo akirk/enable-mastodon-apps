@@ -110,6 +110,20 @@ class Authenticate_Handler {
 			'push'   => __( 'Subscribe to push events for your account.', 'enable-mastodon-apps' ),
 		);
 
+		$requested_scopes = array();
+		foreach ( explode( ' ', $data['scopes'] ) as $scope ) {
+			$p = strpos( $scope, ':' );
+			if ( false === $p ) {
+				$requested_scopes[ $scope ] = array( 'all' => true );
+			} else {
+				$main_scope = substr( $scope, 0, $p );
+				if ( ! isset( $requested_scopes[ $main_scope ] ) ) {
+					$requested_scopes[ $main_scope ] = array();
+				}
+				$requested_scopes[ $main_scope ][ substr( $scope, $p + 1 ) ] = true;
+			}
+		}
+
 		?>
 		<div id="openid-connect-authenticate">
 			<div id="openid-connect-authenticate-form-container" class="login">
@@ -150,11 +164,21 @@ class Authenticate_Handler {
 					<ul style="margin-left: 1em">
 
 						<?php
-						foreach ( array_unique( explode( ' ', $data['scopes'] ) ) as $scope ) {
-							if ( ! isset( $scope_explanations[ $scope ] ) ) {
+						foreach ( $requested_scopes as $main_scope => $subscopes ) {
+							if ( ! isset( $scope_explanations[ $main_scope ] ) ) {
 								continue;
 							}
-							echo '<li style="margin-top: .5em" title="', esc_attr( $scope ), '">', esc_html( $scope_explanations[ $scope ] ), '</li>';
+							echo '<li style="margin-top: .5em" title="', esc_attr( $main_scope ), '">', esc_html( $scope_explanations[ $main_scope ] ), '</li>';
+							if ( ! empty( $subscopes ) ) {
+								echo '<ul style="margin-left: 1em">';
+								foreach ( $subscopes as $subscope => $true ) {
+									if ( ! isset( $scope_explanations[ $main_scope . ':' . $subscope ] ) ) {
+										$scope_explanations[ $main_scope . ':' . $subscope ] = $main_scope . ':' . $subscope;
+									}
+									echo '<li style="margin-top: .5em" title="', esc_attr( $main_scope . ':' . $subscope ), '">', esc_html( $scope_explanations[ $main_scope . ':' . $subscope ] ), '</li>';
+								}
+								echo '</ul>';
+							}
 						}
 						?>
 					</ul>
