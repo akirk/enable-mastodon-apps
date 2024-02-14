@@ -6,7 +6,7 @@
 - Tested up to: 6.2
 - Requires PHP: 5.2.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 0.6.5
+- Stable tag: 0.6.6
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -94,6 +94,10 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 
 ## Changelog
 
+### 0.6.6
+- Implement Autoloader ([#73])
+- Add scope adherence ([#76])
+
 ### 0.6.5
 - Fix missing image attachments for WordPress posts, props @thatguygriff ([#72])
 
@@ -174,6 +178,8 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 - Post replies as comments ([#3])
 - Fix a fatal when saving the default post format
 
+[#73]: https://github.com/akirk/enable-mastodon-apps/pull/73
+[#76]: https://github.com/akirk/enable-mastodon-apps/pull/76
 [#72]: https://github.com/akirk/enable-mastodon-apps/pull/72
 [#65]: https://github.com/akirk/enable-mastodon-apps/pull/65
 [#60]: https://github.com/akirk/enable-mastodon-apps/pull/60
