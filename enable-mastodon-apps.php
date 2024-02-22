@@ -60,7 +60,7 @@ function mastodon_api_pixelfed_nodeinfo_software( $software ) {
 	if ( 'okhttp/4.9.2' === $_SERVER['HTTP_USER_AGENT'] ) {
 		return array(
 			'name'    => 'pixelfed',
-			'version' => '0.11.4',
+			'version' => '0.11.5',
 		);
 	}
 
