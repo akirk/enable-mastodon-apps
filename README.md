@@ -30,6 +30,7 @@ The plugin has been tested with quite a number of Mastodon clients, among them a
 - [Ivory](https://tapbots.com/ivory/) (macOS and iOS)
 - [Mona](https://mastodon.social/@MonaApp) (macOS)
 - [IceCubes](https://github.com/Dimillian/IceCubesApp) (macOS)
+- [Mammoth](https://getmammoth.app/) (macOS and iOS)
 
 Many more, see the [Third-party apps section on joinmastodon.org/apps](https://joinmastodon.org/apps). Each app might have its quirks, [please report an issue when you have troubles[(https://github.com/akirk/enable-mastodon-apps/issues). There is also a chance that the API has not been implemented yet (see below.)
 
