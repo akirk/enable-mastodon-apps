@@ -49,6 +49,9 @@ class Mastodon_API {
 		$this->register_taxonomy();
 		$this->register_custom_post_type();
 		new Mastodon_Admin( $this->oauth );
+
+		// Register Handlers.
+		new Handler\Account();
 	}
 
 	public function register_hooks() {
@@ -904,7 +907,8 @@ class Mastodon_API {
 	}
 
 	public function api_verify_credentials( $request ) {
-		return $this->get_friend_account_data( get_current_user_id() );
+		$request->set_param( 'user_id', get_current_user_id() );
+		return $this->api_account( $request );
 	}
 
 	private function get_posts_query_args( $request ) {
@@ -2321,7 +2325,18 @@ class Mastodon_API {
 
 	public function api_account( $request ) {
 		$user_id = $this->get_user_id_from_request( $request );
-		return $this->get_friend_account_data( $user_id, array(), true );
+
+		$account = \apply_filters( 'mastodon_api_account', null, $user_id, $request );
+
+		if ( ! $account instanceof Entity\Account ) {
+			return new \WP_Error( 'invalid-user', 'Invalid user', array( 'status' => 404 ) );
+		}
+
+		if ( ! $account->is_valid() ) {
+			return new \WP_Error( 'integrity-error', 'Integrity Error', array( 'status' => 500 ) );
+		}
+
+		return $account;
 	}
 
 	/**
