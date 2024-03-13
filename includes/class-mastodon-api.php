@@ -1018,6 +1018,10 @@ class Mastodon_API {
 
 		$ret = array();
 		$c = $args['posts_per_page'];
+		if ( -1 === $c ) {
+			// -1 means to return all statuses on a single page.
+			$c = count( $statuses );
+		}
 		$next_max_id = false;
 		foreach ( $statuses as $status ) {
 			if ( false === $next_max_id ) {
@@ -1149,6 +1153,7 @@ class Mastodon_API {
 			array(
 				'id'                     => strval( $post->ID ),
 				'created_at'             => mysql2date( 'Y-m-d\TH:i:s.000P', $post->post_date, false ),
+				'published_at'           => mysql2date( 'Y-m-d\TH:i:s.000P', $post->post_date, false ),
 				'in_reply_to_id'         => null,
 				'in_reply_to_account_id' => null,
 				'sensitive'              => false,
@@ -2892,8 +2897,62 @@ class Mastodon_API {
 	}
 
 	public function api_announcements() {
+		$type = get_option( 'mastodon_api_announcement_type', 'default' );
 		$ret = array();
 
+		if ( false !== $type ) {
+			$term = get_option( 'mastodon_api_announcement_id', false );
+
+			switch ( $type ) {
+				case 'category':
+					$args['cat'] = get_cat_ID( $term );
+					$args['post_type'] = 'post';
+					$args['posts_per_page'] = -1;
+
+					$ret = $this->get_posts( $args );
+
+					if ( array() !== $ret ) {
+						return $ret;
+					}
+
+					break;
+				case 'tag':
+					$tag = get_term_by( 'slug', $term, 'post_tag' );
+					if ( false === $tag ) {
+						break;
+					}
+
+					$args['tag'] = $tag->ID;
+					$args['post_type'] = 'post';
+					$args['posts_per_page'] = -1;
+
+					$ret = $this->get_posts( $args );
+
+					if ( array() !== $ret ) {
+						return $ret;
+					}
+
+					break;
+				case 'page':
+					$page = get_post( intval( $term ) );
+					$ret[] = $this->get_status_array( $page );
+
+					if ( array() !== $ret ) {
+						return $ret;
+					}
+
+					break;
+				case 'post':
+					$post = get_post( intval( $term ) );
+					$ret[] = $this->get_status_array( $post );
+
+					if ( array() !== $ret ) {
+						return $ret;
+					}
+
+					break;
+			}
+		}
 		$content   = array();
 		$content[] = sprintf(
 			// Translators: %1$s is a URL, %2$s is the domain of your blog.
