@@ -41,6 +41,7 @@ class Account extends Entity {
 		'followers_count' => 'int',
 		'following_count' => 'int',
 
+		'source'          => 'array',
 		'fields'          => 'array',
 		'emojis'          => 'array',
 
@@ -224,4 +225,17 @@ class Account extends Entity {
 	 * @var int
 	 */
 	public $following_count = 0;
+
+	/**
+	 * The account source.
+	 *
+	 * @var array
+	 */
+	public $source = array(
+		'privacy'   => 'public',
+		'sensitive' => false,
+		'language'  => 'en',
+		'note'      => '',
+		'fields'    => array(),
+	);
 }

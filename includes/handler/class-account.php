@@ -35,7 +35,6 @@ class Account {
 		}
 
 		$account = new Account_Entity();
-
 		$account->id             = strval( $user->ID );
 		$account->username       = $user->user_login;
 		$account->display_name   = $user->display_name;
@@ -44,19 +43,17 @@ class Account {
 		$account->acct           = $user->user_login;
 		$account->note           = get_user_meta( $user->ID, 'description', true );
 		$account->created_at     = new \DateTime( $user->user_registered );
-		$account->statuses_count = isset( $posts['status'] ) ? intval( $posts['status'] ) : 0;
+		$account->statuses_count = count_user_posts( $user->ID, 'post', true );
 		$account->last_status_at = new \DateTime( $user->user_registered );
 		$account->url            = get_author_posts_url( $user->ID );
 
-		/*
-		$account->source         = array(
+		$account->source = array(
 			'privacy'   => 'public',
 			'sensitive' => false,
 			'language'  => get_user_locale( $user->ID ),
 			'note'      => '',
 			'fields'    => array(),
 		);
-		*/
 
 		return $account;
 	}
