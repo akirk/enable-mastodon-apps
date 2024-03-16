@@ -40,7 +40,7 @@ class Notification {
 	public function notification_clear( object $request ): void {
 
 		$notification_dismissed_tag = apply_filters( 'mastodon_api_notification_dismissed_tag', 'notification-dismissed' );
-		$notifications = $this->api_notifications( $request );
+		$notifications              = $this->fetch_notifications( $request );
 		foreach ( $notifications as $notification ) {
 			if ( $notification['status'] ) {
 				wp_set_object_terms( $notification['status']['id'], $notification_dismissed_tag, 'post_tag', true );
@@ -56,7 +56,7 @@ class Notification {
 	 */
 	public function notification_dismiss( object $request):void {
 		$notification_dismissed_tag = apply_filters( 'mastodon_api_notification_dismissed_tag', 'notification-dismissed' );
-		$notifications = $this->api_notifications( $request );
+		$notifications              = $this->fetch_notifications( $request );
 		foreach ( $notifications as $notification ) {
 			if ( $request->get_param( 'id' ) !== $notification['id'] ) {
 				continue;
@@ -73,8 +73,8 @@ class Notification {
 	 *
 	 * @return mixed
 	 */
-	public function notification_get( $notification, object $request): object {
-		$notifications = $this->api_notifications( $request );
+	public function notification_get( $notification, object $request ): object {
+		$notifications = $this->fetch_notifications( $request );
 		foreach ( $notifications as $notification ) {
 			if ( $request->get_param( 'id' ) !== $notification['id'] ) {
 				continue;
@@ -91,8 +91,8 @@ class Notification {
 	 *
 	 * @return array
 	 */
-	public function notifications_get( array $notifications, object $request): array {
-		return $this->api_notifications( $request );
+	public function notifications_get( array $notifications, object $request ): array {
+		return $this->fetch_notifications( $request );
 	}
 
 	/**
@@ -100,8 +100,8 @@ class Notification {
 	 *
 	 * @return array
 	 */
-	public function api_notifications( object $request ) {
-		$limit = $request->get_param( 'limit' ) ? $request->get_param( 'limit' ) : 15;
+	public function fetch_notifications( object $request ): array {
+		$limit         = $request->get_param( 'limit' ) ? $request->get_param( 'limit' ) : 15;
 		$notifications = array();
 		$types = $request->get_param( 'types' );
 		$args = array(
