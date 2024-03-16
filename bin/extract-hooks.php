@@ -2,7 +2,7 @@
 /**
  * Extract hooks from the codebase.
  *
- * @package Friends
+ * @package Enable_Mastodon_Apps
  */
 
 $ignore_filters = array();
@@ -236,4 +236,4 @@ file_put_contents(
 	$index
 );
 
-echo 'Genearated ' . count( $filters ) . ' hooks documentation files.' . PHP_EOL;
+echo 'Genearated ' . count( $filters ) . ' hooks documentation files in ' . realpath( $docs ) . PHP_EOL; // phpcs:ignore
