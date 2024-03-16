@@ -18,10 +18,16 @@ use Enable_Mastodon_Apps\Mastodon_API;
  * @package Enable_Mastodon_Apps
  */
 class Relationship {
+	/**
+	 * Relationship constructor.
+	 */
 	public function __construct() {
 		$this->register_hooks();
 	}
 
+	/**
+	 * Register hooks.
+	 */
 	public function register_hooks() {
 		add_filter( 'mastodon_api_relationship', array( $this, 'api_relationship' ), 10, 3 );
 	}
@@ -49,22 +55,10 @@ class Relationship {
 		/**
 		 * Modify account relationship.
 		 *
-		 * @param array            $relationship The account relationship.
-		 * @param string           $user_id      The user ID.
-		 * @param \WP_REST_Request $request      The request object.
-		 *
-		 * @return array The modified account relationship.
-		 *
-		 * Example:
-		 * ```php
-		 * apply_filters( 'mastodon_entity_relationship', function ( $relationship, $user_id, $request ) {
-		 *      $user = get_user_by( 'ID', $user_id );
-		 *
-		 *      if ( $user && $user->has_cap( 'friend_request' ) ) {
-		 *          $relationship['requested'] = true;
-		 *      }
-		 * } );
-		 * ```
+		 * @param Relationship_Entity $relationship The account relationship.
+		 * @param string              $user_id      The user ID.
+		 * @param \WP_REST_Request    $request      The request object.
+		 * @return Relationship_Entity The modified account relationship.
 		 */
 		return apply_filters( 'mastodon_entity_relationship', $relationship, $user_id, $request );
 	}
