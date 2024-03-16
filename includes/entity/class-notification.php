@@ -59,5 +59,4 @@ class Notification extends Entity {
 	 * @var Status
 	 */
 	public Status $status;
-
 }
