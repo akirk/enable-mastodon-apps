@@ -10,10 +10,10 @@
 namespace Enable_Mastodon_Apps\Handler;
 
 /**
- *
+ * This is the generic handler to provide needed helper functions.
  */
 class Handler {
-	private function get_posts_query_args( $request ) {
+	protected function get_posts_query_args( $request ) {
 		$limit = $request->get_param( 'limit' );
 		if ( $limit < 1 ) {
 			$limit = 10;
@@ -56,7 +56,7 @@ class Handler {
 		return $args;
 	}
 
-	private function get_posts( $args, $min_id = null, $max_id = null ) {
+	protected function get_posts( $args, $min_id = null, $max_id = null ) {
 		if ( $min_id ) {
 			$min_filter_handler = function ( $where ) use ( $min_id ) {
 				global $wpdb;
@@ -156,7 +156,7 @@ class Handler {
 		return $ret;
 	}
 
-	private function get_comment_status_array( \WP_Comment $comment ) {
+	protected function get_comment_status_array( \WP_Comment $comment ) {
 		if ( ! $comment ) {
 			return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Record not found', array( 'status' => 404 ) );
 		}
@@ -187,14 +187,14 @@ class Handler {
 	 *
 	 * @return     string  The normalized content.
 	 */
-	private function normalize_whitespace( $post_content ) {
+	protected function normalize_whitespace( $post_content ) {
 		$post_content = preg_replace( '#<!-- /?wp:paragraph -->\s*<!-- /?wp:paragraph -->#', PHP_EOL, $post_content );
 		$post_content = preg_replace( '#\n\s*\n+#', PHP_EOL, $post_content );
 
 		return trim( $post_content );
 	}
 
-	private function get_status_array( $post, $data = array() ) {
+	protected function get_status_array( $post, $data = array() ) {
 		$meta = get_post_meta( $post->ID, 'activitypub', true );
 		$feed_url = get_post_meta( $post->ID, 'feed_url', true );
 
@@ -396,7 +396,7 @@ class Handler {
 		return $data;
 	}
 
-	private function get_notification_array( $type, $date, $account, $status = array() ) {
+	protected function get_notification_array( $type, $date, $account, $status = array() ) {
 		$notification = array(
 			'id'         => preg_replace( '/[^0-9]/', '', $date ),
 			'created_at' => $date,
@@ -429,7 +429,7 @@ class Handler {
 		return $notification;
 	}
 
-	private function convert_outbox_to_status( $outbox, $user_id ) {
+	protected function convert_outbox_to_status( $outbox, $user_id ) {
 		$items = array();
 		foreach ( $outbox['orderedItems'] as $item ) {
 			$status = $this->convert_activity_to_status( $item, $user_id );
@@ -607,7 +607,7 @@ class Handler {
 		return $body;
 	}
 
-	private function update_account_data_with_meta( $data, $meta, $full_metadata = false ) {
+	protected function update_account_data_with_meta( $data, $meta, $full_metadata = false ) {
 		if ( ! $meta || is_wp_error( $meta ) || isset( $meta['error'] ) ) {
 			if ( empty( $data['username'] ) || ! $data['username'] ) {
 				$data['username'] = strtok( $data['id'], '@' );
@@ -676,7 +676,7 @@ class Handler {
 		return $data;
 	}
 
-	private function get_friend_account_data( $user_id, $meta = array(), $full_metadata = false ) {
+	protected function get_friend_account_data( $user_id, $meta = array(), $full_metadata = false ) {
 		$external_user = apply_filters( 'mastodon_api_external_mentions_user', null );
 		$is_external_mention = $external_user && strval( $external_user->ID ) === strval( $user_id );
 		if ( $is_external_mention && isset( $meta['attributedTo']['id'] ) ) {
@@ -941,7 +941,7 @@ class Handler {
 		return false;
 	}
 
-	private function webfinger( $id_or_url ) {
+	protected function webfinger( $id_or_url ) {
 		if ( strpos( $id_or_url, 'acct:' ) === 0 ) {
 			$id_or_url = substr( $id_or_url, 5 );
 		}
@@ -991,7 +991,7 @@ class Handler {
 		return $body;
 	}
 
-	private function remap_reblog_id( $post_id ) {
+	protected function remap_reblog_id( $post_id ) {
 		$remapped_post_id = get_post_meta( $post_id, 'mastodon_reblog_id', true );
 		if ( ! $remapped_post_id ) {
 			$remapped_post_id = wp_insert_post(
@@ -1011,7 +1011,7 @@ class Handler {
 		return $remapped_post_id;
 	}
 
-	private function maybe_get_remapped_reblog_id( $remapped_post_id ) {
+	protected function maybe_get_remapped_reblog_id( $remapped_post_id ) {
 		$post_id = get_post_meta( $remapped_post_id, 'mastodon_reblog_id', true );
 		if ( $post_id ) {
 			return $post_id;
@@ -1019,7 +1019,7 @@ class Handler {
 		return $remapped_post_id;
 	}
 
-	private function remap_comment_id( $comment_id ) {
+	protected function remap_comment_id( $comment_id ) {
 		$remapped_comment_id = get_comment_meta( $comment_id, 'mastodon_comment_id', true );
 		if ( ! $remapped_comment_id ) {
 			$remapped_comment_id = wp_insert_post(
@@ -1039,7 +1039,7 @@ class Handler {
 		return $remapped_comment_id;
 	}
 
-	private function get_remapped_comment_id( $remapped_comment_id ) {
+	protected function get_remapped_comment_id( $remapped_comment_id ) {
 		$comment_id = get_post_meta( $remapped_comment_id, 'mastodon_comment_id', true );
 		if ( $comment_id ) {
 			return $comment_id;
