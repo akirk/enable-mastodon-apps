@@ -54,7 +54,7 @@ class Notification {
 	 *
 	 * @return void
 	 */
-	public function notification_dismiss( object $request):void {
+	public function notification_dismiss( object $request ): void {
 		$notification_dismissed_tag = apply_filters( 'mastodon_api_notification_dismissed_tag', 'notification-dismissed' );
 		$notifications              = $this->fetch_notifications( $request );
 		foreach ( $notifications as $notification ) {
@@ -79,6 +79,7 @@ class Notification {
 			if ( $request->get_param( 'id' ) !== $notification['id'] ) {
 				continue;
 			}
+
 			return $notification;
 		}
 
@@ -103,8 +104,8 @@ class Notification {
 	public function fetch_notifications( object $request ): array {
 		$limit         = $request->get_param( 'limit' ) ? $request->get_param( 'limit' ) : 15;
 		$notifications = array();
-		$types = $request->get_param( 'types' );
-		$args = array(
+		$types         = $request->get_param( 'types' );
+		$args          = array(
 			'posts_per_page' => $limit + 2,
 		);
 		$exclude_types = $request->get_param( 'exclude_types' );
@@ -113,9 +114,9 @@ class Notification {
 			if ( ! $external_user || ! ( $external_user instanceof \WP_User ) ) {
 				return array();
 			}
-			$args = $this->get_posts_query_args( $request );
+			$args                   = $this->get_posts_query_args( $request );
 			$args['posts_per_page'] = $limit + 2;
-			$args['author'] = $external_user->ID;
+			$args['author']         = $external_user->ID;
 			if ( class_exists( '\Friends\User' ) ) {
 				if (
 					$external_user instanceof \Friends\User
@@ -136,16 +137,16 @@ class Notification {
 				}
 				$user_id = $post->post_author;
 				if ( class_exists( '\Friends\User' ) && $post instanceof \WP_Post ) {
-					$user = \Friends\User::get_post_author( $post );
+					$user    = \Friends\User::get_post_author( $post );
 					$user_id = $user->ID;
 				}
 				$notifications[] = $this->get_notification_array( 'mention', mysql2date( 'Y-m-d\TH:i:s.000P', $post->post_date, false ), $this->get_friend_account_data( $user_id, $meta ), $this->get_status_array( $post ) );
 			}
 		}
 
-		$min_id   = $request->get_param( 'min_id' );
-		$max_id   = $request->get_param( 'max_id' );
-		$since_id = $request->get_param( 'since_id' );
+		$min_id      = $request->get_param( 'min_id' );
+		$max_id      = $request->get_param( 'max_id' );
+		$since_id    = $request->get_param( 'since_id' );
 		$next_min_id = false;
 
 		$last_modified = $request->get_header( 'if-modified-since' );
@@ -157,7 +158,7 @@ class Notification {
 		}
 
 		$ret = array();
-		$c = $limit;
+		$c   = $limit;
 		foreach ( $notifications as $notification ) {
 			if ( $max_id ) {
 				if ( strval( $notification['id'] ) >= strval( $max_id ) ) {
@@ -174,7 +175,7 @@ class Notification {
 			if ( $since_id && strval( $since_id ) > strval( $notification['id'] ) ) {
 				break;
 			}
-			if ( $c-- <= 0 ) {
+			if ( $c -- <= 0 ) {
 				break;
 			}
 			$ret[] = $notification;
@@ -186,6 +187,7 @@ class Notification {
 			}
 			header( 'Link: <' . add_query_arg( 'max_id', $ret[ count( $ret ) - 1 ]['id'], home_url( '/api/v1/notifications' ) ) . '>; rel="next"', false );
 		}
+
 		return $ret;
 	}
 
