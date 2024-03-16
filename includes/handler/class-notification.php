@@ -35,7 +35,7 @@ class Notification {
 	/**
 	 * Handle action calls to get dismiss all notifications.
 	 *
-	 * @param object $request Request object from WP
+	 * @param object $request Request object from WP.
 	 *
 	 * @return void
 	 */
@@ -48,13 +48,12 @@ class Notification {
 				wp_set_object_terms( $notification['status']['id'], $notification_dismissed_tag, 'post_tag', true );
 			}
 		}
-
 	}
 
 	/**
 	 * Handle action calls to get dismiss one notification.
 	 *
-	 * @param object $request Request object from WP
+	 * @param object $request Request object from WP.
 	 *
 	 * @return void
 	 */
@@ -74,8 +73,8 @@ class Notification {
 	/**
 	 * Handle filter calls to get one notification.
 	 *
-	 * @param mixed $notification
-	 * @param object $request Request object from WP
+	 * @param mixed $notification Notification to return after working with it.
+	 * @param object $request Request object from WP.
 	 *
 	 * @return mixed
 	 */
@@ -95,8 +94,8 @@ class Notification {
 	/**
 	 * Handle filter calls to get all notifications.
 	 *
-	 * @param array $notifications
-	 * @param object $request Request object from WP
+	 * @param array $notifications Notification to return after working with it.
+	 * @param object $request Request object from WP.
 	 *
 	 * @return array
 	 */
@@ -107,7 +106,7 @@ class Notification {
 	/**
 	 * Helper to get all notifications.
 	 *
-	 * @param object $request Request object from WP
+	 * @param object $request Request object from WP.
 	 *
 	 * @return array
 	 */
@@ -244,5 +243,4 @@ class Notification {
 
 		return $notification;
 	}
-
 }
