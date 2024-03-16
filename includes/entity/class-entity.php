@@ -28,14 +28,18 @@ abstract class Entity implements \JsonSerializable {
 				continue;
 			}
 
-			if ( in_array( $type, array( 'string', 'int', 'bool', 'array' ) ) ) {
+			$object = trim( $type, '?' );
+			$required = strlen( $object ) === strlen( $type );
+
+			if ( in_array( $object, array( 'string', 'int', 'bool', 'array' ) ) ) {
+				if ( ! $required ) {
+					continue;
+				}
+
 				settype( $this->$var, $type );
 				$array[ $var ] = $this->$var;
 				continue;
 			}
-
-			$object = trim( $type, '?' );
-			$required = strlen( $object ) === strlen( $type );
 
 			if ( 'DateTime' === $object ) {
 				if ( $this->$var instanceof \DateTime ) {
