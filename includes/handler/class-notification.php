@@ -28,6 +28,9 @@ class Notification {
 
 		add_action( 'mastodon_api_notification_clear', array( $this, 'notification_clear' ), 20, 1 );
 		add_action( 'mastodon_api_notification_dismiss', array( $this, 'notification_dismiss' ), 20, 1 );
+
+		add_filter( 'mastodon_api_notification_get', array( $this, 'notification_get' ), 20, 2 );
+		add_filter( 'mastodon_api_notifications_get', array( $this, 'notifications_get' ), 20, 2 );
 	}
 
 	public function api_notification( $user_data, $user_id ) {
@@ -94,6 +97,34 @@ class Notification {
 				wp_set_object_terms( $notification['status']['id'], $notification_dismissed_tag, 'post_tag', true );
 			}
 		}
+	}
+
+	/**
+	 * @param mixed $notification
+	 * @param object $request
+	 *
+	 * @return mixed
+	 */
+	public function notification_get( $notification, object $request): object {
+		$notifications = $this->api_notifications( $request );
+		foreach ( $notifications as $notification ) {
+			if ( $request->get_param( 'id' ) !== $notification['id'] ) {
+				continue;
+			}
+			return $notification;
+		}
+
+		return new WP_Error( 'notification_not_found', __( 'Notification not found.', 'enable-mastodon-apps' ) );
+	}
+
+	/**
+	 * @param array $notifications
+	 * @param object $request
+	 *
+	 * @return array
+	 */
+	public function notifications_get( array $notifications, object $request): array {
+		return $this->api_notifications( $request );
 	}
 
 	/**
