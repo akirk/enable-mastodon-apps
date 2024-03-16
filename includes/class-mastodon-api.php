@@ -1313,39 +1313,6 @@ class Mastodon_API {
 		return $data;
 	}
 
-	private function get_notification_array( $type, $date, $account, $status = array() ) {
-		$notification = array(
-			'id'         => preg_replace( '/[^0-9]/', '', $date ),
-			'created_at' => $date,
-		);
-		switch ( $type ) {
-			// As per https://docs.joinmastodon.org/entities/Notification/.
-			case 'mention': // Someone mentioned you in their status.
-			case 'status': // Someone you enabled notifications for has posted a status.
-			case 'reblog': // Someone boosted one of your statuses.
-			case 'follow': // Someone followed you.
-			case 'follow_request': // Someone requested to follow you.
-			case 'favourite': // Someone favourited one of your statuses.
-			case 'poll': // A poll you have voted in or created has ended.
-			case 'update': // A status you interacted with has been edited.
-				$notification['type'] = $type;
-				break;
-			default:
-				return array();
-		}
-
-		if ( $account ) {
-			$notification['account'] = $account;
-		}
-
-		if ( $status ) {
-			$notification['status'] = $status;
-			$notification['id'] .= $status['id'];
-		}
-
-		return $notification;
-	}
-
 	public function api_submit_post( $request ) {
 		if ( ! current_user_can( 'edit_posts' ) ) {
 			return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Insufficient permissions', array( 'status' => 401 ) );
