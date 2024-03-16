@@ -18,7 +18,7 @@ use Enable_Mastodon_Apps\Entity\Notification as Notification_Entity;
  *
  * @package Enable_Mastodon_Apps
  */
-class Notification {
+class Notification extends Handler {
 	public function __construct() {
 		$this->register_hooks();
 	}
