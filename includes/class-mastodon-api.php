@@ -2165,7 +2165,7 @@ class Mastodon_API {
 	/**
 	 * Call out API request to clear all notifications as WP action.
 	 *
-	 * @param object $request
+	 * @param object $request Request object from WP
 	 *
 	 * @return object
 	 */
@@ -2179,7 +2179,7 @@ class Mastodon_API {
 	/**
 	 * Call out API request to clear one notification as WP action.
 	 *
-	 * @param object $request
+	 * @param object $request Request object from WP
 	 *
 	 * @return object
 	 */
@@ -2190,8 +2190,12 @@ class Mastodon_API {
 		return (object) array();
 	}
 
-	/*
+	/**
 	 * Call out API request to get one notification as WP filter.
+	 *
+	 * @param object $request Request object from WP
+	 *
+	 * @return object
 	 */
 	public function api_notification_get( object $request ): object {
 		return apply_filters( 'mastodon_api_notification_get', null, $request );
@@ -2200,7 +2204,7 @@ class Mastodon_API {
 	/**
 	 * Call out API request to get notifications as WP filter.
 	 *
-	 * @param object $request
+	 * @param object $request Request object from WP
 	 *
 	 * @return array
 	 */

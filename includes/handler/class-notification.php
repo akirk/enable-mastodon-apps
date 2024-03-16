@@ -33,7 +33,9 @@ class Notification {
 	}
 
 	/**
-	 * @param object $request
+	 * Handle action calls to get dismiss all notifications.
+	 *
+	 * @param object $request Request object from WP
 	 *
 	 * @return void
 	 */
@@ -50,7 +52,9 @@ class Notification {
 	}
 
 	/**
-	 * @param object $request
+	 * Handle action calls to get dismiss one notification.
+	 *
+	 * @param object $request Request object from WP
 	 *
 	 * @return void
 	 */
@@ -68,8 +72,10 @@ class Notification {
 	}
 
 	/**
+	 * Handle filter calls to get one notification.
+	 *
 	 * @param mixed $notification
-	 * @param object $request
+	 * @param object $request Request object from WP
 	 *
 	 * @return mixed
 	 */
@@ -87,8 +93,10 @@ class Notification {
 	}
 
 	/**
+	 * Handle filter calls to get all notifications.
+	 *
 	 * @param array $notifications
-	 * @param object $request
+	 * @param object $request Request object from WP
 	 *
 	 * @return array
 	 */
@@ -97,7 +105,9 @@ class Notification {
 	}
 
 	/**
-	 * @param object $request
+	 * Helper to get all notifications.
+	 *
+	 * @param object $request Request object from WP
 	 *
 	 * @return array
 	 */
@@ -193,6 +203,8 @@ class Notification {
 	}
 
 	/**
+	 * Helper to get notifications as array based on parameter.
+	 *
 	 * @param string $type
 	 * @param mixed $date
 	 * @param \Enable_Mastodon_Apps\Entity\Account $account
