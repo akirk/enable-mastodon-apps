@@ -1,6 +1,6 @@
 <?php
 /**
- * Friends Mastodon API
+ * Mastodon API
  *
  * This contains the REST API handlers.
  *
@@ -142,56 +142,62 @@ class Mastodon_API {
 		$existing_rules = get_option( 'rewrite_rules' );
 		$needs_flush = false;
 
-		$generic = array(
-			'api/v1/accounts/relationships',
-			'api/v1/accounts/verify_credentials',
-			'api/v1/accounts/familiar_followers',
-			'api/v1/accounts/search',
-			'api/v1/announcements',
-			'api/v1/apps',
-			'api/v1/bookmarks',
-			'api/v1/conversations',
-			'api/v1/custom_emojis',
-			'api/v1/favourites',
-			'api/v1/filters',
-			'api/v1/follow_requests',
-			'api/v1/followed_tags',
-			'api/v1/instance/peers',
-			'api/v2/instance',
-			'api/v1/instance',
-			'api/v1/lists',
-			'api/v1/markers',
-			'api/v1/mutes',
-			'api/v1/notifications/clear',
-			'api/v1/preferences',
-			'api/v1/trends/statuses',
-			'api/v1/push/subscription',
-			'api/v1/streaming',
-			'api/v2/media',
+		$generic = apply_filters(
+			'mastodon_api_generic_routes',
+			array(
+				'api/v1/accounts/relationships',
+				'api/v1/accounts/verify_credentials',
+				'api/v1/accounts/familiar_followers',
+				'api/v1/accounts/search',
+				'api/v1/announcements',
+				'api/v1/apps',
+				'api/v1/bookmarks',
+				'api/v1/conversations',
+				'api/v1/custom_emojis',
+				'api/v1/favourites',
+				'api/v1/filters',
+				'api/v1/follow_requests',
+				'api/v1/followed_tags',
+				'api/v1/instance/peers',
+				'api/v2/instance',
+				'api/v1/instance',
+				'api/v1/lists',
+				'api/v1/markers',
+				'api/v1/mutes',
+				'api/v1/notifications/clear',
+				'api/v1/preferences',
+				'api/v1/trends/statuses',
+				'api/v1/push/subscription',
+				'api/v1/streaming',
+				'api/v2/media',
+			)
 		);
-		$parametrized = array(
-			'api/v1/accounts/([^/]+)/featured_tags'  => 'api/v1/accounts/$matches[1]/featured_tags',
-			'api/v1/accounts/([^/]+)/followers'      => 'api/v1/accounts/$matches[1]/followers',
-			'api/v1/accounts/([^/]+)/follow'         => 'api/v1/accounts/$matches[1]/follow',
-			'api/v1/accounts/([^/]+)/unfollow'       => 'api/v1/accounts/$matches[1]/unfollow',
-			'api/v1/accounts/([^/]+)/statuses'       => 'api/v1/accounts/$matches[1]/statuses',
-			'api/v1/statuses/([0-9]+)/context'       => 'api/v1/statuses/$matches[1]/context',
-			'api/v1/statuses/([0-9]+)/favourited_by' => 'api/v1/statuses/$matches[1]/favourited_by',
-			'api/v1/statuses/([0-9]+)/favourite'     => 'api/v1/statuses/$matches[1]/favourite',
-			'api/v1/statuses/([0-9]+)/unfavourite'   => 'api/v1/statuses/$matches[1]/unfavourite',
-			'api/v1/statuses/([0-9]+)/reblog'        => 'api/v1/statuses/$matches[1]/reblog',
-			'api/v1/statuses/([0-9]+)/unreblog'      => 'api/v1/statuses/$matches[1]/unreblog',
-			'api/v1/notifications/([^/]+)/dismiss'   => 'api/v1/notifications/$matches[1]/dismiss',
-			'api/v1/notifications/([^/|$]+)/?$'      => 'api/v1/notifications/$matches[1]',
-			'api/v1/notifications'                   => 'api/v1/notifications',
-			'api/nodeinfo/([0-9]+[.][0-9]+).json'    => 'api/nodeinfo/$matches[1].json',
-			'api/v1/media/([0-9]+)'                  => 'api/v1/media/$matches[1]',
-			'api/v1/statuses/([0-9]+)'               => 'api/v1/statuses/$matches[1]',
-			'api/v1/statuses'                        => 'api/v1/statuses',
-			'api/v1/accounts/(.+)'                   => 'api/v1/accounts/$matches[1]',
-			'api/v1/timelines/(home|public)'         => 'api/v1/timelines/$matches[1]',
-			'api/v1/timelines/tag/([^/|$]+)'         => 'api/v1/timelines/tag/$matches[1]',
-			'api/v2/search'                          => 'api/v1/search',
+		$parametrized = apply_filters(
+			'mastodon_api_parametrized_routes',
+			array(
+				'api/v1/accounts/([^/]+)/featured_tags'  => 'api/v1/accounts/$matches[1]/featured_tags',
+				'api/v1/accounts/([^/]+)/followers'      => 'api/v1/accounts/$matches[1]/followers',
+				'api/v1/accounts/([^/]+)/follow'         => 'api/v1/accounts/$matches[1]/follow',
+				'api/v1/accounts/([^/]+)/unfollow'       => 'api/v1/accounts/$matches[1]/unfollow',
+				'api/v1/accounts/([^/]+)/statuses'       => 'api/v1/accounts/$matches[1]/statuses',
+				'api/v1/statuses/([0-9]+)/context'       => 'api/v1/statuses/$matches[1]/context',
+				'api/v1/statuses/([0-9]+)/favourited_by' => 'api/v1/statuses/$matches[1]/favourited_by',
+				'api/v1/statuses/([0-9]+)/favourite'     => 'api/v1/statuses/$matches[1]/favourite',
+				'api/v1/statuses/([0-9]+)/unfavourite'   => 'api/v1/statuses/$matches[1]/unfavourite',
+				'api/v1/statuses/([0-9]+)/reblog'        => 'api/v1/statuses/$matches[1]/reblog',
+				'api/v1/statuses/([0-9]+)/unreblog'      => 'api/v1/statuses/$matches[1]/unreblog',
+				'api/v1/notifications/([^/]+)/dismiss'   => 'api/v1/notifications/$matches[1]/dismiss',
+				'api/v1/notifications/([^/|$]+)/?$'      => 'api/v1/notifications/$matches[1]',
+				'api/v1/notifications'                   => 'api/v1/notifications',
+				'api/nodeinfo/([0-9]+[.][0-9]+).json'    => 'api/nodeinfo/$matches[1].json',
+				'api/v1/media/([0-9]+)'                  => 'api/v1/media/$matches[1]',
+				'api/v1/statuses/([0-9]+)'               => 'api/v1/statuses/$matches[1]',
+				'api/v1/statuses'                        => 'api/v1/statuses',
+				'api/v1/accounts/(.+)'                   => 'api/v1/accounts/$matches[1]',
+				'api/v1/timelines/(home|public)'         => 'api/v1/timelines/$matches[1]',
+				'api/v1/timelines/tag/([^/|$]+)'         => 'api/v1/timelines/tag/$matches[1]',
+				'api/v2/search'                          => 'api/v1/search',
+			)
 		);
 
 		foreach ( $generic as $rule ) {
@@ -704,6 +710,8 @@ class Mastodon_API {
 				'permission_callback' => array( $this, 'public_api_permission' ),
 			)
 		);
+
+		do_action( 'mastodon_api_register_rest_routes', $this );
 	}
 
 	public function query_vars( $query_vars ) {

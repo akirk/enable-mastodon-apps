@@ -50,36 +50,16 @@ OAuth2\Autoloader::register();
 				require_once $file;
 			} else {
 				// translators: %s is the class name.
-				\wp_die( sprintf( esc_html__( 'Required class not found or not readable: %s', 'enable-mastodon-apps' ), esc_html( $full_class ) ) );
+				\wp_die( sprintf( esc_html__( 'Required class not found or not readable: %s', 'enable-mastodon-apps' ), esc_html( $file ) ) );
 			}
 		}
 	}
 );
 
-function mastodon_api_pixelfed_nodeinfo_software( $software ) {
-	if ( 'okhttp/4.9.2' === $_SERVER['HTTP_USER_AGENT'] ) {
-		return array(
-			'name'    => 'pixelfed',
-			'version' => '0.11.5',
-		);
-	}
-
-	return $software;
-}
-add_filter( 'mastodon_api_nodeinfo_software', 'mastodon_api_pixelfed_nodeinfo_software' );
-
-function mastodon_api_pixelfed_post_formats( $post_formats, $app_metadata ) {
-	if ( in_array( $app_metadata, array( 'Pixelfed' ) ) ) {
-		$post_formats = array( 'image' );
-	}
-
-	return $post_formats;
-}
-add_filter( 'mastodon_api_new_app_post_formats', 'mastodon_api_pixelfed_post_formats', 10, 2 );
-
 add_action(
 	'init',
 	function () {
 		new Enable_Mastodon_Apps\Mastodon_API();
+		new Enable_Mastodon_Apps\Integration\Pixelfed();
 	}
 );
