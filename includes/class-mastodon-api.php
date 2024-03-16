@@ -2197,7 +2197,12 @@ class Mastodon_API {
 		return $relationships;
 	}
 
-	public function api_notification_clear( $request ) {
+	/**
+	 * @param object $request
+	 *
+	 * @return object
+	 */
+	public function api_notification_clear( object $request ): object {
 		$notification_dismissed_tag = apply_filters( 'mastodon_api_notification_dismissed_tag', 'notification-dismissed' );
 		$notifications = $this->api_notifications( $request );
 		foreach ( $notifications as $notification ) {
