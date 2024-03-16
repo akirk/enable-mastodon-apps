@@ -12,7 +12,6 @@ namespace Enable_Mastodon_Apps;
 use WP_REST_Request;
 use WP_REST_Response;
 
-
 /**
  * This is the class that implements the Mastodon API endpoints.
  *
@@ -1944,8 +1943,31 @@ class Mastodon_API {
 		return $this->get_posts( $args );
 	}
 
-	public function api_account_followers( $request ) {
-		$user_id   = $this->get_user_id_from_request( $request );
+	/**
+	 * Get the account followers.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|\WP_Error
+	 */
+	public function api_account_followers( WP_REST_Request $request ) {
+		$user_id = $this->get_user_id_from_request( $request );
+
+		/**
+		 * Modify the account followers.
+		 *
+		 * @param array           $followers The account followers.
+		 * @param string          $user_id   The user ID.
+		 * @param WP_REST_Request $request   The request object.
+		 * @return array The modified account followers.
+		 *
+		 * Example:
+		 * ```php
+		 * apply_filters( 'mastodon_api_account_followers', function ( $followers, $user_id, $request ) {
+		 *    $followers[] = 'pfefferle';
+		 *
+		 *    return $followers;
+		 * } );
+		 */
 		$followers = \apply_filters( 'mastodon_api_account_followers', array(), $user_id, $request );
 
 		if ( is_wp_error( $followers ) ) {
