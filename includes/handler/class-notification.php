@@ -200,7 +200,7 @@ class Notification extends Handler {
 	 *
 	 * @return array
 	 */
-	private function get_notification_array( string $type, $date, \Enable_Mastodon_Apps\Entity\Account $account, array $status = array() ): array {
+	protected function get_notification_array( string $type, $date, \Enable_Mastodon_Apps\Entity\Account $account, array $status = array() ): array {
 		$notification = array(
 			'id'         => preg_replace( '/[^0-9]/', '', $date ),
 			'created_at' => $date,
