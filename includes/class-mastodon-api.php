@@ -2334,6 +2334,28 @@ class Mastodon_API {
 	public function api_account( $request ) {
 		$user_id = $this->get_user_id_from_request( $request );
 
+		/**
+		 * Modify the account data returned for `/api/account/{user_id}` requests.
+		 *
+		 * @param Entity\Account|null $account The account data.
+		 * @param int $user_id The requested user ID.
+		 * @param \WP_REST_Request $request The request object.
+		 * @return Entity\Account|null The modified account data.
+		 *
+		 * Example:
+		 * ```php
+		 * add_filter( 'mastodon_api_account', function( $user_data, $user_id ) {
+		 *     $user = get_user_by( 'ID', $user_id );
+		 *
+		 *     $account                 = new Account_Entity();
+		 *     $account->id             = strval( $user->ID );
+		 *     $account->username       = $user->user_login;
+		 *     $account->display_name   = $user->display_name;
+		 *
+		 *     return $account;
+		 * } );
+		 * ```
+		 */
 		$account = \apply_filters( 'mastodon_api_account', null, $user_id, $request );
 
 		if ( ! $account instanceof Entity\Account ) {
