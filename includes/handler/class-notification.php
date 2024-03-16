@@ -140,6 +140,7 @@ class Notification {
 					$user    = \Friends\User::get_post_author( $post );
 					$user_id = $user->ID;
 				}
+				// @TODO: fix use of get_friend_account_data and get_status_array
 				$notifications[] = $this->get_notification_array( 'mention', mysql2date( 'Y-m-d\TH:i:s.000P', $post->post_date, false ), $this->get_friend_account_data( $user_id, $meta ), $this->get_status_array( $post ) );
 			}
 		}
