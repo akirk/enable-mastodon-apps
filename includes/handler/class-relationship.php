@@ -57,7 +57,7 @@ class Relationship {
 		 *
 		 * Example:
 		 * ```php
-		 * apply_filters( 'mastodon_api_account_relationships', function ( $relationship, $user_id, $request ) {
+		 * apply_filters( 'mastodon_entity_relationship', function ( $relationship, $user_id, $request ) {
 		 *      $user = get_user_by( 'ID', $user_id );
 		 *
 		 *      if ( $user && $user->has_cap( 'friend_request' ) ) {
