@@ -73,7 +73,7 @@ class Notification {
 	/**
 	 * Handle filter calls to get one notification.
 	 *
-	 * @param mixed $notification Notification to return after working with it.
+	 * @param mixed  $notification Notification to return after working with it.
 	 * @param object $request Request object from WP.
 	 *
 	 * @return mixed
@@ -94,7 +94,7 @@ class Notification {
 	/**
 	 * Handle filter calls to get all notifications.
 	 *
-	 * @param array $notifications Notification to return after working with it.
+	 * @param array  $notifications Notification to return after working with it.
 	 * @param object $request Request object from WP.
 	 *
 	 * @return array
@@ -185,7 +185,7 @@ class Notification {
 			if ( $since_id && strval( $since_id ) > strval( $notification['id'] ) ) {
 				break;
 			}
-			if ( $c -- <= 0 ) {
+			if ( $c-- <= 0 ) {
 				break;
 			}
 			$ret[] = $notification;
@@ -204,10 +204,10 @@ class Notification {
 	/**
 	 * Helper to get notifications as array based on parameter.
 	 *
-	 * @param string $type
-	 * @param mixed $date
-	 * @param \Enable_Mastodon_Apps\Entity\Account $account
-	 * @param array $status
+	 * @param string $type                                  Type of notification.
+	 * @param mixed $date                                   Date for limit.
+	 * @param \Enable_Mastodon_Apps\Entity\Account $account Attached account for notifications.
+	 * @param array $status                                 Status of notifications.
 	 *
 	 * @return array
 	 */
