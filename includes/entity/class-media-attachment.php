@@ -68,9 +68,9 @@ class Media_Attachment extends Entity {
 	/**
 	 * Media metadata.
 	 *
-	 * @var string
+	 * @var object
 	 */
-	public string $meta;
+	public object $meta;
 
 	/**
 	 * Alternate text that describes what is in the media attachment.
