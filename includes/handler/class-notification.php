@@ -101,7 +101,7 @@ class Notification {
 	 *
 	 * @return array
 	 */
-	public function fetch_notifications( object $request ): array {
+	private function fetch_notifications( object $request ): array {
 		$limit         = $request->get_param( 'limit' ) ? $request->get_param( 'limit' ) : 15;
 		$notifications = array();
 		$types         = $request->get_param( 'types' );
