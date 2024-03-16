@@ -18,7 +18,7 @@ use Enable_Mastodon_Apps\Entity\Account as Account_Entity;
  *
  * @package Enable_Mastodon_Apps
  */
-class Account {
+class Account extends Handler {
 	public function __construct() {
 		$this->register_hooks();
 	}
