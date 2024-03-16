@@ -4,7 +4,7 @@
 - Tags: mastodon, activitypub, friends, fediverse
 - Requires at least: 5.0
 - Tested up to: 6.4
-- Requires PHP: 5.2.4
+- Requires PHP: 7.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
 - Stable tag: 0.6.6
 

@@ -397,7 +397,7 @@ class Mastodon_API {
 			'api/v1/notifications',
 			array(
 				'methods'             => 'GET',
-				'callback'            => array( $this, 'api_notifications' ),
+				'callback'            => array( $this, 'api_notifications_get' ),
 				'permission_callback' => $this->required_scope( 'read:notifications' ),
 			)
 		);
@@ -1315,39 +1315,6 @@ class Mastodon_API {
 		return $data;
 	}
 
-	private function get_notification_array( $type, $date, $account, $status = array() ) {
-		$notification = array(
-			'id'         => preg_replace( '/[^0-9]/', '', $date ),
-			'created_at' => $date,
-		);
-		switch ( $type ) {
-			// As per https://docs.joinmastodon.org/entities/Notification/.
-			case 'mention': // Someone mentioned you in their status.
-			case 'status': // Someone you enabled notifications for has posted a status.
-			case 'reblog': // Someone boosted one of your statuses.
-			case 'follow': // Someone followed you.
-			case 'follow_request': // Someone requested to follow you.
-			case 'favourite': // Someone favourited one of your statuses.
-			case 'poll': // A poll you have voted in or created has ended.
-			case 'update': // A status you interacted with has been edited.
-				$notification['type'] = $type;
-				break;
-			default:
-				return array();
-		}
-
-		if ( $account ) {
-			$notification['account'] = $account;
-		}
-
-		if ( $status ) {
-			$notification['status'] = $status;
-			$notification['id'] .= $status['id'];
-		}
-
-		return $notification;
-	}
-
 	public function api_submit_post( $request ) {
 		if ( ! current_user_can( 'edit_posts' ) ) {
 			return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Insufficient permissions', array( 'status' => 401 ) );
@@ -1631,78 +1598,15 @@ class Mastodon_API {
 		return $ret['accounts'];
 	}
 
-	public function api_search( $request ) {
-		$type = $request->get_param( 'type' );
-		$ret = array(
-			'accounts' => array(),
-			'statuses' => array(),
-			'hashtags' => array(),
-		);
-
-		$q = $request->get_param( 'q' );
-		$query_is_url = parse_url( $q );
-		if ( $query_is_url ) {
-			if ( 'true' !== $request->get_param( 'resolve' ) || ! is_user_logged_in() ) {
-				return $ret;
-			}
-			$status = $this->get_json( $q, 'status-' . md5( $q ) );
-			$ret['statuses'][] = $this->convert_activity_to_status( array( 'object' => $status ), $status['attributedTo'] );
-		} else {
-			if ( ! $type || 'accounts' === $type ) {
-				if ( preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $q ) && ! $request->get_param( 'offset' ) ) {
-					$ret['accounts'][] = $this->get_friend_account_data( $q, array(), true );
-				}
-				$query = new \WP_User_Query(
-					array(
-						'search'         => '*' . $q . '*',
-						'search_columns' => array(
-							'user_login',
-							'user_nicename',
-							'user_email',
-							'user_url',
-							'display_name',
-						),
-						'offset'         => $request->get_param( 'offset' ),
-						'number'         => $request->get_param( 'limit' ),
-					)
-				);
-				$users = $query->get_results();
-				foreach ( $users as $user ) {
-					$ret['accounts'][] = $this->get_friend_account_data( $user->ID );
-				}
-			}
-			if ( ! $type || 'statuses' === $type ) {
-				$args = $this->get_posts_query_args( $request );
-				if ( empty( $args ) ) {
-					return array();
-				}
-				$args = apply_filters( 'mastodon_api_timelines_args', $args, $request );
-				$valid_url = wp_parse_url( $q );
-				if ( $valid_url && isset( $valid_url['host'] ) ) {
-					if ( ! $request->get_param( 'offset' ) ) {
-						$url = $q;
-						$json = $this->get_json( $url, crc32( $url ) );
-						if ( ! is_wp_error( $json ) && isset( $json['id'], $json['attributedTo'] ) ) {
-							$user_id = $this->get_acct( $json['attributedTo'] );
-							$ret['statuses'][] = $this->convert_activity_to_status(
-								array(
-									'id'     => $json['id'] . '#create-activity',
-									'object' => $json,
-
-								),
-								$user_id
-							);
-						}
-					}
-				} elseif ( is_user_logged_in() ) {
-					$args['s'] = $q;
-					$args['offset'] = $request->get_param( 'offset' );
-					$args['posts_per_page'] = $request->get_param( 'limit' );
-					$ret['statuses'] = array_merge( $ret['statuses'], $this->get_posts( $args ) );
-				}
-			}
-		}
-		return $ret;
+	/**
+	 * Call out API request to search as WP filter.
+	 *
+	 * @param object $request Request object from WP.
+	 *
+	 * @return object
+	 */
+	public function api_search( object $request ) {
+		return apply_filters( 'mastodon_api_search', null, $request );
 	}
 
 	public function api_push_subscription( $request ) {
@@ -2212,132 +2116,54 @@ class Mastodon_API {
 		return $relationships;
 	}
 
-	public function api_notification_clear( $request ) {
-		$notification_dismissed_tag = apply_filters( 'mastodon_api_notification_dismissed_tag', 'notification-dismissed' );
-		$notifications = $this->api_notifications( $request );
-		foreach ( $notifications as $notification ) {
-			if ( $notification['status'] ) {
-				wp_set_object_terms( $notification['status']['id'], $notification_dismissed_tag, 'post_tag', true );
-			}
-		}
+	/**
+	 * Call out API request to clear all notifications as WP action.
+	 *
+	 * @param object $request Request object from WP.
+	 *
+	 * @return object
+	 */
+	public function api_notification_clear( object $request ): object {
+
+		do_action( 'mastodon_api_notification_clear', $request );
 
 		return (object) array();
 	}
 
-	public function api_notification_dismiss( $request ) {
-		$notification_dismissed_tag = apply_filters( 'mastodon_api_notification_dismissed_tag', 'notification-dismissed' );
-		$notifications = $this->api_notifications( $request );
-		foreach ( $notifications as $notification ) {
-			if ( $request->get_param( 'id' ) !== $notification['id'] ) {
-				continue;
-			}
-			if ( $notification['status'] ) {
-				wp_set_object_terms( $notification['status']['id'], $notification_dismissed_tag, 'post_tag', true );
-				return (object) array();
-			}
-		}
-		return (object) array();
-	}
+	/**
+	 * Call out API request to clear one notification as WP action.
+	 *
+	 * @param object $request Request object from WP.
+	 *
+	 * @return object
+	 */
+	public function api_notification_dismiss( object $request ): object {
 
-	public function api_notification_get( $request ) {
-		$notifications = $this->api_notifications( $request );
-		foreach ( $notifications as $notification ) {
-			if ( $request->get_param( 'id' ) !== $notification['id'] ) {
-				continue;
-			}
-			return $notification;
-		}
+		do_action( 'mastodon_api_notification_dismiss', $request );
 
 		return (object) array();
 	}
 
-	public function api_notifications( $request ) {
-		$limit = $request->get_param( 'limit' ) ? $request->get_param( 'limit' ) : 15;
-		$notifications = array();
-		$types = $request->get_param( 'types' );
-		$args = array(
-			'posts_per_page' => $limit + 2,
-		);
-		$exclude_types = $request->get_param( 'exclude_types' );
-		if ( ( ! is_array( $types ) || in_array( 'mention', $types, true ) ) && ( ! is_array( $exclude_types ) || ! in_array( 'mention', $exclude_types, true ) ) ) {
-			$external_user = apply_filters( 'mastodon_api_external_mentions_user', null );
-			if ( ! $external_user || ! ( $external_user instanceof \WP_User ) ) {
-				return array();
-			}
-			$args = $this->get_posts_query_args( $request );
-			$args['posts_per_page'] = $limit + 2;
-			$args['author'] = $external_user->ID;
-			if ( class_exists( '\Friends\User' ) ) {
-				if (
-					$external_user instanceof \Friends\User
-					&& method_exists( $external_user, 'modify_get_posts_args_by_author' )
-				) {
-					$args = $external_user->modify_get_posts_args_by_author( $args );
-				}
-			}
+	/**
+	 * Call out API request to get one notification as WP filter.
+	 *
+	 * @param object $request Request object from WP.
+	 *
+	 * @return object
+	 */
+	public function api_notification_get( object $request ): object {
+		return apply_filters( 'mastodon_api_notification_get', null, $request );
+	}
 
-			$notification_dismissed_tag = get_term_by( 'slug', apply_filters( 'mastodon_api_notification_dismissed_tag', 'notification-dismissed' ), 'post_tag' );
-			if ( $notification_dismissed_tag ) {
-				$args['tag__not_in'] = array( $notification_dismissed_tag->term_id );
-			}
-			foreach ( get_posts( $args ) as $post ) {
-				$meta = get_post_meta( $post->ID, 'activitypub', true );
-				if ( ! $meta ) {
-					continue;
-				}
-				$user_id = $post->post_author;
-				if ( class_exists( '\Friends\User' ) && $post instanceof \WP_Post ) {
-					$user = \Friends\User::get_post_author( $post );
-					$user_id = $user->ID;
-				}
-				$notifications[] = $this->get_notification_array( 'mention', mysql2date( 'Y-m-d\TH:i:s.000P', $post->post_date, false ), $this->get_friend_account_data( $user_id, $meta ), $this->get_status_array( $post ) );
-			}
-		}
-
-		$min_id   = $request->get_param( 'min_id' );
-		$max_id   = $request->get_param( 'max_id' );
-		$since_id = $request->get_param( 'since_id' );
-		$next_min_id = false;
-
-		$last_modified = $request->get_header( 'if-modified-since' );
-		if ( $last_modified ) {
-			$last_modified = gmdate( 'Y-m-d\TH:i:s.000P', strtotime( $last_modified ) );
-			if ( $last_modified > $max_id ) {
-				$max_id = $last_modified;
-			}
-		}
-
-		$ret = array();
-		$c = $limit;
-		foreach ( $notifications as $notification ) {
-			if ( $max_id ) {
-				if ( strval( $notification['id'] ) >= strval( $max_id ) ) {
-					continue;
-				}
-				$max_id = null;
-			}
-			if ( false === $next_min_id ) {
-				$next_min_id = $notification['id'];
-			}
-			if ( $min_id && strval( $min_id ) >= strval( $notification['id'] ) ) {
-				break;
-			}
-			if ( $since_id && strval( $since_id ) > strval( $notification['id'] ) ) {
-				break;
-			}
-			if ( $c-- <= 0 ) {
-				break;
-			}
-			$ret[] = $notification;
-		}
-
-		if ( ! empty( $ret ) ) {
-			if ( $next_min_id ) {
-				header( 'Link: <' . add_query_arg( 'min_id', $next_min_id, home_url( '/api/v1/notifications' ) ) . '>; rel="prev"', false );
-			}
-			header( 'Link: <' . add_query_arg( 'max_id', $ret[ count( $ret ) - 1 ]['id'], home_url( '/api/v1/notifications' ) ) . '>; rel="next"', false );
-		}
-		return $ret;
+	/**
+	 * Call out API request to get notifications as WP filter.
+	 *
+	 * @param object $request Request object from WP.
+	 *
+	 * @return array
+	 */
+	public function api_notifications_get( object $request ): array {
+		return apply_filters( 'mastodon_api_notifications_get', array(), $request );
 	}
 
 	public function api_preferences( $request ) {
