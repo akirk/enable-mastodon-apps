@@ -397,7 +397,7 @@ class Mastodon_API {
 			'api/v1/notifications',
 			array(
 				'methods'             => 'GET',
-				'callback'            => array( $this, 'api_notifications' ),
+				'callback'            => array( $this, 'api_notifications_get' ),
 				'permission_callback' => $this->required_scope( 'read:notifications' ),
 			)
 		);
@@ -2221,16 +2221,12 @@ class Mastodon_API {
 		return (object) array();
 	}
 
-	public function api_notification_get( $request ) {
-		$notifications = $this->api_notifications( $request );
-		foreach ( $notifications as $notification ) {
-			if ( $request->get_param( 'id' ) !== $notification['id'] ) {
-				continue;
-			}
-			return $notification;
-		}
+	public function api_notification_get( object $request ): object {
+		return apply_filters( 'mastodon_api_notification_get', null, $request );
+	}
 
-		return (object) array();
+	public function api_notifications_get( object $request ): array {
+		return apply_filters( 'mastodon_api_notifications_get', array(), $request );
 	}
 
 	public function api_preferences( $request ) {
