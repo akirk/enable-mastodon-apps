@@ -53,10 +53,12 @@ class Search {
 			$ret['statuses'][] = $this->convert_activity_to_status( array( 'object' => $status ), $status['attributedTo'] );
 		} else {
 			if ( ! $type || 'accounts' === $type ) {
-				// TODO: check this
-//				if ( preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $q ) && ! $request->get_param( 'offset' ) ) {
-//					$ret['accounts'][] = $this->get_friend_account_data( $q, array(), true );
-//				}
+				/*
+				TODO: check this
+				if ( preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $q ) && ! $request->get_param( 'offset' ) ) {
+					$ret['accounts'][] = $this->get_friend_account_data( $q, array(), true );
+				}
+				*/
 				$query = new \WP_User_Query(
 					array(
 						'search'         => '*' . $q . '*',
