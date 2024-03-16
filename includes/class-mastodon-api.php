@@ -12,6 +12,7 @@ namespace Enable_Mastodon_Apps;
 use WP_REST_Request;
 use WP_REST_Response;
 
+
 /**
  * This is the class that implements the Mastodon API endpoints.
  *
@@ -1532,8 +1533,8 @@ class Mastodon_API {
 		/**
 		 * Modify the timelines data returned for `/api/timelines/(home)` requests.
 		 *
-		 * @param Entity\Status[]  $statuses The statuses data.
-		 * @param \WP_REST_Request $request  The request object.
+		 * @param Entity\Status[] $statuses The statuses data.
+		 * @param WP_REST_Request $request  The request object.
 		 * @return Entity\Status[] The modified statuses data.
 		 *
 		 * Example:
@@ -1547,8 +1548,8 @@ class Mastodon_API {
 		/**
 		 * Modify the timelines data returned for `/api/timelines/(tag)/` requests.
 		 *
-		 * @param Entity\Status[]  $statuses The statuses data.
-		 * @param \WP_REST_Request $request  The request object.
+		 * @param Entity\Status[] $statuses The statuses data.
+		 * @param WP_REST_Request $request  The request object.
 		 * @return Entity\Status[] The modified statuses data.
 		 *
 		 * Example:
@@ -1562,8 +1563,8 @@ class Mastodon_API {
 		/**
 		 * Modify the public timelines data returned for `/api/timelines/(public)` requests.
 		 *
-		 * @param Entity\Status[]  $statuses The statuses data.
-		 * @param \WP_REST_Request $request  The request object.
+		 * @param Entity\Status[] $statuses The statuses data.
+		 * @param WP_REST_Request $request  The request object.
 		 * @return Entity\Status[] The modified statuses data.
 		 *
 		 * Example:
@@ -2027,9 +2028,15 @@ class Mastodon_API {
 		return $relationships[0];
 	}
 
-	public function api_account_relationships( $request ) {
+	/**
+	 * Get the account relationships.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return array
+	 */
+	public function api_account_relationships( WP_REST_Request $request ): array {
 		$relationships = array();
-		$user_ids = $request->get_param( 'id' );
+		$user_ids      = $request->get_param( 'id' );
 		if ( ! is_array( $user_ids ) ) {
 			$user_ids = array( $user_ids );
 		}
@@ -2058,27 +2065,27 @@ class Mastodon_API {
 				}
 			}
 
-			if ( class_exists( '\Friends\User' ) ) {
-				$user = \Friends\User::get_user_by_id( $user_id );
-				if ( $user ) {
-					foreach ( $user->get_feeds() as $feed ) {
-						if ( $feed->get_parser() !== 'activitypub' ) {
-							continue;
-						}
-
-						if ( $feed->is_active() ) {
-							$relationship['following'] = true;
-						}
-					}
-
-					if ( $user->has_cap( 'friend_request' ) ) {
-						$relationship['requested'] = true;
-					}
-				}
-			} elseif ( preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id ) ) {
-				$relationship['following'] = false;
-			}
-			$relationships[] = $relationship;
+			/**
+			 * Modify the account relationships.
+			 *
+			 * @param array           $relationship The account relationship.
+			 * @param string          $user_id      The user ID.
+			 * @param WP_REST_Request $request      The request object.
+			 *
+			 * @return array The modified account relationship.
+			 *
+			 * Example:
+			 * ```php
+			 * apply_filters( 'mastodon_api_account_relationships', function ( $relationship, $user_id, $request ) {
+			 *      $user = get_user_by( 'ID', $user_id );
+			 *
+			 *      if ( $user && $user->has_cap( 'friend_request' ) ) {
+			 *          $relationship['requested'] = true;
+			 *      }
+			 * } );
+			 * ```
+			 */
+			$relationships[] = apply_filters( 'mastodon_api_account_relationships', $relationship, $user_id, $request );
 		}
 
 		return $relationships;
