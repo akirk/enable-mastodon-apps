@@ -17,7 +17,7 @@ namespace Enable_Mastodon_Apps\Entity;
  * @package Enable_Mastodon_Apps
  */
 class Status extends Entity {
-	protected $_types = [
+	protected $_types = array(
 		'id'                     => 'string',
 		'created_at'             => 'string',
 		'spoiler_text'           => 'string',
@@ -56,7 +56,7 @@ class Status extends Entity {
 		'reblog'                 => 'Status?',
 
 		'application'            => 'Application?',
-	];
+	);
 
 	/**
 	 * The status ID.
@@ -189,7 +189,7 @@ class Status extends Entity {
 	 *
 	 * @var array
 	 */
-	public array $media_attachments = [];
+	public array $media_attachments = array();
 
 	/**
 	 * List of mentions.
@@ -197,7 +197,7 @@ class Status extends Entity {
 	 *
 	 * @var array
 	 */
-	public array $mentions = [];
+	public array $mentions = array();
 
 	/**
 	 * List of tags of this status.
@@ -205,7 +205,7 @@ class Status extends Entity {
 	 *
 	 * @var array
 	 */
-	public array $tags = [];
+	public array $tags = array();
 
 	/**
 	 * List of emojis.
@@ -213,7 +213,7 @@ class Status extends Entity {
 	 *
 	 * @var array
 	 */
-	public array $emojis = [];
+	public array $emojis = array();
 
 	/**
 	 * The amount of replies to this status.

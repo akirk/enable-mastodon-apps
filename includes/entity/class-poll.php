@@ -17,7 +17,7 @@ namespace Enable_Mastodon_Apps\Entity;
  * @package Enable_Mastodon_Apps
  */
 class Poll extends Entity {
-	protected $_types = [
+	protected $_types = array(
 		'id'           => 'string',
 
 		'expires_at'   => 'string?',
@@ -33,7 +33,7 @@ class Poll extends Entity {
 		'options'      => 'array',
 		'emojis'       => 'array',
 		'own_votes'    => 'array',
-	];
+	);
 
 	/**
 	 * The ID of the poll in the database
@@ -107,5 +107,5 @@ class Poll extends Entity {
 	 *
 	 * @var int[]
 	 */
-	public array $own_votes = [];
+	public array $own_votes = array();
 }

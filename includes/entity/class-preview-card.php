@@ -17,7 +17,7 @@ namespace Enable_Mastodon_Apps\Entity;
  * @package Enable_Mastodon_Apps
  */
 class Preview_Card extends Entity {
-	protected $_types = [
+	protected $_types = array(
 		'url'           => 'string',
 		'title'         => 'string',
 		'description'   => 'string',
@@ -34,7 +34,7 @@ class Preview_Card extends Entity {
 
 		'width'         => 'int',
 		'height'        => 'int',
-	];
+	);
 
 	/**
 	 * Location of linked resource.
