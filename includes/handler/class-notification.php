@@ -126,14 +126,6 @@ class Notification {
 			$args                   = $this->get_posts_query_args( $request );
 			$args['posts_per_page'] = $limit + 2;
 			$args['author']         = $external_user->ID;
-			if ( class_exists( '\Friends\User' ) ) {
-				if (
-					$external_user instanceof \Friends\User
-					&& method_exists( $external_user, 'modify_get_posts_args_by_author' )
-				) {
-					$args = $external_user->modify_get_posts_args_by_author( $args );
-				}
-			}
 
 			$notification_dismissed_tag = get_term_by( 'slug', apply_filters( 'mastodon_api_notification_dismissed_tag', 'notification-dismissed' ), 'post_tag' );
 			if ( $notification_dismissed_tag ) {
@@ -145,10 +137,6 @@ class Notification {
 					continue;
 				}
 				$user_id = $post->post_author;
-				if ( class_exists( '\Friends\User' ) && $post instanceof \WP_Post ) {
-					$user    = \Friends\User::get_post_author( $post );
-					$user_id = $user->ID;
-				}
 				// @TODO: fix use of get_friend_account_data and get_status_array
 				$notifications[] = $this->get_notification_array( 'mention', mysql2date( 'Y-m-d\TH:i:s.000P', $post->post_date, false ), $this->get_friend_account_data( $user_id, $meta ), $this->get_status_array( $post ) );
 			}
