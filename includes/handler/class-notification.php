@@ -132,6 +132,7 @@ class Notification {
 				$args['tag__not_in'] = array( $notification_dismissed_tag->term_id );
 			}
 			foreach ( get_posts( $args ) as $post ) {
+				// TODO: Check if still the right way
 				$meta = get_post_meta( $post->ID, 'activitypub', true );
 				if ( ! $meta ) {
 					continue;
