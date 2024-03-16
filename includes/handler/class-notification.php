@@ -204,10 +204,10 @@ class Notification {
 	/**
 	 * Helper to get notifications as array based on parameter.
 	 *
-	 * @param string $type                                  Type of notification.
-	 * @param mixed $date                                   Date for limit.
+	 * @param string                               $type Type of notification.
+	 * @param mixed                                $date Date for limit.
 	 * @param \Enable_Mastodon_Apps\Entity\Account $account Attached account for notifications.
-	 * @param array $status                                 Status of notifications.
+	 * @param array                                $status Status of notifications.
 	 *
 	 * @return array
 	 */
