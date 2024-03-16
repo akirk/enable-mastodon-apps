@@ -1964,7 +1964,10 @@ class Mastodon_API {
 		 * Example:
 		 * ```php
 		 * apply_filters( 'mastodon_api_account_followers', function ( $followers, $user_id, $request ) {
-		 *    $followers[] = 'pfefferle';
+		 *    $account     = new Entity\Account();
+		 *    $account->id = $user_id
+		 *
+		 *    $followers[] = $account;
 		 *
 		 *    return $followers;
 		 * } );
@@ -1974,6 +1977,13 @@ class Mastodon_API {
 		if ( is_wp_error( $followers ) ) {
 			return $followers;
 		}
+
+		$followers = array_filter(
+			$followers,
+			function ( $follower ) {
+				return $follower instanceof Entity\Account;
+			}
+		);
 
 		return new WP_REST_Response( $followers );
 	}
@@ -2024,7 +2034,7 @@ class Mastodon_API {
 	 * Get the account relationships.
 	 *
 	 * @param WP_REST_Request $request Request object.
-	 * @return array|\WP_Error
+	 * @return WP_REST_Response|\WP_Error
 	 */
 	public function api_account_relationships( WP_REST_Request $request ) {
 		$relationships = array();
@@ -2058,7 +2068,16 @@ class Mastodon_API {
 		 *    return $relationships;
 		 * } );
 		 */
-		return apply_filters( 'mastodon_api_account_relationships', $relationships, $user_ids, $request );
+		$relationships = apply_filters( 'mastodon_api_account_relationships', $relationships, $user_ids, $request );
+
+		$relationships = array_filter(
+			$relationships,
+			function ( $relationship ) {
+				return $relationship instanceof Entity\Relationship;
+			}
+		);
+
+		return rest_ensure_response( $relationships );
 	}
 
 	/**
