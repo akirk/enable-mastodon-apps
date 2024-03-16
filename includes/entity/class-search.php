@@ -18,9 +18,9 @@ namespace Enable_Mastodon_Apps\Entity;
  */
 class Search extends Entity {
 	protected $_types = array(
-		'accounts'         => 'array',
-		'statuses'         => 'array',
-		'hashtags'         => 'array',
+		'accounts' => 'array',
+		'statuses' => 'array',
+		'hashtags' => 'array',
 	);
 
 	/**
