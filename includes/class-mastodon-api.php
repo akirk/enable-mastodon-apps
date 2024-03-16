@@ -1560,13 +1560,30 @@ class Mastodon_API {
 	}
 
 	public function api_timelines( $request ) {
-		$args = $this->get_posts_query_args( $request );
-		if ( empty( $args ) ) {
-			return array();
-		}
-		$args = apply_filters( 'mastodon_api_timelines_args', $args, $request );
+		/**
+		 * Modify the timelines data returned for `/api/timelines/(home)` requests.
+		 *
+		 * @param Entity\Status[] $statuses The statuses data.
+		 * @param \WP_REST_Request $request The request object.
+		 * @return Entity\Status[] The modified statuses data.
+		 *
+		 * Example:
+		 * ```php
+		 * ```
+		 */
+		$timelines = \apply_filters( 'mastodon_api_timelines', null, $request );
 
-		return $this->get_posts( $args, $request->get_param( 'min_id' ), $request->get_param( 'max_id' ) );
+		foreach ( $timelines as $timeline ) {
+			if ( ! $timeline instanceof Entity\Timeline ) {
+				return new \WP_Error( 'invalid-user', 'Invalid user', array( 'status' => 404 ) );
+			}
+
+			if ( ! $timeline->is_valid() ) {
+				return new \WP_Error( 'integrity-error', 'Integrity Error', array( 'status' => 500 ) );
+			}
+		}
+
+		return $timelines;
 	}
 
 	public function api_tag_timelines( $request ) {
