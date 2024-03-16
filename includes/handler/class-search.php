@@ -18,7 +18,7 @@ use Enable_Mastodon_Apps\Entity\Search as Search_Entity;
  *
  * @package Enable_Mastodon_Apps
  */
-class Search {
+class Search extends Handler  {
 	public function __construct() {
 		$this->register_hooks();
 	}
