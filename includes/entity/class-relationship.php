@@ -11,6 +11,8 @@ namespace Enable_Mastodon_Apps\Entity;
 
 /**
  * Relationship entity.
+ *
+ * @see https://docs.joinmastodon.org/entities/Relationship/
  */
 class Relationship extends Entity {
 
