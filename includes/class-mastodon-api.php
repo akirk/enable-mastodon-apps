@@ -57,6 +57,7 @@ class Mastodon_API {
 		new Handler\Account();
 		new Handler\Media_Attachment();
 		new Handler\Notification();
+		new Handler\Relationship();
 		new Handler\Search();
 		new Handler\Status();
 		new Handler\Timeline();
@@ -1977,86 +1978,55 @@ class Mastodon_API {
 		return new WP_REST_Response( $followers );
 	}
 
-	public function api_account_follow( $request ) {
+	/**
+	 * Follow the given account.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|\WP_Error
+	 */
+	public function api_account_follow( WP_REST_Request $request ) {
 		$user_id = $this->get_user_id_from_request( $request );
-		$relationships = array();
 
-		$user = \Friends\User::get_user_by_id( $user_id );
-		if ( $user ) {
-			foreach ( $user->get_feeds() as $feed ) {
-				if ( $feed->get_parser() !== 'activitypub' ) {
-					continue;
-				}
+		/**
+		 * Follow the given account.
+		 *
+		 * Can also be used to update whether to show reblogs or enable notifications.
+		 *
+		 * @param string          $user_id The user ID.
+		 * @param WP_REST_Request $request The request object.
+		 */
+		do_action( 'mastodon_api_account_follow', $user_id, $request );
 
-				if ( ! $feed->is_active() ) {
-					$feed->activate();
-				}
-			}
-
-			$request->set_param( 'id', $user->ID );
-			$relationships = $this->api_account_relationships( $request );
-		} elseif ( preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id ) ) {
-			$url = $this->get_activitypub_url( $user_id );
-			$meta = apply_filters( 'friends_get_activitypub_metadata', array(), $url );
-
-			$vars = array();
-			if ( ! empty( $meta['name'] ) ) {
-				$vars['display_name'] = $meta['name'];
-			}
-
-			$new_user_id = apply_filters( 'friends_create_and_follow', $user_id, $url, 'application/activity+json', $vars );
-			if ( is_wp_error( $new_user_id ) ) {
-				return $new_user_id;
-			}
-
-			$request->set_param( 'id', $new_user_id );
-			$relationships = $this->api_account_relationships( $request );
-		}
-
-		if ( empty( $relationships ) ) {
-			return new WP_REST_Response( array( 'error' => 'Invalid user' ), 404 );
-		}
-
-		return $relationships[0];
+		return rest_ensure_response( $this->get_relationship( $user_id, $request ) );
 	}
 
-	public function api_account_unfollow( $request ) {
+	/**
+	 * Unfollow the given account.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|\WP_Error
+	 */
+	public function api_account_unfollow( WP_REST_Request $request ) {
 		$user_id = $this->get_user_id_from_request( $request );
-		$relationships = array();
 
-		if ( is_numeric( $user_id ) && class_exists( '\Friends\User' ) ) {
-			$user = \Friends\User::get_user_by_id( $user_id );
-			if ( ! $user || is_wp_error( $user ) ) {
-				return array();
-			}
+		/**
+		 * Unfollow the given account.
+		 *
+		 * @param string          $user_id The user ID.
+		 * @param WP_REST_Request $request The request object.
+		 */
+		do_action( 'mastodon_api_account_unfollow', $user_id, $request );
 
-			foreach ( $user->get_feeds() as $feed ) {
-				if ( $feed->get_parser() !== 'activitypub' ) {
-					continue;
-				}
-				if ( $feed->is_active() ) {
-					$feed->deactivate();
-				}
-			}
-
-			$request->set_param( 'id', $user->ID );
-			$relationships = $this->api_account_relationships( $request );
-		}
-
-		if ( empty( $relationships ) ) {
-			return new \WP_Error( 'invalid-user', 'Invalid user', array( 'status' => 404 ) );
-		}
-
-		return $relationships[0];
+		return rest_ensure_response( $this->get_relationship( $user_id, $request ) );
 	}
 
 	/**
 	 * Get the account relationships.
 	 *
 	 * @param WP_REST_Request $request Request object.
-	 * @return array
+	 * @return array|\WP_Error
 	 */
-	public function api_account_relationships( WP_REST_Request $request ): array {
+	public function api_account_relationships( WP_REST_Request $request ) {
 		$relationships = array();
 		$user_ids      = $request->get_param( 'id' );
 		if ( ! is_array( $user_ids ) ) {
@@ -2064,53 +2034,72 @@ class Mastodon_API {
 		}
 
 		foreach ( $user_ids as $user_id ) {
-			$relationship = array(
-				'id'                   => $user_id,
-				'following'            => false,
-				'showing_reblogs'      => false,
-				'notifying'            => false,
-				'followed_by'          => false,
-				'blocking'             => false,
-				'blocked_by'           => false,
-				'muting'               => false,
-				'muting_notifications' => false,
-				'requested'            => false,
-				'domain_blocking'      => false,
-				'endorsed'             => false,
-				'note'                 => '',
-			);
-
-			if ( $user_id > 1e10 ) {
-				$remote_user_id = get_term_by( 'id', $user_id - 1e10, self::REMOTE_USER_TAXONOMY );
-				if ( $remote_user_id ) {
-					$user_id = $remote_user_id->name;
-				}
+			$relationship = $this->get_relationship( $user_id, $request );
+			if ( is_wp_error( $relationship ) ) {
+				return $relationship;
 			}
 
-			/**
-			 * Modify the account relationships.
-			 *
-			 * @param array           $relationship The account relationship.
-			 * @param string          $user_id      The user ID.
-			 * @param WP_REST_Request $request      The request object.
-			 *
-			 * @return array The modified account relationship.
-			 *
-			 * Example:
-			 * ```php
-			 * apply_filters( 'mastodon_api_account_relationships', function ( $relationship, $user_id, $request ) {
-			 *      $user = get_user_by( 'ID', $user_id );
-			 *
-			 *      if ( $user && $user->has_cap( 'friend_request' ) ) {
-			 *          $relationship['requested'] = true;
-			 *      }
-			 * } );
-			 * ```
-			 */
-			$relationships[] = apply_filters( 'mastodon_api_account_relationships', $relationship, $user_id, $request );
+			$relationships[] = $relationship;
 		}
 
-		return $relationships;
+		/**
+		 * Modify the account relationships.
+		 *
+		 * @param array           $relationships The account relationships.
+		 * @param array           $user_ids      The user IDs.
+		 * @param WP_REST_Request $request       The request object.
+		 * @return array The modified account relationships.
+		 *
+		 * Example:
+		 * ```php
+		 * apply_filters( 'mastodon_api_account_relationships', function ( $relationships, $user_ids, $request ) {
+		 *    $relationships[0]->following = true;
+		 *
+		 *    return $relationships;
+		 * } );
+		 */
+		return apply_filters( 'mastodon_api_account_relationships', $relationships, $user_ids, $request );
+	}
+
+	/**
+	 * Relationship entity for the given user.
+	 *
+	 * @param string          $user_id The user ID.
+	 * @param WP_REST_Request $request The request object.
+	 * @return Entity\Relationship|\WP_Error The modified account relationships or WP_Error if the user is invalid.
+	 */
+	private function get_relationship( string $user_id, WP_REST_Request $request ) {
+		/**
+		 * Modify the account relationship.
+		 *
+		 * @param array           $relationship The account relationship.
+		 * @param string          $user_id      The user ID.
+		 * @param WP_REST_Request $request      The request object.
+		 * @return Entity\Relationship The relationship entity.
+		 *
+		 * Example:
+		 * ```php
+		 * apply_filters( 'mastodon_api_relationship', function ( $relationship, $user_id, $request ) {
+		 *      $user = get_user_by( 'ID', $user_id );
+		 *
+		 *      $relationship     = new Entity\Relationship();
+		 *      $relationship->id = strval( $user->ID );
+		 *
+		 *      return $relationship;
+		 * } );
+		 * ```
+		 */
+		$relationship = apply_filters( 'mastodon_api_relationship', null, $user_id, $request );
+
+		if ( ! $relationship instanceof Entity\Relationship ) {
+			return new \WP_Error( 'invalid-user', 'Invalid user', array( 'status' => 404 ) );
+		}
+
+		if ( ! $relationship->is_valid() ) {
+			return new \WP_Error( 'integrity-error', 'Integrity Error', array( 'status' => 500 ) );
+		}
+
+		return $relationship;
 	}
 
 	/**
