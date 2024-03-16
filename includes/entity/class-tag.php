@@ -18,9 +18,9 @@ namespace Enable_Mastodon_Apps\Entity;
  */
 class Tag extends Entity {
 	protected $_types = array(
-		'name' => 'string',
-		'url' => 'string',
-		'history' => 'array',
+		'name'      => 'string',
+		'url'       => 'string',
+		'history'   => 'array',
 		'following' => 'bool',
 	);
 
