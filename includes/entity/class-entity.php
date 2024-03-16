@@ -31,7 +31,7 @@ abstract class Entity implements \JsonSerializable {
 			$object = trim( $type, '?' );
 			$required = strlen( $object ) === strlen( $type );
 
-			if ( in_array( $object, array( 'string', 'int', 'bool', 'array' ) ) ) {
+			if ( in_array( $object, array( 'string', 'int', 'bool', 'array', 'object' ) ) ) {
 				if ( ! $required ) {
 					continue;
 				}
