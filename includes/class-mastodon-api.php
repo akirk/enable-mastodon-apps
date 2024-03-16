@@ -1450,7 +1450,7 @@ class Mastodon_API {
 		 * @param int   $attachment_id    The attachment ID.
 		 * @return Entity\Media_Attachment The media attachment.
 		 */
-		return apply_filters( 'mastodon_api_post_media_attachment', null, $attachment_id );
+		return apply_filters( 'mastodon_api_media_attachment', null, $attachment_id );
 	}
 
 	/**
