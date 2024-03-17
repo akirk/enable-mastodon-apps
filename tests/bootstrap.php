@@ -34,14 +34,6 @@ if ( file_exists( $phpunitpolyfills ) ) {
  * Manually load the plugin being tested.
  */
 function _manually_load_plugin() {
-	$friends_plugin = dirname( dirname( __DIR__ ) ) . '/friends/friends.php'; // phpcs:ignore
-	$alternate_friends_plugin = dirname( __DIR__ ) . '/friends/friends.php'; // phpcs:ignore
-	if ( file_exists( $friends_plugin ) ) {
-		require $friends_plugin;
-	} elseif ( file_exists( $alternate_friends_plugin ) ) {
-		require $alternate_friends_plugin;
-	}
-
 	require dirname( __DIR__ ) . '/enable-mastodon-apps.php'; // phpcs:ignore
 }
 tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
