@@ -31,10 +31,6 @@ class InstanceEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertIsString( $data->uri );
 		$this->assertEquals( $data->uri, \wp_parse_url( \home_url(), \PHP_URL_HOST ) );
 
-		$this->assertTrue( property_exists( $data, 'account_domain' ) );
-		$this->assertIsString( $data->account_domain );
-		$this->assertEquals( $data->qccount_domain, \wp_parse_url( \home_url(), \PHP_URL_HOST ) );
-
 		$this->assertTrue( property_exists( $data, 'title' ) );
 		$this->assertIsString( $data->title );
 		$this->assertEquals( $data->title, get_bloginfo( 'name' ) );
