@@ -192,8 +192,13 @@ class Handler {
 	 * @return     string  The normalized content.
 	 */
 	protected function normalize_whitespace( $post_content ) {
-		$post_content = preg_replace( '#<!-- /?wp:paragraph -->\s*<!-- /?wp:paragraph -->#', PHP_EOL, $post_content );
-		$post_content = preg_replace( '#\n\s*\n+#', PHP_EOL, $post_content );
+		$post_content = \strip_shortcodes( $post_content );
+		$post_content = \do_blocks( $post_content );
+		$post_content = \wptexturize( $post_content );
+		$post_content = \convert_smilies( $post_content );
+		$post_content = \wp_filter_content_tags( $post_content, 'template' );
+		$post_content = \str_replace( ']]>', ']]&gt;', $post_content );
+		$post_content = \preg_replace( '/[\n\r\t]/', '', $post_content );
 
 		return trim( $post_content );
 	}
@@ -263,7 +268,7 @@ class Handler {
 				'reblogged_by'           => $reblogged_by,
 				'muted'                  => false,
 				'bookmarked'             => false,
-				'content'                => $this->normalize_whitespace( $post->post_title . PHP_EOL . $post->post_content ),
+				'content'                => $post->post_title . PHP_EOL . $post->post_content,
 				'filtered'               => array(),
 				'reblog'                 => null,
 				'account'                => $account_data,
