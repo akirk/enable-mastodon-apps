@@ -18,7 +18,7 @@ services:
     ports:
       - "8111:80"
     volumes:
-      - .:/var/www/html/wp-content/plugins/activitypub
+      - .:/var/www/html/wp-content/plugins/enable-mastodon-apps
     restart: always
     environment:
       WORDPRESS_DB_HOST: db:3306
