@@ -36,16 +36,9 @@ class Media_Attachment {
 		$meta  = \wp_get_attachment_metadata( $attachment_id );
 		$url   = \wp_get_attachment_url( $attachment_id );
 
-		$type = 'image';
-		if ( preg_match( '#^audio/#', $meta['mime-type'] ) || preg_match( '#\.(mp3|m4a|wav|aiff)$#i', $url ) ) {
-			$type = 'audio';
-		} elseif ( preg_match( '#^video/#', $meta['mime-type'] ) || preg_match( '#\.(mov|mkv|mp4)$#i', $url ) ) {
-			$type = 'video';
-		}
-
 		$media_attachment              = new Media_Attachment_Entity();
 		$media_attachment->id          = strval( $attachment_id );
-		$media_attachment->type        = $type;
+		$media_attachment->type        = wp_check_filetype( $meta['file'] )['type'];
 		$media_attachment->url         = $url;
 		$media_attachment->preview_url = $thumb[0];
 		$media_attachment->text_url    = $url;

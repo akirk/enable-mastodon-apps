@@ -1487,6 +1487,8 @@ class Mastodon_API {
 			return new \WP_Error( 'mastodon_api_post_media', $attachment_id->get_error_message(), array( 'status' => 422 ) );
 		}
 
+		wp_update_attachment_metadata( $attachment_id, wp_generate_attachment_metadata( $attachment_id, get_attached_file( $attachment_id ) ) );
+
 		$request->set_param( 'post_id', $attachment_id );
 
 		$description = $request->get_param( 'description' );
