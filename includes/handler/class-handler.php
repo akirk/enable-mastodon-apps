@@ -24,7 +24,7 @@ class Handler {
 
 		$args = array(
 			'posts_per_page'   => $limit,
-			'post_type'        => array( 'post', ),
+			'post_type'        => array( 'post' ),
 			'suppress_filters' => false,
 			'post_status'      => array( 'publish', 'private' ),
 		);
