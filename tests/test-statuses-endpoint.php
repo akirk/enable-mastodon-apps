@@ -13,6 +13,11 @@ namespace Enable_Mastodon_Apps;
  * @package
  */
 class StatusesEndpoint_Test extends Mastodon_API_TestCase {
+	public function set_up() {
+		add_theme_support( 'post-formats', array( 'status', 'aside', 'gallery', 'image' ) );
+		parent::set_up();
+	}
+
 	public function test_register_routes() {
 		global $wp_rest_server;
 		$routes = $wp_rest_server->get_routes();
@@ -78,6 +83,13 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 	}
 
 	public function test_status_post_basic_status() {
+		add_filter(
+			'mastodon_api_new_post_format',
+			function ( $format ) {
+				return 'status';
+			}
+		);
+
 		global $wp_rest_server;
 		$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/statuses' );
 		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
@@ -93,6 +105,13 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 	}
 
 	public function test_status_post_multiline_status() {
+		add_filter(
+			'mastodon_api_new_post_format',
+			function ( $format ) {
+				return 'status';
+			}
+		);
+
 		global $wp_rest_server;
 		$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/statuses' );
 		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
@@ -104,6 +123,7 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertIsString( $data['id'] );
 		$this->assertIsNumeric( $data['id'] );
 		$p = get_post( $data['id'] );
+
 		$this->assertEquals( 'status', get_post_format( $p->ID ) );
 
 		$this->assertEquals( $p->post_title, '' );
