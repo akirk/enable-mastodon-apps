@@ -10,6 +10,7 @@
 namespace Enable_Mastodon_Apps\Handler;
 
 use Enable_Mastodon_Apps\Mastodon_API;
+use Enable_Mastodon_Apps\Mastodon_App;
 
 /**
  * This is the generic handler to provide needed helper functions.
@@ -38,12 +39,10 @@ class Handler {
 			}
 		}
 
-		/*
-		// @TODO bring back Application check
-		if ( $this->app ) {
-			$args = $this->app->modify_wp_query_args( $args );
+		$app = Mastodon_App::get_current_app();
+		if ( $app ) {
+			$args = $app->modify_wp_query_args( $args );
 		}
-		*/
 
 		$args['tax_query'] = array(
 			array(
