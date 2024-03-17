@@ -9,7 +9,7 @@
 
 namespace Enable_Mastodon_Apps\Handler;
 
-use Enable_Mastodon_Apps\Handler;
+use Enable_Mastodon_Apps\Handler\Handler;
 use Enable_Mastodon_Apps\Entity\Account as Account_Entity;
 
 /**
