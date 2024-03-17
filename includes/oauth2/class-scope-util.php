@@ -2,7 +2,7 @@
 /**
  * OAuth2 Scope Util
  *
- * @package Friends
+ * @package Enable_Mastodon_Apps
  */
 
 namespace Enable_Mastodon_Apps\OAuth2;
