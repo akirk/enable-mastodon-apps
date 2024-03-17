@@ -98,7 +98,7 @@ class Timeline extends Handler {
 		}
 
 		// Only get the published posts for the public timeline.
-		$args['post_status'] = array( 'publish' );
+		$args['post_status'] = 'publish';
 
 		/**
 		 * Filter the query arguments for the timeline.

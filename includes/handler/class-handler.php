@@ -26,7 +26,7 @@ class Handler {
 			'posts_per_page'   => $limit,
 			'post_type'        => array( 'post' ),
 			'suppress_filters' => false,
-			'post_status'      => array( 'publish', 'private' ),
+			'post_status'      => 'any',
 		);
 
 		$pinned = $request->get_param( 'pinned' );

@@ -35,6 +35,7 @@ class Account extends Handler {
 			return $user_data;
 		}
 
+		$note    = get_user_meta( $user->ID, 'description', true );
 		$account = new Account_Entity();
 		$account->id             = strval( $user->ID );
 		$account->username       = $user->user_login;
@@ -42,7 +43,7 @@ class Account extends Handler {
 		$account->avatar         = get_avatar_url( $user->ID );
 		$account->avatar_static  = get_avatar_url( $user->ID );
 		$account->acct           = $user->user_login;
-		$account->note           = get_user_meta( $user->ID, 'description', true );
+		$account->note           = wpautop( $note );
 		$account->created_at     = new \DateTime( $user->user_registered );
 		$account->statuses_count = count_user_posts( $user->ID, 'post', true );
 		$account->last_status_at = new \DateTime( $user->user_registered );
@@ -52,7 +53,7 @@ class Account extends Handler {
 			'privacy'   => 'public',
 			'sensitive' => false,
 			'language'  => get_user_locale( $user->ID ),
-			'note'      => '',
+			'note'      => $note,
 			'fields'    => array(),
 		);
 
