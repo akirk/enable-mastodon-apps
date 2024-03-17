@@ -158,17 +158,17 @@ class Handler {
 		$next_max_id = false;
 		foreach ( $statuses as $status ) {
 			if ( false === $next_max_id ) {
-				$next_max_id = $status['id'];
+				$next_max_id = $status->id;
 			}
 			if ( $min_id ) {
-				if ( $status['id'] !== $min_id ) {
+				if ( $status->id !== $min_id ) {
 					continue;
 				}
 				// We can now include results but need to skip this one.
 				$min_id = null;
 				continue;
 			}
-			if ( $max_id && strval( $max_id ) === $status['id'] ) {
+			if ( $max_id && strval( $max_id ) === $status->id ) {
 				break;
 			}
 			if ( $c-- <= 0 ) {
@@ -181,7 +181,7 @@ class Handler {
 			if ( $next_max_id ) {
 				header( 'Link: <' . add_query_arg( 'max_id', $next_max_id, home_url( strtok( $_SERVER['REQUEST_URI'], '?' ) ) ) . '>; rel="next"', false );
 			}
-			header( 'Link: <' . add_query_arg( 'min_id', $ret[0]['id'], home_url( strtok( $_SERVER['REQUEST_URI'], '?' ) ) ) . '>; rel="prev"', false );
+			header( 'Link: <' . add_query_arg( 'min_id', $ret[0]->id, home_url( strtok( $_SERVER['REQUEST_URI'], '?' ) ) ) . '>; rel="prev"', false );
 		}
 
 		return $ret;

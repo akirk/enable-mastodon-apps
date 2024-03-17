@@ -22,14 +22,15 @@ class Status extends Entity {
 		'created_at'             => 'string',
 		'spoiler_text'           => 'string',
 		'visibility'             => 'string',
-		'language'               => 'string',
 		'uri'                    => 'string',
-		'url'                    => 'string',
 		'content'                => 'string',
-		'text'                   => 'string',
 
+		'url'                    => 'string?',
+		'language'               => 'string?',
 		'in_reply_to_id'         => 'string?',
 		'in_reply_to_account_id' => 'string?',
+		'text'                   => 'string?',
+		'edited_at'              => 'string?',
 
 		'sensitive'              => 'bool',
 		'favourited'             => 'bool',
@@ -37,8 +38,8 @@ class Status extends Entity {
 		'muted'                  => 'bool',
 		'bookmarked'             => 'bool',
 		'pinned'                 => 'bool',
-		'filtered'               => 'bool',
 
+		'filtered'               => 'array',
 		'media_attachments'      => 'array',
 		'mentions'               => 'array',
 		'tags'                   => 'array',
@@ -48,10 +49,11 @@ class Status extends Entity {
 		'reblogs_count'          => 'int',
 		'favourites_count'       => 'int',
 
-		'card'                   => 'object?',
-		'poll'                   => 'object?',
+		'card'                   => 'Preview_Card?',
 
-		'account'                => 'Account',
+		'poll'                   => 'Poll?',
+
+		'account'                => 'array', // TODO: Use Account entity.
 
 		'reblog'                 => 'Status?',
 
@@ -73,6 +75,13 @@ class Status extends Entity {
 	public string $created_at;
 
 	/**
+	 * When the status was edited.
+	 *
+	 * @var null|string
+	 */
+	public ?string $edited_at;
+
+	/**
 	 * Text to be shown as a warning or subject before the actual content.
 	 *
 	 * @var string
@@ -89,9 +98,9 @@ class Status extends Entity {
 	/**
 	 * ISO 639 language code for this status.
 	 *
-	 * @var string
+	 * @var null|string
 	 */
-	public string $language;
+	public ?string $language;
 
 	/**
 	 * The URI to this status.
@@ -103,9 +112,9 @@ class Status extends Entity {
 	/**
 	 * The URL to this status.
 	 *
-	 * @var string
+	 * @var null|string
 	 */
-	public string $url;
+	public ?string $url;
 
 	/**
 	 * The HTML-encoded content of this status.
@@ -117,9 +126,9 @@ class Status extends Entity {
 	/**
 	 * The plain-text content of this status.
 	 *
-	 * @var string
+	 * @var null|string
 	 */
-	public string $text;
+	public ?string $text = null;
 
 	/**
 	 * The ID of a status this status is a reply to.
@@ -178,11 +187,12 @@ class Status extends Entity {
 	public bool $pinned = false;
 
 	/**
-	 * Whether this status has been filtered.
+	 * The filter and keywords that matched this status.
+	 * TODO: implement as list of FilterResult objects
 	 *
-	 * @var bool
+	 * @var array
 	 */
-	public bool $filtered = false;
+	public array $filtered = array();
 
 	/**
 	 * List of media attachments of this status.
@@ -238,10 +248,11 @@ class Status extends Entity {
 
 	/**
 	 * The account this status belongs to.
+	 * TODO: implement as Account object
 	 *
-	 * @var Account
+	 * @var array
 	 */
-	public Account $account;
+	public array $account;
 
 	/**
 	 * The status object that gets reblogged.

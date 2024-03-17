@@ -27,18 +27,18 @@ class TimelineEndpoint_Test extends Mastodon_API_TestCase {
 		$data = $response->get_data();
 
 		$this->assertArrayHasKey( 0, $data );
-		$this->assertArrayHasKey( 'id', $data[0] );
-		$this->assertIsString( $data[0]['id'] );
-		$this->assertEquals( $data[0]['id'], strval( $this->friend_post ) );
+		$this->assertTrue( property_exists( $data[0], 'id' ) );
+		$this->assertIsString( $data[0]->id );
+		$this->assertEquals( $data[0]->id, strval( $this->friend_post ) );
 
-		$this->assertArrayHasKey( 'media_attachments', $data[0] );
+		$this->assertTrue( property_exists( $data[0], 'media_attachments' ) );
 		$this->assertArrayHasKey( 0, $data[0]['media_attachments'] );
-		$this->assertEquals( '513722435', $data[0]['media_attachments'][0]['id'] );
+		$this->assertEquals( '513722435', $data[0]->media_attachments[0]->id );
 
 		$this->assertArrayHasKey( 1, $data );
 		$this->assertArrayHasKey( 'id', $data[1] );
-		$this->assertIsString( $data[1]['id'] );
-		$this->assertEquals( $data[1]['id'], strval( $this->post ) );
+		$this->assertIsString( $data[1]->id );
+		$this->assertEquals( $data[1]->id, strval( $this->post ) );
 	}
 
 	public function test_timelines_segmentation() {
