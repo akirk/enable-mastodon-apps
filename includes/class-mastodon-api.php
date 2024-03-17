@@ -54,6 +54,7 @@ class Mastodon_API {
 		new Handler\Account();
 		new Handler\Notification();
 		new Handler\Search();
+		new Handler\Status();
 		new Handler\Timeline();
 	}
 
