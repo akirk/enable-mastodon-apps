@@ -1785,7 +1785,7 @@ class Mastodon_API {
 			'media_attachments'      => array_map(
 				function ( $attachment ) {
 					$request = new WP_REST_Request();
-					$request->set_param( 'post_id', $attachment['id'] );
+					$request->set_param( 'post_id', $attachment->id );
 
 					return $this->api_get_media( $request );
 				},
