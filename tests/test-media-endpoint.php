@@ -21,6 +21,23 @@ class MediaEndpoint_Test extends Mastodon_API_TestCase {
 		copy( $orig_file, $this->test_file );
 	}
 
+	public function tearDown(): void {
+		if ( file_exists( $this->test_file ) ) {
+			unlink( $this->test_file );
+		}
+
+		$uploads  = wp_upload_dir();
+		$iterator = new \RecursiveDirectoryIterator( $uploads['basedir'] );
+		$objects  = new \RecursiveIteratorIterator( $iterator );
+		foreach ( $objects as $name => $object ) {
+			if ( is_file( $name ) ) {
+				unlink( $name );
+			}
+		}
+
+		parent::tearDown();
+	}
+
 	public function test_register_routes() {
 		global $wp_rest_server;
 		$routes = $wp_rest_server->get_routes();
@@ -53,7 +70,7 @@ class MediaEndpoint_Test extends Mastodon_API_TestCase {
 		$response = $wp_rest_server->dispatch( $request );
 
 		$this->assertEquals( 200, $response->get_status() );
-		$this->assertInternalType( Entity\Media_Attachment::class, $response->get_data() );
+		$this->assertInstanceOf( Entity\Media_Attachment::class, $response->get_data() );
 	}
 
 	public function test_get_media() {
@@ -73,10 +90,10 @@ class MediaEndpoint_Test extends Mastodon_API_TestCase {
 		);
 		$response = $wp_rest_server->dispatch( $request );
 
-		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v2/media/' . $response->get_data()->id );
+		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/media/' . $response->get_data()->id );
 		$response = $wp_rest_server->dispatch( $request );
 
 		$this->assertEquals( 200, $response->get_status() );
-		$this->assertInternalType( Entity\Media_Attachment::class, $response->get_data() );
+		$this->assertInstanceOf( Entity\Media_Attachment::class, $response->get_data() );
 	}
 }
