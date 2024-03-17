@@ -58,7 +58,7 @@ class InstanceEndpoint_Test extends Mastodon_API_TestCase {
 		$response = $wp_rest_server->dispatch( $request );
 		$this->assertEquals( 200, $response->get_status() );
 
-		$this->assertEmpty( $response->get_data()->created_at );
+		$this->assertEmpty( $response->get_data()->updated_at );
 
 		$description = 'Updated blog description!';
 		update_option( 'blogdescription', $description );
@@ -67,6 +67,6 @@ class InstanceEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertSame( 200, $response->get_status() );
 
 		$this->assertSame( $description, $response->get_data()->content );
-		$this->assertNotEmpty( $response->get_data()->created_at );
+		$this->assertNotEmpty( $response->get_data()->updated_at );
 	}
 }
