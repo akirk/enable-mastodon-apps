@@ -697,7 +697,7 @@ class Handler {
 		}
 
 		if (
-			preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id )
+			preg_match( '/^@?' . Enable_Mastodon_Apps::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id )
 			|| $url
 		) {
 			if ( ! is_user_logged_in() ) {
@@ -742,7 +742,7 @@ class Handler {
 		// $placeholder_image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 
 		if (
-			preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id )
+			preg_match( '/^@?' . Enable_Mastodon_Apps::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id )
 			|| $url
 		) {
 			if ( ! $remote_user_id ) {
