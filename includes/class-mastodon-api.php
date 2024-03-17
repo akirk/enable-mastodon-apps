@@ -1919,16 +1919,6 @@ class Mastodon_API {
 			return array();
 		}
 		$args['author'] = $user_id;
-		if ( class_exists( '\Friends\User' ) ) {
-			$user = \Friends\User::get_user_by_id( $user_id );
-
-			if (
-				$user instanceof \Friends\User
-				&& method_exists( $user, 'modify_get_posts_args_by_author' )
-			) {
-				$args = $user->modify_get_posts_args_by_author( $args );
-			}
-		}
 
 		$args = apply_filters( 'mastodon_api_account_statuses_args', $args, $request );
 
@@ -2461,22 +2451,6 @@ class Mastodon_API {
 		}
 
 		$user = false;
-		if ( class_exists( '\Friends\User' ) ) {
-			$user = \Friends\User::get_user_by_id( $user_id );
-
-			if ( $user instanceof \Friends\Subscription ) {
-				$remote_user_id = get_term_by( 'name', $user->ID, self::REMOTE_USER_TAXONOMY );
-				if ( $remote_user_id ) {
-					$remote_user_id = $remote_user_id->term_id;
-				} else {
-					$remote_user_id = wp_insert_term( $user->ID, self::REMOTE_USER_TAXONOMY );
-					if ( ! is_wp_error( $remote_user_id ) ) {
-						$remote_user_id = $remote_user_id['term_id'];
-					}
-				}
-				$user->ID = 1e10 + $remote_user_id;
-			}
-		}
 
 		if ( ! $user || is_wp_error( $user ) ) {
 			$user = new \WP_User( $user_id );
@@ -2489,14 +2463,12 @@ class Mastodon_API {
 		$followers_count = 0;
 		$following_count = 0;
 		$avatar = get_avatar_url( $user->ID );
-		if ( $user instanceof \Friends\User ) {
-			$posts = $user->get_post_count_by_post_format();
-		} else {
-			// Get post count for the post format status for the user.
-			$posts = array(
-				'status' => count_user_posts( $user->ID, 'post', true ),
-			);
-		}
+
+		// Get post count for the post format status for the user.
+		$posts = array(
+			'status' => count_user_posts( $user->ID, 'post', true ),
+		);
+
 		if ( get_current_user_id() === $user->ID ) {
 			if ( class_exists( '\Activitypub\Peer\Followers', false ) ) {
 				$followers_count = count( \Activitypub\Peer\Followers::get_followers( $user->ID ) );
@@ -2718,9 +2690,6 @@ class Mastodon_API {
 	private function software_string() {
 		global $wp_version;
 		$software = 'WordPress/' . $wp_version;
-		if ( defined( 'FRIENDS_VERSION' ) ) {
-			$software .= ', Friends/' . FRIENDS_VERSION;
-		}
 		if ( defined( 'ACTIVITYPUB_VERSION' ) ) {
 			$software .= ', ActivityPub/' . ACTIVITYPUB_VERSION;
 		}

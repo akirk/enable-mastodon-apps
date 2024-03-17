@@ -211,10 +211,7 @@ class Handler {
 		$feed_url = get_post_meta( $post->ID, 'feed_url', true );
 
 		$user_id = $post->post_author;
-		if ( class_exists( '\Friends\User' ) && $post instanceof \WP_Post ) {
-			$user = \Friends\User::get_post_author( $post );
-			$user_id = $user->ID;
-		} elseif ( isset( $meta['attributedTo']['id'] ) && $meta['attributedTo']['id'] ) {
+		if ( isset( $meta['attributedTo']['id'] ) && $meta['attributedTo']['id'] ) {
 			// It's an ActivityPub post, so the feed_url is the ActivityPub URL.
 			if ( $feed_url ) {
 				$user_id = $feed_url;
@@ -737,22 +734,6 @@ class Handler {
 		}
 
 		$user = false;
-		if ( class_exists( '\Friends\User' ) ) {
-			$user = \Friends\User::get_user_by_id( $user_id );
-
-			if ( $user instanceof \Friends\Subscription ) {
-				$remote_user_id = get_term_by( 'name', $user->ID, Mastodon_API::REMOTE_USER_TAXONOMY );
-				if ( $remote_user_id ) {
-					$remote_user_id = $remote_user_id->term_id;
-				} else {
-					$remote_user_id = wp_insert_term( $user->ID, Mastodon_API::REMOTE_USER_TAXONOMY );
-					if ( ! is_wp_error( $remote_user_id ) ) {
-						$remote_user_id = $remote_user_id['term_id'];
-					}
-				}
-				$user->ID = 1e10 + $remote_user_id;
-			}
-		}
 
 		if ( ! $user || is_wp_error( $user ) ) {
 			$user = new \WP_User( $user_id );
@@ -765,14 +746,12 @@ class Handler {
 		$followers_count = 0;
 		$following_count = 0;
 		$avatar = get_avatar_url( $user->ID );
-		if ( $user instanceof \Friends\User ) {
-			$posts = $user->get_post_count_by_post_format();
-		} else {
-			// Get post count for the post format status for the user.
-			$posts = array(
-				'status' => count_user_posts( $user->ID, 'post', true ),
-			);
-		}
+
+		// Get post count for the post format status for the user.
+		$posts = array(
+			'status' => count_user_posts( $user->ID, 'post', true ),
+		);
+
 		if ( get_current_user_id() === $user->ID ) {
 			if ( class_exists( '\Activitypub\Peer\Followers', false ) ) {
 				$followers_count = count( \Activitypub\Peer\Followers::get_followers( $user->ID ) );
