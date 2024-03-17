@@ -25,6 +25,8 @@ class Mastodon_App {
 	 */
 	private $term;
 
+	private static $current_app = null;
+
 	const DEBUG_CLIENT_ID = 'enable-mastodon-apps';
 	const TAXONOMY = 'mastodon-app';
 	const VALID_SCOPES = array(
@@ -167,6 +169,16 @@ class Mastodon_App {
 			return true;
 		}
 		update_term_meta( $this->term->term_id, 'last_used', time() );
+	}
+
+	public static function set_current_app( $client_id, $request ) {
+		self::$current_app = Mastodon_App::get_by_client_id( $client_id );
+		self::$current_app->was_used( $request );
+		return self::$current_app;
+	}
+
+	public static function get_current_app() {
+		return self::$current_app;
 	}
 
 	public function is_outdated() {
