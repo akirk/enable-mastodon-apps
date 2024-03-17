@@ -61,6 +61,5 @@ add_action(
 	function () {
 		new Enable_Mastodon_Apps\Mastodon_API();
 		new Enable_Mastodon_Apps\Integration\Pixelfed();
-		add_filter( 'pre_option_link_manager_enabled', '__return_true' );
 	}
 );
