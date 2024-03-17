@@ -2632,9 +2632,6 @@ class Mastodon_API {
 	private function software_string() {
 		global $wp_version;
 		$software = 'WordPress/' . $wp_version;
-		if ( defined( 'FRIENDS_VERSION' ) ) {
-			$software .= ', Friends/' . FRIENDS_VERSION;
-		}
 		if ( defined( 'ACTIVITYPUB_VERSION' ) ) {
 			$software .= ', ActivityPub/' . ACTIVITYPUB_VERSION;
 		}
