@@ -675,21 +675,21 @@ class Handler {
 			$account = $this->get_acct( $user_id );
 
 			if ( $account ) {
-				$remote_user_id = get_term_by( 'name', $account, self::REMOTE_USER_TAXONOMY );
+				$remote_user_id = get_term_by( 'name', $account, Mastodon_API::REMOTE_USER_TAXONOMY );
 				if ( $remote_user_id ) {
 					$remote_user_id = $remote_user_id->term_id;
 				} else {
-					$remote_user_id = wp_insert_term( $account, self::REMOTE_USER_TAXONOMY );
+					$remote_user_id = wp_insert_term( $account, Mastodon_API::REMOTE_USER_TAXONOMY );
 					if ( ! is_wp_error( $remote_user_id ) ) {
 						$remote_user_id = $remote_user_id['term_id'];
 					}
 				}
 			} elseif ( $user_id ) {
-				$remote_user_id = get_term_by( 'name', $user_id, self::REMOTE_USER_TAXONOMY );
+				$remote_user_id = get_term_by( 'name', $user_id, Mastodon_API::REMOTE_USER_TAXONOMY );
 				if ( $remote_user_id ) {
 					$remote_user_id = $remote_user_id->term_id;
 				} else {
-					$remote_user_id = wp_insert_term( $user_id, self::REMOTE_USER_TAXONOMY );
+					$remote_user_id = wp_insert_term( $user_id, Mastodon_API::REMOTE_USER_TAXONOMY );
 					if ( ! is_wp_error( $remote_user_id ) ) {
 						$remote_user_id = $remote_user_id['term_id'];
 					}
@@ -769,11 +769,11 @@ class Handler {
 			$user = \Friends\User::get_user_by_id( $user_id );
 
 			if ( $user instanceof \Friends\Subscription ) {
-				$remote_user_id = get_term_by( 'name', $user->ID, self::REMOTE_USER_TAXONOMY );
+				$remote_user_id = get_term_by( 'name', $user->ID, Mastodon_API::REMOTE_USER_TAXONOMY );
 				if ( $remote_user_id ) {
 					$remote_user_id = $remote_user_id->term_id;
 				} else {
-					$remote_user_id = wp_insert_term( $user->ID, self::REMOTE_USER_TAXONOMY );
+					$remote_user_id = wp_insert_term( $user->ID, Mastodon_API::REMOTE_USER_TAXONOMY );
 					if ( ! is_wp_error( $remote_user_id ) ) {
 						$remote_user_id = $remote_user_id['term_id'];
 					}
