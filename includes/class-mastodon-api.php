@@ -1605,6 +1605,12 @@ class Mastodon_API {
 	public function api_tag_timelines( $request ) {
 		$args = $this->get_posts_query_args( $request );
 		$args['tag'] = $request->get_param( 'hashtag' );
+
+		$ppp_param = $request->get_param( 'limit' );
+		if ( null !== $ppp_param ) {
+			$args['posts_per_page'] = $ppp_param;
+		}
+
 		$args = apply_filters( 'mastodon_api_timelines_args', $args, $request );
 
 		return $this->get_posts( $args, $request->get_param( 'min_id' ), $request->get_param( 'max_id' ) );
@@ -1624,7 +1630,12 @@ class Mastodon_API {
 			'hashtags' => array(),
 		);
 
-		$q = $request->get_param( 'q' );
+		$q = trim( $request->get_param( 'q' ) );
+		// Don't allow empty search queries.
+		if ( '' === $search_query ) {
+			return $ret;
+		}
+
 		$query_is_url = parse_url( $q );
 		if ( $query_is_url ) {
 			if ( 'true' !== $request->get_param( 'resolve' ) || ! is_user_logged_in() ) {
@@ -1673,7 +1684,6 @@ class Mastodon_API {
 								array(
 									'id'     => $json['id'] . '#create-activity',
 									'object' => $json,
-
 								),
 								$user_id
 							);
@@ -1684,6 +1694,37 @@ class Mastodon_API {
 					$args['offset'] = $request->get_param( 'offset' );
 					$args['posts_per_page'] = $request->get_param( 'limit' );
 					$ret['statuses'] = array_merge( $ret['statuses'], $this->get_posts( $args ) );
+				}
+			}
+			if ( ! $type || 'hashtags' === $type ) {
+				$q_param = $request->get_param( 'q' );
+				$categories = get_categories(
+					array(
+						'orderby'    => 'name',
+						'hide_empty' => false,
+						'search'     => $q_param,
+					)
+				);
+				foreach ( $categories as $category ) {
+					$ret['hashtags'][] = array(
+						'name'    => $category->name,
+						'url'     => get_category_link( $category ),
+						'history' => array(),
+					);
+				}
+				$tags = get_tags(
+					array(
+						'orderby'    => 'name',
+						'hide_empty' => false,
+						'search'     => $q_param,
+					)
+				);
+				foreach ( $tags as $tag ) {
+					$ret['hashtags'][] = array(
+						'name'    => $tag->name,
+						'url'     => get_tag_link( $tag ),
+						'history' => array(),
+					);
 				}
 			}
 		}
