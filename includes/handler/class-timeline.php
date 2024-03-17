@@ -37,7 +37,7 @@ class Timeline extends Handler {
 	 *
 	 * @return Entity\Status[]|array An array of Status objects.
 	 */
-	public function api_timelines( $request ) {
+	public function api_timelines( $statuses, $request ) {
 		$args = $this->get_posts_query_args( $request );
 		if ( empty( $args ) ) {
 			return array();
@@ -54,7 +54,7 @@ class Timeline extends Handler {
 	 *
 	 * @return Entity\Status[]|array An array of Status objects.
 	 */
-	public function api_tag_timelines( $request ) {
+	public function api_tag_timelines( $statuses, $request ) {
 		$args = $this->get_posts_query_args( $request );
 		$args['tag'] = $request->get_param( 'hashtag' );
 		$args = apply_filters( 'mastodon_api_timelines_args', $args, $request );
@@ -69,7 +69,7 @@ class Timeline extends Handler {
 	 *
 	 * @return Entity\Status[]|array An array of Status objects.
 	 */
-	public function api_public_timeline( $request ) {
+	public function api_public_timeline( $statuses, $request ) {
 		$args = $this->get_posts_query_args( $request );
 		if ( empty( $args ) ) {
 			return array();
