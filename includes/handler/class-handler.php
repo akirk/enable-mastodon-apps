@@ -360,7 +360,7 @@ class Handler {
 			$data['account']['display_name'] = $override_author_name;
 		}
 
-		$reactions = apply_filters( 'friends_get_user_reactions', array(), $post->ID );
+		$reactions = apply_filters( 'enable_mastodon_apps_get_user_reactions', array(), $post->ID );
 		if ( ! empty( $reactions ) ) {
 			$data['favourited'] = true;
 		}
@@ -488,7 +488,7 @@ class Handler {
 	public static function check_url( $url ) {
 		$host = parse_url( $url, PHP_URL_HOST );
 
-		$check_url = apply_filters( 'friends_host_is_valid', null, $host );
+		$check_url = apply_filters( 'enable_mastodon_apps_host_is_valid', null, $host );
 		if ( ! is_null( $check_url ) ) {
 			return $check_url;
 		}
@@ -700,7 +700,7 @@ class Handler {
 				wp_cache_set( $cache_key, $data, 'enable-mastodon-apps' );
 				return $data;
 			}
-			$meta = apply_filters( 'friends_get_activitypub_metadata', array(), $url );
+			$meta = apply_filters( 'enable_mastodon_apps_get_activitypub_metadata', array(), $url );
 
 			$data = array(
 				'id'              => strval( 1e10 + $remote_user_id ),
@@ -796,7 +796,7 @@ class Handler {
 			$data['id'] = $data['acct'];
 			$data['username'] = strtok( $data['acct'], '@' );
 
-			$meta = apply_filters( 'friends_get_activitypub_metadata', array(), $meta['attributedTo']['id'] );
+			$meta = apply_filters( 'enable_mastodon_apps_get_activitypub_metadata', array(), $meta['attributedTo']['id'] );
 			$data = $this->update_account_data_with_meta( $data, $meta, $full_metadata );
 		} else {
 			$acct = $this->get_user_acct( $user );
@@ -804,8 +804,8 @@ class Handler {
 				$data['acct'] = $acct;
 			}
 
-			foreach ( apply_filters( 'friends_get_user_feeds', array(), $user ) as $feed ) {
-				$meta = apply_filters( 'friends_get_feed_metadata', array(), $feed );
+			foreach ( apply_filters( 'enable_mastodon_apps_get_user_feeds', array(), $user ) as $feed ) {
+				$meta = apply_filters( 'enable_mastodon_apps_get_feed_metadata', array(), $feed );
 				if ( $meta && ! is_wp_error( $meta ) && ! isset( $meta['error'] ) ) {
 					$data['acct'] = $this->get_acct( $meta['id'] );
 					$data = $this->update_account_data_with_meta( $data, $meta, $full_metadata );
