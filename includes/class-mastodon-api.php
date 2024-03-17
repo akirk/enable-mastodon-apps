@@ -9,6 +9,9 @@
 
 namespace Enable_Mastodon_Apps;
 
+use WP_REST_Request;
+use WP_REST_Response;
+
 /**
  * This is the class that implements the Mastodon API endpoints.
  *
@@ -52,6 +55,7 @@ class Mastodon_API {
 
 		// Register Handlers.
 		new Handler\Account();
+		new Handler\Media_Attachment();
 		new Handler\Notification();
 		new Handler\Search();
 		new Handler\Status();
@@ -786,7 +790,7 @@ class Mastodon_API {
 		if ( 0 !== strpos( $_SERVER['REQUEST_URI'], '/api/v' ) ) {
 			return $template;
 		}
-		$request = new \WP_REST_Request( $_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI'] );
+		$request = new WP_REST_Request( $_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI'] );
 		$request->set_query_params( $_GET );
 		$request->set_body_params( $_POST );
 		$request->set_headers( getallheaders() );
@@ -1214,29 +1218,22 @@ class Mastodon_API {
 			$img = substr( $data['content'], $p, $e - $p + 19 );
 			if ( preg_match( '#<img(?:\s+src="(?P<url>[^"]+)"|\s+width="(?P<width>\d+)"|\s+height="(?P<height>\d+)"|\s+class="(?P<class>[^"]+)|\s+.*="[^"]+)+"#i', $img, $img_tag ) ) {
 				if ( ! empty( $img_tag['url'] ) ) {
-					$url = $img_tag['url'];
+					$url      = $img_tag['url'];
 					$media_id = crc32( $url );
 					$img_meta = array();
+
 					foreach ( $attachments as $attachment_id => $attachment ) {
 						if (
 						wp_get_attachment_url( $attachment_id ) === $url
 						|| ( isset( $img_tag['class'] ) && preg_match( '#\bwp-image-' . $attachment_id . '\b#', $img_tag['class'] ) )
 
 						) {
-							$media_id = $attachment_id;
-							$attachment_metadata = \wp_get_attachment_metadata( $attachment_id );
-							$img_tag['width'] = $attachment_metadata['width'];
-							$img_tag['height'] = $attachment_metadata['height'];
-							unset( $attachments[ $attachment_id ] );
+							$request = new WP_REST_Request();
+							$request->set_param( 'post_id', $attachment_id );
 
-							$img_meta['original'] = array(
-								'width'  => intval( $img_tag['width'] ),
-								'height' => intval( $img_tag['height'] ),
-								'size'   => $img_tag['width'] . 'x' . $img_tag['height'],
-								'aspect' => $img_tag['width'] / max( 1, $img_tag['height'] ),
-							);
+							$data['media_attachments'][] = $this->api_get_media( $request );
 
-							break;
+							continue 2;
 						}
 					}
 					$data['media_attachments'][] = array(
@@ -1247,12 +1244,8 @@ class Mastodon_API {
 						'remote_url'         => $url,
 						'preview_url'        => $url,
 						'text_url'           => $url,
-						'meta'               => array_merge(
-							$img_meta,
-							array(
-								'description' => isset( $attachment ) && $attachment ? $attachment->post_excerpt : '',
-							)
-						),
+						'description'        => '',
+						'meta'               => $img_meta,
 					);
 				}
 			}
@@ -1261,34 +1254,10 @@ class Mastodon_API {
 		}
 
 		foreach ( $attachments as $attachment_id => $attachment ) {
-			$url = wp_get_attachment_url( $attachment_id );
-			$attachment_metadata = wp_get_attachment_metadata( $attachment_id );
+			$request = new WP_REST_Request();
+			$request->set_param( 'post_id', $attachment_id );
 
-			$type = 'image';
-			if ( preg_match( '#^image/#', $attachment_metadata['mime-type'] ) || preg_match( '#\.(gif|png|jpe?g)$#i', $url ) ) {
-				$type = 'image';
-			} elseif ( preg_match( '#^audio/#', $attachment_metadata['mime-type'] ) || preg_match( '#\.(mp3|m4a|wav|aiff)$#i', $url ) ) {
-				$type = 'audio';
-			} elseif ( preg_match( '#^video/#', $attachment_metadata['mime-type'] ) || preg_match( '#\.(mov|mkv|mp4)$#i', $url ) ) {
-				$type = 'video';
-			}
-
-			$data['media_attachments'][] = array(
-				'id'          => strval( $attachment_id ),
-				'type'        => $type,
-				'url'         => $url,
-				'preview_url' => $url,
-				'text_url'    => $url,
-				'meta'        => array(
-					'original' => array(
-						'width'  => intval( $attachment_metadata['width'] ),
-						'height' => intval( $attachment_metadata['height'] ),
-						'size'   => $attachment_metadata['width'] . 'x' . $attachment_metadata['height'],
-						'aspect' => $attachment_metadata['width'] / max( 1, $attachment_metadata['height'] ),
-					),
-				),
-				'description' => $attachment->post_excerpt,
-			);
+			$data['media_attachments'][] = $this->api_get_media( $request );
 		}
 		$author_name = $data['account']['display_name'];
 		$override_author_name = get_post_meta( $post->ID, 'author', true );
@@ -1462,25 +1431,35 @@ class Mastodon_API {
 		return $this->get_status_array( get_post( $post_id ) );
 	}
 
-	public function api_get_media( $request ) {
-		$post_id = $request->get_param( 'post_id' );
-		if ( ! is_numeric( $post_id ) || $post_id < 0 ) {
+	/**
+	 * Get a Media_Attachment entity by ID.
+	 *
+	 * @param WP_REST_Request $request The full data about the request.
+	 * @return Entity\Media_Attachment|\WP_Error
+	 */
+	public function api_get_media( WP_REST_Request $request ) {
+		$attachment_id = $request->get_param( 'post_id' );
+		if ( ! is_numeric( $attachment_id ) || $attachment_id < 0 ) {
 			return new \WP_Error( 'mastodon_api_get_media', 'Invalid post ID', array( 'status' => 400 ) );
 		}
-		$attachment = wp_get_attachment_metadata( $post_id );
-		$post = get_post( $post_id );
-		return array(
-			'id'          => $post_id,
-			'type'        => 'image',
-			'url'         => wp_get_attachment_url( $post_id ),
-			'preview_url' => wp_get_attachment_url( $post_id ),
-			'height'      => $attachment['height'],
-			'width'       => $attachment['width'],
-			'description' => $post->post_excerpt,
-		);
+
+		/**
+		 * Filters the media attachment returned by the API.
+		 *
+		 * @param array $media_attachment The media attachment.
+		 * @param int   $attachment_id    The attachment ID.
+		 * @return Entity\Media_Attachment The media attachment.
+		 */
+		return apply_filters( 'mastodon_api_media_attachment', null, $attachment_id );
 	}
 
-	public function api_post_media( $request ) {
+	/**
+	 * Create a new media attachment.
+	 *
+	 * @param WP_REST_Request $request The full data about the request.
+	 * @return \WP_Error|WP_REST_Response
+	 */
+	public function api_post_media( WP_REST_Request $request ) {
 		$media = $request->get_file_params();
 		if ( empty( $media ) ) {
 			return new \WP_Error( 'mastodon_api_post_media', 'Media is empty', array( 'status' => 422 ) );
@@ -1508,6 +1487,10 @@ class Mastodon_API {
 			return new \WP_Error( 'mastodon_api_post_media', $attachment_id->get_error_message(), array( 'status' => 422 ) );
 		}
 
+		wp_update_attachment_metadata( $attachment_id, wp_generate_attachment_metadata( $attachment_id, get_attached_file( $attachment_id ) ) );
+
+		$request->set_param( 'post_id', $attachment_id );
+
 		$description = $request->get_param( 'description' );
 		if ( $description ) {
 			wp_update_post(
@@ -1518,36 +1501,18 @@ class Mastodon_API {
 			);
 		}
 
-		$thumb = \wp_get_attachment_image_src( $attachment_id, 'thumbnail' );
-		$meta = \wp_get_attachment_metadata( $attachment_id );
-
-		return array(
-			'id'          => strval( $attachment_id ),
-			'type'        => 'image',
-			'url'         => \wp_get_attachment_url( $attachment_id ),
-			'preview_url' => $thumb[0],
-			'text_url'    => \wp_get_attachment_url( $attachment_id ),
-			'description' => $description,
-			'meta'        => array(
-				'original' => array(
-					'width'  => $meta['width'],
-					'height' => $meta['height'],
-					'size'   => $meta['width'] . 'x' . $meta['height'],
-					'aspect' => $meta['width'] / $meta['height'],
-				),
-				'small'    => array(
-					'width'  => $thumb[1],
-					'height' => $thumb[2],
-					'size'   => $thumb[1] . 'x' . $thumb[2],
-					'aspect' => $thumb[1] / $thumb[2],
-				),
-			),
-		);
+		return rest_ensure_response( $this->api_get_media( $request ) );
 	}
 
-	public function api_update_media( $request ) {
-		$post_id = $request->get_param( 'post_id' );
-		if ( ! is_numeric( $post_id ) || $post_id < 0 ) {
+	/**
+	 * Update a media attachment.
+	 *
+	 * @param WP_REST_Request $request The full data about the request.
+	 * @return \WP_Error|WP_REST_Response
+	 */
+	public function api_update_media( WP_REST_Request $request ) {
+		$attachment_id = $request->get_param( 'post_id' );
+		if ( ! is_numeric( $attachment_id ) || $attachment_id < 0 ) {
 			return new \WP_Error( 'mastodon_api_get_media', 'Invalid post ID', array( 'status' => 400 ) );
 		}
 
@@ -1555,12 +1520,12 @@ class Mastodon_API {
 		if ( $description ) {
 			wp_update_post(
 				array(
-					'ID'           => $post_id,
+					'ID'           => $attachment_id,
 					'post_excerpt' => $description,
 				)
 			);
 		}
-		return $this->api_get_media( $request );
+		return rest_ensure_response( $this->api_get_media( $request ) );
 	}
 
 	public function api_timelines( $request ) {
@@ -1807,11 +1772,11 @@ class Mastodon_API {
 	public function api_get_post( $request ) {
 		$post_id = $request->get_param( 'post_id' );
 		if ( ! $post_id ) {
-			return new \WP_REST_Response( array( 'error' => 'Record not found' ), 404 );
+			return new WP_REST_Response( array( 'error' => 'Record not found' ), 404 );
 		}
 
 		if ( get_post_status( $post_id ) !== 'publish' && ! current_user_can( 'edit_post', $post_id ) ) {
-			return new \WP_REST_Response( array( 'error' => 'Record not found' ), 404 );
+			return new WP_REST_Response( array( 'error' => 'Record not found' ), 404 );
 		}
 
 		$comment_id = $this->get_remapped_comment_id( $post_id );
@@ -1823,7 +1788,7 @@ class Mastodon_API {
 		$post = get_post( $post_id );
 
 		if ( ! $post ) {
-			return new \WP_REST_Response( array( 'error' => 'Record not found' ), 404 );
+			return new WP_REST_Response( array( 'error' => 'Record not found' ), 404 );
 		}
 
 		/**
@@ -1884,22 +1849,10 @@ class Mastodon_API {
 			'account'                => $this->get_friend_account_data( $user_id ),
 			'media_attachments'      => array_map(
 				function ( $attachment ) {
-					return array(
-						'id'          => crc32( $attachment['url'] ),
-						'type'        => strtok( $attachment['mediaType'], '/' ),
-						'url'         => $attachment['url'],
-						'preview_url' => $attachment['url'],
-						'text_url'    => $attachment['url'],
-						'meta'        => array(
-							'original' => array(
-								'width'  => intval( $attachment['width'] ),
-								'height' => intval( $attachment['height'] ),
-								'size'   => $attachment['width'] . 'x' . $attachment['height'],
-								'aspect' => $attachment['width'] / max( 1, $attachment['height'] ),
-							),
-						),
-						'description' => ! empty( $attachment['description'] ) ? $attachment['description'] : '',
-					);
+					$request = new WP_REST_Request();
+					$request->set_param( 'post_id', $attachment['id'] );
+
+					return $this->api_get_media( $request );
 				},
 				$activity['object']['attachment']
 			),
@@ -1998,7 +1951,7 @@ class Mastodon_API {
 			return $followers;
 		}
 
-		return new \WP_REST_Response( $followers );
+		return new WP_REST_Response( $followers );
 	}
 
 	public function api_account_follow( $request ) {
@@ -2038,7 +1991,7 @@ class Mastodon_API {
 		}
 
 		if ( empty( $relationships ) ) {
-			return new \WP_REST_Response( array( 'error' => 'Invalid user' ), 404 );
+			return new WP_REST_Response( array( 'error' => 'Invalid user' ), 404 );
 		}
 
 		return $relationships[0];
@@ -2197,7 +2150,7 @@ class Mastodon_API {
 		 *
 		 * @param Entity\Account|null $account The account data.
 		 * @param int $user_id The requested user ID.
-		 * @param \WP_REST_Request $request The request object.
+		 * @param WP_REST_Request $request The request object.
 		 * @return Entity\Account|null The modified account data.
 		 *
 		 * Example:

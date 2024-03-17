@@ -7,10 +7,10 @@ services:
       MYSQL_DATABASE: ema-test
       MYSQL_ROOT_PASSWORD: ema-test
     healthcheck:
-        test: ["CMD", "curl", "-f", "http://localhost:3306"]
-        interval: 5s
-        timeout: 2s
-        retries: 5
+      test: ["CMD", "curl", "-f", "http://localhost:3306"]
+      interval: 5s
+      timeout: 2s
+      retries: 5
 
   test-php:
     build:
