@@ -27,32 +27,32 @@ class InstanceEndpoint_Test extends Mastodon_API_TestCase {
 
 		$data = $response->get_data();
 
-		$this->assertArrayHasKey( 'uri', $data );
-		$this->assertIsString( $data['uri'] );
-		$this->assertEquals( $data['uri'], \wp_parse_url( \home_url(), \PHP_URL_HOST ) );
+		$this->assertTrue( property_exists( $data, 'uri' ) );
+		$this->assertIsString( $data->uri );
+		$this->assertEquals( $data->uri, \wp_parse_url( \home_url(), \PHP_URL_HOST ) );
 
-		$this->assertArrayHasKey( 'account_domain', $data );
-		$this->assertIsString( $data['account_domain'] );
-		$this->assertEquals( $data['account_domain'], \wp_parse_url( \home_url(), \PHP_URL_HOST ) );
+		$this->assertTrue( property_exists( $data, 'account_domain' ) );
+		$this->assertIsString( $data->account_domain );
+		$this->assertEquals( $data->qccount_domain, \wp_parse_url( \home_url(), \PHP_URL_HOST ) );
 
-		$this->assertArrayHasKey( 'title', $data );
-		$this->assertIsString( $data['title'] );
-		$this->assertEquals( $data['title'], get_bloginfo( 'name' ) );
+		$this->assertTrue( property_exists( $data, 'title' ) );
+		$this->assertIsString( $data->title );
+		$this->assertEquals( $data->title, get_bloginfo( 'name' ) );
 
-		$this->assertArrayHasKey( 'description', $data );
-		$this->assertIsString( $data['description'] );
-		$this->assertEquals( $data['description'], get_bloginfo( 'description' ) );
+		$this->assertTrue( property_exists( $data, 'description' ) );
+		$this->assertIsString( $data->description );
+		$this->assertEquals( $data->description, get_bloginfo( 'description' ) );
 
-		$this->assertArrayHasKey( 'email', $data );
-		$this->assertIsString( $data['email'] );
-		$this->assertEquals( $data['email'], 'not@public.example' );
+		$this->assertTrue( property_exists( $data, 'email' ) );
+		$this->assertIsString( $data->email );
+		$this->assertEquals( $data->email, 'not@public.example' );
 
-		$this->assertArrayHasKey( 'version', $data );
-		$this->assertIsString( $data['version'] );
-		$this->assertStringContainsString( ENABLE_MASTODON_APPS_VERSION, $data['version'] );
+		$this->assertTrue( property_exists( $data, 'version' ) );
+		$this->assertIsString( $data->version );
+		$this->assertStringContainsString( ENABLE_MASTODON_APPS_VERSION, $data->version );
 
-		$this->assertFalse( $data['registrations'], false );
+		$this->assertFalse( $data->registrations, false );
 
-		$this->assertFalse( $data['approval_required'], false );
+		$this->assertFalse( $data->approval_required, false );
 	}
 }
