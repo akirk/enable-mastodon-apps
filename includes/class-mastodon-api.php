@@ -657,6 +657,21 @@ class Mastodon_API {
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_account_relationships' ),
 				'permission_callback' => $this->required_scope( 'read:follows' ),
+				'args'                => array(
+					'id'             => array(
+						'type'        => 'array',
+						'description' => 'The account IDs to fetch relationships for',
+						'items'       => array(
+							'type' => 'string',
+						),
+						'required'    => true,
+					),
+					'with_suspended' => array(
+						'type'        => 'boolean',
+						'description' => 'Whether to include relationships with suspended accounts',
+						'default'     => false,
+					),
+				),
 			)
 		);
 
