@@ -1024,7 +1024,16 @@ class Mastodon_API {
 
 		$statuses = array();
 		foreach ( $posts as $post ) {
-			$status = $this->get_status_array( $post );
+			/**
+			 * Modify the status data.
+			 *
+			 * @param array|null $account The status data.
+			 * @param int $post_id The object ID to get the status from.
+			 * @param array $data Additional status data.
+			 * @return array|null The modified status data.
+			 */
+			$status = apply_filters( 'mastodon_api_status', null, $post->ID, array() );
+
 			if ( $status ) {
 				$statuses[ $post->post_date ] = $status;
 			}
@@ -1113,12 +1122,24 @@ class Mastodon_API {
 			'post_title'   => '',
 		);
 
-		return $this->get_status_array(
-			$post,
+		/**
+		 * Modify the status data.
+		 *
+		 * @param array|null $account The status data.
+		 * @param int $post_id The object ID to get the status from.
+		 * @param array $data Additional status data.
+		 * @return array|null The modified status data.
+		 */
+		$status = apply_filters(
+			'mastodon_api_status',
+			null,
+			$post->ID,
 			array(
 				'in_reply_to_id' => $comment->comment_post_ID,
 			)
 		);
+
+		return $status;
 	}
 
 	private function get_user_id_from_request( $request ) {
@@ -1132,187 +1153,6 @@ class Mastodon_API {
 		}
 
 		return $user_id;
-	}
-
-	/**
-	 * Strip empty whitespace
-	 *
-	 * @param      string $post_content  The post content.
-	 *
-	 * @return     string  The normalized content.
-	 */
-	private function normalize_whitespace( $post_content ) {
-		$post_content = preg_replace( '#<!-- /?wp:paragraph -->\s*<!-- /?wp:paragraph -->#', PHP_EOL, $post_content );
-		$post_content = preg_replace( '#\n\s*\n+#', PHP_EOL, $post_content );
-
-		return trim( $post_content );
-	}
-
-	private function get_status_array( $post, $data = array() ) {
-		$meta = get_post_meta( $post->ID, 'activitypub', true );
-		$feed_url = get_post_meta( $post->ID, 'feed_url', true );
-
-		$user_id = $post->post_author;
-		if ( class_exists( '\Friends\User' ) && $post instanceof \WP_Post ) {
-			$user = \Friends\User::get_post_author( $post );
-			$user_id = $user->ID;
-		} elseif ( isset( $meta['attributedTo']['id'] ) && $meta['attributedTo']['id'] ) {
-			// It's an ActivityPub post, so the feed_url is the ActivityPub URL.
-			if ( $feed_url ) {
-				$user_id = $feed_url;
-			} else {
-				$user_id = $meta['attributedTo']['id'];
-			}
-		}
-
-		if ( ! $user_id ) {
-			return null;
-		}
-		$account_data = $this->get_friend_account_data( $user_id, $meta );
-		if ( is_wp_error( $account_data ) ) {
-			return null;
-		}
-
-		$reblogged = get_post_meta( $post->ID, 'reblogged' );
-		$reblogged_by = array();
-		if ( $reblogged ) {
-			$reblog_user_ids = get_post_meta( $post->ID, 'reblogged_by' );
-			if ( ! is_array( $reblog_user_ids ) ) {
-				$reblog_user_ids = array();
-			}
-			$reblog_user_ids = array_map( 'intval', $reblog_user_ids );
-			$reblogged_by = array_map(
-				function ( $user_id ) {
-					return $this->get_friend_account_data( $user_id );
-				},
-				$reblog_user_ids
-			);
-			$reblogged = in_array( get_current_user_id(), $reblog_user_ids, true );
-		} else {
-			$reblogged = false;
-		}
-
-		$data = array_merge(
-			array(
-				'id'                     => strval( $post->ID ),
-				'created_at'             => mysql2date( 'Y-m-d\TH:i:s.000P', $post->post_date, false ),
-				'in_reply_to_id'         => null,
-				'in_reply_to_account_id' => null,
-				'sensitive'              => false,
-				'spoiler_text'           => '',
-				'visibility'             => 'publish' === $post->post_status ? 'public' : 'unlisted',
-				'language'               => null,
-				'uri'                    => $post->guid,
-				'url'                    => null,
-				'replies_count'          => 0,
-				'reblogs_count'          => 0,
-				'favourites_count'       => 0,
-				'edited_at'              => null,
-				'favourited'             => false,
-				'reblogged'              => $reblogged,
-				'reblogged_by'           => $reblogged_by,
-				'muted'                  => false,
-				'bookmarked'             => false,
-				'content'                => $post->post_title . PHP_EOL . $post->post_content,
-				'filtered'               => array(),
-				'reblog'                 => null,
-				'account'                => $account_data,
-				'media_attachments'      => array(),
-				'mentions'               => array(),
-				'tags'                   => array(),
-				'emojis'                 => array(),
-				'pinned'                 => is_sticky( $post->ID ),
-				'card'                   => null,
-				'poll'                   => null,
-			),
-			$data
-		);
-
-		if ( ! $reblogged ) {
-			unset( $data['reblogged_by'] );
-		}
-
-		if ( ! $data['pinned'] ) {
-			unset( $data['pinned'] );
-		}
-
-		// get the attachments for the post.
-		$attachments = get_attached_media( '', $post->ID );
-		$p = strpos( $data['content'], '<!-- wp:image' );
-		while ( false !== $p ) {
-			$e = strpos( $data['content'], '<!-- /wp:image', $p );
-			if ( ! $e ) {
-				break;
-			}
-			$img = substr( $data['content'], $p, $e - $p + 19 );
-			if ( preg_match( '#<img(?:\s+src="(?P<url>[^"]+)"|\s+width="(?P<width>\d+)"|\s+height="(?P<height>\d+)"|\s+class="(?P<class>[^"]+)|\s+.*="[^"]+)+"#i', $img, $img_tag ) ) {
-				if ( ! empty( $img_tag['url'] ) ) {
-					$url      = $img_tag['url'];
-					$media_id = crc32( $url );
-					$img_meta = array();
-
-					foreach ( $attachments as $attachment_id => $attachment ) {
-						if (
-						wp_get_attachment_url( $attachment_id ) === $url
-						|| ( isset( $img_tag['class'] ) && preg_match( '#\bwp-image-' . $attachment_id . '\b#', $img_tag['class'] ) )
-
-						) {
-							$request = new WP_REST_Request();
-							$request->set_param( 'post_id', $attachment_id );
-
-							$data['media_attachments'][] = $this->api_get_media( $request );
-
-							continue 2;
-						}
-					}
-					$data['media_attachments'][] = array(
-						'id'                 => strval( $media_id ),
-						'type'               => 'image',
-						'url'                => $url,
-						'preview_remote_url' => $url,
-						'remote_url'         => $url,
-						'preview_url'        => $url,
-						'text_url'           => $url,
-						'description'        => '',
-						'meta'               => $img_meta,
-					);
-				}
-			}
-			$data['content'] = $this->normalize_whitespace( substr( $data['content'], 0, $p ) . substr( $data['content'], $e + 18 ) );
-			$p = strpos( $data['content'], '<!-- wp:image' );
-		}
-
-		foreach ( $attachments as $attachment_id => $attachment ) {
-			$request = new WP_REST_Request();
-			$request->set_param( 'post_id', $attachment_id );
-
-			$data['media_attachments'][] = $this->api_get_media( $request );
-		}
-		$author_name = $data['account']['display_name'];
-		$override_author_name = get_post_meta( $post->ID, 'author', true );
-
-		if ( isset( $meta['reblog'] ) && $meta['reblog'] && isset( $meta['attributedTo']['id'] ) ) {
-			$data['reblog'] = $data;
-			$data['reblog']['id'] = $this->remap_reblog_id( $data['reblog']['id'] ); // ensure that the id is different from the post as it might crash some clients (Ivory).
-			$data['media_attachments'] = array();
-			$data['mentions'] = array();
-			$data['tags'] = array();
-			unset( $data['pinned'] );
-			$data['content'] = '';
-			$data['reblog']['account'] = $this->get_friend_account_data( $this->get_acct( $meta['attributedTo']['id'] ), $meta );
-			if ( ! $data['reblog']['account']['acct'] ) {
-				$data['reblog'] = null;
-			}
-		} elseif ( $override_author_name && $author_name !== $override_author_name ) {
-			$data['account']['display_name'] = $override_author_name;
-		}
-
-		$reactions = apply_filters( 'friends_get_user_reactions', array(), $post->ID );
-		if ( ! empty( $reactions ) ) {
-			$data['favourited'] = true;
-		}
-
-		return $data;
 	}
 
 	public function api_submit_post( $request ) {
@@ -1457,7 +1297,18 @@ class Mastodon_API {
 				),
 			);
 		}
-		return $this->get_status_array( get_post( $post_id ) );
+
+		/**
+		 * Modify the status data.
+		 *
+		 * @param array|null $account The status data.
+		 * @param int $post_id The object ID to get the status from.
+		 * @param array $data Additional status data.
+		 * @return array|null The modified status data.
+		 */
+		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
+
+		return $status;
 	}
 
 	/**
@@ -1687,7 +1538,17 @@ class Mastodon_API {
 		if ( $comment_id ) {
 			$comment = get_comment( $comment_id );
 			$post_id = $comment->comment_post_ID;
-			$status = $this->get_status_array( get_post( $post_id ) );
+
+			/**
+			 * Modify the status data.
+			 *
+			 * @param array|null $account The status data.
+			 * @param int $post_id The object ID to get the status from.
+			 * @param array $data Additional status data.
+			 * @return array|null The modified status data.
+			 */
+			$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
+
 			if ( $status ) {
 				$context['ancestors'][] = $status;
 			}
@@ -1718,9 +1579,17 @@ class Mastodon_API {
 		// 2764 = heart
 		do_action( 'mastodon_api_react', $post_id, '2b50' );
 
-		$post = get_post( $post_id );
+		/**
+		 * Modify the status data.
+		 *
+		 * @param array|null $account The status data.
+		 * @param int $post_id The object ID to get the status from.
+		 * @param array $data Additional status data.
+		 * @return array|null The modified status data.
+		 */
+		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
 
-		return $this->get_status_array( $post );
+		return $status;
 	}
 
 	public function api_unfavourite_post( $request ) {
@@ -1735,9 +1604,17 @@ class Mastodon_API {
 		// 2764 = heart
 		do_action( 'mastodon_api_unreact', $post_id, '2b50' );
 
-		$post = get_post( $post_id );
+		/**
+		 * Modify the status data.
+		 *
+		 * @param array|null $account The status data.
+		 * @param int $post_id The object ID to get the status from.
+		 * @param array $data Additional status data.
+		 * @return array|null The modified status data.
+		 */
+		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
 
-		return $this->get_status_array( $post );
+		return $status;
 	}
 
 	public function api_reblog_post( $request ) {
@@ -1753,9 +1630,18 @@ class Mastodon_API {
 		if ( $post ) {
 			do_action( 'mastodon_api_reblog', $post );
 		}
-		$post = get_post( $post_id );
 
-		return $this->get_status_array( $post );
+		/**
+		 * Modify the status data.
+		 *
+		 * @param array|null $account The status data.
+		 * @param int $post_id The object ID to get the status from.
+		 * @param array $data Additional status data.
+		 * @return array|null The modified status data.
+		 */
+		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
+
+		return $status;
 	}
 
 	public function api_unreblog_post( $request ) {
@@ -1770,9 +1656,18 @@ class Mastodon_API {
 		if ( $post ) {
 			do_action( 'mastodon_api_unreblog', $post );
 		}
-		$post = get_post( $post_id );
 
-		return $this->get_status_array( $post );
+		/**
+		 * Modify the status data.
+		 *
+		 * @param array|null $account The status data.
+		 * @param int $post_id The object ID to get the status from.
+		 * @param array $data Additional status data.
+		 * @return array|null The modified status data.
+		 */
+		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
+
+		return $status;
 	}
 
 	public function api_delete_post( $request ) {
@@ -1795,7 +1690,17 @@ class Mastodon_API {
 			wp_trash_post( $post_id );
 		}
 
-		return $this->get_status_array( get_post( $post_id ) );
+		/**
+		 * Modify the status data.
+		 *
+		 * @param array|null $account The status data.
+		 * @param int $post_id The object ID to get the status from.
+		 * @param array $data Additional status data.
+		 * @return array|null The modified status data.
+		 */
+		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
+
+		return $status;
 	}
 
 	public function api_get_post( $request ) {
@@ -1825,9 +1730,10 @@ class Mastodon_API {
 		 *
 		 * @param array|null $account The status data.
 		 * @param int $post_id The object ID to get the status from.
+		 * @param array $data Additional status data.
 		 * @return array|null The modified status data.
 		 */
-		$status = apply_filters( 'mastodon_api_status', null, $post_id );
+		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
 
 		if ( ! is_array( $status ) ) {
 			return new \WP_Error( 'invalid-status', 'Invalid status', array( 'status' => 404 ) );
@@ -1969,7 +1875,21 @@ class Mastodon_API {
 
 		$args = apply_filters( 'mastodon_api_account_statuses_args', $args, $request );
 
-		return $this->get_posts( $args );
+		/**
+		 * Filter the account statuses.
+		 *
+		 * @param array|null $statuses Current statuses.
+		 * @param array $args Current statuses arguments.
+		 * @param int|null $min_id Optional minimum status ID.
+		 * @param int|null $max_id Optional maximum status ID.
+		 */
+		$statuses = apply_filters( 'mastodon_api_statuses', null, $args, null, null );
+
+		if ( is_wp_error( $statuses ) || empty( $statuses ) ) {
+			return new \WP_Error( 'invalid-statuses', 'Invalid statuses', array( 'status' => 404 ) );
+		}
+
+		return $statuses;
 	}
 
 	/**

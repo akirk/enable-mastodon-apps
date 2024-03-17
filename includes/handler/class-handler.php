@@ -87,7 +87,16 @@ class Handler {
 
 		$statuses = array();
 		foreach ( $posts as $post ) {
-			$status = $this->get_status_array( $post );
+			/**
+			 * Modify the status data.
+			 *
+			 * @param array|null $account The status data.
+			 * @param int $post_id The object ID to get the status from.
+			 * @param array $data Additional status data.
+			 * @return array|null The modified status data.
+			 */
+			$status = apply_filters( 'mastodon_api_status', null, $post->ID, array() );
+
 			if ( $status ) {
 				$statuses[ $post->post_date ] = $status;
 			}
@@ -103,7 +112,25 @@ class Handler {
 			);
 
 			foreach ( $comments as $comment ) {
-				$status = $this->get_comment_status_array( $comment );
+				$post_id = $this->remap_comment_id( $comment->comment_ID );
+
+				/**
+				 * Modify the status data.
+				 *
+				 * @param array|null $account The status data.
+				 * @param int $post_id The object ID to get the status from.
+					 * @param array $data Additional status data.
+				 * @return array|null The modified status data.
+				 */
+				$status = apply_filters(
+					'mastodon_api_status',
+					null,
+					$post_id,
+					array(
+						'in_reply_to_id' => $comment->comment_post_ID,
+					)
+				);
+
 				if ( $status ) {
 					$statuses[ $comment->comment_date ] = $status;
 				}
@@ -158,30 +185,6 @@ class Handler {
 		}
 
 		return $ret;
-	}
-
-	protected function get_comment_status_array( \WP_Comment $comment ) {
-		if ( ! $comment ) {
-			return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Record not found', array( 'status' => 404 ) );
-		}
-
-		$post = (object) array(
-			'ID'           => $this->remap_comment_id( $comment->comment_ID ),
-			'guid'         => $comment->guid . '#comment-' . $comment->comment_ID,
-			'post_author'  => $comment->user_id,
-			'post_content' => $comment->comment_content,
-			'post_date'    => $comment->comment_date,
-			'post_status'  => $comment->post_status,
-			'post_type'    => $comment->post_type,
-			'post_title'   => '',
-		);
-
-		return $this->get_status_array(
-			$post,
-			array(
-				'in_reply_to_id' => $comment->comment_post_ID,
-			)
-		);
 	}
 
 	/**
