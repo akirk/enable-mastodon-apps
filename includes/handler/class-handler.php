@@ -36,17 +36,20 @@ class Handler {
 			}
 		}
 
+		/*
+		// @TODO bring back Application check
 		if ( $this->app ) {
 			$args = $this->app->modify_wp_query_args( $args );
-		} else {
-			$args['tax_query'] = array(
-				array(
-					'taxonomy' => 'post_format',
-					'field'    => 'slug',
-					'terms'    => array( 'post-format-status' ),
-				),
-			);
 		}
+		*/
+
+		$args['tax_query'] = array(
+			array(
+				'taxonomy' => 'post_format',
+				'field'    => 'slug',
+				'terms'    => array( 'post-format-status' ),
+			),
+		);
 
 		$post_id = $request->get_param( 'post_id' );
 		if ( $post_id ) {
