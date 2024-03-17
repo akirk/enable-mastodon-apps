@@ -51,7 +51,9 @@ class Search extends Handler {
 				return $ret;
 			}
 			$status = $this->get_json( $q, 'status-' . md5( $q ) );
-			$ret['statuses'][] = $this->convert_activity_to_status( array( 'object' => $status ), $status['attributedTo'] );
+			if ( ! is_wp_error( $status ) ) {
+				$ret['statuses'][] = $this->convert_activity_to_status( array( 'object' => $status ), $status['attributedTo'] );
+			}
 		} else {
 			if ( ! $type || 'accounts' === $type ) {
 				if ( preg_match( '/^@?' . Mastodon_API::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $q ) && ! $request->get_param( 'offset' ) ) {
