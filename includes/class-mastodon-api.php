@@ -1024,7 +1024,16 @@ class Mastodon_API {
 
 		$statuses = array();
 		foreach ( $posts as $post ) {
-			$status = $this->get_status_array( $post );
+			/**
+			 * Modify the status data.
+			 *
+			 * @param array|null $account The status data.
+			 * @param int $post_id The object ID to get the status from.
+			 * @param array $data Additional status data.
+			 * @return array|null The modified status data.
+			 */
+			$status = apply_filters( 'mastodon_api_status', null, $post->ID, array() );
+
 			if ( $status ) {
 				$statuses[ $post->post_date ] = $status;
 			}
@@ -1113,12 +1122,24 @@ class Mastodon_API {
 			'post_title'   => '',
 		);
 
-		return $this->get_status_array(
-			$post,
+		/**
+		 * Modify the status data.
+		 *
+		 * @param array|null $account The status data.
+		 * @param int $post_id The object ID to get the status from.
+		 * @param array $data Additional status data.
+		 * @return array|null The modified status data.
+		 */
+		$status = apply_filters(
+			'mastodon_api_status',
+			null,
+			$post->ID,
 			array(
 				'in_reply_to_id' => $comment->comment_post_ID,
 			)
 		);
+
+		return $status;
 	}
 
 	private function get_user_id_from_request( $request ) {
@@ -1457,7 +1478,18 @@ class Mastodon_API {
 				),
 			);
 		}
-		return $this->get_status_array( get_post( $post_id ) );
+
+		/**
+		 * Modify the status data.
+		 *
+		 * @param array|null $account The status data.
+		 * @param int $post_id The object ID to get the status from.
+		 * @param array $data Additional status data.
+		 * @return array|null The modified status data.
+		 */
+		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
+
+		return $status;
 	}
 
 	/**
@@ -1687,7 +1719,17 @@ class Mastodon_API {
 		if ( $comment_id ) {
 			$comment = get_comment( $comment_id );
 			$post_id = $comment->comment_post_ID;
-			$status = $this->get_status_array( get_post( $post_id ) );
+
+			/**
+			 * Modify the status data.
+			 *
+			 * @param array|null $account The status data.
+			 * @param int $post_id The object ID to get the status from.
+			 * @param array $data Additional status data.
+			 * @return array|null The modified status data.
+			 */
+			$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
+
 			if ( $status ) {
 				$context['ancestors'][] = $status;
 			}
@@ -1718,9 +1760,17 @@ class Mastodon_API {
 		// 2764 = heart
 		do_action( 'mastodon_api_react', $post_id, '2b50' );
 
-		$post = get_post( $post_id );
+		/**
+		 * Modify the status data.
+		 *
+		 * @param array|null $account The status data.
+		 * @param int $post_id The object ID to get the status from.
+		 * @param array $data Additional status data.
+		 * @return array|null The modified status data.
+		 */
+		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
 
-		return $this->get_status_array( $post );
+		return $status;
 	}
 
 	public function api_unfavourite_post( $request ) {
@@ -1735,9 +1785,17 @@ class Mastodon_API {
 		// 2764 = heart
 		do_action( 'mastodon_api_unreact', $post_id, '2b50' );
 
-		$post = get_post( $post_id );
+		/**
+		 * Modify the status data.
+		 *
+		 * @param array|null $account The status data.
+		 * @param int $post_id The object ID to get the status from.
+		 * @param array $data Additional status data.
+		 * @return array|null The modified status data.
+		 */
+		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
 
-		return $this->get_status_array( $post );
+		return $status;
 	}
 
 	public function api_reblog_post( $request ) {
@@ -1753,9 +1811,18 @@ class Mastodon_API {
 		if ( $post ) {
 			do_action( 'mastodon_api_reblog', $post );
 		}
-		$post = get_post( $post_id );
 
-		return $this->get_status_array( $post );
+		/**
+		 * Modify the status data.
+		 *
+		 * @param array|null $account The status data.
+		 * @param int $post_id The object ID to get the status from.
+		 * @param array $data Additional status data.
+		 * @return array|null The modified status data.
+		 */
+		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
+
+		return $status;
 	}
 
 	public function api_unreblog_post( $request ) {
@@ -1770,9 +1837,18 @@ class Mastodon_API {
 		if ( $post ) {
 			do_action( 'mastodon_api_unreblog', $post );
 		}
-		$post = get_post( $post_id );
 
-		return $this->get_status_array( $post );
+		/**
+		 * Modify the status data.
+		 *
+		 * @param array|null $account The status data.
+		 * @param int $post_id The object ID to get the status from.
+		 * @param array $data Additional status data.
+		 * @return array|null The modified status data.
+		 */
+		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
+
+		return $status;
 	}
 
 	public function api_delete_post( $request ) {
@@ -1795,7 +1871,17 @@ class Mastodon_API {
 			wp_trash_post( $post_id );
 		}
 
-		return $this->get_status_array( get_post( $post_id ) );
+		/**
+		 * Modify the status data.
+		 *
+		 * @param array|null $account The status data.
+		 * @param int $post_id The object ID to get the status from.
+		 * @param array $data Additional status data.
+		 * @return array|null The modified status data.
+		 */
+		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
+
+		return $status;
 	}
 
 	public function api_get_post( $request ) {
@@ -1825,9 +1911,10 @@ class Mastodon_API {
 		 *
 		 * @param array|null $account The status data.
 		 * @param int $post_id The object ID to get the status from.
+		 * @param array $data Additional status data.
 		 * @return array|null The modified status data.
 		 */
-		$status = apply_filters( 'mastodon_api_status', null, $post_id );
+		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
 
 		if ( ! is_array( $status ) ) {
 			return new \WP_Error( 'invalid-status', 'Invalid status', array( 'status' => 404 ) );
@@ -1969,7 +2056,21 @@ class Mastodon_API {
 
 		$args = apply_filters( 'mastodon_api_account_statuses_args', $args, $request );
 
-		return $this->get_posts( $args );
+		/**
+		 * Filter the account statuses.
+		 *
+		 * @param array|null $statuses Current statuses.
+		 * @param array $args Current statuses arguments.
+		 * @param int|null $min_id Optional minimum status ID.
+		 * @param int|null $max_id Optional maximum status ID.
+		 */
+		$statuses = apply_filters( 'mastodon_api_statuses', null, $args, null, null );
+
+		if ( is_wp_error( $statuses ) || empty( $statuses ) ) {
+			return new \WP_Error( 'invalid-statuses', 'Invalid statuses', array( 'status' => 404 ) );
+		}
+
+		return $statuses;
 	}
 
 	/**
