@@ -52,6 +52,9 @@ class Mastodon_API {
 
 		// Register Handlers.
 		new Handler\Account();
+		new Handler\Notification();
+		new Handler\Search();
+		new Handler\Timeline();
 	}
 
 	public function register_hooks() {
@@ -596,7 +599,7 @@ class Mastodon_API {
 			'api/v1/timelines/(tag)/(?P<hashtag>[^/]+)',
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
-				'callback'            => array( $this, 'api_tag_timelines' ),
+				'callback'            => array( $this, 'api_tag_timeline' ),
 				'permission_callback' => $this->required_scope( 'read:statuses' ),
 			)
 		);
@@ -767,9 +770,8 @@ class Mastodon_API {
 			}
 			return true;
 		}
-		$this->app = Mastodon_App::get_by_client_id( $token['client_id'] );
-		$this->app->was_used( $request );
 		wp_set_current_user( $token['user_id'] );
+		Mastodon_App::set_current_app( $token['client_id'], $request );
 		return is_user_logged_in();
 	}
 
@@ -790,7 +792,7 @@ class Mastodon_API {
 		if ( ! empty( $_SERVER['HTTP_AUTHORIZATION'] ) ) {
 			$this->oauth->get_token();
 		}
-		$app = $this->app;
+		$app = Mastodon_App::get_current_app();
 		if ( ! $app ) {
 			$app = Mastodon_App::get_debug_app();
 		}
@@ -852,9 +854,8 @@ class Mastodon_API {
 		}
 
 		OAuth2\Access_Token_Storage::was_used( $token['access_token'] );
-		$this->app = Mastodon_App::get_by_client_id( $token['client_id'] );
 		wp_set_current_user( $token['user_id'] );
-		$this->app->was_used( $request );
+		Mastodon_App::set_current_app( $token['client_id'], $request );
 		return is_user_logged_in();
 	}
 
@@ -865,8 +866,7 @@ class Mastodon_API {
 			return is_user_logged_in();
 		}
 		OAuth2\Access_Token_Storage::was_used( $token['access_token'] );
-		$this->app = Mastodon_App::get_by_client_id( $token['client_id'] );
-		$this->app->was_used( $request );
+		Mastodon_App::set_current_app( $token['client_id'], $request );
 		return true;
 	}
 
@@ -942,8 +942,9 @@ class Mastodon_API {
 			}
 		}
 
-		if ( $this->app ) {
-			$args = $this->app->modify_wp_query_args( $args );
+		$app = Mastodon_App::get_current_app();
+		if ( $app ) {
+			$args = $app->modify_wp_query_args( $args );
 		} else {
 			$args['tax_query'] = array(
 				array(
@@ -1382,7 +1383,11 @@ class Mastodon_API {
 		$post_data['post_type']    = 'post';
 		$post_data['post_title']   = '';
 
-		$app_post_formats = $this->app->get_post_formats();
+		$app = Mastodon_App::get_current_app();
+		$app_post_formats = array();
+		if ( $app ) {
+			$app_post_formats = $app->get_post_formats();
+		}
 		if ( empty( $app_post_formats ) ) {
 			$app_post_formats = array( 'status' );
 		}
@@ -1558,21 +1563,48 @@ class Mastodon_API {
 	}
 
 	public function api_timelines( $request ) {
-		$args = $this->get_posts_query_args( $request );
-		if ( empty( $args ) ) {
-			return array();
-		}
-		$args = apply_filters( 'mastodon_api_timelines_args', $args, $request );
-
-		return $this->get_posts( $args, $request->get_param( 'min_id' ), $request->get_param( 'max_id' ) );
+		/**
+		 * Modify the timelines data returned for `/api/timelines/(home)` requests.
+		 *
+		 * @param Entity\Status[]  $statuses The statuses data.
+		 * @param \WP_REST_Request $request  The request object.
+		 * @return Entity\Status[] The modified statuses data.
+		 *
+		 * Example:
+		 * ```php
+		 * ```
+		 */
+		return \apply_filters( 'mastodon_api_timelines', null, $request );
 	}
 
-	public function api_tag_timelines( $request ) {
-		$args = $this->get_posts_query_args( $request );
-		$args['tag'] = $request->get_param( 'hashtag' );
-		$args = apply_filters( 'mastodon_api_timelines_args', $args, $request );
+	public function api_tag_timeline( $request ) {
+		/**
+		 * Modify the timelines data returned for `/api/timelines/(tag)/` requests.
+		 *
+		 * @param Entity\Status[]  $statuses The statuses data.
+		 * @param \WP_REST_Request $request  The request object.
+		 * @return Entity\Status[] The modified statuses data.
+		 *
+		 * Example:
+		 * ```php
+		 * ```
+		 */
+		return \apply_filters( 'mastodon_api_tag_timeline', null, $request );
+	}
 
-		return $this->get_posts( $args, $request->get_param( 'min_id' ), $request->get_param( 'max_id' ) );
+	public function api_public_timeline( $request ) {
+		/**
+		 * Modify the public timelines data returned for `/api/timelines/(public)` requests.
+		 *
+		 * @param Entity\Status[]  $statuses The statuses data.
+		 * @param \WP_REST_Request $request  The request object.
+		 * @return Entity\Status[] The modified statuses data.
+		 *
+		 * Example:
+		 * ```php
+		 * ```
+		 */
+		return \apply_filters( 'mastodon_api_public_timeline', null, $request );
 	}
 
 	public function api_accounts_search( $request ) {
@@ -1594,20 +1626,6 @@ class Mastodon_API {
 
 	public function api_push_subscription( $request ) {
 		return array();
-	}
-
-	public function api_public_timeline( $request ) {
-		$args = $this->get_posts_query_args( $request );
-		if ( empty( $args ) ) {
-			return array();
-		}
-
-		// Only get the published posts for the public timeline.
-		$args['post_status'] = array( 'publish' );
-
-		$args = apply_filters( 'mastodon_api_timelines_args', $args, $request );
-
-		return $this->get_posts( $args, $request->get_param( 'min_id' ), $request->get_param( 'max_id' ) );
 	}
 
 	public function api_get_post_context( $request ) {
@@ -2778,6 +2796,11 @@ class Mastodon_API {
 	public function api_announcements() {
 		$ret = array();
 
+		$app = Mastodon_App::get_current_app();
+		if ( ! $app ) {
+			return $ret;
+		}
+
 		$content   = array();
 		$content[] = sprintf(
 			// Translators: %1$s is a URL, %2$s is the domain of your blog.
@@ -2788,17 +2811,17 @@ class Mastodon_API {
 
 		$content[] = sprintf(
 			// Translators: %s is the post formats.
-			_n( 'Posts with the post format <strong>%s</strong> will appear in this app.', 'Posts with the post formats <strong>%s</strong> will appear in this app.', count( $this->app->get_post_formats() ), 'enable-mastodon-apps' ),
-			implode( ', ', $this->app->get_post_formats() )
+			_n( 'Posts with the post format <strong>%s</strong> will appear in this app.', 'Posts with the post formats <strong>%s</strong> will appear in this app.', count( $app->get_post_formats() ), 'enable-mastodon-apps' ),
+			implode( ', ', $app->get_post_formats() )
 		);
 
 		$content[] = sprintf(
 			// Translators: %s is the post format.
 			__( 'If you create a new note in this app, it will be created with the <strong>%s</strong> post format.', 'enable-mastodon-apps' ),
-			reset( $this->app->get_post_formats() )
+			reset( $app->get_post_formats() )
 		);
 
-		if ( 'standard' === reset( $this->app->get_post_formats() ) ) {
+		if ( 'standard' === reset( $app->get_post_formats() ) ) {
 			$content[] = __( 'If you want to create a post in WordPress with a title, add a new line after the title. The first line will then appear as the title of the post.', 'enable-mastodon-apps' );
 		} else {
 			$content[] = __( 'Because a new post is not created in the standard post format, it will be published without title. To change this, select the <strong>standard</strong> post format in the Enable Mastodon Apps settings.', 'enable-mastodon-apps' );
@@ -2807,7 +2830,7 @@ class Mastodon_API {
 		$ret[] = array(
 			'id'           => 1,
 			'content'      => '<h1><strong>' . __( 'Mastodon Apps', 'enable-mastodon-apps' ) . '</strong></h1><p>' . implode( '</p><p>' . PHP_EOL, $content ) . '</p>',
-			'published_at' => $this->app->get_creation_date(),
+			'published_at' => $app->get_creation_date(),
 			'updated_at'   => time(),
 			'starts_at'    => null,
 			'ends_at'      => null,
