@@ -981,13 +981,9 @@ class Mastodon_API {
 	 * @return     array   The potentially modified default value.
 	 */
 	public function default_option_mastodon_api_default_post_formats( $post_formats ) {
-		if ( ! defined( 'FRIENDS_VERSION' ) ) {
-			$post_formats = array(
-				'standard',
-			);
-		}
-
-		return $post_formats;
+		return array(
+			'standard',
+		);
 	}
 
 	public function api_verify_credentials( $request ) {
