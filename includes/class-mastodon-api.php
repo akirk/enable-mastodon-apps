@@ -692,6 +692,14 @@ class Mastodon_API {
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_account_followers' ),
 				'permission_callback' => array( $this, 'public_api_permission' ),
+				'args'                => array(
+					'limit' => array(
+						'type'        => 'integer',
+						'description' => 'Maximum number of results to return',
+						'default'     => 40,
+						'maximum'     => 80,
+					),
+				),
 			)
 		);
 
@@ -702,6 +710,25 @@ class Mastodon_API {
 				'methods'             => array( 'POST', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_account_follow' ),
 				'permission_callback' => $this->required_scope( 'write:follows' ),
+				'args'                => array(
+					'reblogs'   => array(
+						'type'        => 'boolean',
+						'description' => 'Whether to also follow the account&#8217;s reblogs',
+						'default'     => true,
+					),
+					'notify'    => array(
+						'type'        => 'boolean',
+						'description' => 'Whether to also send a notification to the account',
+						'default'     => false,
+					),
+					'languages' => array(
+						'type'        => 'array',
+						'description' => ' Filter received statuses for these languages. If not provided, you will receive this account’s posts in all languages.',
+						'items'       => array(
+							'type' => 'string',
+						),
+					),
+				),
 			)
 		);
 
