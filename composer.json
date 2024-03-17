@@ -34,6 +34,8 @@
 			"@php ./vendor/bin/phpcbf"
 		],
 		"test": [
+      "composer install",
+      "bin/install-wp-tests.sh ema-test root ema-test test-db latest true",
 			"@php ./vendor/phpunit/phpunit/phpunit --no-coverage"
 		]
 	},
