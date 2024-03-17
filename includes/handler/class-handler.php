@@ -9,6 +9,8 @@
 
 namespace Enable_Mastodon_Apps\Handler;
 
+use Enable_Mastodon_Apps\Mastodon_API;
+
 /**
  * This is the generic handler to provide needed helper functions.
  */
@@ -36,17 +38,20 @@ class Handler {
 			}
 		}
 
+		/*
+		// @TODO bring back Application check
 		if ( $this->app ) {
 			$args = $this->app->modify_wp_query_args( $args );
-		} else {
-			$args['tax_query'] = array(
-				array(
-					'taxonomy' => 'post_format',
-					'field'    => 'slug',
-					'terms'    => array( 'post-format-status' ),
-				),
-			);
 		}
+		*/
+
+		$args['tax_query'] = array(
+			array(
+				'taxonomy' => 'post_format',
+				'field'    => 'slug',
+				'terms'    => array( 'post-format-status' ),
+			),
+		);
 
 		$post_id = $request->get_param( 'post_id' );
 		if ( $post_id ) {
@@ -396,39 +401,6 @@ class Handler {
 		return $data;
 	}
 
-	protected function get_notification_array( $type, $date, $account, $status = array() ) {
-		$notification = array(
-			'id'         => preg_replace( '/[^0-9]/', '', $date ),
-			'created_at' => $date,
-		);
-		switch ( $type ) {
-			// As per https://docs.joinmastodon.org/entities/Notification/.
-			case 'mention': // Someone mentioned you in their status.
-			case 'status': // Someone you enabled notifications for has posted a status.
-			case 'reblog': // Someone boosted one of your statuses.
-			case 'follow': // Someone followed you.
-			case 'follow_request': // Someone requested to follow you.
-			case 'favourite': // Someone favourited one of your statuses.
-			case 'poll': // A poll you have voted in or created has ended.
-			case 'update': // A status you interacted with has been edited.
-				$notification['type'] = $type;
-				break;
-			default:
-				return array();
-		}
-
-		if ( $account ) {
-			$notification['account'] = $account;
-		}
-
-		if ( $status ) {
-			$notification['status'] = $status;
-			$notification['id'] .= $status['id'];
-		}
-
-		return $notification;
-	}
-
 	protected function convert_outbox_to_status( $outbox, $user_id ) {
 		$items = array();
 		foreach ( $outbox['orderedItems'] as $item ) {
@@ -694,7 +666,7 @@ class Handler {
 		}
 
 		if (
-			preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id )
+			preg_match( '/^@?' . Mastodon_API::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id )
 			|| $url
 		) {
 			if ( ! is_user_logged_in() ) {
@@ -739,7 +711,7 @@ class Handler {
 		// $placeholder_image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 
 		if (
-			preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id )
+			preg_match( '/^@?' . Mastodon_API::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id )
 			|| $url
 		) {
 			if ( ! $remote_user_id ) {
