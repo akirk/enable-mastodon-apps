@@ -933,7 +933,7 @@ class Mastodon_API {
 
 		$args = array(
 			'posts_per_page'   => $limit,
-			'post_type'        => apply_filters( 'friends_frontend_post_types', array( 'post' ) ),
+			'post_type'        => array( 'post', ),
 			'suppress_filters' => false,
 			'post_status'      => array( 'publish', 'private' ),
 		);
@@ -966,7 +966,7 @@ class Mastodon_API {
 			$args['p'] = $post_id;
 		}
 
-		return $args;
+		return apply_filters( 'enable_mastodon_apps_get_posts_query_args', $args, $request );
 	}
 
 	private function get_posts( $args, $min_id = null, $max_id = null ) {
