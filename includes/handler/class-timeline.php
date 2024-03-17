@@ -33,7 +33,8 @@ class Timeline extends Handler {
 	/**
 	 * Handle timeline requests.
 	 *
-	 * @param WP_REST_Request $request The request object.
+	 * @param Entity\Status[] $statuses An array of Status objects.
+	 * @param WP_REST_Request $request  The request object.
 	 *
 	 * @return Entity\Status[]|array An array of Status objects.
 	 */
@@ -50,6 +51,7 @@ class Timeline extends Handler {
 	/**
 	 * Handle tag timeline requests.
 	 *
+	 * @param Entity\Status[] $statuses An array of Status objects.
 	 * @param WP_REST_Request $request The request object.
 	 *
 	 * @return Entity\Status[]|array An array of Status objects.
@@ -65,6 +67,7 @@ class Timeline extends Handler {
 	/**
 	 * Handle public simeline requests
 	 *
+	 * @param Entity\Status[] $statuses An array of Status objects.
 	 * @param WP_REST_Request $request The request object.
 	 *
 	 * @return Entity\Status[]|array An array of Status objects.
