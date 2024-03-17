@@ -1735,7 +1735,7 @@ class Mastodon_API {
 		 */
 		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
 
-		// TODO: replace with validate_entity() as soon as available
+		// TODO: replace with validate_entity() as soon as available.
 		if ( ! $status instanceof Entity\Status ) {
 			return new \WP_Error( 'invalid-status', 'Invalid status', array( 'status' => 404 ) );
 		}
