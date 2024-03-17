@@ -131,7 +131,7 @@ class Mastodon_App {
 				delete_metadata( 'term', $this->term->term_id, 'request', $request );
 				continue;
 			}
-			$requests[ $request['timestamp'] * 10000 ] = $request;
+			$requests[ intval( $request['timestamp'] * 10000 ) ] = $request;
 		}
 
 		ksort( $requests );
