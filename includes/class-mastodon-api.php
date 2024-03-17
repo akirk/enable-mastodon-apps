@@ -54,6 +54,7 @@ class Mastodon_API {
 		new Handler\Account();
 		new Handler\Notification();
 		new Handler\Search();
+		new Handler\Status();
 		new Handler\Timeline();
 	}
 
@@ -1825,7 +1826,20 @@ class Mastodon_API {
 			return new \WP_REST_Response( array( 'error' => 'Record not found' ), 404 );
 		}
 
-		return $this->get_status_array( $post );
+		/**
+		 * Modify the status data.
+		 *
+		 * @param array|null $account The status data.
+		 * @param int $post_id The object ID to get the status from.
+		 * @return array|null The modified status data.
+		 */
+		$status = apply_filters( 'mastodon_api_status', null, $post_id );
+
+		if ( ! is_array( $status ) ) {
+			return new \WP_Error( 'invalid-status', 'Invalid status', array( 'status' => 404 ) );
+		}
+
+		return $status;
 	}
 
 	private function convert_outbox_to_status( $outbox, $user_id ) {
