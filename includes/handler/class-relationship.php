@@ -11,13 +11,14 @@ namespace Enable_Mastodon_Apps\Handler;
 
 use Enable_Mastodon_Apps\Entity\Relationship as Relationship_Entity;
 use Enable_Mastodon_Apps\Mastodon_API;
+use Enable_Mastodon_Apps\Handler\Handler;
 
 /**
  * This is the class that implements the default handler for all Relationship endpoints.
  *
  * @package Enable_Mastodon_Apps
  */
-class Relationship {
+class Relationship extends Handler {
 	/**
 	 * Relationship constructor.
 	 */

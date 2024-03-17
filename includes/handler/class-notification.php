@@ -9,6 +9,7 @@
 
 namespace Enable_Mastodon_Apps\Handler;
 
+use Enable_Mastodon_Apps\Handler\Handler;
 use Enable_Mastodon_Apps\Entity\Notification as Notification_Entity;
 
 /**
