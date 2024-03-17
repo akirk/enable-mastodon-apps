@@ -1457,6 +1457,22 @@ class Mastodon_API {
 			}
 		}
 
+		$categories = get_categories( array( 'orderby' => 'name', 'hide_empty' => false ) );
+		$post_data['post_category'] = array();
+		foreach( $categories as $category ) {
+			if( stristr( $status, '#' . $category->name ) !== false ) {
+				$post_data['post_category'][] = $category->term_id;
+			}
+		}
+
+		$tags = get_tags( array( 'orderby' => 'name', 'hide_empty' => false ) );
+		$post_data['tags_input'] = array();
+		foreach( $tags as $tag ) {
+			if( stristr( $status, '#' . $tag->name ) !== false ) {
+				$post_data['tags_input'][] = $tag->name;
+			}
+		}
+
 		$post_id = wp_insert_post( $post_data );
 		if ( is_wp_error( $post_id ) ) {
 			return $post_id;
