@@ -70,7 +70,6 @@ class Mastodon_API {
 		add_filter( 'rest_pre_serve_request', array( $this, 'allow_cors' ), 10, 4 );
 		add_filter( 'rest_pre_echo_response', array( $this, 'reformat_error_response' ), 10, 3 );
 		add_filter( 'template_include', array( $this, 'log_404s' ) );
-		add_filter( 'activitypub_post', array( $this, 'activitypub_post' ), 10, 2 );
 		add_filter( 'enable_mastodon_apps_get_json', array( $this, 'get_json' ), 10, 4 );
 		add_action( 'default_option_mastodon_api_default_post_formats', array( $this, 'default_option_mastodon_api_default_post_formats' ) );
 	}
@@ -931,19 +930,6 @@ class Mastodon_API {
 		return true;
 	}
 
-	public function activitypub_post( $data, $post ) {
-		if ( $post->post_parent ) {
-			$parent_post = get_post( $post->post_parent );
-			$data['inReplyTo'] = $parent_post->guid;
-		}
-
-		if ( get_post_meta( $post->ID, 'activitypub_in_reply_to', true ) ) {
-			$data['inReplyTo'] = get_post_meta( $post->ID, 'activitypub_in_reply_to', true );
-		}
-
-		return $data;
-	}
-
 	/**
 	 * Set the default post format.
 	 *
@@ -1227,7 +1213,7 @@ class Mastodon_API {
 				'reblogged_by'           => $reblogged_by,
 				'muted'                  => false,
 				'bookmarked'             => false,
-				'content'                => $this->normalize_whitespace( $post->post_title . PHP_EOL . $post->post_content ),
+				'content'                => $post->post_title . PHP_EOL . $post->post_content,
 				'filtered'               => array(),
 				'reblog'                 => null,
 				'account'                => $account_data,

@@ -268,7 +268,7 @@ class Handler {
 				'reblogged_by'           => $reblogged_by,
 				'muted'                  => false,
 				'bookmarked'             => false,
-				'content'                => $this->normalize_whitespace( $post->post_title . PHP_EOL . $post->post_content ),
+				'content'                => $post->post_title . PHP_EOL . $post->post_content,
 				'filtered'               => array(),
 				'reblog'                 => null,
 				'account'                => $account_data,
