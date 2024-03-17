@@ -45,7 +45,7 @@ class InstanceEndpoint_Test extends Mastodon_API_TestCase {
 
 		$this->assertTrue( property_exists( $data, 'email' ) );
 		$this->assertIsString( $data->email );
-		$this->assertEquals( $data->email, 'not@public.example' );
+		$this->assertEquals( $data->email, get_option( 'admin_emil' ) );
 
 		$this->assertTrue( property_exists( $data, 'version' ) );
 		$this->assertIsString( $data->version );
