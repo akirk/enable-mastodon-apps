@@ -9,6 +9,7 @@
 
 namespace Enable_Mastodon_Apps\Handler;
 
+use Enable_Mastodon_Apps\Mastodon_API;
 use Enable_Mastodon_Apps\Entity\Search as Search_Entity;
 
 /**
@@ -53,7 +54,7 @@ class Search extends Handler {
 			$ret['statuses'][] = $this->convert_activity_to_status( array( 'object' => $status ), $status['attributedTo'] );
 		} else {
 			if ( ! $type || 'accounts' === $type ) {
-				if ( preg_match( '/^@?' . Enable_Mastodon_Apps::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $q ) && ! $request->get_param( 'offset' ) ) {
+				if ( preg_match( '/^@?' . Mastodon_API::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $q ) && ! $request->get_param( 'offset' ) ) {
 					$ret['accounts'][] = $this->get_friend_account_data( $q, array(), true );
 				}
 				$query = new \WP_User_Query(
