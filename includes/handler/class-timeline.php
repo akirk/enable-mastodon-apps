@@ -43,6 +43,15 @@ class Timeline extends Handler {
 		if ( empty( $args ) ) {
 			return array();
 		}
+
+		/**
+		 * Filter the query arguments for the timeline.
+		 *
+		 * @param array           $args    The query arguments.
+		 * @param WP_REST_Request $request The request object.
+		 *
+		 * @return array The modified query arguments.
+		 */
 		$args = apply_filters( 'mastodon_api_timelines_args', $args, $request );
 
 		return $this->get_posts( $args, $request->get_param( 'min_id' ), $request->get_param( 'max_id' ) );
@@ -59,6 +68,15 @@ class Timeline extends Handler {
 	public function api_tag_timelines( $statuses, $request ) {
 		$args = $this->get_posts_query_args( $request );
 		$args['tag'] = $request->get_param( 'hashtag' );
+
+		/**
+		 * Filter the query arguments for the timeline.
+		 *
+		 * @param array           $args    The query arguments.
+		 * @param WP_REST_Request $request The request object.
+		 *
+		 * @return array The modified query arguments.
+		 */
 		$args = apply_filters( 'mastodon_api_timelines_args', $args, $request );
 
 		return $this->get_posts( $args, $request->get_param( 'min_id' ), $request->get_param( 'max_id' ) );
@@ -81,6 +99,14 @@ class Timeline extends Handler {
 		// Only get the published posts for the public timeline.
 		$args['post_status'] = array( 'publish' );
 
+		/**
+		 * Filter the query arguments for the timeline.
+		 *
+		 * @param array           $args    The query arguments.
+		 * @param WP_REST_Request $request The request object.
+		 *
+		 * @return array The modified query arguments.
+		 */
 		$args = apply_filters( 'mastodon_api_timelines_args', $args, $request );
 
 		return $this->get_posts( $args, $request->get_param( 'min_id' ), $request->get_param( 'max_id' ) );
