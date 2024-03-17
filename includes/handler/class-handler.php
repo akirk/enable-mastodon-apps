@@ -347,7 +347,7 @@ class Handler {
 					);
 				}
 			}
-			$data['content'] = $this->normalize_whitespace( substr( $data['content'], 0, $p ) . substr( $data['content'], $e + 18 ) );
+			$data['content'] = substr( $data['content'], 0, $p ) . substr( $data['content'], $e + 18 );
 			$p = strpos( $data['content'], '<!-- wp:image' );
 		}
 
@@ -404,6 +404,8 @@ class Handler {
 		if ( ! empty( $reactions ) ) {
 			$data['favourited'] = true;
 		}
+
+		$data['content'] = $this->normalize_whitespace( $data['content'] );
 
 		return $data;
 	}
