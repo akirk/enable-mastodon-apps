@@ -52,6 +52,9 @@ class Mastodon_API {
 
 		// Register Handlers.
 		new Handler\Account();
+		new Handler\Notification();
+		new Handler\Search();
+		new Handler\Timeline();
 	}
 
 	public function register_hooks() {
@@ -596,7 +599,7 @@ class Mastodon_API {
 			'api/v1/timelines/(tag)/(?P<hashtag>[^/]+)',
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
-				'callback'            => array( $this, 'api_tag_timelines' ),
+				'callback'            => array( $this, 'api_tag_timeline' ),
 				'permission_callback' => $this->required_scope( 'read:statuses' ),
 			)
 		);
@@ -1563,35 +1566,45 @@ class Mastodon_API {
 		/**
 		 * Modify the timelines data returned for `/api/timelines/(home)` requests.
 		 *
-		 * @param Entity\Status[] $statuses The statuses data.
-		 * @param \WP_REST_Request $request The request object.
+		 * @param Entity\Status[]  $statuses The statuses data.
+		 * @param \WP_REST_Request $request  The request object.
 		 * @return Entity\Status[] The modified statuses data.
 		 *
 		 * Example:
 		 * ```php
 		 * ```
 		 */
-		$timelines = \apply_filters( 'mastodon_api_timelines', null, $request );
-
-		foreach ( $timelines as $timeline ) {
-			if ( ! $timeline instanceof Entity\Timeline ) {
-				return new \WP_Error( 'invalid-user', 'Invalid user', array( 'status' => 404 ) );
-			}
-
-			if ( ! $timeline->is_valid() ) {
-				return new \WP_Error( 'integrity-error', 'Integrity Error', array( 'status' => 500 ) );
-			}
-		}
-
-		return $timelines;
+		return \apply_filters( 'mastodon_api_timelines', null, $request );
 	}
 
-	public function api_tag_timelines( $request ) {
-		$args = $this->get_posts_query_args( $request );
-		$args['tag'] = $request->get_param( 'hashtag' );
-		$args = apply_filters( 'mastodon_api_timelines_args', $args, $request );
+	public function api_tag_timeline( $request ) {
+		/**
+		 * Modify the timelines data returned for `/api/timelines/(tag)/` requests.
+		 *
+		 * @param Entity\Status[]  $statuses The statuses data.
+		 * @param \WP_REST_Request $request  The request object.
+		 * @return Entity\Status[] The modified statuses data.
+		 *
+		 * Example:
+		 * ```php
+		 * ```
+		 */
+		return \apply_filters( 'mastodon_api_tag_timeline', null, $request );
+	}
 
-		return $this->get_posts( $args, $request->get_param( 'min_id' ), $request->get_param( 'max_id' ) );
+	public function api_public_timeline( $request ) {
+		/**
+		 * Modify the public timelines data returned for `/api/timelines/(public)` requests.
+		 *
+		 * @param Entity\Status[]  $statuses The statuses data.
+		 * @param \WP_REST_Request $request  The request object.
+		 * @return Entity\Status[] The modified statuses data.
+		 *
+		 * Example:
+		 * ```php
+		 * ```
+		 */
+		return \apply_filters( 'mastodon_api_public_timeline', null, $request );
 	}
 
 	public function api_accounts_search( $request ) {
@@ -1613,20 +1626,6 @@ class Mastodon_API {
 
 	public function api_push_subscription( $request ) {
 		return array();
-	}
-
-	public function api_public_timeline( $request ) {
-		$args = $this->get_posts_query_args( $request );
-		if ( empty( $args ) ) {
-			return array();
-		}
-
-		// Only get the published posts for the public timeline.
-		$args['post_status'] = array( 'publish' );
-
-		$args = apply_filters( 'mastodon_api_timelines_args', $args, $request );
-
-		return $this->get_posts( $args, $request->get_param( 'min_id' ), $request->get_param( 'max_id' ) );
 	}
 
 	public function api_get_post_context( $request ) {
