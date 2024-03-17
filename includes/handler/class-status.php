@@ -9,6 +9,8 @@
 
 namespace Enable_Mastodon_Apps\Handler;
 
+use Enable_Mastodon_Apps\Handler;
+
 /**
  * This is the class that implements the default handler for all Status endpoints.
  *
