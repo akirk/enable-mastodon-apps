@@ -24,18 +24,20 @@ class Status extends Handler {
 	}
 
 	public function register_hooks() {
-		add_filter( 'mastodon_api_status', array( $this, 'api_status' ), 10, 2 );
+		add_filter( 'mastodon_api_status', array( $this, 'api_status' ), 10, 3 );
+		add_filter( 'mastodon_api_statuses', array( $this, 'api_statuses' ), 10, 4 );
 	}
 
 	/**
 	 * Get a status array.
 	 * TODO: Replace array with Entity\Status
 	 *
-	 * @param array|array $status Current status array.
-	 * @param int         $object_id The object ID to get the status from.
+	 * @param array|null $status Current status array.
+	 * @param int        $object_id The object ID to get the status from.
+	 * @param array      $data Additional status data.
 	 * @return array The status array
 	 */
-	public function api_status( ?array $status, int $object_id ) {
+	public function api_status( ?array $status, int $object_id, array $data = array() ): array {
 		$comment = get_comment( $object_id );
 
 		if ( $comment instanceof \WP_Comment ) {
@@ -45,9 +47,22 @@ class Status extends Handler {
 		$post = get_post( $object_id );
 
 		if ( $post instanceof \WP_Post ) {
-			return $this->get_status_array( $post );
+			return $this->get_status_array( $post, $data );
 		}
 
 		return $status;
+	}
+
+	/**
+	 * Get a list of statuses.
+	 *
+	 * @param array|null $statuses Current statuses.
+	 * @param array      $args Current statuses arguments.
+	 * @param int|null   $min_id Optional minimum status ID.
+	 * @param int|null   $max_id Optional maximum status ID.
+	 * @return array
+	 */
+	public function api_statuses( ?array $statuses, array $args, ?int $min_id = null, ?int $max_id = null ): array {
+		return $this->get_posts( $args, $min_id, $max_id );
 	}
 }
