@@ -29,11 +29,11 @@ class Status extends Handler {
 	 * Get a status array.
 	 * TODO: Replace array with Entity\Status
 	 *
-	 * @param array $status Current status array.
-	 * @param int   $object_id The object ID to get the status from.
+	 * @param array|array $status Current status array.
+	 * @param int         $object_id The object ID to get the status from.
 	 * @return array The status array
 	 */
-	public function api_status( array $status, int $object_id ) {
+	public function api_status( ?array $status, int $object_id ) {
 		$comment = get_comment( $object_id );
 
 		if ( $comment instanceof \WP_Comment ) {
