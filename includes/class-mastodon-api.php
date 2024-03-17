@@ -1827,12 +1827,12 @@ class Mastodon_API {
 		}
 
 		/**
-		* Modify the status data.
-		*
-		* @param array|null $account The status data.
-		* @param int $post_id The object ID to get the status from.
-		* @return array|null The modified status data.
-		*/
+		 * Modify the status data.
+		 *
+		 * @param array|null $account The status data.
+		 * @param int $post_id The object ID to get the status from.
+		 * @return array|null The modified status data.
+		 */
 		$status = apply_filters( 'mastodon_api_status', null, $post_id );
 
 		if ( ! is_array( $status ) ) {
