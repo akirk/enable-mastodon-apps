@@ -9,12 +9,13 @@
 
 namespace Enable_Mastodon_Apps\Handler;
 
+use Enable_Mastodon_Apps\Handler;
 use Enable_Mastodon_Apps\Entity\Media_Attachment as Media_Attachment_Entity;
 
 /**
  * This is the class that implements the default handler for all Media endpoints.
  */
-class Media_Attachment {
+class Media_Attachment extends Handler {
 	public function __construct() {
 		$this->register_hooks();
 	}

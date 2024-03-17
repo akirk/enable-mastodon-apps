@@ -10,6 +10,7 @@
 namespace Enable_Mastodon_Apps\Handler;
 
 use WP_REST_Request;
+use Enable_Mastodon_Apps\Handler;
 use Enable_Mastodon_Apps\Entity\Timeline as Timeline_Entity;
 
 /**
