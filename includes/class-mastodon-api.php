@@ -1036,7 +1036,7 @@ class Mastodon_API {
 			$args['p'] = $post_id;
 		}
 
-		return apply_filters( 'enable_mastodon_apps_get_posts_query_args', $args, $request );
+		return apply_filters( 'mastodon_api_get_posts_query_args', $args, $request );
 	}
 
 	private function get_posts( $args, $min_id = null, $max_id = null ) {
