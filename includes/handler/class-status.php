@@ -37,7 +37,7 @@ class Status extends Handler {
 	 * @param array      $data Additional status data.
 	 * @return array The status array
 	 */
-	public function api_status( ?array $status, int $object_id, array $data = array() ): array|null {
+	public function api_status( ?array $status, int $object_id, array $data = array() ): ?array {
 		$comment = get_comment( $object_id );
 
 		if ( $comment instanceof \WP_Comment ) {
