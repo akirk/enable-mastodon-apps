@@ -33,23 +33,23 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$data = $response->get_data();
 		$userdata = get_userdata( $this->administrator );
 
-		$this->assertIsString( $data['id'] );
-		$this->assertEquals( $data['id'], strval( $this->friend_post ) );
+		$this->assertIsString( $data->id );
+		$this->assertEquals( $data->id, strval( $this->friend_post ) );
 
-		$this->assertIsArray( $data['account'] );
-		$this->assertIsString( $data['uri'] );
-		$this->assertIsString( $data['content'] );
-		if ( ! empty( $data['in_reply_to_id'] ) ) {
-			$this->assertIsInt( $data['in_reply_to_id'] );
+		$this->assertIsArray( $data->account );
+		$this->assertIsString( $data->uri );
+		$this->assertIsString( $data->content );
+		if ( ! empty( $data->in_reply_to_id ) ) {
+			$this->assertIsInt( $data->in_reply_to_id );
 		}
-		if ( ! empty( $data['in_reply_to_account_id'] ) ) {
-			$this->assertIsInt( $data['in_reply_to_account_id'] );
+		if ( ! empty( $data->in_reply_to_account_id ) ) {
+			$this->assertIsInt( $data->in_reply_to_account_id );
 		}
-		$this->assertIsString( $data['created_at'] );
-		$this->assertTrue( false !== \DateTime::createFromFormat( 'Y-m-d\TH:i:s.uP', $data['created_at'] ) );
-		$this->assertIsInt( $data['replies_count'] );
-		$this->assertIsInt( $data['reblogs_count'] );
-		$this->assertIsInt( $data['favourites_count'] );
+		$this->assertIsString( $data->created_at );
+		$this->assertTrue( false !== \DateTime::createFromFormat( 'Y-m-d\TH:i:s.uP', $data->created_at ) );
+		$this->assertIsInt( $data->replies_count );
+		$this->assertIsInt( $data->reblogs_count );
+		$this->assertIsInt( $data->favourites_count );
 	}
 
 	public function test_statuses_private_id() {
@@ -98,9 +98,9 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertEquals( 200, $response->get_status() );
 
 		$data = $response->get_data();
-		$this->assertIsString( $data['id'] );
-		$this->assertIsNumeric( $data['id'] );
-		$p = get_post( $data['id'] );
+		$this->assertIsString( $data->id );
+		$this->assertIsNumeric( $data->id );
+		$p = get_post( $data->id );
 		$this->assertEquals( $p->post_content, 'test' );
 	}
 
@@ -120,9 +120,9 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertEquals( 200, $response->get_status() );
 
 		$data = $response->get_data();
-		$this->assertIsString( $data['id'] );
-		$this->assertIsNumeric( $data['id'] );
-		$p = get_post( $data['id'] );
+		$this->assertIsString( $data->id );
+		$this->assertIsNumeric( $data->id );
+		$p = get_post( $data->id );
 
 		$this->assertEquals( 'status', get_post_format( $p->ID ) );
 
@@ -140,9 +140,9 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertEquals( 200, $response->get_status() );
 
 		$data = $response->get_data();
-		$this->assertIsString( $data['id'] );
-		$this->assertIsNumeric( $data['id'] );
-		$p = get_post( $data['id'] );
+		$this->assertIsString( $data->id );
+		$this->assertIsNumeric( $data->id );
+		$p = get_post( $data->id );
 		$this->assertFalse( get_post_format( $p->ID ) );
 
 		$this->assertEquals( $p->post_title, 'headline' );
@@ -160,9 +160,9 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertEquals( 200, $response->get_status() );
 
 		$data = $response->get_data();
-		$this->assertIsString( $data['id'] );
-		$this->assertIsNumeric( $data['id'] );
-		$p = get_post( $data['id'] );
+		$this->assertIsString( $data->id );
+		$this->assertIsNumeric( $data->id );
+		$p = get_post( $data->id );
 		$this->assertFalse( get_post_format( $p->ID ) );
 
 		$this->assertEquals( $p->post_title, '<p>headline</p>' );
