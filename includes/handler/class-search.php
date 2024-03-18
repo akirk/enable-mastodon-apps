@@ -45,7 +45,11 @@ class Search extends Handler {
 			'hashtags' => array(),
 		);
 
-		$q = $request->get_param( 'q' );
+		$q = trim( $request->get_param( 'q' ) );
+		// Don't allow empty search queries.
+		if ( '' === $q ) {
+			return $ret;
+		}
 
 		if ( ! $type || 'accounts' === $type ) {
 			if ( preg_match( '/^@?' . Mastodon_API::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $q ) && ! $request->get_param( 'offset' ) ) {
@@ -98,6 +102,37 @@ class Search extends Handler {
 				$args['offset'] = $request->get_param( 'offset' );
 				$args['posts_per_page'] = $request->get_param( 'limit' );
 				$ret['statuses'] = array_merge( $ret['statuses'], $this->get_posts( $args ) );
+			}
+		}
+		if ( ! $type || 'hashtags' === $type ) {
+			$q_param = $request->get_param( 'q' );
+			$categories = get_categories(
+				array(
+					'orderby'    => 'name',
+					'hide_empty' => false,
+					'search'     => $q_param,
+				)
+			);
+			foreach ( $categories as $category ) {
+				$ret['hashtags'][] = array(
+					'name'    => $category->name,
+					'url'     => get_category_link( $category ),
+					'history' => array(),
+				);
+			}
+			$tags = get_tags(
+				array(
+					'orderby'    => 'name',
+					'hide_empty' => false,
+					'search'     => $q_param,
+				)
+			);
+			foreach ( $tags as $tag ) {
+				$ret['hashtags'][] = array(
+					'name'    => $tag->name,
+					'url'     => get_tag_link( $tag ),
+					'history' => array(),
+				);
 			}
 		}
 		return $ret;
