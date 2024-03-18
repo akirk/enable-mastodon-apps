@@ -73,6 +73,7 @@ class Mastodon_API {
 		add_filter( 'template_include', array( $this, 'log_404s' ) );
 		add_filter( 'enable_mastodon_apps_get_json', array( $this, 'get_json' ), 10, 4 );
 		add_action( 'default_option_mastodon_api_default_post_formats', array( $this, 'default_option_mastodon_api_default_post_formats' ) );
+		add_filter( 'rest_request_before_callbacks', array( $this, 'rest_request_before_callbacks' ) );
 	}
 
 	public function allow_cors() {
@@ -1471,6 +1472,21 @@ class Mastodon_API {
 
 		return $post_formats;
 	}
+
+	/**
+	 * Converts param validation errors to error codes expected by Mastodon apps.
+	 *
+	 * @param WP_REST_Response|\WP_HTTP_Response|\WP_Error|mixed $response Result to send to the client.
+	 * @return WP_REST_Response|\WP_HTTP_Response|\WP_Error|mixed
+	 */
+	public function rest_request_before_callbacks( $response ) {
+		if ( is_wp_error( $response ) && 'rest_invalid_param' === $response->get_error_code() ) {
+			$response = new \WP_Error( $response->get_error_code(), $response->get_error_message(), array( 'status' => 422 ) );
+		}
+
+		return $response;
+	}
+
 
 	public function api_verify_credentials( $request ) {
 		$request->set_param( 'user_id', get_current_user_id() );
