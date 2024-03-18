@@ -158,17 +158,17 @@ class Handler {
 		$next_max_id = false;
 		foreach ( $statuses as $status ) {
 			if ( false === $next_max_id ) {
-				$next_max_id = $status['id'];
+				$next_max_id = $status->id;
 			}
 			if ( $min_id ) {
-				if ( $status['id'] !== $min_id ) {
+				if ( $status->id !== $min_id ) {
 					continue;
 				}
 				// We can now include results but need to skip this one.
 				$min_id = null;
 				continue;
 			}
-			if ( $max_id && strval( $max_id ) === $status['id'] ) {
+			if ( $max_id && strval( $max_id ) === $status->id ) {
 				break;
 			}
 			if ( $c-- <= 0 ) {
@@ -181,7 +181,7 @@ class Handler {
 			if ( $next_max_id ) {
 				header( 'Link: <' . add_query_arg( 'max_id', $next_max_id, home_url( strtok( $_SERVER['REQUEST_URI'], '?' ) ) ) . '>; rel="next"', false );
 			}
-			header( 'Link: <' . add_query_arg( 'min_id', $ret[0]['id'], home_url( strtok( $_SERVER['REQUEST_URI'], '?' ) ) ) . '>; rel="prev"', false );
+			header( 'Link: <' . add_query_arg( 'min_id', $ret[0]->id, home_url( strtok( $_SERVER['REQUEST_URI'], '?' ) ) ) . '>; rel="prev"', false );
 		}
 
 		return $ret;
@@ -306,80 +306,43 @@ class Handler {
 			if ( preg_match( '#<img(?:\s+src="(?P<url>[^"]+)"|\s+width="(?P<width>\d+)"|\s+height="(?P<height>\d+)"|\s+class="(?P<class>[^"]+)|\s+.*="[^"]+)+"#i', $img, $img_tag ) ) {
 				if ( ! empty( $img_tag['url'] ) ) {
 					$url = $img_tag['url'];
-					$media_id = crc32( $url );
-					$img_meta = array();
-					foreach ( $attachments as $attachment_id => $attachment ) {
+					$media_id = 0;
+					foreach ( array_keys( $attachments ) as $attachment_id ) {
 						if (
-						wp_get_attachment_url( $attachment_id ) === $url
-						|| ( isset( $img_tag['class'] ) && preg_match( '#\bwp-image-' . $attachment_id . '\b#', $img_tag['class'] ) )
-
+							wp_get_attachment_url( $attachment_id ) === $url
+							|| ( isset( $img_tag['class'] ) && preg_match( '#\bwp-image-' . $attachment_id . '\b#', $img_tag['class'] ) )
 						) {
 							$media_id = $attachment_id;
-							$attachment_metadata = \wp_get_attachment_metadata( $attachment_id );
-							$img_tag['width'] = $attachment_metadata['width'];
-							$img_tag['height'] = $attachment_metadata['height'];
 							unset( $attachments[ $attachment_id ] );
-
-							$img_meta['original'] = array(
-								'width'  => intval( $img_tag['width'] ),
-								'height' => intval( $img_tag['height'] ),
-								'size'   => $img_tag['width'] . 'x' . $img_tag['height'],
-								'aspect' => $img_tag['width'] / max( 1, $img_tag['height'] ),
-							);
-
 							break;
 						}
 					}
-					$data['media_attachments'][] = array(
-						'id'                 => strval( $media_id ),
-						'type'               => 'image',
-						'url'                => $url,
-						'preview_remote_url' => $url,
-						'remote_url'         => $url,
-						'preview_url'        => $url,
-						'text_url'           => $url,
-						'meta'               => array_merge(
-							$img_meta,
-							array(
-								'description' => isset( $attachment ) && $attachment ? $attachment->post_excerpt : '',
-							)
-						),
-					);
+
+					if ( $media_id ) {
+						/**
+						 * Filters the media attachment returned by the API.
+						 *
+						 * @param array $media_attachment The media attachment.
+						 * @param int   $attachment_id    The attachment ID.
+						 * @return Entity\Media_Attachment The media attachment.
+						 */
+						$data['media_attachments'][] = apply_filters( 'mastodon_api_media_attachment', null, $media_id );
+					}
 				}
 			}
 			$data['content'] = substr( $data['content'], 0, $p ) . substr( $data['content'], $e + 18 );
 			$p = strpos( $data['content'], '<!-- wp:image' );
 		}
 
-		foreach ( $attachments as $attachment_id => $attachment ) {
-			$url = wp_get_attachment_url( $attachment_id );
-			$attachment_metadata = wp_get_attachment_metadata( $attachment_id );
-
-			$type = 'image';
-			if ( preg_match( '#^image/#', $attachment_metadata['mime-type'] ) || preg_match( '#\.(gif|png|jpe?g)$#i', $url ) ) {
-				$type = 'image';
-			} elseif ( preg_match( '#^audio/#', $attachment_metadata['mime-type'] ) || preg_match( '#\.(mp3|m4a|wav|aiff)$#i', $url ) ) {
-				$type = 'audio';
-			} elseif ( preg_match( '#^video/#', $attachment_metadata['mime-type'] ) || preg_match( '#\.(mov|mkv|mp4)$#i', $url ) ) {
-				$type = 'video';
-			}
-
-			$data['media_attachments'][] = array(
-				'id'          => strval( $attachment_id ),
-				'type'        => $type,
-				'url'         => $url,
-				'preview_url' => $url,
-				'text_url'    => $url,
-				'meta'        => array(
-					'original' => array(
-						'width'  => intval( $attachment_metadata['width'] ),
-						'height' => intval( $attachment_metadata['height'] ),
-						'size'   => $attachment_metadata['width'] . 'x' . $attachment_metadata['height'],
-						'aspect' => $attachment_metadata['width'] / max( 1, $attachment_metadata['height'] ),
-					),
-				),
-				'description' => $attachment->post_excerpt,
-			);
+		foreach ( array_keys( $attachments ) as $attachment_id ) {
+			/**
+			 * Filters the media attachment returned by the API.
+			 *
+			 * @param array $media_attachment The media attachment.
+			 * @param int   $attachment_id    The attachment ID.
+			 * @return Entity\Media_Attachment The media attachment.
+			 */
+			$data['media_attachments'][] = apply_filters( 'mastodon_api_media_attachment', null, $attachment_id );
 		}
 		$author_name = $data['account']['display_name'];
 		$override_author_name = get_post_meta( $post->ID, 'author', true );
@@ -453,20 +416,20 @@ class Handler {
 			'media_attachments'      => array_map(
 				function ( $attachment ) {
 					return array(
-						'id'          => crc32( $attachment['url'] ),
-						'type'        => strtok( $attachment['mediaType'], '/' ),
-						'url'         => $attachment['url'],
-						'preview_url' => $attachment['url'],
-						'text_url'    => $attachment['url'],
+						'id'          => crc32( $attachment->url ),
+						'type'        => strtok( $attachment->type, '/' ),
+						'url'         => $attachment->url,
+						'preview_url' => $attachment->url,
+						'text_url'    => $attachment->url,
 						'meta'        => array(
 							'original' => array(
-								'width'  => intval( $attachment['width'] ),
-								'height' => intval( $attachment['height'] ),
-								'size'   => $attachment['width'] . 'x' . $attachment['height'],
-								'aspect' => $attachment['width'] / max( 1, $attachment['height'] ),
+								'width'  => intval( $attachment->width ),
+								'height' => intval( $attachment->height ),
+								'size'   => $attachment->width . 'x' . $attachment->height,
+								'aspect' => $attachment->width / max( 1, $attachment->height ),
 							),
 						),
-						'description' => ! empty( $attachment['description'] ) ? $attachment['description'] : '',
+						'description' => ! empty( $attachment->description ) ? $attachment->description : '',
 					);
 				},
 				$activity['object']['attachment']

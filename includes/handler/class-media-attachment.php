@@ -39,7 +39,7 @@ class Media_Attachment extends Handler {
 
 		$media_attachment              = new Media_Attachment_Entity();
 		$media_attachment->id          = strval( $attachment_id );
-		$media_attachment->type        = wp_check_filetype( $meta['file'] )['type'];
+		$media_attachment->type        = strtok( wp_check_filetype( $meta['file'] )['type'], '/' );
 		$media_attachment->url         = $url;
 		$media_attachment->preview_url = $thumb[0];
 		$media_attachment->text_url    = $url;

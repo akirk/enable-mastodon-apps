@@ -1796,11 +1796,7 @@ class Mastodon_API {
 		 */
 		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
 
-		if ( ! is_array( $status ) ) {
-			return new \WP_Error( 'invalid-status', 'Invalid status', array( 'status' => 404 ) );
-		}
-
-		return $status;
+		return $this->validate_entity( $status, Entity\Status::class );
 	}
 
 	private function convert_outbox_to_status( $outbox, $user_id ) {
@@ -1846,7 +1842,7 @@ class Mastodon_API {
 			'media_attachments'      => array_map(
 				function ( $attachment ) {
 					$request = new WP_REST_Request();
-					$request->set_param( 'post_id', $attachment['id'] );
+					$request->set_param( 'post_id', $attachment->id );
 
 					return $this->api_get_media( $request );
 				},

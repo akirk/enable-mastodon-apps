@@ -10,6 +10,7 @@
 namespace Enable_Mastodon_Apps\Handler;
 
 use Enable_Mastodon_Apps\Handler\Handler;
+use Enable_Mastodon_Apps\Entity\Status as Status_Entity;
 
 /**
  * This is the class that implements the default handler for all Status endpoints.
@@ -30,14 +31,13 @@ class Status extends Handler {
 
 	/**
 	 * Get a status array.
-	 * TODO: Replace array with Entity\Status
 	 *
-	 * @param array|null $status Current status array.
-	 * @param int        $object_id The object ID to get the status from.
-	 * @param array      $data Additional status data.
-	 * @return array The status array
+	 * @param Status_Entity $status Current status array.
+	 * @param int           $object_id The object ID to get the status from.
+	 * @param array         $data Additional status data.
+	 * @return Status_Entity The status entity
 	 */
-	public function api_status( ?array $status, int $object_id, array $data = array() ): ?array {
+	public function api_status( ?Status_Entity $status, int $object_id, array $data = array() ): ?Status_Entity {
 		$comment = get_comment( $object_id );
 
 		if ( $comment instanceof \WP_Comment ) {
@@ -47,7 +47,12 @@ class Status extends Handler {
 		$post = get_post( $object_id );
 
 		if ( $post instanceof \WP_Post ) {
-			return $this->get_status_array( $post, $data );
+			$status_array = $this->get_status_array( $post, $data );
+			$status = new Status_Entity();
+
+			foreach ( \array_keys( $status_array ) as $key ) {
+				$status->{$key} = $status_array[ $key ];
+			}
 		}
 
 		return $status;
