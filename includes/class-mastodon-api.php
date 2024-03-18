@@ -962,7 +962,7 @@ class Mastodon_API {
 	public function logged_in_for_private_permission( $request ) {
 		$post_id = $request->get_param( 'post_id' );
 		if ( ! $post_id ) {
-			return false;
+			return true;
 		}
 
 		if ( get_post_status( $post_id ) !== 'publish' ) {
@@ -1036,7 +1036,7 @@ class Mastodon_API {
 			$args['p'] = $post_id;
 		}
 
-		return apply_filters( 'enable_mastodon_apps_get_posts_query_args', $args, $request );
+		return apply_filters( 'mastodon_api_get_posts_query_args', $args, $request );
 	}
 
 	private function get_posts( $args, $min_id = null, $max_id = null ) {
@@ -1195,6 +1195,25 @@ class Mastodon_API {
 		}
 
 		return $user_id;
+	}
+
+	/**
+	 * Validate the type of an entity.
+	 *
+	 * @param object $entity The entity object.
+	 * @param string $type The entity types.
+	 * @return object|WP_Error Entity or WP_Error object
+	 */
+	private function validate_entity( $entity, $type ) {
+		if ( ! $entity instanceof $type ) {
+			return new \WP_Error( 'invalid-entity', 'Invalid entity, not one of ' . $type, array( 'status' => 404 ) );
+		}
+
+		if ( ! $entity->is_valid() ) {
+			return new \WP_Error( 'integrity-error', 'Integrity Error', array( 'status' => 500 ) );
+		}
+
+		return $entity;
 	}
 
 	public function api_submit_post( $request ) {
@@ -2100,15 +2119,7 @@ class Mastodon_API {
 		 */
 		$relationship = apply_filters( 'mastodon_api_relationship', null, $user_id, $request );
 
-		if ( ! $relationship instanceof Entity\Relationship ) {
-			return new \WP_Error( 'invalid-user', 'Invalid user', array( 'status' => 404 ) );
-		}
-
-		if ( ! $relationship->is_valid() ) {
-			return new \WP_Error( 'integrity-error', 'Integrity Error', array( 'status' => 500 ) );
-		}
-
-		return $relationship;
+		return $this->validate_entity( $relationship, Entity\Relationship::class );
 	}
 
 	/**
@@ -2196,15 +2207,7 @@ class Mastodon_API {
 		 */
 		$account = \apply_filters( 'mastodon_api_account', null, $user_id, $request );
 
-		if ( ! $account instanceof Entity\Account ) {
-			return new \WP_Error( 'invalid-user', 'Invalid user', array( 'status' => 404 ) );
-		}
-
-		if ( ! $account->is_valid() ) {
-			return new \WP_Error( 'integrity-error', 'Integrity Error', array( 'status' => 500 ) );
-		}
-
-		return $account;
+		return $this->validate_entity( $account, Entity\Account::class );
 	}
 
 	/**
