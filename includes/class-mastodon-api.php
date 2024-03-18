@@ -55,6 +55,7 @@ class Mastodon_API {
 
 		// Register Handlers.
 		new Handler\Account();
+		new Handler\Instance();
 		new Handler\Media_Attachment();
 		new Handler\Notification();
 		new Handler\Relationship();
@@ -167,8 +168,12 @@ class Mastodon_API {
 				'api/v1/follow_requests',
 				'api/v1/followed_tags',
 				'api/v1/instance/peers',
-				'api/v2/instance',
+				'api/v1/instance/rules',
+				'api/v1/instance/domain_blocks',
+				'api/v1/instance/extended_description',
+				'api/v1/instance/translation_languages',
 				'api/v1/instance',
+				'api/v2/instance',
 				'api/v1/lists',
 				'api/v1/markers',
 				'api/v1/mutes',
@@ -248,15 +253,7 @@ class Mastodon_API {
 				'permission_callback' => $this->required_scope( 'read:announcements' ),
 			)
 		);
-		register_rest_route(
-			self::PREFIX,
-			'api/v1/instance/peers',
-			array(
-				'methods'             => 'GET',
-				'callback'            => '__return_empty_array',
-				'permission_callback' => array( $this, 'public_api_permission' ),
-			)
-		);
+
 		register_rest_route(
 			self::PREFIX,
 			'api/v1/instance',
@@ -266,7 +263,6 @@ class Mastodon_API {
 				'permission_callback' => array( $this, 'public_api_permission' ),
 			)
 		);
-
 		register_rest_route(
 			self::PREFIX,
 			'api/v2/instance',
@@ -276,6 +272,52 @@ class Mastodon_API {
 				'permission_callback' => array( $this, 'public_api_permission' ),
 			)
 		);
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/instance/peers',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'api_instance_peers' ),
+				'permission_callback' => array( $this, 'public_api_permission' ),
+			)
+		);
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/instance/rules',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'api_instance_rules' ),
+				'permission_callback' => array( $this, 'public_api_permission' ),
+			)
+		);
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/instance/domain_blocks',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'api_instance_domain_blocks' ),
+				'permission_callback' => array( $this, 'public_api_permission' ),
+			)
+		);
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/instance/extended_description',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'api_instance_extended_description' ),
+				'permission_callback' => array( $this, 'public_api_permission' ),
+			)
+		);
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/instance/translation_languages',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'api_instance_translation_languages' ),
+				'permission_callback' => array( $this, 'public_api_permission' ),
+			)
+		);
+
 		register_rest_route(
 			self::PREFIX,
 			'api/nodeinfo/2.0.json',
@@ -963,7 +1005,7 @@ class Mastodon_API {
 			'posts_per_page'   => $limit,
 			'post_type'        => array( 'post' ),
 			'suppress_filters' => false,
-			'post_status'      => array( 'publish', 'private' ),
+			'post_status'      => 'any',
 		);
 
 		$pinned = $request->get_param( 'pinned' );
@@ -994,7 +1036,7 @@ class Mastodon_API {
 			$args['p'] = $post_id;
 		}
 
-		return apply_filters( 'enable_mastodon_apps_get_posts_query_args', $args, $request );
+		return apply_filters( 'mastodon_api_get_posts_query_args', $args, $request );
 	}
 
 	private function get_posts( $args, $min_id = null, $max_id = null ) {
@@ -1153,25 +1195,6 @@ class Mastodon_API {
 		}
 
 		return $user_id;
-	}
-
-	/**
-	 * Validate the type of an entity.
-	 *
-	 * @param object $entity The entity object.
-	 * @param string $type The entity types.
-	 * @return object|WP_Error Entity or WP_Error object
-	 */
-	private function validate_entity( $entity, $type ) {
-		if ( ! $entity instanceof $type ) {
-			return new \WP_Error( 'invalid-entity', 'Invalid entity, not one of ' . $type, array( 'status' => 404 ) );
-		}
-
-		if ( ! $entity->is_valid() ) {
-			return new \WP_Error( 'integrity-error', 'Integrity Error', array( 'status' => 500 ) );
-		}
-
-		return $entity;
 	}
 
 	public function api_submit_post( $request ) {
@@ -2077,7 +2100,15 @@ class Mastodon_API {
 		 */
 		$relationship = apply_filters( 'mastodon_api_relationship', null, $user_id, $request );
 
-		return $this->validate_entity( $relationship, Entity\Relationship::class );
+		if ( ! $relationship instanceof Entity\Relationship ) {
+			return new \WP_Error( 'invalid-user', 'Invalid user', array( 'status' => 404 ) );
+		}
+
+		if ( ! $relationship->is_valid() ) {
+			return new \WP_Error( 'integrity-error', 'Integrity Error', array( 'status' => 500 ) );
+		}
+
+		return $relationship;
 	}
 
 	/**
@@ -2789,39 +2820,188 @@ class Mastodon_API {
 		return $ret;
 	}
 
-	public function api_instance() {
-		$ret = array(
-			'title'             => html_entity_decode( get_bloginfo( 'name' ), ENT_QUOTES ),
-			'description'       => html_entity_decode( get_bloginfo( 'description' ), ENT_QUOTES ),
-			'short_description' => html_entity_decode( get_bloginfo( 'description' ), ENT_QUOTES ),
-			'email'             => 'not@public.example',
-			'version'           => $this->software_string(),
-			'stats'             => array(
-				'user_count'   => 1,
-				'status_count' => 1,
-				'domain_count' => 1,
-			),
+	/**
+	 * Returns the software instance of Mastodon running on this domain.
+	 *
+	 * @return WP_REST_Response The instance data.
+	 */
+	public function api_instance(): WP_REST_Response {
+		/**
+		 * Modify the instance data returned for `/api/instance` requests.
+		 *
+		 * @param array $ret The instance data.
+		 *
+		 * @return array The modified instance data.
+		 *
+		 * Example:
+		 * ```php
+		 * add_filter( 'mastodon_api_instance_v2', function( $instance_data ) {
+		 *      return new Entity\Instance();
+		 *  } );
+		 * ```
+		 */
+		$instance = apply_filters( 'mastodon_api_instance_v1', null );
 
-			'account_domain'    => \wp_parse_url( \home_url(), \PHP_URL_HOST ),
-			'registrations'     => false,
-			'approval_required' => false,
-			'uri'               => \wp_parse_url( \home_url(), \PHP_URL_HOST ),
-		);
-
-		return apply_filters( 'mastodon_api_instance_v1', $ret );
+		return rest_ensure_response( $instance );
 	}
 
-	public function api_instance_v2() {
-		$api_instance = $this->api_instance();
-		$ret = array_merge(
-			array(
-				'domain' => $api_instance['account_domain'],
-			),
-			$api_instance
-		);
+	/**
+	 * Returns the software instance of Mastodon running on this domain.
+	 *
+	 * @return WP_REST_Response The instance data.
+	 */
+	public function api_instance_v2(): WP_REST_Response {
+		/**
+		 * Modify the instance data returned for `/api/instance` requests.
+		 *
+		 * @param null $instance_data The instance data.
+		 * @return Entity\Instance The instance object.
+		 *
+		 * Example:
+		 * ```php
+		 * add_filter( 'mastodon_api_instance_v2', function( $instance_data ) {
+		 *     return new Entity\Instance();
+		 * } );
+		 * ```
+		 */
+		$instance = apply_filters( 'mastodon_api_instance_v2', null );
 
-		unset( $ret['account_domain'] );
+		return rest_ensure_response( $instance );
+	}
 
-		return apply_filters( 'mastodon_api_instance_v2', $ret );
+	/**
+	 * Returns the list of connected domains.
+	 *
+	 * @param WP_REST_Request $request The full request object.
+	 * @return WP_REST_Response
+	 */
+	public function api_instance_peers( WP_REST_Request $request ): WP_REST_Response {
+		$peers = get_bookmarks();
+		$peers = wp_list_pluck( $peers, 'link_url' );
+
+		/**
+		 * Modify the instance peers returned for `/api/instance/peers` requests.
+		 *
+		 * @param array $peers The instance peers.
+		 * @return array The modified instance peers.
+		 *
+		 * Example:
+		 * ```php
+		 * add_filter( 'mastodon_api_instance_peers', function( $peers ) {
+		 *     $peers[] = 'https://example.com';
+		 *
+		 *     return $peers;
+		 * } );
+		 * ```
+		 */
+		$peers = apply_filters( 'mastodon_api_instance_peers', $peers );
+
+		return rest_ensure_response( $peers );
+	}
+
+	/**
+	 * Rules that the users of this service should follow.
+	 *
+	 * @param WP_REST_Request $request The full request object.
+	 * @return WP_REST_Response
+	 */
+	public function api_instance_rules( WP_REST_Request $request ): WP_REST_Response {
+		/**
+		 * Modify the instance rules returned for `/api/instance/rules` requests.
+		 *
+		 * @param array $rules The instance rules.
+		 * @return array The modified instance rules.
+		 *
+		 * Example:
+		 * ```php
+		 * add_filter( 'mastodon_api_instance_rules', function( $rules ) {
+		 *     $rules[] = 'https://example.com';
+		 *
+		 *     return $rules;
+		 * } );
+		 * ```
+		 */
+		$rules = apply_filters( 'mastodon_api_instance_rules', array() );
+
+		return rest_ensure_response( $rules );
+	}
+
+	/**
+	 * Obtain a list of domains that have been blocked.
+	 *
+	 * @param WP_REST_Request $request The full request object.
+	 * @return WP_REST_Response
+	 */
+	public function api_instance_domain_blocks( WP_REST_Request $request ): WP_REST_Response {
+		/**
+		 * Modify the instance domain_blocks returned for `/api/instance/domain_blocks` requests.
+		 *
+		 * @param array $domain_blocks The instance domain_blocks.
+		 * @return Entity\Domain_Block[] The list of blocked domains.
+		 *
+		 * Example:
+		 * ```php
+		 * add_filter( 'mastodon_api_instance_domain_blocks', function( $domain_blocks ) {
+		 *     $domain_blocks[] = new Entity\Domain_Block();
+		 *
+		 *     return $domain_blocks;
+		 * } );
+		 * ```
+		 */
+		$domain_blocks = apply_filters( 'mastodon_api_instance_domain_blocks', array() );
+
+		return rest_ensure_response( $domain_blocks );
+	}
+
+	/**
+	 * Obtain an extended description of this server.
+	 *
+	 * @param WP_REST_Request $request The full request object.
+	 * @return WP_REST_Response
+	 */
+	public function api_instance_extended_description( WP_REST_Request $request ): WP_REST_Response {
+		/**
+		 * Modify the instance extended_description returned for `/api/instance/extended_description` requests.
+		 *
+		 * @param null $extended_description The instance extended_description.
+		 * @return Entity\Extended_Description The extended description of this server.
+		 *
+		 * Example:
+		 * ```php
+		 * add_filter( 'mastodon_api_instance_extended_description', function( $description ) {
+		 *     return new Entity\Extended_Description();
+		 * } );
+		 * ```
+		 */
+		$extended_description = apply_filters( 'mastodon_api_instance_extended_description', null );
+
+		return rest_ensure_response( $extended_description );
+	}
+
+	/**
+	 * Translation language pairs supported by the translation engine used by the server.
+	 *
+	 * @param WP_REST_Request $request The full request object.
+	 * @return WP_REST_Response
+	 */
+	public function api_instance_translation_languages( WP_REST_Request $request ): WP_REST_Response {
+		/**
+		 * Modify the translation languages returned for `/api/instance/translation_languages` requests.
+		 *
+		 * @param array $translation_languages The instance translation_languages.
+		 * @return array The modified instance translation_languages.
+		 *
+		 * Example:
+		 * ```php
+		 * add_filter( 'mastodon_api_instance_translation_languages', function( $translation_languages ) {
+		 *     $translation_languages['en'] = array( 'de', 'es', 'fr', 'it', 'ja', 'nl', 'pl', 'pt', 'ru', 'zh' );
+		 *
+		 *     return $translation_languages;
+		 * } );
+		 * ```
+		 */
+		$translation_languages = apply_filters( 'mastodon_api_instance_translation_languages', array() );
+
+		return rest_ensure_response( $translation_languages );
 	}
 }
