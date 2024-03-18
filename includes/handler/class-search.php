@@ -45,7 +45,11 @@ class Search extends Handler {
 			'hashtags' => array(),
 		);
 
-		$q = $request->get_param( 'q' );
+		$q = trim( $request->get_param( 'q' ) );
+		// Don't allow empty search queries.
+		if ( '' === $q ) {
+			return $ret;
+		}
 
 		if ( ! $type || 'accounts' === $type ) {
 			if ( preg_match( '/^@?' . Mastodon_API::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $q ) && ! $request->get_param( 'offset' ) ) {

@@ -70,6 +70,11 @@ class Timeline extends Handler {
 		$args = $this->get_posts_query_args( $request );
 		$args['tag'] = $request->get_param( 'hashtag' );
 
+		$ppp_param = $request->get_param( 'limit' );
+		if ( null !== $ppp_param ) {
+			$args['posts_per_page'] = $ppp_param;
+		}
+
 		/**
 		 * Filter the query arguments for the timeline.
 		 *
