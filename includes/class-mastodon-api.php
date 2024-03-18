@@ -962,7 +962,7 @@ class Mastodon_API {
 	public function logged_in_for_private_permission( $request ) {
 		$post_id = $request->get_param( 'post_id' );
 		if ( ! $post_id ) {
-			return false;
+			return true;
 		}
 
 		if ( get_post_status( $post_id ) !== 'publish' ) {
