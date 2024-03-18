@@ -242,6 +242,27 @@ class Mastodon_API {
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'api_apps' ),
 				'permission_callback' => array( $this, 'public_api_permission' ),
+				'args'                => array(
+					'client_name'   => array(
+						'type'        => 'string',
+						'description' => 'The name of your application.',
+						'required'    => true,
+					),
+					'redirect_uris' => array(
+						'type'        => 'string',
+						'description' => 'Where the user should be redirected after authorization.',
+						'required'    => true,
+					),
+					'scopes'        => array(
+						'type'        => 'string',
+						'description' => 'Space separated list of scopes.',
+						'default'     => 'read',
+					),
+					'website'       => array(
+						'type'        => 'string',
+						'description' => 'The URL to your application’s website.',
+					),
+				),
 			)
 		);
 		register_rest_route(
@@ -251,6 +272,13 @@ class Mastodon_API {
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'api_announcements' ),
 				'permission_callback' => $this->required_scope( 'read:announcements' ),
+				'args'                => array(
+					'with_dismissed' => array(
+						'type'        => 'boolean',
+						'description' => 'Whether to include dismissed announcements.',
+						'default'     => false,
+					),
+				),
 			)
 		);
 
@@ -334,6 +362,14 @@ class Mastodon_API {
 				'methods'             => 'GET',
 				'callback'            => '__return_empty_array',
 				'permission_callback' => $this->required_scope( 'read:follows,follow' ),
+				'args'                => array(
+					'limit' => array(
+						'type'        => 'integer',
+						'description' => 'Maximum number of results to return.',
+						'default'     => 40,
+						'maximum'     => 80,
+					),
+				),
 			)
 		);
 		register_rest_route(
@@ -352,6 +388,14 @@ class Mastodon_API {
 				'methods'             => 'GET',
 				'callback'            => '__return_empty_array',
 				'permission_callback' => $this->required_scope( 'read:bookmarks' ),
+				'args'                => array(
+					'limit' => array(
+						'type'        => 'integer',
+						'description' => 'Maximum number of results to return.',
+						'default'     => 100,
+						'maximum'     => 200,
+					),
+				),
 			)
 		);
 		register_rest_route(
@@ -361,6 +405,14 @@ class Mastodon_API {
 				'methods'             => 'GET',
 				'callback'            => '__return_empty_array',
 				'permission_callback' => $this->required_scope( 'read:statuses' ),
+				'args'                => array(
+					'limit' => array(
+						'type'        => 'integer',
+						'description' => 'Maximum number of results to return.',
+						'default'     => 40,
+						'maximum'     => 80,
+					),
+				),
 			)
 		);
 
@@ -371,6 +423,14 @@ class Mastodon_API {
 				'methods'             => 'GET',
 				'callback'            => '__return_empty_array',
 				'permission_callback' => $this->required_scope( 'read:favourites' ),
+				'args'                => array(
+					'limit' => array(
+						'type'        => 'integer',
+						'description' => 'Maximum number of results to return.',
+						'default'     => 40,
+						'maximum'     => 80,
+					),
+				),
 			)
 		);
 		register_rest_route(
@@ -396,9 +456,39 @@ class Mastodon_API {
 			self::PREFIX,
 			'api/v1/markers',
 			array(
-				'methods'             => 'GET',
-				'callback'            => '__return_empty_array',
-				'permission_callback' => $this->required_scope( 'read:statuses' ),
+				array(
+					'methods'             => 'GET',
+					'callback'            => '__return_empty_array',
+					'permission_callback' => $this->required_scope( 'read:statuses' ),
+					'args'                => array(
+						'timeline' => array(
+							'type'        => 'array',
+							'items'       => array(
+								'type' => 'string',
+								'enum' => array(
+									'home',
+									'notifications',
+								),
+							),
+							'description' => 'The timeline(s) to fetch markers for.',
+						),
+					),
+				),
+				array(
+					'methods'             => 'POST',
+					'callback'            => '__return_empty_array',
+					'permission_callback' => $this->required_scope( 'write:statuses' ),
+					'args'                => array(
+						'home'          => array(
+							'type'        => 'string',
+							'description' => 'ID of the last status read in the home timeline.',
+						),
+						'notifications' => array(
+							'type'        => 'string',
+							'description' => 'ID of the last notification read.',
+						),
+					),
+				),
 			)
 		);
 
@@ -409,6 +499,14 @@ class Mastodon_API {
 				'methods'             => 'GET',
 				'callback'            => '__return_empty_array',
 				'permission_callback' => $this->required_scope( 'read:mutes' ),
+				'args'                => array(
+					'limit' => array(
+						'type'        => 'integer',
+						'description' => 'Maximum number of results to return.',
+						'default'     => 40,
+						'maximum'     => 80,
+					),
+				),
 			)
 		);
 
@@ -449,6 +547,70 @@ class Mastodon_API {
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'api_notifications_get' ),
 				'permission_callback' => $this->required_scope( 'read:notifications' ),
+				'args'                => array(
+					'max_id'        => array(
+						'type'        => 'string',
+						'description' => 'All results returned will be lesser than this ID. In effect, sets an upper bound on results.',
+					),
+					'since_id'      => array(
+						'type'        => 'string',
+						'description' => 'All results returned will be greater than this ID. In effect, sets a lower bound on results.',
+					),
+					'min_id'        => array(
+						'type'        => 'string',
+						'description' => 'Returns results immediately newer than this ID. In effect, sets a cursor at this ID and paginates forward.',
+					),
+					'limit'         => array(
+						'type'        => 'integer',
+						'description' => 'Maximum number of results to return.',
+						'default'     => 40,
+						'maximum'     => 80,
+					),
+					'types'         => array(
+						'type'        => 'array',
+						'items'       => array(
+							'type' => 'string',
+							'enum' => array(
+								'mention',
+								'status',
+								'reblog',
+								'follow',
+								'follow_request',
+								'favourite',
+								'poll',
+								'update',
+								'admin.sign_up',
+								'admin.report',
+								'severed_relationship',
+							),
+						),
+						'description' => 'The types of notifications to fetch.',
+					),
+					'exclude_types' => array(
+						'type'        => 'array',
+						'items'       => array(
+							'type' => 'string',
+							'enum' => array(
+								'mention',
+								'status',
+								'reblog',
+								'follow',
+								'follow_request',
+								'favourite',
+								'poll',
+								'update',
+								'admin.sign_up',
+								'admin.report',
+								'severed_relationship',
+							),
+						),
+						'description' => 'The types of notifications to exclude.',
+					),
+					'account_id'    => array(
+						'type'        => 'string',
+						'description' => 'The ID of the account to fetch notifications for.',
+					),
+				),
 			)
 		);
 
@@ -469,6 +631,19 @@ class Mastodon_API {
 				'methods'             => 'GET',
 				'callback'            => '__return_empty_array',
 				'permission_callback' => array( $this, 'public_api_permission' ),
+				'args'                => array(
+					'limit'  => array(
+						'type'        => 'integer',
+						'description' => 'Maximum number of results to return.',
+						'default'     => 20,
+						'maximum'     => 40,
+					),
+					'offset' => array(
+						'type'        => 'integer',
+						'description' => 'Skip the first n results.',
+						'default'     => 0,
+					),
+				),
 			)
 		);
 		register_rest_route(
@@ -488,6 +663,12 @@ class Mastodon_API {
 				'methods'             => 'GET',
 				'callback'            => '__return_empty_array',
 				'permission_callback' => $this->required_scope( 'read:follows' ),
+				'args'                => array(
+					'id' => array(
+						'type'        => 'array',
+						'description' => 'Find familiar followers for the provided account IDs.',
+					),
+				),
 			)
 		);
 
@@ -508,6 +689,34 @@ class Mastodon_API {
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_accounts_search' ),
 				'permission_callback' => $this->required_scope( 'read:accounts' ),
+				'args'                => array(
+					'q'         => array(
+						'type'        => 'string',
+						'description' => 'What to search for.',
+						'required'    => true,
+					),
+					'limit'     => array(
+						'type'        => 'integer',
+						'description' => 'Maximum number of results to return.',
+						'default'     => 40,
+						'maximum'     => 80,
+					),
+					'offset'    => array(
+						'type'        => 'integer',
+						'description' => 'Skip the first n results.',
+						'default'     => 0,
+					),
+					'resolve'   => array(
+						'type'        => 'boolean',
+						'description' => 'Attempt WebFinger lookup. Use this when `q` is an exact address.',
+						'default'     => false,
+					),
+					'following' => array(
+						'type'        => 'boolean',
+						'description' => 'Only return accounts the current user is following.',
+						'default'     => false,
+					),
+				),
 			)
 		);
 
@@ -518,6 +727,16 @@ class Mastodon_API {
 				'methods'             => array( 'POST', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_post_media' ),
 				'permission_callback' => $this->required_scope( 'write:media' ),
+				'args'                => array(
+					'description' => array(
+						'type'        => 'string',
+						'description' => 'A plain-text description of the media.',
+					),
+					'focus'       => array(
+						'type'        => 'string',
+						'description' => 'Two floating points (x,y), comma-delimited, ranging from -1.0 to 1.0.',
+					),
+				),
 			)
 		);
 
@@ -548,6 +767,72 @@ class Mastodon_API {
 				'methods'             => array( 'POST', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_submit_post' ),
 				'permission_callback' => $this->required_scope( 'write:statuses' ),
+				'args'                => array(
+					'status'         => array(
+						'type'        => 'string',
+						'description' => ' The text content of the status. If `media_ids` is provided, this becomes optional. Attaching a `poll` is optional while `status` is provided.',
+					),
+					'media_ids'      => array(
+						'type'        => 'array',
+						'description' => 'Include Attachment IDs to be attached as media. If provided, `status` becomes optional, and `poll` cannot be used.',
+						'items'       => array(
+							'type' => 'string',
+						),
+					),
+					'poll'           => array(
+						'type'        => 'object',
+						'description' => 'Poll options.',
+						'properties'  => array(
+							'options'    => array(
+								'type'        => 'array',
+								'description' => ' Possible answers to the poll. If provided, `media_ids` cannot be used, and `poll[expires_in]` must be provided.',
+								'items'       => array(
+									'type' => 'string',
+								),
+							),
+							'expires_in' => array(
+								'type'        => 'integer',
+								'description' => 'Duration in seconds before the poll ends. If provided, `media_ids` cannot be used, and `poll[options]` must be provided.',
+							),
+							'multiple'   => array(
+								'type'        => 'boolean',
+								'description' => 'Allow multiple choices.',
+								'default'     => false,
+							),
+							'hide_totals' => array(
+								'type'        => 'boolean',
+								'description' => 'Hide poll results until the poll ends.',
+								'default'     => false,
+							),
+						),
+					),
+					'in_reply_to_id' => array(
+						'type'        => 'integer',
+						'description' => 'The ID of the status being replied to.',
+					),
+					'sensitive'      => array(
+						'type'        => 'boolean',
+						'description' => 'Mark the status as NSFW.',
+					),
+					'spoiler_text'   => array(
+						'type'        => 'string',
+						'description' => 'Text to be shown as a warning before the actual content.',
+					),
+					'visibility'     => array(
+						'type'        => 'string',
+						'description' => 'The status visibility.',
+						'enum'        => array( 'public', 'unlisted', 'private', 'direct' ),
+						'default'     => 'public',
+					),
+					'language'       => array(
+						'type'        => 'string',
+						'description' => 'ISO 639 language code for this status.',
+					),
+					'scheduled_at'   => array(
+						'type'        => 'string',
+						'description' => 'ISO 8601 Datetime at which to schedule a status. Providing this parameter will cause `ScheduledStatus` to be returned instead of `Status`. Must be at least 5 minutes in the future.',
+					),
+				),
 			)
 		);
 
@@ -568,6 +853,14 @@ class Mastodon_API {
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => '__return_empty_array',
 				'permission_callback' => $this->required_scope( 'read:statuses', true ),
+				'args'                => array(
+					'limit' => array(
+						'type'        => 'integer',
+						'description' => 'Maximum number of results to return.',
+						'default'     => 40,
+						'maximum'     => 80,
+					),
+				),
 			)
 		);
 
@@ -598,6 +891,14 @@ class Mastodon_API {
 				'methods'             => array( 'POST', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_reblog_post' ),
 				'permission_callback' => $this->required_scope( 'write:statuses' ),
+				'args'                => array(
+					'visibility' => array(
+						'type'        => 'string',
+						'description' => 'The visibility of the reblog. Currently unused in UI.',
+						'enum'        => array( 'public', 'unlisted', 'private' ),
+						'default'     => 'public',
+					),
+				),
 			)
 		);
 
@@ -638,6 +939,26 @@ class Mastodon_API {
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_timelines' ),
 				'permission_callback' => $this->required_scope( 'read:statuses' ),
+				'args'                => array(
+					'max_id'   => array(
+						'type'        => 'string',
+						'description' => 'All results returned will be lesser than this ID. In effect, sets an upper bound on results.',
+					),
+					'since_id' => array(
+						'type'        => 'string',
+						'description' => 'All results returned will be greater than this ID. In effect, sets a lower bound on results.',
+					),
+					'min_id'   => array(
+						'type'        => 'string',
+						'description' => 'Returns results immediately newer than this ID. In effect, sets a cursor at this ID and paginates forward.',
+					),
+					'limit'    => array(
+						'type'        => 'integer',
+						'description' => 'Maximum number of results to return.',
+						'default'     => 20,
+						'maximum'     => 40,
+					),
+				),
 			)
 		);
 
@@ -648,6 +969,62 @@ class Mastodon_API {
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_tag_timeline' ),
 				'permission_callback' => $this->required_scope( 'read:statuses' ),
+				'args'                => array(
+					'any'        => array(
+						'type'        => 'array',
+						'description' => 'Return statuses that contain any of these additional tags.',
+						'items'       => array(
+							'type' => 'string',
+						),
+					),
+					'all'        => array(
+						'type'        => 'array',
+						'description' => 'Return statuses that contain all of these additional tags.',
+						'items'       => array(
+							'type' => 'string',
+						),
+					),
+					'none'       => array(
+						'type'        => 'array',
+						'description' => 'Return statuses that contain none of these additional tags.',
+						'items'       => array(
+							'type' => 'string',
+						),
+					),
+					'local'      => array(
+						'type'        => 'boolean',
+						'description' => 'Only return statuses originating from this instance.',
+						'default'     => false,
+					),
+					'remote'     => array(
+						'type'        => 'boolean',
+						'description' => 'Only return statuses originating from other instances.',
+						'default'     => false,
+					),
+					'only_media' => array(
+						'type'        => 'boolean',
+						'description' => 'Only return statuses that have media attachments.',
+						'default'     => false,
+					),
+					'max_id'     => array(
+						'type'        => 'string',
+						'description' => 'All results returned will be lesser than this ID. In effect, sets an upper bound on results.',
+					),
+					'since_id'   => array(
+						'type'        => 'string',
+						'description' => 'All results returned will be greater than this ID. In effect, sets a lower bound on results.',
+					),
+					'min_id'     => array(
+						'type'        => 'string',
+						'description' => 'Returns results immediately newer than this ID. In effect, sets a cursor at this ID and paginates forward.',
+					),
+					'limit'      => array(
+						'type'        => 'integer',
+						'description' => 'Maximum number of results to return.',
+						'default'     => 20,
+						'maximum'     => 40,
+					),
+				),
 			)
 		);
 
@@ -658,6 +1035,26 @@ class Mastodon_API {
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_public_timeline' ),
 				'permission_callback' => array( $this, 'public_api_permission' ),
+				'args'                => array(
+					'max_id'   => array(
+						'type'        => 'string',
+						'description' => 'All results returned will be lesser than this ID. In effect, sets an upper bound on results.',
+					),
+					'since_id' => array(
+						'type'        => 'string',
+						'description' => 'All results returned will be greater than this ID. In effect, sets a lower bound on results.',
+					),
+					'min_id'   => array(
+						'type'        => 'string',
+						'description' => 'Returns results immediately newer than this ID. In effect, sets a cursor at this ID and paginates forward.',
+					),
+					'limit'    => array(
+						'type'        => 'integer',
+						'description' => 'Maximum number of results to return.',
+						'default'     => 20,
+						'maximum'     => 40,
+					),
+				),
 			)
 		);
 
@@ -688,6 +1085,47 @@ class Mastodon_API {
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_search' ),
 				'permission_callback' => array( $this, 'have_token_permission' ),
+				'args'                => array(
+					'q'          => array(
+						'type'        => 'string',
+						'description' => 'What to search for.',
+						'required'    => true,
+					),
+					'type'       => array(
+						'type'        => 'string',
+						'description' => 'The type of search to perform.',
+						'enum'        => array( 'accounts', 'hashtags', 'statuses' ),
+						'default'     => 'statuses',
+					),
+					'resolve'    => array(
+						'type'        => 'boolean',
+						'description' => 'Attempt WebFinger lookup. Use this when `q` is an exact address.',
+						'default'     => false,
+					),
+					'account_id' => array(
+						'type'        => 'string',
+						'description' => 'The ID of the account to search for.',
+					),
+					'max_id'     => array(
+						'type'        => 'string',
+						'description' => 'All results returned will be lesser than this ID. In effect, sets an upper bound on results.',
+					),
+					'min_id'     => array(
+						'type'        => 'string',
+						'description' => 'Returns results immediately newer than this ID. In effect, sets a cursor at this ID and paginates forward.',
+					),
+					'limit'      => array(
+						'type'        => 'integer',
+						'description' => 'Maximum number of results to return.',
+						'default'     => 40,
+						'maximum'     => 80,
+					),
+					'offset'     => array(
+						'type'        => 'integer',
+						'description' => 'Skip the first n results.',
+						'default'     => 0,
+					),
+				),
 			)
 		);
 
@@ -790,6 +1228,50 @@ class Mastodon_API {
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_account_statuses' ),
 				'permission_callback' => $this->required_scope( 'read:statuses', true ),
+				'args'                => array(
+					'max_id'   => array(
+						'type'        => 'string',
+						'description' => 'All results returned will be lesser than this ID. In effect, sets an upper bound on results.',
+					),
+					'since_id' => array(
+						'type'        => 'string',
+						'description' => 'All results returned will be greater than this ID. In effect, sets a lower bound on results.',
+					),
+					'min_id'   => array(
+						'type'        => 'string',
+						'description' => 'Returns results immediately newer than this ID. In effect, sets a cursor at this ID and paginates forward.',
+					),
+					'limit'    => array(
+						'type'        => 'integer',
+						'description' => 'Maximum number of results to return.',
+						'default'     => 20,
+						'maximum'     => 40,
+					),
+					'only_media' => array(
+						'type'        => 'boolean',
+						'description' => 'Only return statuses that have media attachments.',
+						'default'     => false,
+					),
+					'exclude_replies' => array(
+						'type'        => 'boolean',
+						'description' => 'Skip statuses that are replies.',
+						'default'     => false,
+					),
+					'exclude_reblogs' => array(
+						'type'        => 'boolean',
+						'description' => 'Skip statuses that are reblogs.',
+						'default'     => false,
+					),
+					'pinned'   => array(
+						'type'        => 'boolean',
+						'description' => 'Only return statuses that are pinned.',
+						'default'     => false,
+					),
+					'tagged'   => array(
+						'type'        => 'string',
+						'description' => 'Only return statuses that have this tag.',
+					),
+				),
 			)
 		);
 
