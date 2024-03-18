@@ -262,6 +262,7 @@ class Mastodon_API {
 					'website'       => array(
 						'type'        => 'string',
 						'description' => 'The URL to your application’s website.',
+						'format'      => 'uri',
 					),
 				),
 			)
@@ -1480,7 +1481,7 @@ class Mastodon_API {
 	 * @return WP_REST_Response|\WP_HTTP_Response|\WP_Error|mixed
 	 */
 	public function rest_request_before_callbacks( $response ) {
-		if ( is_wp_error( $response ) && 'rest_invalid_param' === $response->get_error_code() ) {
+		if ( is_wp_error( $response ) && 'rest_missing_callback_param' === $response->get_error_code() ) {
 			$response = new \WP_Error( $response->get_error_code(), $response->get_error_message(), array( 'status' => 422 ) );
 		}
 
