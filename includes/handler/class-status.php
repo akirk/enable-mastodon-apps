@@ -31,7 +31,6 @@ class Status extends Handler {
 
 	/**
 	 * Get a status array.
-	 * TODO: Replace array with Entity\Status
 	 *
 	 * @param Status_Entity $status Current status array.
 	 * @param int           $object_id The object ID to get the status from.
