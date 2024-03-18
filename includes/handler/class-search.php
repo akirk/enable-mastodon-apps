@@ -100,6 +100,37 @@ class Search extends Handler {
 				$ret['statuses'] = array_merge( $ret['statuses'], $this->get_posts( $args ) );
 			}
 		}
+		if ( ! $type || 'hashtags' === $type ) {
+			$q_param = $request->get_param( 'q' );
+			$categories = get_categories(
+				array(
+					'orderby'    => 'name',
+					'hide_empty' => false,
+					'search'     => $q_param,
+				)
+			);
+			foreach ( $categories as $category ) {
+				$ret['hashtags'][] = array(
+					'name'    => $category->name,
+					'url'     => get_category_link( $category ),
+					'history' => array(),
+				);
+			}
+			$tags = get_tags(
+				array(
+					'orderby'    => 'name',
+					'hide_empty' => false,
+					'search'     => $q_param,
+				)
+			);
+			foreach ( $tags as $tag ) {
+				$ret['hashtags'][] = array(
+					'name'    => $tag->name,
+					'url'     => get_tag_link( $tag ),
+					'history' => array(),
+				);
+			}
+		}
 		return $ret;
 	}
 }
