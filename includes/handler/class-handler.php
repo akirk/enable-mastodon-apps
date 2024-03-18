@@ -42,14 +42,6 @@ class Handler {
 		$app = Mastodon_App::get_current_app();
 		if ( $app ) {
 			$args = $app->modify_wp_query_args( $args );
-		} else {
-			$args['tax_query'] = array(
-				array(
-					'taxonomy' => 'post_format',
-					'field'    => 'slug',
-					'terms'    => array( 'post-format-status' ),
-				),
-			);
 		}
 
 		$post_id = $request->get_param( 'post_id' );
@@ -57,7 +49,7 @@ class Handler {
 			$args['p'] = $post_id;
 		}
 
-		return apply_filters( 'enable_mastodon_apps_get_posts_query_args', $args, $request );
+		return apply_filters( 'mastodon_api_get_posts_query_args', $args, $request );
 	}
 
 	protected function get_posts( $args, $min_id = null, $max_id = null ) {
