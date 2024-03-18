@@ -66,7 +66,7 @@ class Timeline extends Handler {
 	 *
 	 * @return Entity\Status[]|array An array of Status objects.
 	 */
-	public function api_tag_timelines( $statuses, $request ) {
+	public function api_tag_timeline( $statuses, $request ) {
 		$args = $this->get_posts_query_args( $request );
 		$args['tag'] = $request->get_param( 'hashtag' );
 
