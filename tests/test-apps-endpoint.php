@@ -56,6 +56,8 @@ class AppsEndpoint_Test extends Mastodon_API_TestCase {
 		update_option( 'mastodon_api_disable_logins', 1 );
 
 		$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/apps' );
+		$request->set_param( 'client_name', 'test123' );
+		$request->set_param( 'redirect_uris', 'https://example.org' );
 		$response = $wp_rest_server->dispatch( $request );
 		$this->assertEquals( 403, $response->get_status() );
 		$data = $response->get_data();
@@ -73,6 +75,7 @@ class AppsEndpoint_Test extends Mastodon_API_TestCase {
 			$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/apps' );
 			$request->set_param( 'client_name', 'test123' );
 			$request->set_param( 'client_name', $invalid_client_name );
+			$request->set_param( 'redirect_uris', 'https://example.org' );
 			$response = $wp_rest_server->dispatch( $request );
 			$this->assertEquals( 422, $response->get_status() );
 
@@ -89,6 +92,7 @@ class AppsEndpoint_Test extends Mastodon_API_TestCase {
 			$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/apps' );
 			$request->set_param( 'client_name', 'test123' );
 			$request->set_param( 'client_name', $valid_client_name );
+			$request->set_param( 'redirect_uris', 'https://example.org' );
 			$response = $wp_rest_server->dispatch( $request );
 			$this->assertEquals( 422, $response->get_status() );
 
