@@ -783,18 +783,18 @@ class Mastodon_API {
 						'type'        => 'object',
 						'description' => 'Poll options.',
 						'properties'  => array(
-							'options'    => array(
+							'options'     => array(
 								'type'        => 'array',
 								'description' => ' Possible answers to the poll. If provided, `media_ids` cannot be used, and `poll[expires_in]` must be provided.',
 								'items'       => array(
 									'type' => 'string',
 								),
 							),
-							'expires_in' => array(
+							'expires_in'  => array(
 								'type'        => 'integer',
 								'description' => 'Duration in seconds before the poll ends. If provided, `media_ids` cannot be used, and `poll[options]` must be provided.',
 							),
-							'multiple'   => array(
+							'multiple'    => array(
 								'type'        => 'boolean',
 								'description' => 'Allow multiple choices.',
 								'default'     => false,
@@ -1229,25 +1229,25 @@ class Mastodon_API {
 				'callback'            => array( $this, 'api_account_statuses' ),
 				'permission_callback' => $this->required_scope( 'read:statuses', true ),
 				'args'                => array(
-					'max_id'   => array(
+					'max_id'          => array(
 						'type'        => 'string',
 						'description' => 'All results returned will be lesser than this ID. In effect, sets an upper bound on results.',
 					),
-					'since_id' => array(
+					'since_id'        => array(
 						'type'        => 'string',
 						'description' => 'All results returned will be greater than this ID. In effect, sets a lower bound on results.',
 					),
-					'min_id'   => array(
+					'min_id'          => array(
 						'type'        => 'string',
 						'description' => 'Returns results immediately newer than this ID. In effect, sets a cursor at this ID and paginates forward.',
 					),
-					'limit'    => array(
+					'limit'           => array(
 						'type'        => 'integer',
 						'description' => 'Maximum number of results to return.',
 						'default'     => 20,
 						'maximum'     => 40,
 					),
-					'only_media' => array(
+					'only_media'      => array(
 						'type'        => 'boolean',
 						'description' => 'Only return statuses that have media attachments.',
 						'default'     => false,
@@ -1262,12 +1262,12 @@ class Mastodon_API {
 						'description' => 'Skip statuses that are reblogs.',
 						'default'     => false,
 					),
-					'pinned'   => array(
+					'pinned'          => array(
 						'type'        => 'boolean',
 						'description' => 'Only return statuses that are pinned.',
 						'default'     => false,
 					),
-					'tagged'   => array(
+					'tagged'          => array(
 						'type'        => 'string',
 						'description' => 'Only return statuses that have this tag.',
 					),
