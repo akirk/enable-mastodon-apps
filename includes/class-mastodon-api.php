@@ -1197,6 +1197,25 @@ class Mastodon_API {
 		return $user_id;
 	}
 
+	/**
+	 * Validate the type of an entity.
+	 *
+	 * @param object $entity The entity object.
+	 * @param string $type The entity types.
+	 * @return object|WP_Error Entity or WP_Error object
+	 */
+	private function validate_entity( $entity, $type ) {
+		if ( ! $entity instanceof $type ) {
+			return new \WP_Error( 'invalid-entity', 'Invalid entity, not one of ' . $type, array( 'status' => 404 ) );
+		}
+
+		if ( ! $entity->is_valid() ) {
+			return new \WP_Error( 'integrity-error', 'Integrity Error', array( 'status' => 500 ) );
+		}
+
+		return $entity;
+	}
+
 	public function api_submit_post( $request ) {
 		if ( ! current_user_can( 'edit_posts' ) ) {
 			return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Insufficient permissions', array( 'status' => 401 ) );
@@ -2100,15 +2119,7 @@ class Mastodon_API {
 		 */
 		$relationship = apply_filters( 'mastodon_api_relationship', null, $user_id, $request );
 
-		if ( ! $relationship instanceof Entity\Relationship ) {
-			return new \WP_Error( 'invalid-user', 'Invalid user', array( 'status' => 404 ) );
-		}
-
-		if ( ! $relationship->is_valid() ) {
-			return new \WP_Error( 'integrity-error', 'Integrity Error', array( 'status' => 500 ) );
-		}
-
-		return $relationship;
+		return $this->validate_entity( $relationship, Entity\Relationship::class );
 	}
 
 	/**
