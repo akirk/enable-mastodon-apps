@@ -40,14 +40,6 @@ class Handler {
 		$app = Mastodon_App::get_current_app();
 		if ( $app ) {
 			$args = $app->modify_wp_query_args( $args );
-		} else {
-			$args['tax_query'] = array(
-				array(
-					'taxonomy' => 'post_format',
-					'field'    => 'slug',
-					'terms'    => array( 'post-format-status' ),
-				),
-			);
 		}
 
 		$post_id = $request->get_param( 'post_id' );
