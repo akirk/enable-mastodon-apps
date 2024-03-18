@@ -309,14 +309,10 @@ class Handler {
 					$media_id = 0;
 					foreach ( array_keys( $attachments ) as $attachment_id ) {
 						if (
-						wp_get_attachment_url( $attachment_id ) === $url
-						|| ( isset( $img_tag['class'] ) && preg_match( '#\bwp-image-' . $attachment_id . '\b#', $img_tag['class'] ) )
-
+							wp_get_attachment_url( $attachment_id ) === $url
+							|| ( isset( $img_tag['class'] ) && preg_match( '#\bwp-image-' . $attachment_id . '\b#', $img_tag['class'] ) )
 						) {
 							$media_id = $attachment_id;
-							$attachment_metadata = \wp_get_attachment_metadata( $attachment_id );
-							$img_tag['width'] = $attachment_metadata['width'];
-							$img_tag['height'] = $attachment_metadata['height'];
 							unset( $attachments[ $attachment_id ] );
 							break;
 						}
