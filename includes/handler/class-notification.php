@@ -138,9 +138,17 @@ class Notification extends Handler {
 				if ( ! $meta ) {
 					continue;
 				}
-				$user_id = $post->post_author;
+
+				$account = apply_filters( 'mastodon_api_account', null, $post->post_author );
+				$status  = apply_filters( 'mastodon_api_status', null, $post->ID );
+
 				// @TODO: fix use of get_friend_account_data and get_status_array
-				$notifications[] = $this->get_notification_array( 'mention', mysql2date( 'Y-m-d\TH:i:s.000P', $post->post_date, false ), $this->get_friend_account_data( $user_id, $meta ), $this->get_status_array( $post ) );
+				$notifications[] = $this->get_notification_array(
+					'mention',
+					mysql2date( 'Y-m-d\TH:i:s.000P', $post->post_date, false ),
+					$account,
+					$status
+				);
 			}
 		}
 
@@ -197,11 +205,11 @@ class Notification extends Handler {
 	 * @param string                               $type Type of notification.
 	 * @param mixed                                $date Date for limit.
 	 * @param \Enable_Mastodon_Apps\Entity\Account $account Attached account for notifications.
-	 * @param array                                $status Status of notifications.
+	 * @param \Enable_Mastodon_Apps\Entity\Status  $status Status of notifications.
 	 *
 	 * @return array
 	 */
-	protected function get_notification_array( string $type, $date, \Enable_Mastodon_Apps\Entity\Account $account, array $status = array() ): array {
+	protected function get_notification_array( string $type, $date, \Enable_Mastodon_Apps\Entity\Account $account, \Enable_Mastodon_Apps\Entity\Status $status ): array {
 		$notification = array(
 			'id'         => preg_replace( '/[^0-9]/', '', $date ),
 			'created_at' => $date,
@@ -228,7 +236,7 @@ class Notification extends Handler {
 
 		if ( $status ) {
 			$notification['status'] = $status;
-			$notification['id'] .= $status['id'];
+			$notification['id'] .= $status->id;
 		}
 
 		return $notification;

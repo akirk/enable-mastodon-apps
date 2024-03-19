@@ -36,7 +36,7 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertIsString( $data->id );
 		$this->assertEquals( $data->id, strval( $this->friend_post ) );
 
-		$this->assertIsArray( $data->account );
+		$this->assertInstanceOf( '\Enable_Mastodon_Apps\Entity\Account', $data->account );
 		$this->assertIsString( $data->uri );
 		$this->assertIsString( $data->content );
 		if ( ! empty( $data->in_reply_to_id ) ) {
@@ -45,8 +45,7 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		if ( ! empty( $data->in_reply_to_account_id ) ) {
 			$this->assertIsInt( $data->in_reply_to_account_id );
 		}
-		$this->assertIsString( $data->created_at );
-		$this->assertTrue( false !== \DateTime::createFromFormat( 'Y-m-d\TH:i:s.uP', $data->created_at ) );
+		$this->assertInstanceOf( '\DateTime', $data->created_at );
 		$this->assertIsInt( $data->replies_count );
 		$this->assertIsInt( $data->reblogs_count );
 		$this->assertIsInt( $data->favourites_count );

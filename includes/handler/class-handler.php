@@ -100,7 +100,7 @@ class Handler {
 			 */
 			$status = apply_filters( 'mastodon_api_status', null, $post->ID, array() );
 
-			if ( $status ) {
+			if ( $status && ! is_wp_error( $status ) ) {
 				$statuses[ $post->post_date . '.' . ++$k ] = $status;
 			}
 		}
@@ -133,7 +133,7 @@ class Handler {
 					)
 				);
 
-				if ( $status ) {
+				if ( $status && ! is_wp_error( $status ) ) {
 					$statuses[ $comment->comment_date . '.' . ++$k ] = $status;
 				}
 			}
@@ -146,192 +146,6 @@ class Handler {
 			$response->add_link( 'prev', remove_query_arg( 'max_id', add_query_arg( 'min_id', reset( $statuses )->id, home_url( $_SERVER['REQUEST_URI'] ) ) ) );
 		}
 		return $response;
-	}
-
-	/**
-	 * Strip empty whitespace
-	 *
-	 * @param      string $post_content  The post content.
-	 *
-	 * @return     string  The normalized content.
-	 */
-	protected function normalize_whitespace( $post_content ) {
-		$post_content = \strip_shortcodes( $post_content );
-		$post_content = \do_blocks( $post_content );
-		$post_content = \wptexturize( $post_content );
-		$post_content = \convert_smilies( $post_content );
-		$post_content = \wp_filter_content_tags( $post_content, 'template' );
-		$post_content = \str_replace( ']]>', ']]&gt;', $post_content );
-		$post_content = \preg_replace( '/[\n\r\t]/', '', $post_content );
-
-		return trim( $post_content );
-	}
-
-	protected function get_status_array( $post, $data = array() ) {
-		$meta = get_post_meta( $post->ID, 'activitypub', true );
-		$feed_url = get_post_meta( $post->ID, 'feed_url', true );
-
-		$user_id = $post->post_author;
-		if ( class_exists( '\Friends\User' ) && $post instanceof \WP_Post ) {
-			$user = \Friends\User::get_post_author( $post );
-			$user_id = $user->ID;
-		} elseif ( isset( $meta['attributedTo']['id'] ) && $meta['attributedTo']['id'] ) {
-			// It's an ActivityPub post, so the feed_url is the ActivityPub URL.
-			if ( $feed_url ) {
-				$user_id = $feed_url;
-			} else {
-				$user_id = $meta['attributedTo']['id'];
-			}
-		}
-
-		if ( ! $user_id ) {
-			return null;
-		}
-		$account_data = $this->get_friend_account_data( $user_id, $meta );
-		if ( is_wp_error( $account_data ) ) {
-			return null;
-		}
-
-		$reblogged = get_post_meta( $post->ID, 'reblogged' );
-		$reblogged_by = array();
-		if ( $reblogged ) {
-			$reblog_user_ids = get_post_meta( $post->ID, 'reblogged_by' );
-			if ( ! is_array( $reblog_user_ids ) ) {
-				$reblog_user_ids = array();
-			}
-			$reblog_user_ids = array_map( 'intval', $reblog_user_ids );
-			$reblogged_by = array_map(
-				function ( $user_id ) {
-					return $this->get_friend_account_data( $user_id );
-				},
-				$reblog_user_ids
-			);
-			$reblogged = in_array( get_current_user_id(), $reblog_user_ids, true );
-		} else {
-			$reblogged = false;
-		}
-
-		$data = array_merge(
-			array(
-				'id'                     => strval( $post->ID ),
-				'created_at'             => mysql2date( 'Y-m-d\TH:i:s.000P', $post->post_date, false ),
-				'in_reply_to_id'         => null,
-				'in_reply_to_account_id' => null,
-				'sensitive'              => false,
-				'spoiler_text'           => '',
-				'visibility'             => 'publish' === $post->post_status ? 'public' : 'unlisted',
-				'language'               => null,
-				'uri'                    => $post->guid,
-				'url'                    => null,
-				'replies_count'          => 0,
-				'reblogs_count'          => 0,
-				'favourites_count'       => 0,
-				'edited_at'              => null,
-				'favourited'             => false,
-				'reblogged'              => $reblogged,
-				'reblogged_by'           => $reblogged_by,
-				'muted'                  => false,
-				'bookmarked'             => false,
-				'content'                => $post->post_title . PHP_EOL . $post->post_content,
-				'filtered'               => array(),
-				'reblog'                 => null,
-				'account'                => $account_data,
-				'media_attachments'      => array(),
-				'mentions'               => array(),
-				'tags'                   => array(),
-				'emojis'                 => array(),
-				'pinned'                 => is_sticky( $post->ID ),
-				'card'                   => null,
-				'poll'                   => null,
-			),
-			$data
-		);
-
-		if ( ! $reblogged ) {
-			unset( $data['reblogged_by'] );
-		}
-
-		if ( ! $data['pinned'] ) {
-			unset( $data['pinned'] );
-		}
-
-		// get the attachments for the post.
-		$attachments = get_attached_media( '', $post->ID );
-		$p = strpos( $data['content'], '<!-- wp:image' );
-		while ( false !== $p ) {
-			$e = strpos( $data['content'], '<!-- /wp:image', $p );
-			if ( ! $e ) {
-				break;
-			}
-			$img = substr( $data['content'], $p, $e - $p + 19 );
-			if ( preg_match( '#<img(?:\s+src="(?P<url>[^"]+)"|\s+width="(?P<width>\d+)"|\s+height="(?P<height>\d+)"|\s+class="(?P<class>[^"]+)|\s+.*="[^"]+)+"#i', $img, $img_tag ) ) {
-				if ( ! empty( $img_tag['url'] ) ) {
-					$url = $img_tag['url'];
-					$media_id = 0;
-					foreach ( array_keys( $attachments ) as $attachment_id ) {
-						if (
-							wp_get_attachment_url( $attachment_id ) === $url
-							|| ( isset( $img_tag['class'] ) && preg_match( '#\bwp-image-' . $attachment_id . '\b#', $img_tag['class'] ) )
-						) {
-							$media_id = $attachment_id;
-							unset( $attachments[ $attachment_id ] );
-							break;
-						}
-					}
-
-					if ( $media_id ) {
-						/**
-						 * Filters the media attachment returned by the API.
-						 *
-						 * @param array $media_attachment The media attachment.
-						 * @param int   $attachment_id    The attachment ID.
-						 * @return Entity\Media_Attachment The media attachment.
-						 */
-						$data['media_attachments'][] = apply_filters( 'mastodon_api_media_attachment', null, $media_id );
-					}
-				}
-			}
-			$data['content'] = substr( $data['content'], 0, $p ) . substr( $data['content'], $e + 18 );
-			$p = strpos( $data['content'], '<!-- wp:image' );
-		}
-
-		foreach ( array_keys( $attachments ) as $attachment_id ) {
-			/**
-			 * Filters the media attachment returned by the API.
-			 *
-			 * @param array $media_attachment The media attachment.
-			 * @param int   $attachment_id    The attachment ID.
-			 * @return Entity\Media_Attachment The media attachment.
-			 */
-			$data['media_attachments'][] = apply_filters( 'mastodon_api_media_attachment', null, $attachment_id );
-		}
-		$author_name = $data['account']['display_name'];
-		$override_author_name = get_post_meta( $post->ID, 'author', true );
-
-		if ( isset( $meta['reblog'] ) && $meta['reblog'] && isset( $meta['attributedTo']['id'] ) ) {
-			$data['reblog'] = $data;
-			$data['reblog']['id'] = $this->remap_reblog_id( $data['reblog']['id'] ); // ensure that the id is different from the post as it might crash some clients (Ivory).
-			$data['media_attachments'] = array();
-			$data['mentions'] = array();
-			$data['tags'] = array();
-			unset( $data['pinned'] );
-			$data['content'] = '';
-			$data['reblog']['account'] = $this->get_friend_account_data( $this->get_acct( $meta['attributedTo']['id'] ), $meta );
-			if ( ! $data['reblog']['account']['acct'] ) {
-				$data['reblog'] = null;
-			}
-		} elseif ( $override_author_name && $author_name !== $override_author_name ) {
-			$data['account']['display_name'] = $override_author_name;
-		}
-
-		$reactions = apply_filters( 'friends_get_user_reactions', array(), $post->ID );
-		if ( ! empty( $reactions ) ) {
-			$data['favourited'] = true;
-		}
-
-		$data['content'] = $this->normalize_whitespace( $data['content'] );
-
-		return $data;
 	}
 
 	protected function convert_outbox_to_status( $outbox, $user_id ) {
