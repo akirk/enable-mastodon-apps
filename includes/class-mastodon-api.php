@@ -369,7 +369,6 @@ class Mastodon_API {
 						'type'        => 'integer',
 						'description' => 'Maximum number of results to return.',
 						'default'     => 40,
-						'maximum'     => 80,
 					),
 				),
 			)
@@ -395,7 +394,6 @@ class Mastodon_API {
 						'type'        => 'integer',
 						'description' => 'Maximum number of results to return.',
 						'default'     => 100,
-						'maximum'     => 200,
 					),
 				),
 			)
@@ -412,7 +410,6 @@ class Mastodon_API {
 						'type'        => 'integer',
 						'description' => 'Maximum number of results to return.',
 						'default'     => 40,
-						'maximum'     => 80,
 					),
 				),
 			)
@@ -430,7 +427,6 @@ class Mastodon_API {
 						'type'        => 'integer',
 						'description' => 'Maximum number of results to return.',
 						'default'     => 40,
-						'maximum'     => 80,
 					),
 				),
 			)
@@ -506,7 +502,6 @@ class Mastodon_API {
 						'type'        => 'integer',
 						'description' => 'Maximum number of results to return.',
 						'default'     => 40,
-						'maximum'     => 80,
 					),
 				),
 			)
@@ -569,7 +564,6 @@ class Mastodon_API {
 						'type'        => 'integer',
 						'description' => 'Maximum number of results to return.',
 						'default'     => 40,
-						'maximum'     => 80,
 					),
 					'types'         => array(
 						'type'        => 'array',
@@ -641,7 +635,6 @@ class Mastodon_API {
 						'type'        => 'integer',
 						'description' => 'Maximum number of results to return.',
 						'default'     => 20,
-						'maximum'     => 40,
 					),
 					'offset' => array(
 						'type'        => 'integer',
@@ -704,7 +697,6 @@ class Mastodon_API {
 						'type'        => 'integer',
 						'description' => 'Maximum number of results to return.',
 						'default'     => 40,
-						'maximum'     => 80,
 					),
 					'offset'    => array(
 						'type'        => 'integer',
@@ -863,7 +855,6 @@ class Mastodon_API {
 						'type'        => 'integer',
 						'description' => 'Maximum number of results to return.',
 						'default'     => 40,
-						'maximum'     => 80,
 					),
 				),
 			)
@@ -964,7 +955,6 @@ class Mastodon_API {
 						'type'        => 'integer',
 						'description' => 'Maximum number of results to return.',
 						'default'     => 20,
-						'maximum'     => 40,
 					),
 				),
 			)
@@ -1033,7 +1023,6 @@ class Mastodon_API {
 						'type'        => 'integer',
 						'description' => 'Maximum number of results to return.',
 						'default'     => 20,
-						'maximum'     => 40,
 					),
 				),
 			)
@@ -1066,7 +1055,6 @@ class Mastodon_API {
 						'type'        => 'integer',
 						'description' => 'Maximum number of results to return.',
 						'default'     => 20,
-						'maximum'     => 40,
 					),
 				),
 			)
@@ -1134,7 +1122,6 @@ class Mastodon_API {
 						'type'        => 'integer',
 						'description' => 'Maximum number of results to return.',
 						'default'     => 40,
-						'maximum'     => 80,
 					),
 					'offset'     => array(
 						'type'        => 'integer',
@@ -1192,7 +1179,6 @@ class Mastodon_API {
 						'type'        => 'integer',
 						'description' => 'Maximum number of results to return',
 						'default'     => 40,
-						'maximum'     => 1000,
 					),
 				),
 			)
@@ -1264,7 +1250,6 @@ class Mastodon_API {
 						'type'        => 'integer',
 						'description' => 'Maximum number of results to return.',
 						'default'     => 20,
-						'maximum'     => 40,
 					),
 					'only_media'      => array(
 						'type'        => 'boolean',
