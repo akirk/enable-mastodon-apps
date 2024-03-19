@@ -57,7 +57,7 @@ class Handler {
 			$args['p'] = $post_id;
 		}
 
-		return apply_filters( 'enable_mastodon_apps_get_posts_query_args', $args, $request );
+		return apply_filters( 'mastodon_api_get_posts_query_args', $args, $request );
 	}
 
 	protected function get_posts( $args, $min_id = null, $max_id = null ): \WP_REST_Response {
@@ -172,10 +172,7 @@ class Handler {
 		$feed_url = get_post_meta( $post->ID, 'feed_url', true );
 
 		$user_id = $post->post_author;
-		if ( class_exists( '\Friends\User' ) && $post instanceof \WP_Post ) {
-			$user = \Friends\User::get_post_author( $post );
-			$user_id = $user->ID;
-		} elseif ( isset( $meta['attributedTo']['id'] ) && $meta['attributedTo']['id'] ) {
+		if ( isset( $meta['attributedTo']['id'] ) && $meta['attributedTo']['id'] ) {
 			// It's an ActivityPub post, so the feed_url is the ActivityPub URL.
 			if ( $feed_url ) {
 				$user_id = $feed_url;
@@ -324,7 +321,7 @@ class Handler {
 			$data['account']['display_name'] = $override_author_name;
 		}
 
-		$reactions = apply_filters( 'friends_get_user_reactions', array(), $post->ID );
+		$reactions = apply_filters( 'mastodon_api_get_user_reactions', array(), $post->ID );
 		if ( ! empty( $reactions ) ) {
 			$data['favourited'] = true;
 		}
@@ -452,7 +449,7 @@ class Handler {
 	public static function check_url( $url ) {
 		$host = parse_url( $url, PHP_URL_HOST );
 
-		$check_url = apply_filters( 'friends_host_is_valid', null, $host );
+		$check_url = apply_filters( 'mastodon_api_host_is_valid', null, $host );
 		if ( ! is_null( $check_url ) ) {
 			return $check_url;
 		}
@@ -664,7 +661,7 @@ class Handler {
 				wp_cache_set( $cache_key, $data, 'enable-mastodon-apps' );
 				return $data;
 			}
-			$meta = apply_filters( 'friends_get_activitypub_metadata', array(), $url );
+			$meta = apply_filters( 'mastodon_api_get_activitypub_metadata', array(), $url );
 
 			$data = array(
 				'id'              => strval( 1e10 + $remote_user_id ),
@@ -698,22 +695,6 @@ class Handler {
 		}
 
 		$user = false;
-		if ( class_exists( '\Friends\User' ) ) {
-			$user = \Friends\User::get_user_by_id( $user_id );
-
-			if ( $user instanceof \Friends\Subscription ) {
-				$remote_user_id = get_term_by( 'name', $user->ID, Mastodon_API::REMOTE_USER_TAXONOMY );
-				if ( $remote_user_id ) {
-					$remote_user_id = $remote_user_id->term_id;
-				} else {
-					$remote_user_id = wp_insert_term( $user->ID, Mastodon_API::REMOTE_USER_TAXONOMY );
-					if ( ! is_wp_error( $remote_user_id ) ) {
-						$remote_user_id = $remote_user_id['term_id'];
-					}
-				}
-				$user->ID = 1e10 + $remote_user_id;
-			}
-		}
 
 		if ( ! $user || is_wp_error( $user ) ) {
 			$user = new \WP_User( $user_id );
@@ -726,14 +707,12 @@ class Handler {
 		$followers_count = 0;
 		$following_count = 0;
 		$avatar = get_avatar_url( $user->ID );
-		if ( $user instanceof \Friends\User ) {
-			$posts = $user->get_post_count_by_post_format();
-		} else {
-			// Get post count for the post format status for the user.
-			$posts = array(
-				'status' => count_user_posts( $user->ID, 'post', true ),
-			);
-		}
+
+		// Get post count for the post format status for the user.
+		$posts = array(
+			'status' => count_user_posts( $user->ID, 'post', true ),
+		);
+
 		if ( get_current_user_id() === $user->ID ) {
 			if ( class_exists( '\Activitypub\Peer\Followers', false ) ) {
 				$followers_count = count( \Activitypub\Peer\Followers::get_followers( $user->ID ) );
@@ -778,7 +757,7 @@ class Handler {
 			$data['id'] = $data['acct'];
 			$data['username'] = strtok( $data['acct'], '@' );
 
-			$meta = apply_filters( 'friends_get_activitypub_metadata', array(), $meta['attributedTo']['id'] );
+			$meta = apply_filters( 'mastodon_api_get_activitypub_metadata', array(), $meta['attributedTo']['id'] );
 			$data = $this->update_account_data_with_meta( $data, $meta, $full_metadata );
 		} else {
 			$acct = $this->get_user_acct( $user );
@@ -786,8 +765,8 @@ class Handler {
 				$data['acct'] = $acct;
 			}
 
-			foreach ( apply_filters( 'friends_get_user_feeds', array(), $user ) as $feed ) {
-				$meta = apply_filters( 'friends_get_feed_metadata', array(), $feed );
+			foreach ( apply_filters( 'mastodon_api_get_user_feeds', array(), $user ) as $feed ) {
+				$meta = apply_filters( 'mastodon_api_get_feed_metadata', array(), $feed );
 				if ( $meta && ! is_wp_error( $meta ) && ! isset( $meta['error'] ) ) {
 					$data['acct'] = $this->get_acct( $meta['id'] );
 					$data = $this->update_account_data_with_meta( $data, $meta, $full_metadata );

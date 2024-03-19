@@ -1481,13 +1481,9 @@ class Mastodon_API {
 	 * @return     array   The potentially modified default value.
 	 */
 	public function default_option_mastodon_api_default_post_formats( $post_formats ) {
-		if ( ! defined( 'FRIENDS_VERSION' ) ) {
-			$post_formats = array(
-				'standard',
-			);
-		}
-
-		return $post_formats;
+		return array(
+			'standard',
+		);
 	}
 
 	/**
@@ -1969,7 +1965,7 @@ class Mastodon_API {
 					$response = wp_safe_remote_get(
 						$context_api_url,
 						array(
-							'timeout'     => apply_filters( 'friends_http_timeout', 20 ),
+							'timeout'     => apply_filters( 'enable_mastodon_apps_http_timeout', 20 ),
 							'redirection' => 1,
 						)
 					);
@@ -2309,7 +2305,7 @@ class Mastodon_API {
 			$url = $this->get_activitypub_url( $user_id );
 			if ( $url ) {
 				$account = $this->get_acct( $user_id );
-				$meta = apply_filters( 'friends_get_activitypub_metadata', array(), $url );
+				$meta = apply_filters( 'enable_mastodon_apps_get_activitypub_metadata', array(), $url );
 				if ( $meta && ! is_wp_error( $meta ) ) {
 					$outbox = $this->get_json( $meta['outbox'], 'outbox-' . $account, array( 'first' => null ) );
 					$outbox_page = $this->get_json( $outbox['first'], 'outboxpage-' . $account, array( 'orderedItems' => array() ) );
@@ -2608,7 +2604,7 @@ class Mastodon_API {
 	public static function check_url( $url ) {
 		$host = parse_url( $url, PHP_URL_HOST );
 
-		$check_url = apply_filters( 'friends_host_is_valid', null, $host );
+		$check_url = apply_filters( 'enable_mastodon_apps_host_is_valid', null, $host );
 		if ( ! is_null( $check_url ) ) {
 			return $check_url;
 		}
@@ -2820,7 +2816,7 @@ class Mastodon_API {
 				wp_cache_set( $cache_key, $data, 'enable-mastodon-apps' );
 				return $data;
 			}
-			$meta = apply_filters( 'friends_get_activitypub_metadata', array(), $url );
+			$meta = apply_filters( 'enable_mastodon_apps_get_activitypub_metadata', array(), $url );
 
 			$data = array(
 				'id'              => strval( 1e10 + $remote_user_id ),
@@ -2854,22 +2850,6 @@ class Mastodon_API {
 		}
 
 		$user = false;
-		if ( class_exists( '\Friends\User' ) ) {
-			$user = \Friends\User::get_user_by_id( $user_id );
-
-			if ( $user instanceof \Friends\Subscription ) {
-				$remote_user_id = get_term_by( 'name', $user->ID, self::REMOTE_USER_TAXONOMY );
-				if ( $remote_user_id ) {
-					$remote_user_id = $remote_user_id->term_id;
-				} else {
-					$remote_user_id = wp_insert_term( $user->ID, self::REMOTE_USER_TAXONOMY );
-					if ( ! is_wp_error( $remote_user_id ) ) {
-						$remote_user_id = $remote_user_id['term_id'];
-					}
-				}
-				$user->ID = 1e10 + $remote_user_id;
-			}
-		}
 
 		if ( ! $user || is_wp_error( $user ) ) {
 			$user = new \WP_User( $user_id );
@@ -2882,14 +2862,12 @@ class Mastodon_API {
 		$followers_count = 0;
 		$following_count = 0;
 		$avatar = get_avatar_url( $user->ID );
-		if ( $user instanceof \Friends\User ) {
-			$posts = $user->get_post_count_by_post_format();
-		} else {
-			// Get post count for the post format status for the user.
-			$posts = array(
-				'status' => count_user_posts( $user->ID, 'post', true ),
-			);
-		}
+
+		// Get post count for the post format status for the user.
+		$posts = array(
+			'status' => count_user_posts( $user->ID, 'post', true ),
+		);
+
 		if ( get_current_user_id() === $user->ID ) {
 			if ( class_exists( '\Activitypub\Peer\Followers', false ) ) {
 				$followers_count = count( \Activitypub\Peer\Followers::get_followers( $user->ID ) );
@@ -2934,7 +2912,7 @@ class Mastodon_API {
 			$data['id'] = $data['acct'];
 			$data['username'] = strtok( $data['acct'], '@' );
 
-			$meta = apply_filters( 'friends_get_activitypub_metadata', array(), $meta['attributedTo']['id'] );
+			$meta = apply_filters( 'enable_mastodon_apps_get_activitypub_metadata', array(), $meta['attributedTo']['id'] );
 			$data = $this->update_account_data_with_meta( $data, $meta, $full_metadata );
 		} else {
 			$acct = $this->get_user_acct( $user );
@@ -2942,8 +2920,8 @@ class Mastodon_API {
 				$data['acct'] = $acct;
 			}
 
-			foreach ( apply_filters( 'friends_get_user_feeds', array(), $user ) as $feed ) {
-				$meta = apply_filters( 'friends_get_feed_metadata', array(), $feed );
+			foreach ( apply_filters( 'enable_mastodon_apps_get_user_feeds', array(), $user ) as $feed ) {
+				$meta = apply_filters( 'enable_mastodon_apps_get_feed_metadata', array(), $feed );
 				if ( $meta && ! is_wp_error( $meta ) && ! isset( $meta['error'] ) ) {
 					$data['acct'] = $this->get_acct( $meta['id'] );
 					$data = $this->update_account_data_with_meta( $data, $meta, $full_metadata );
@@ -3111,9 +3089,6 @@ class Mastodon_API {
 	private function software_string() {
 		global $wp_version;
 		$software = 'WordPress/' . $wp_version;
-		if ( defined( 'FRIENDS_VERSION' ) ) {
-			$software .= ', Friends/' . FRIENDS_VERSION;
-		}
 		if ( defined( 'ACTIVITYPUB_VERSION' ) ) {
 			$software .= ', ActivityPub/' . ACTIVITYPUB_VERSION;
 		}
