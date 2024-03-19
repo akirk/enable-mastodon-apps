@@ -35,7 +35,7 @@ class Search extends Entity {
 	 *
 	 * @var Status[]
 	 */
-	public string $type;
+	public array $statuses;
 
 	/**
 	 * Tags as search results.
