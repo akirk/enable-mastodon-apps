@@ -72,7 +72,7 @@ class Mastodon_API {
 		add_filter( 'rest_pre_echo_response', array( $this, 'reformat_error_response' ), 10, 3 );
 		add_filter( 'template_include', array( $this, 'log_404s' ) );
 		add_filter( 'enable_mastodon_apps_get_json', array( $this, 'get_json' ), 10, 4 );
-		add_action( 'default_option_mastodon_api_default_post_formats', array( $this, 'default_option_mastodon_api_default_post_formats' ) );
+		add_filter( 'default_option_mastodon_api_default_post_formats', array( $this, 'default_option_mastodon_api_default_post_formats' ) );
 	}
 
 	public function allow_cors() {
