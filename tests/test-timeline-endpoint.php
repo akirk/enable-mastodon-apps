@@ -79,7 +79,7 @@ class TimelineEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertEquals( $data[2]['id'], strval( $post->ID ) );
 
 		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/timelines/home' );
-		$request->set_param( 'min_id', $post->ID );
+		$request->set_param( 'min_id', strval( $post->ID ) );
 		$response = $wp_rest_server->dispatch( $request );
 		$data = json_decode( json_encode( $response->get_data() ), true );
 
@@ -90,7 +90,7 @@ class TimelineEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertEquals( $data[0]['id'], strval( $third_post->ID ) );
 
 		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/timelines/home' );
-		$request->set_param( 'max_id', $friend_post->ID );
+		$request->set_param( 'max_id', strval( $friend_post->ID ) );
 		$response = $wp_rest_server->dispatch( $request );
 		$data = json_decode( json_encode( $response->get_data() ), true );
 
@@ -101,8 +101,8 @@ class TimelineEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertEquals( $data[0]['id'], strval( $post->ID ) );
 
 		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/timelines/home' );
-		$request->set_param( 'min_id', $post->ID );
-		$request->set_param( 'max_id', $third_post->ID );
+		$request->set_param( 'min_id', strval( $post->ID ) );
+		$request->set_param( 'max_id', strval( $third_post->ID ) );
 		$response = $wp_rest_server->dispatch( $request );
 		$data = json_decode( json_encode( $response->get_data() ), true );
 
