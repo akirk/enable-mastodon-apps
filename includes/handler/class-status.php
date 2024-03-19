@@ -11,6 +11,7 @@ namespace Enable_Mastodon_Apps\Handler;
 
 use Enable_Mastodon_Apps\Handler\Handler;
 use Enable_Mastodon_Apps\Entity\Status as Status_Entity;
+use WP_REST_Response;
 
 /**
  * This is the class that implements the default handler for all Status endpoints.
@@ -71,7 +72,7 @@ class Status extends Handler {
 	 * @param int|null   $max_id Optional maximum status ID.
 	 * @return array
 	 */
-	public function api_statuses( ?array $statuses, array $args, ?int $min_id = null, ?int $max_id = null ): array {
+	public function api_statuses( ?array $statuses, array $args, ?int $min_id = null, ?int $max_id = null ): \WP_REST_Response {
 		return $this->get_posts( $args, $min_id, $max_id );
 	}
 }

@@ -19,7 +19,7 @@ class Handler {
 	protected function get_posts_query_args( $request ) {
 		$limit = $request->get_param( 'limit' );
 		if ( $limit < 1 ) {
-			$limit = 10;
+			$limit = 20;
 		}
 
 		$args = array(
@@ -60,12 +60,14 @@ class Handler {
 		return apply_filters( 'enable_mastodon_apps_get_posts_query_args', $args, $request );
 	}
 
-	protected function get_posts( $args, $min_id = null, $max_id = null ) {
+	protected function get_posts( $args, $min_id = null, $max_id = null ): \WP_REST_Response {
+		$c = $args['posts_per_page'];
 		if ( $min_id ) {
 			$min_filter_handler = function ( $where ) use ( $min_id ) {
 				global $wpdb;
 				return $where . $wpdb->prepare( " AND {$wpdb->posts}.ID > %d", $min_id );
 			};
+			$args['order'] = 'ASC';
 			add_filter( 'posts_where', $min_filter_handler );
 		}
 
@@ -76,7 +78,9 @@ class Handler {
 			};
 			add_filter( 'posts_where', $max_filter_handler );
 		}
+
 		$posts = get_posts( $args );
+		global $wpdb;
 
 		if ( $min_id ) {
 			remove_filter( 'posts_where', $min_filter_handler );
@@ -85,8 +89,8 @@ class Handler {
 			remove_filter( 'posts_where', $max_filter_handler );
 		}
 
-		$statuses = array();
 		$k = 0;
+		$statuses = array();
 		foreach ( $posts as $post ) {
 			/**
 			 * Modify the status data.
@@ -136,55 +140,14 @@ class Handler {
 				}
 			}
 		}
-		ksort( $statuses );
+		krsort( $statuses );
 
-		if ( $min_id ) {
-			$min_id = strval( $min_id );
-			$min_id_exists_in_statuses = false;
-			foreach ( $statuses as $status ) {
-				if ( $status->id === $min_id ) {
-					$min_id_exists_in_statuses = true;
-					break;
-				}
-			}
-			if ( ! $min_id_exists_in_statuses ) {
-				// We don't need to watch the min_id.
-				$min_id = null;
-			}
+		$response = new \WP_REST_Response( array_values( $statuses ) );
+		if ( ! empty( $statuses ) ) {
+			$response->add_link( 'next', remove_query_arg( 'min_id', add_query_arg( 'max_id', end( $statuses )->id, rest_url( $_SERVER['REQUEST_URI'] ) ) ) );
+			$response->add_link( 'prev', remove_query_arg( 'max_id', add_query_arg( 'min_id', reset( $statuses )->id, rest_url( $_SERVER['REQUEST_URI'] ) ) ) );
 		}
-
-		$ret = array();
-		$c = $args['posts_per_page'];
-		$next_max_id = false;
-		foreach ( $statuses as $status ) {
-			if ( false === $next_max_id ) {
-				$next_max_id = $status->id;
-			}
-			if ( $min_id ) {
-				if ( $status->id !== $min_id ) {
-					continue;
-				}
-				// We can now include results but need to skip this one.
-				$min_id = null;
-				continue;
-			}
-			if ( $max_id && strval( $max_id ) === $status->id ) {
-				break;
-			}
-			if ( $c-- <= 0 ) {
-				break;
-			}
-			array_unshift( $ret, $status );
-		}
-
-		if ( ! empty( $ret ) ) {
-			if ( $next_max_id ) {
-				header( 'Link: <' . add_query_arg( 'max_id', $next_max_id, home_url( strtok( $_SERVER['REQUEST_URI'], '?' ) ) ) . '>; rel="next"', false );
-			}
-			header( 'Link: <' . add_query_arg( 'min_id', $ret[0]->id, home_url( strtok( $_SERVER['REQUEST_URI'], '?' ) ) ) . '>; rel="prev"', false );
-		}
-
-		return $ret;
+		return $response;
 	}
 
 	/**
