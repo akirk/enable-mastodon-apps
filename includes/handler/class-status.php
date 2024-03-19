@@ -50,6 +50,10 @@ class Status extends Handler {
 			$status_array = $this->get_status_array( $post, $data );
 			$status = new Status_Entity();
 
+			if ( ! $status_array ) {
+				return null;
+			}
+
 			foreach ( \array_keys( $status_array ) as $key ) {
 				$status->{$key} = $status_array[ $key ];
 			}
