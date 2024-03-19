@@ -145,9 +145,6 @@ class Handler {
 		if ( ! empty( $statuses ) ) {
 			$response->add_link( 'next', remove_query_arg( 'min_id', add_query_arg( 'max_id', end( $statuses )->id, rest_url( $_SERVER['REQUEST_URI'] ) ) ) );
 			$response->add_link( 'prev', remove_query_arg( 'max_id', add_query_arg( 'min_id', reset( $statuses )->id, rest_url( $_SERVER['REQUEST_URI'] ) ) ) );
-			foreach ( $response->get_links() as $rel => $link ) {
-				$response->link_header( $rel, $link[0]['href'] );
-			}
 		}
 		return $response;
 	}

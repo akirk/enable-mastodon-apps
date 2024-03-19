@@ -68,7 +68,8 @@ class Mastodon_API {
 		add_action( 'wp_loaded', array( $this, 'rewrite_rules' ) );
 		add_action( 'query_vars', array( $this, 'query_vars' ) );
 		add_action( 'rest_api_init', array( $this, 'add_rest_routes' ) );
-		add_filter( 'rest_pre_serve_request', array( $this, 'allow_cors' ), 10, 4 );
+		add_filter( 'rest_pre_serve_request', array( $this, 'allow_cors' ), 10, 0 );
+		add_filter( 'rest_post_dispatch', array( $this, 'send_http_links' ), 10, 1 );
 		add_filter( 'rest_pre_echo_response', array( $this, 'reformat_error_response' ), 10, 3 );
 		add_filter( 'template_include', array( $this, 'log_404s' ) );
 		add_filter( 'enable_mastodon_apps_get_json', array( $this, 'get_json' ), 10, 4 );
@@ -84,6 +85,12 @@ class Mastodon_API {
 		if ( 'OPTIONS' === $_SERVER['REQUEST_METHOD'] ) {
 			header( 'Access-Control-Allow-Origin: *', true, 204 );
 			exit;
+		}
+	}
+
+	public function send_http_links( \WP_REST_Response $response ) {
+		foreach ( $response->get_links() as $rel => $link ) {
+			$response->link_header( $rel, $link[0]['href'] );
 		}
 	}
 
