@@ -61,7 +61,6 @@ class Handler {
 	}
 
 	protected function get_posts( $args, $min_id = null, $max_id = null ): \WP_REST_Response {
-		$c = $args['posts_per_page'];
 		if ( $min_id ) {
 			$min_filter_handler = function ( $where ) use ( $min_id ) {
 				global $wpdb;
@@ -146,6 +145,9 @@ class Handler {
 		if ( ! empty( $statuses ) ) {
 			$response->add_link( 'next', remove_query_arg( 'min_id', add_query_arg( 'max_id', end( $statuses )->id, rest_url( $_SERVER['REQUEST_URI'] ) ) ) );
 			$response->add_link( 'prev', remove_query_arg( 'max_id', add_query_arg( 'min_id', reset( $statuses )->id, rest_url( $_SERVER['REQUEST_URI'] ) ) ) );
+			foreach ( $response->get_links() as $rel => $link ) {
+				$response->link_header( $link, $rel );
+			}
 		}
 		return $response;
 	}
