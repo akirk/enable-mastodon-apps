@@ -79,7 +79,6 @@ class Handler {
 		}
 
 		$posts = get_posts( $args );
-		global $wpdb;
 
 		if ( $min_id ) {
 			remove_filter( 'posts_where', $min_filter_handler );
