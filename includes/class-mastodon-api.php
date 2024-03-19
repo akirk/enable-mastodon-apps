@@ -1192,7 +1192,7 @@ class Mastodon_API {
 						'type'        => 'integer',
 						'description' => 'Maximum number of results to return',
 						'default'     => 40,
-						'maximum'     => 80,
+						'maximum'     => 1000,
 					),
 				),
 			)
