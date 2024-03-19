@@ -92,6 +92,7 @@ class Mastodon_API {
 		foreach ( $response->get_links() as $rel => $link ) {
 			$response->link_header( $rel, $link[0]['href'] );
 		}
+		return $response;
 	}
 
 	/**
