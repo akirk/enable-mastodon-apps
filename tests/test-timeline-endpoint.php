@@ -24,21 +24,20 @@ class TimelineEndpoint_Test extends Mastodon_API_TestCase {
 		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/timelines/home' );
 		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
 		$response = $wp_rest_server->dispatch( $request );
-		$data = $response->get_data();
+		$data = json_decode( json_encode( $response->get_data() ), true );
 
 		$this->assertArrayHasKey( 0, $data );
-		$this->assertTrue( property_exists( $data[0], 'id' ) );
-		$this->assertIsString( $data[0]->id );
-		$this->assertEquals( $data[0]->id, strval( $this->friend_post ) );
+		$this->assertArrayHasKey( 'id', $data[0] );
+		$this->assertIsString( $data[0]['id'] );
+		$this->assertEquals( $data[0]['id'], strval( $this->friend_post ) );
 
 		$this->assertArrayHasKey( 'media_attachments', $data[0] );
-		$this->assertTrue( property_exists( $data[0], 'media_attachments' ) );
-		$this->assertEquals( '513722435', $data[0]->media_attachments[0]->id );
+		$this->assertEquals( $this->friend_attachment_id, $data[0]['media_attachments'][0]['id'] );
 
 		$this->assertArrayHasKey( 1, $data );
 		$this->assertArrayHasKey( 'id', $data[1] );
-		$this->assertIsString( $data[1]->id );
-		$this->assertEquals( $data[1]->id, strval( $this->post ) );
+		$this->assertIsString( $data[1]['id'] );
+		$this->assertEquals( $data[1]['id'], strval( $this->post ) );
 	}
 
 	public function test_timelines_segmentation() {
@@ -51,7 +50,7 @@ class TimelineEndpoint_Test extends Mastodon_API_TestCase {
 				'post_content' => '',
 				'post_title'   => 'Third title',
 				'post_status'  => 'publish',
-				'post_type'    => 'friend_post_cache',
+				'post_type'    => 'post',
 				'post_date'    => '2023-01-05 00:00:00',
 			)
 		);
@@ -69,7 +68,7 @@ class TimelineEndpoint_Test extends Mastodon_API_TestCase {
 		global $wp_rest_server;
 		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/timelines/home' );
 		$response = $wp_rest_server->dispatch( $request );
-		$data = $response->get_data();
+		$data = json_decode( json_encode( $response->get_data() ), true );
 
 		$this->assertCount( 3, $data );
 		$this->assertArrayHasKey( 0, $data );
@@ -82,7 +81,7 @@ class TimelineEndpoint_Test extends Mastodon_API_TestCase {
 		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/timelines/home' );
 		$request->set_param( 'min_id', $post->ID );
 		$response = $wp_rest_server->dispatch( $request );
-		$data = $response->get_data();
+		$data = json_decode( json_encode( $response->get_data() ), true );
 
 		$this->assertCount( 2, $data );
 		$this->assertArrayHasKey( 0, $data );
@@ -93,7 +92,7 @@ class TimelineEndpoint_Test extends Mastodon_API_TestCase {
 		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/timelines/home' );
 		$request->set_param( 'max_id', $friend_post->ID );
 		$response = $wp_rest_server->dispatch( $request );
-		$data = $response->get_data();
+		$data = json_decode( json_encode( $response->get_data() ), true );
 
 		$this->assertCount( 1, $data );
 		$this->assertArrayHasKey( 0, $data );
@@ -105,7 +104,7 @@ class TimelineEndpoint_Test extends Mastodon_API_TestCase {
 		$request->set_param( 'min_id', $post->ID );
 		$request->set_param( 'max_id', $third_post->ID );
 		$response = $wp_rest_server->dispatch( $request );
-		$data = $response->get_data();
+		$data = json_decode( json_encode( $response->get_data() ), true );
 
 		$this->assertCount( 1, $data );
 		$this->assertArrayHasKey( 0, $data );
@@ -116,7 +115,7 @@ class TimelineEndpoint_Test extends Mastodon_API_TestCase {
 		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/timelines/home' );
 		$request->set_param( 'limit', 1 );
 		$response = $wp_rest_server->dispatch( $request );
-		$data = $response->get_data();
+		$data = json_decode( json_encode( $response->get_data() ), true );
 
 		$this->assertCount( 1, $data );
 		$this->assertArrayHasKey( 0, $data );
@@ -127,7 +126,7 @@ class TimelineEndpoint_Test extends Mastodon_API_TestCase {
 		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/timelines/home' );
 		$request->set_param( 'limit', 2 );
 		$response = $wp_rest_server->dispatch( $request );
-		$data = $response->get_data();
+		$data = json_decode( json_encode( $response->get_data() ), true );
 
 		$this->assertCount( 2, $data );
 		$this->assertArrayHasKey( 0, $data );
@@ -139,7 +138,7 @@ class TimelineEndpoint_Test extends Mastodon_API_TestCase {
 		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/timelines/home' );
 		$request->set_param( 'limit', 3 );
 		$response = $wp_rest_server->dispatch( $request );
-		$data = $response->get_data();
+		$data = json_decode( json_encode( $response->get_data() ), true );
 
 		$this->assertCount( 3, $data );
 		$this->assertArrayHasKey( 0, $data );
@@ -152,7 +151,7 @@ class TimelineEndpoint_Test extends Mastodon_API_TestCase {
 		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/timelines/home' );
 		$request->set_param( 'limit', 5 );
 		$response = $wp_rest_server->dispatch( $request );
-		$data = $response->get_data();
+		$data = json_decode( json_encode( $response->get_data() ), true );
 
 		$this->assertCount( 3, $data );
 		$this->assertArrayHasKey( 0, $data );
