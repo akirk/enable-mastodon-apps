@@ -26,7 +26,7 @@ class Handler {
 			'posts_per_page'   => $limit,
 			'post_type'        => array( 'post' ),
 			'suppress_filters' => false,
-			'post_status'      => 'any',
+			'post_status'      => array( 'publish', 'private' ),
 		);
 
 		$pinned = $request->get_param( 'pinned' );
@@ -76,8 +76,8 @@ class Handler {
 			};
 			add_filter( 'posts_where', $max_filter_handler );
 		}
-
 		$posts = get_posts( $args );
+
 		if ( $min_id ) {
 			remove_filter( 'posts_where', $min_filter_handler );
 		}
@@ -86,6 +86,7 @@ class Handler {
 		}
 
 		$statuses = array();
+		$k = 0;
 		foreach ( $posts as $post ) {
 			/**
 			 * Modify the status data.
@@ -98,10 +99,9 @@ class Handler {
 			$status = apply_filters( 'mastodon_api_status', null, $post->ID, array() );
 
 			if ( $status ) {
-				$statuses[ $post->post_date ] = $status;
+				$statuses[ $post->post_date . '.' . ++$k ] = $status;
 			}
 		}
-
 		if ( ! isset( $args['pinned'] ) || ! $args['pinned'] ) {
 			// Comments cannot be pinned for now.
 			$comments = get_comments(
@@ -132,7 +132,7 @@ class Handler {
 				);
 
 				if ( $status ) {
-					$statuses[ $comment->comment_date ] = $status;
+					$statuses[ $comment->comment_date . '.' . ++$k ] = $status;
 				}
 			}
 		}
@@ -142,7 +142,7 @@ class Handler {
 			$min_id = strval( $min_id );
 			$min_id_exists_in_statuses = false;
 			foreach ( $statuses as $status ) {
-				if ( $status['id'] === $min_id ) {
+				if ( $status->id === $min_id ) {
 					$min_id_exists_in_statuses = true;
 					break;
 				}
