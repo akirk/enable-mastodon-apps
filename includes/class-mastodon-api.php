@@ -551,16 +551,19 @@ class Mastodon_API {
 				'permission_callback' => $this->required_scope( 'read:notifications' ),
 				'args'                => array(
 					'max_id'        => array(
-						'type'        => 'string',
-						'description' => 'All results returned will be lesser than this ID. In effect, sets an upper bound on results.',
+						'type'              => 'string',
+						'description'       => 'All results returned will be lesser than this ID. In effect, sets an upper bound on results.',
+						'sanitize_callback' => array( $this, 'id_as_strval' ),
 					),
 					'since_id'      => array(
-						'type'        => 'string',
-						'description' => 'All results returned will be greater than this ID. In effect, sets a lower bound on results.',
+						'type'              => 'string',
+						'description'       => 'All results returned will be greater than this ID. In effect, sets a lower bound on results.',
+						'sanitize_callback' => array( $this, 'id_as_strval' ),
 					),
 					'min_id'        => array(
-						'type'        => 'string',
-						'description' => 'Returns results immediately newer than this ID. In effect, sets a cursor at this ID and paginates forward.',
+						'type'              => 'string',
+						'description'       => 'Returns results immediately newer than this ID. In effect, sets a cursor at this ID and paginates forward.',
+						'sanitize_callback' => array( $this, 'id_as_strval' ),
 					),
 					'limit'         => array(
 						'type'        => 'integer',
@@ -943,16 +946,19 @@ class Mastodon_API {
 				'permission_callback' => $this->required_scope( 'read:statuses' ),
 				'args'                => array(
 					'max_id'   => array(
-						'type'        => 'string',
-						'description' => 'All results returned will be lesser than this ID. In effect, sets an upper bound on results.',
+						'type'              => 'string',
+						'description'       => 'All results returned will be lesser than this ID. In effect, sets an upper bound on results.',
+						'sanitize_callback' => array( $this, 'id_as_strval' ),
 					),
 					'since_id' => array(
-						'type'        => 'string',
-						'description' => 'All results returned will be greater than this ID. In effect, sets a lower bound on results.',
+						'type'              => 'string',
+						'description'       => 'All results returned will be greater than this ID. In effect, sets a lower bound on results.',
+						'sanitize_callback' => array( $this, 'id_as_strval' ),
 					),
 					'min_id'   => array(
-						'type'        => 'string',
-						'description' => 'Returns results immediately newer than this ID. In effect, sets a cursor at this ID and paginates forward.',
+						'type'              => 'string',
+						'description'       => 'Returns results immediately newer than this ID. In effect, sets a cursor at this ID and paginates forward.',
+						'sanitize_callback' => array( $this, 'id_as_strval' ),
 					),
 					'limit'    => array(
 						'type'        => 'integer',
@@ -1009,16 +1015,19 @@ class Mastodon_API {
 						'default'     => false,
 					),
 					'max_id'     => array(
-						'type'        => 'string',
-						'description' => 'All results returned will be lesser than this ID. In effect, sets an upper bound on results.',
+						'type'              => 'string',
+						'description'       => 'All results returned will be lesser than this ID. In effect, sets an upper bound on results.',
+						'sanitize_callback' => array( $this, 'id_as_strval' ),
 					),
 					'since_id'   => array(
-						'type'        => 'string',
-						'description' => 'All results returned will be greater than this ID. In effect, sets a lower bound on results.',
+						'type'              => 'string',
+						'description'       => 'All results returned will be greater than this ID. In effect, sets a lower bound on results.',
+						'sanitize_callback' => array( $this, 'id_as_strval' ),
 					),
 					'min_id'     => array(
-						'type'        => 'string',
-						'description' => 'Returns results immediately newer than this ID. In effect, sets a cursor at this ID and paginates forward.',
+						'type'              => 'string',
+						'description'       => 'Returns results immediately newer than this ID. In effect, sets a cursor at this ID and paginates forward.',
+						'sanitize_callback' => array( $this, 'id_as_strval' ),
 					),
 					'limit'      => array(
 						'type'        => 'integer',
@@ -1039,16 +1048,19 @@ class Mastodon_API {
 				'permission_callback' => array( $this, 'public_api_permission' ),
 				'args'                => array(
 					'max_id'   => array(
-						'type'        => 'string',
-						'description' => 'All results returned will be lesser than this ID. In effect, sets an upper bound on results.',
+						'type'              => 'string',
+						'description'       => 'All results returned will be lesser than this ID. In effect, sets an upper bound on results.',
+						'sanitize_callback' => array( $this, 'id_as_strval' ),
 					),
 					'since_id' => array(
-						'type'        => 'string',
-						'description' => 'All results returned will be greater than this ID. In effect, sets a lower bound on results.',
+						'type'              => 'string',
+						'description'       => 'All results returned will be greater than this ID. In effect, sets a lower bound on results.',
+						'sanitize_callback' => array( $this, 'id_as_strval' ),
 					),
 					'min_id'   => array(
-						'type'        => 'string',
-						'description' => 'Returns results immediately newer than this ID. In effect, sets a cursor at this ID and paginates forward.',
+						'type'              => 'string',
+						'description'       => 'Returns results immediately newer than this ID. In effect, sets a cursor at this ID and paginates forward.',
+						'sanitize_callback' => array( $this, 'id_as_strval' ),
 					),
 					'limit'    => array(
 						'type'        => 'integer',
@@ -1109,12 +1121,14 @@ class Mastodon_API {
 						'description' => 'The ID of the account to search for.',
 					),
 					'max_id'     => array(
-						'type'        => 'string',
-						'description' => 'All results returned will be lesser than this ID. In effect, sets an upper bound on results.',
+						'type'              => 'string',
+						'description'       => 'All results returned will be lesser than this ID. In effect, sets an upper bound on results.',
+						'sanitize_callback' => array( $this, 'id_as_strval' ),
 					),
 					'min_id'     => array(
-						'type'        => 'string',
-						'description' => 'Returns results immediately newer than this ID. In effect, sets a cursor at this ID and paginates forward.',
+						'type'              => 'string',
+						'description'       => 'Returns results immediately newer than this ID. In effect, sets a cursor at this ID and paginates forward.',
+						'sanitize_callback' => array( $this, 'id_as_strval' ),
 					),
 					'limit'      => array(
 						'type'        => 'integer',
@@ -1232,16 +1246,19 @@ class Mastodon_API {
 				'permission_callback' => $this->required_scope( 'read:statuses', true ),
 				'args'                => array(
 					'max_id'          => array(
-						'type'        => 'string',
-						'description' => 'All results returned will be lesser than this ID. In effect, sets an upper bound on results.',
+						'type'              => 'string',
+						'description'       => 'All results returned will be lesser than this ID. In effect, sets an upper bound on results.',
+						'sanitize_callback' => array( $this, 'id_as_strval' ),
 					),
 					'since_id'        => array(
-						'type'        => 'string',
-						'description' => 'All results returned will be greater than this ID. In effect, sets a lower bound on results.',
+						'type'              => 'string',
+						'description'       => 'All results returned will be greater than this ID. In effect, sets a lower bound on results.',
+						'sanitize_callback' => array( $this, 'id_as_strval' ),
 					),
 					'min_id'          => array(
-						'type'        => 'string',
-						'description' => 'Returns results immediately newer than this ID. In effect, sets a cursor at this ID and paginates forward.',
+						'type'              => 'string',
+						'description'       => 'Returns results immediately newer than this ID. In effect, sets a cursor at this ID and paginates forward.',
+						'sanitize_callback' => array( $this, 'id_as_strval' ),
 					),
 					'limit'           => array(
 						'type'        => 'integer',
@@ -1293,6 +1310,10 @@ class Mastodon_API {
 	public function query_vars( $query_vars ) {
 		$query_vars[] = 'enable-mastodon-apps';
 		return $query_vars;
+	}
+
+	public function id_as_strval( $id ) {
+		return strval( $id );
 	}
 
 	public function ensure_required_scope( $request, $scopes, $also_public ) {
