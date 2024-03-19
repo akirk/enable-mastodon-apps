@@ -58,7 +58,7 @@ abstract class Entity implements \JsonSerializable {
 
 			if ( class_exists( '\\Enable_Mastodon_Apps\\Entity\\' . $object ) ) {
 				if ( $this->$var instanceof Entity ) {
-					$array[ $var ] = $this->$var->to_array();
+					$array[ $var ] = $this->$var->jsonSerialize();
 					continue;
 				}
 

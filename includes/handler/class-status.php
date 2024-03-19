@@ -31,6 +31,82 @@ class Status extends Handler {
 	}
 
 	/**
+	 * Get media attachments from blocks. They will be formatted as ActivityPub attachments, not as WP attachments.
+	 * Copied almost verbatim from the ActivityPub plugin.
+	 *
+	 * @param \WP_Post $post The post to get the attachments from.
+	 * @param int      $max_media The maximum number of attachments to return.
+	 *
+	 * @return array The attachments.
+	 */
+	protected function get_block_attachments( \WP_Post $post, int $max_media = 10 ): array {
+		$media_ids = array();
+
+		if ( \function_exists( 'has_post_thumbnail' ) && \has_post_thumbnail( $post->ID ) ) {
+			$media_ids[] = \get_post_thumbnail_id( $post->ID );
+		}
+
+		$blocks = \parse_blocks( $post->post_content );
+		return self::get_media_ids_from_blocks( $blocks, $media_ids, $max_media );
+	}
+	/**
+	 * Recursively get media IDs from blocks.
+	 * Copied almost verbatim from the ActivityPub plugin.
+	 *
+	 * @param array $blocks The blocks to search for media IDs.
+	 * @param array $media_ids The media IDs to append new IDs to.
+	 * @param int   $max_media The maximum number of media to return.
+	 *
+	 * @return array The image IDs.
+	 */
+	protected function get_media_ids_from_blocks( array $blocks, array $media_ids, int $max_media ): array {
+
+		foreach ( $blocks as $block ) {
+			// Recurse into inner blocks.
+			if ( ! empty( $block['innerBlocks'] ) ) {
+				$media_ids = self::get_media_ids_from_blocks( $block['innerBlocks'], $media_ids, $max_media );
+			}
+
+			switch ( $block['blockName'] ) {
+				case 'core/image':
+				case 'core/cover':
+				case 'core/audio':
+				case 'core/video':
+				case 'videopress/video':
+					if ( ! empty( $block['attrs']['id'] ) ) {
+						$media_ids[] = $block['attrs']['id'];
+					}
+					break;
+				case 'jetpack/slideshow':
+				case 'jetpack/tiled-gallery':
+					if ( ! empty( $block['attrs']['ids'] ) ) {
+						$media_ids = array_merge( $media_ids, $block['attrs']['ids'] );
+					}
+					break;
+				case 'jetpack/image-compare':
+					if ( ! empty( $block['attrs']['beforeImageId'] ) ) {
+						$media_ids[] = $block['attrs']['beforeImageId'];
+					}
+					if ( ! empty( $block['attrs']['afterImageId'] ) ) {
+						$media_ids[] = $block['attrs']['afterImageId'];
+					}
+					break;
+			}
+
+			// Depupe.
+			$media_ids = \array_unique( $media_ids );
+
+			// Stop doing unneeded work.
+			if ( count( $media_ids ) >= $max_media ) {
+				break;
+			}
+		}
+
+		// Still need to slice it because one gallery could knock us over the limit.
+		return array_slice( $media_ids, 0, $max_media );
+	}
+
+	/**
 	 * Get a status array.
 	 *
 	 * @param Status_Entity $status Current status array.
@@ -39,24 +115,30 @@ class Status extends Handler {
 	 * @return Status_Entity The status entity
 	 */
 	public function api_status( ?Status_Entity $status, int $object_id, array $data = array() ): ?Status_Entity {
-		$comment = get_comment( $object_id );
-
-		if ( $comment instanceof \WP_Comment ) {
-			$object_id = $comment->comment_post_ID;
+		if ( $status instanceof Status_Entity ) {
+			return $status;
 		}
 
 		$post = get_post( $object_id );
 
 		if ( $post instanceof \WP_Post ) {
-			$status_array = $this->get_status_array( $post, $data );
-			$status = new Status_Entity();
-
-			if ( ! $status_array ) {
-				return null;
+			$account = apply_filters( 'mastodon_api_account', null, $post->post_author );
+			if ( ! ( $account instanceof \Enable_Mastodon_Apps\Entity\Account ) ) {
+				return $status;
 			}
-
-			foreach ( \array_keys( $status_array ) as $key ) {
-				$status->{$key} = $status_array[ $key ];
+			$status = new Status_Entity();
+			$status->id = strval( $post->ID );
+			$status->created_at = new \DateTime( $post->post_date );
+			$status->visibility = 'public';
+			$status->uri = get_permalink( $post->ID );
+			$status->content = $post->post_content;
+			$status->account = $account;
+			$media_attachments = $this->get_block_attachments( $post );
+			foreach ( $media_attachments as $media_id ) {
+				$media_attachment = apply_filters( 'mastodon_api_media_attachment', null, $media_id );
+				if ( $media_attachment ) {
+					$status->media_attachments[] = $media_attachment;
+				}
 			}
 		}
 
