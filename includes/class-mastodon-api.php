@@ -2442,7 +2442,7 @@ class Mastodon_API {
 		 * @param int|null $min_id Optional minimum status ID.
 		 * @param int|null $max_id Optional maximum status ID.
 		 */
-		$statuses = apply_filters( 'mastodon_api_statuses', null, $args, null, null );
+		$statuses = apply_filters( 'mastodon_api_statuses', null, $args, $request->get_param( 'min_id' ), $request->get_param( 'max_id' ) );
 
 		// @TODO Array-Filter to test if $statuses are an instanceof Status
 
