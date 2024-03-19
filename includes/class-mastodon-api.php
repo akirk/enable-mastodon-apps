@@ -1915,7 +1915,6 @@ class Mastodon_API {
 			return array();
 		}
 		$args['author'] = $user_id;
-
 		$args = apply_filters( 'mastodon_api_account_statuses_args', $args, $request );
 
 		/**
@@ -1928,9 +1927,7 @@ class Mastodon_API {
 		 */
 		$statuses = apply_filters( 'mastodon_api_statuses', null, $args, null, null );
 
-		if ( is_wp_error( $statuses ) || empty( $statuses ) ) {
-			return new \WP_Error( 'invalid-statuses', 'Invalid statuses', array( 'status' => 404 ) );
-		}
+		// @TODO Array-Filter to test if $statuses are an instanceof Status
 
 		return $statuses;
 	}
