@@ -26,7 +26,7 @@ class Search extends Handler {
 	}
 
 	public function register_hooks() {
-		add_filter( 'mastodon_api_search', array( $this, 'search' ), 20, 2 );
+		add_filter( 'mastodon_api_search', array( $this, 'search' ), 10, 2 );
 	}
 
 	/**
@@ -136,6 +136,8 @@ class Search extends Handler {
 				);
 			}
 		}
+
+		$ret = array_merge( $search, $ret );
 		return $ret;
 	}
 }
