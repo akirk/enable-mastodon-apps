@@ -46,6 +46,7 @@ class Search extends Handler {
 		);
 
 		$q = trim( $request->get_param( 'q' ) );
+		$q = esc_attr( $q );
 		// Don't allow empty search queries.
 		if ( '' === $q ) {
 			return $ret;
@@ -57,7 +58,7 @@ class Search extends Handler {
 			}
 			$query = new \WP_User_Query(
 				array(
-					'search'         => '*' . $q . '*',
+					'search'         => "*$q*",
 					'search_columns' => array(
 						'user_login',
 						'user_nicename',
@@ -101,7 +102,7 @@ class Search extends Handler {
 				$args['s'] = $q;
 				$args['offset'] = $request->get_param( 'offset' );
 				$args['posts_per_page'] = $request->get_param( 'limit' );
-				$ret['statuses'] = array_merge( $ret['statuses'], $this->get_posts( $args ) );
+				$ret['statuses'] = array_merge( $ret['statuses'], $this->get_posts( $args )->get_data() );
 			}
 		}
 		if ( ! $type || 'hashtags' === $type ) {
