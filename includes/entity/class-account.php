@@ -47,7 +47,7 @@ class Account extends Entity {
 
 		'moved'           => 'Account?',
 
-		'created_at'      => 'DateTime',
+		'created_at'      => 'DateTime?',
 		'last_status_at'  => 'DateTime?',
 	);
 	/**

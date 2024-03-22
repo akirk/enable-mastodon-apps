@@ -148,17 +148,6 @@ class Handler {
 		return $response;
 	}
 
-	protected function convert_outbox_to_status( $outbox, $user_id ) {
-		$items = array();
-		foreach ( $outbox['orderedItems'] as $item ) {
-			$status = $this->convert_activity_to_status( $item, $user_id );
-			if ( $status ) {
-				$items[] = $status;
-			}
-		}
-		return $items;
-	}
-
 	public function convert_activity_to_status( $activity, $user_id ) {
 		if ( ! isset( $activity['object']['type'] ) || 'Note' !== $activity['object']['type'] ) {
 			return null;
