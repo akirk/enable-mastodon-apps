@@ -1516,7 +1516,7 @@ class Mastodon_API {
 		}
 
 		$post = (object) array(
-			'ID'           => $this->remap_comment_id( $comment->comment_ID ),
+			'ID'           => self::remap_comment_id( $comment->comment_ID ),
 			'guid'         => $comment->guid . '#comment-' . $comment->comment_ID,
 			'post_author'  => $comment->user_id,
 			'post_content' => $comment->comment_content,
@@ -1903,7 +1903,7 @@ class Mastodon_API {
 			return false;
 		}
 
-		$post_id = $this->maybe_get_remapped_reblog_id( $post_id );
+		$post_id = self::maybe_get_remapped_reblog_id( $post_id );
 
 		$context = array(
 			'ancestors'   => array(),
@@ -1957,7 +1957,7 @@ class Mastodon_API {
 			}
 		}
 
-		$comment_id = $this->get_remapped_comment_id( $post_id );
+		$comment_id = self::get_remapped_comment_id( $post_id );
 		if ( $comment_id ) {
 			$comment = get_comment( $comment_id );
 			$post_id = $comment->comment_post_ID;
@@ -1996,7 +1996,7 @@ class Mastodon_API {
 			return false;
 		}
 
-		$post_id = $this->maybe_get_remapped_reblog_id( $post_id );
+		$post_id = self::maybe_get_remapped_reblog_id( $post_id );
 
 		// 2b50 = star
 		// 2764 = heart
@@ -2021,7 +2021,7 @@ class Mastodon_API {
 			return false;
 		}
 
-		$post_id = $this->maybe_get_remapped_reblog_id( $post_id );
+		$post_id = self::maybe_get_remapped_reblog_id( $post_id );
 
 		// 2b50 = star
 		// 2764 = heart
@@ -2046,7 +2046,7 @@ class Mastodon_API {
 			return false;
 		}
 
-		$post_id = $this->maybe_get_remapped_reblog_id( $post_id );
+		$post_id = self::maybe_get_remapped_reblog_id( $post_id );
 
 		$post = get_post( $post_id );
 
@@ -2073,7 +2073,7 @@ class Mastodon_API {
 			return false;
 		}
 
-		$post_id = $this->maybe_get_remapped_reblog_id( $post_id );
+		$post_id = self::maybe_get_remapped_reblog_id( $post_id );
 
 		$post = get_post( $post_id );
 		if ( $post ) {
@@ -2099,7 +2099,7 @@ class Mastodon_API {
 			return false;
 		}
 
-		$comment_id = $this->get_remapped_comment_id( $post_id );
+		$comment_id = self::get_remapped_comment_id( $post_id );
 		if ( $comment_id ) {
 			$comment = get_comment( $comment_id );
 			if ( intval( $comment->user_id ) === get_current_user_id() ) {
@@ -2136,12 +2136,12 @@ class Mastodon_API {
 			return new WP_REST_Response( array( 'error' => 'Record not found' ), 404 );
 		}
 
-		$comment_id = $this->get_remapped_comment_id( $post_id );
+		$comment_id = self::get_remapped_comment_id( $post_id );
 		if ( $comment_id ) {
 			return $this->get_comment_status_array( get_comment( $comment_id ) );
 		}
 
-		$post_id = $this->maybe_get_remapped_reblog_id( $post_id );
+		$post_id = self::maybe_get_remapped_reblog_id( $post_id );
 		$post = get_post( $post_id );
 
 		if ( ! $post ) {
