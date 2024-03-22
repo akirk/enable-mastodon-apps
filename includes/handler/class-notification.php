@@ -142,7 +142,6 @@ class Notification extends Handler {
 				$account = apply_filters( 'mastodon_api_account', null, $post->post_author );
 				$status  = apply_filters( 'mastodon_api_status', null, $post->ID );
 
-				// @TODO: fix use of get_friend_account_data and get_status_array
 				$notifications[] = $this->get_notification_array(
 					'mention',
 					mysql2date( 'Y-m-d\TH:i:s.000P', $post->post_date, false ),

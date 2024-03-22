@@ -54,7 +54,7 @@ class Search extends Handler {
 
 		if ( ! $type || 'accounts' === $type ) {
 			if ( preg_match( '/^@?' . Mastodon_API::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $q ) && ! $request->get_param( 'offset' ) ) {
-				$ret['accounts'][] = $this->get_friend_account_data( $q, array(), true );
+				$ret['accounts'][] = apply_filters( 'mastodon_api_account', null, $q );
 			}
 			$query = new \WP_User_Query(
 				array(
@@ -72,7 +72,7 @@ class Search extends Handler {
 			);
 			$users = $query->get_results();
 			foreach ( $users as $user ) {
-				$ret['accounts'][] = $this->get_friend_account_data( $user->ID );
+				$ret['accounts'][] = apply_filters( 'mastodon_api_account', null, $user->ID );
 			}
 		}
 		if ( ! $type || 'statuses' === $type ) {
@@ -85,18 +85,7 @@ class Search extends Handler {
 			if ( $valid_url && isset( $valid_url['host'] ) ) {
 				if ( ! $request->get_param( 'offset' ) ) {
 					$url = $q;
-					$json = $this->get_json( $url, crc32( $url ) );
-					if ( ! is_wp_error( $json ) && isset( $json['id'], $json['attributedTo'] ) ) {
-						$user_id = $this->get_acct( $json['attributedTo'] );
-						$ret['statuses'][] = $this->convert_activity_to_status(
-							array(
-								'id'     => $json['id'] . '#create-activity',
-								'object' => $json,
-
-							),
-							$user_id
-						);
-					}
+					// TODO allow lookup by URL.
 				}
 			} elseif ( is_user_logged_in() ) {
 				$args['s'] = $q;
@@ -139,5 +128,16 @@ class Search extends Handler {
 
 		$ret = array_merge( $search, $ret );
 		return $ret;
+	}
+
+	protected function convert_outbox_to_status( $outbox, $user_id ) {
+		$items = array();
+		foreach ( $outbox['orderedItems'] as $item ) {
+			$status = $this->convert_activity_to_status( $item, $user_id );
+			if ( $status ) {
+				$items[] = $status;
+			}
+		}
+		return $items;
 	}
 }
