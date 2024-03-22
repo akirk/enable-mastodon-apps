@@ -1577,6 +1577,35 @@ class Mastodon_API {
 		return $entity;
 	}
 
+	private function filter_non_entities( $entities, $type ) {
+		$wp_rest_response = false;
+		if ( $entities instanceof \WP_REST_Response ) {
+			$wp_rest_response = $entities;
+			$entities = $entities->data;
+		}
+		if ( ! is_array( $entities ) ) {
+			return array();
+		}
+		$entities = array_filter(
+			$entities,
+			function ( $entity ) use ( $type ) {
+				if ( ! $entity instanceof $type ) {
+					return false;
+				}
+
+				if ( ! $entity->is_valid() ) {
+					return false;
+				}
+				return true;
+			}
+		);
+		if ( $wp_rest_response ) {
+			$wp_rest_response->data = $entities;
+			return $wp_rest_response;
+		}
+		return $entities;
+	}
+
 	public function api_submit_post( $request ) {
 		if ( ! current_user_can( 'edit_posts' ) ) {
 			return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Insufficient permissions', array( 'status' => 401 ) );
@@ -2387,8 +2416,19 @@ class Mastodon_API {
 		return $preferences;
 	}
 
+	public static function get_mastodon_language( $lang ) {
+		if ( false === strpos( $lang, '_' ) ) {
+			return $lang . '_' . strtoupper( $lang );
+		}
+		return $lang;
+	}
+
 	public function api_account_statuses( $request ) {
 		$user_id = $this->get_user_id_from_request( $request );
+		if ( preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id ) ) {
+			// TODO: use the ActivityPub plugin to retrieve the user statuses from their outbox.
+		}
+
 		$args = array(
 			'author' => $user_id,
 		);
@@ -2404,9 +2444,7 @@ class Mastodon_API {
 		 */
 		$statuses = apply_filters( 'mastodon_api_statuses', null, $args, $request->get_param( 'min_id' ), $request->get_param( 'max_id' ) );
 
-		// @TODO Array-Filter to test if $statuses are an instanceof Status
-
-		return $statuses;
+		return $this->filter_non_entities( $statuses, Entity\Status::class );
 	}
 
 	public function api_account( $request ) {

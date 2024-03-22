@@ -147,11 +147,4 @@ class Handler {
 		}
 		return $response;
 	}
-
-	public static function get_mastodon_language( $lang ) {
-		if ( false === strpos( $lang, '_' ) ) {
-			return $lang . '_' . strtoupper( $lang );
-		}
-		return $lang;
-	}
 }
