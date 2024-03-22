@@ -2397,6 +2397,7 @@ class Mastodon_API {
 		 * @param Entity\Account|null $account The account data.
 		 * @param int $user_id The requested user ID.
 		 * @param WP_REST_Request $request The request object.
+		 * @param WP_Post|null $post The post object.
 		 * @return Entity\Account|null The modified account data.
 		 *
 		 * Example:
@@ -2413,7 +2414,7 @@ class Mastodon_API {
 		 * } );
 		 * ```
 		 */
-		$account = \apply_filters( 'mastodon_api_account', null, $user_id, $request );
+		$account = \apply_filters( 'mastodon_api_account', null, $user_id, $request, null );
 
 		return $this->validate_entity( $account, Entity\Account::class );
 	}
@@ -2871,7 +2872,7 @@ class Mastodon_API {
 		return $body;
 	}
 
-	private function remap_reblog_id( $post_id ) {
+	public static function remap_reblog_id( $post_id ) {
 		$remapped_post_id = get_post_meta( $post_id, 'mastodon_reblog_id', true );
 		if ( ! $remapped_post_id ) {
 			$remapped_post_id = wp_insert_post(
@@ -2891,7 +2892,7 @@ class Mastodon_API {
 		return $remapped_post_id;
 	}
 
-	private function maybe_get_remapped_reblog_id( $remapped_post_id ) {
+	public static function maybe_get_remapped_reblog_id( $remapped_post_id ) {
 		$post_id = get_post_meta( $remapped_post_id, 'mastodon_reblog_id', true );
 		if ( $post_id ) {
 			return $post_id;
@@ -2899,7 +2900,7 @@ class Mastodon_API {
 		return $remapped_post_id;
 	}
 
-	private function remap_comment_id( $comment_id ) {
+	public static function remap_comment_id( $comment_id ) {
 		$remapped_comment_id = get_comment_meta( $comment_id, 'mastodon_comment_id', true );
 		if ( ! $remapped_comment_id ) {
 			$remapped_comment_id = wp_insert_post(
@@ -2919,12 +2920,26 @@ class Mastodon_API {
 		return $remapped_comment_id;
 	}
 
-	private function get_remapped_comment_id( $remapped_comment_id ) {
+	public static function get_remapped_comment_id( $remapped_comment_id ) {
 		$comment_id = get_post_meta( $remapped_comment_id, 'mastodon_comment_id', true );
 		if ( $comment_id ) {
 			return $comment_id;
 		}
 		return false;
+	}
+
+	public static function remap_user_id( $user_id ) {
+		$remote_user_id = get_term_by( 'name', $user_id, \Enable_Mastodon_Apps\Mastodon_API::REMOTE_USER_TAXONOMY );
+		if ( $remote_user_id ) {
+			$remote_user_id = $remote_user_id->term_id;
+		} else {
+			$remote_user_id = wp_insert_term( $user_id, \Enable_Mastodon_Apps\Mastodon_API::REMOTE_USER_TAXONOMY );
+			if ( ! is_wp_error( $remote_user_id ) ) {
+				$remote_user_id = $remote_user_id['term_id'];
+			}
+		}
+
+		return 1e10 + $remote_user_id;
 	}
 
 	private function software_string() {
