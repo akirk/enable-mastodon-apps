@@ -1504,7 +1504,6 @@ class Mastodon_API {
 		return $response;
 	}
 
-
 	public function api_verify_credentials( $request ) {
 		$request->set_param( 'user_id', get_current_user_id() );
 		return $this->api_account( $request );
@@ -2386,6 +2385,28 @@ class Mastodon_API {
 			'posting:default:visibility' => apply_filters( 'mastodon_api_account_visibility', 'public', wp_get_current_user() ),
 		);
 		return $preferences;
+	}
+
+	public function api_account_statuses( $request ) {
+		$user_id = $this->get_user_id_from_request( $request );
+		$args = array(
+			'author' => $user_id,
+		);
+		$args = apply_filters( 'mastodon_api_account_statuses_args', $args, $request );
+
+		/**
+		 * Filter the account statuses.
+		 *
+		 * @param array|null $statuses Current statuses.
+		 * @param array $args Current statuses arguments.
+		 * @param int|null $min_id Optional minimum status ID.
+		 * @param int|null $max_id Optional maximum status ID.
+		 */
+		$statuses = apply_filters( 'mastodon_api_statuses', null, $args, $request->get_param( 'min_id' ), $request->get_param( 'max_id' ) );
+
+		// @TODO Array-Filter to test if $statuses are an instanceof Status
+
+		return $statuses;
 	}
 
 	public function api_account( $request ) {
