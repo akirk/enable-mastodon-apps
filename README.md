@@ -1,6 +1,6 @@
 # Enable Mastodon Apps
 
-- Contributors: akirk, pfefferle
+- Contributors: akirk, pfefferle, drivingralle, kittmedia, obenland
 - Tags: mastodon, activitypub, friends, fediverse
 - Requires at least: 5.0
 - Tested up to: 6.4
