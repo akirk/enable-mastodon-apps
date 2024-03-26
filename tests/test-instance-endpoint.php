@@ -27,32 +27,46 @@ class InstanceEndpoint_Test extends Mastodon_API_TestCase {
 
 		$data = $response->get_data();
 
-		$this->assertArrayHasKey( 'uri', $data );
-		$this->assertIsString( $data['uri'] );
-		$this->assertEquals( $data['uri'], \wp_parse_url( \home_url(), \PHP_URL_HOST ) );
+		$this->assertTrue( property_exists( $data, 'uri' ) );
+		$this->assertIsString( $data->uri );
+		$this->assertEquals( $data->uri, \wp_parse_url( \home_url(), \PHP_URL_HOST ) );
 
-		$this->assertArrayHasKey( 'account_domain', $data );
-		$this->assertIsString( $data['account_domain'] );
-		$this->assertEquals( $data['account_domain'], \wp_parse_url( \home_url(), \PHP_URL_HOST ) );
+		$this->assertTrue( property_exists( $data, 'title' ) );
+		$this->assertIsString( $data->title );
+		$this->assertEquals( $data->title, get_bloginfo( 'name' ) );
 
-		$this->assertArrayHasKey( 'title', $data );
-		$this->assertIsString( $data['title'] );
-		$this->assertEquals( $data['title'], get_bloginfo( 'name' ) );
+		$this->assertTrue( property_exists( $data, 'description' ) );
+		$this->assertIsString( $data->description );
+		$this->assertEquals( $data->description, get_bloginfo( 'description' ) );
 
-		$this->assertArrayHasKey( 'description', $data );
-		$this->assertIsString( $data['description'] );
-		$this->assertEquals( $data['description'], get_bloginfo( 'description' ) );
+		$this->assertTrue( property_exists( $data, 'email' ) );
+		$this->assertIsString( $data->email );
+		$this->assertEquals( $data->email, get_option( 'admin_email' ) );
 
-		$this->assertArrayHasKey( 'email', $data );
-		$this->assertIsString( $data['email'] );
-		$this->assertEquals( $data['email'], 'not@public.example' );
+		$this->assertTrue( property_exists( $data, 'version' ) );
+		$this->assertIsString( $data->version );
+		$this->assertStringContainsString( ENABLE_MASTODON_APPS_VERSION, $data->version );
 
-		$this->assertArrayHasKey( 'version', $data );
-		$this->assertIsString( $data['version'] );
-		$this->assertStringContainsString( ENABLE_MASTODON_APPS_VERSION, $data['version'] );
+		$this->assertFalse( $data->registrations, false );
 
-		$this->assertFalse( $data['registrations'], false );
+		$this->assertFalse( $data->approval_required, false );
+	}
 
-		$this->assertFalse( $data['approval_required'], false );
+	public function test_extended_description() {
+		global $wp_rest_server;
+		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/instance/extended_description' );
+		$response = $wp_rest_server->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$this->assertEmpty( $response->get_data()->updated_at );
+
+		$description = 'Updated blog description!';
+		update_option( 'blogdescription', $description );
+
+		$response = $wp_rest_server->dispatch( $request );
+		$this->assertSame( 200, $response->get_status() );
+
+		$this->assertSame( $description, $response->get_data()->content );
+		$this->assertNotEmpty( $response->get_data()->updated_at );
 	}
 }

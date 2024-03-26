@@ -56,6 +56,8 @@ class AppsEndpoint_Test extends Mastodon_API_TestCase {
 		update_option( 'mastodon_api_disable_logins', 1 );
 
 		$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/apps' );
+		$request->set_param( 'client_name', 'test123' );
+		$request->set_param( 'redirect_uris', 'https://example.org' );
 		$response = $wp_rest_server->dispatch( $request );
 		$this->assertEquals( 403, $response->get_status() );
 		$data = $response->get_data();
@@ -73,6 +75,7 @@ class AppsEndpoint_Test extends Mastodon_API_TestCase {
 			$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/apps' );
 			$request->set_param( 'client_name', 'test123' );
 			$request->set_param( 'client_name', $invalid_client_name );
+			$request->set_param( 'redirect_uris', 'https://example.org' );
 			$response = $wp_rest_server->dispatch( $request );
 			$this->assertEquals( 422, $response->get_status() );
 
@@ -96,7 +99,7 @@ class AppsEndpoint_Test extends Mastodon_API_TestCase {
 
 			$this->assertArrayHasKey( 'code', $data, $valid_client_name );
 			$this->assertIsString( $data['code'], $valid_client_name );
-			$this->assertEquals( $data['code'], 'invalid-redirect_uris', $valid_client_name );
+			$this->assertEquals( $data['code'], 'rest_missing_callback_param', $valid_client_name );
 		}
 
 		foreach ( array(
@@ -116,22 +119,6 @@ class AppsEndpoint_Test extends Mastodon_API_TestCase {
 		}
 
 		foreach ( array(
-			'https://test',
-		) as $valid_redirect_uris ) {
-			$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/apps' );
-			$request->set_param( 'client_name', 'test123' );
-			$request->set_param( 'redirect_uris', $valid_redirect_uris );
-			$response = $wp_rest_server->dispatch( $request );
-			$this->assertEquals( 422, $response->get_status() );
-
-			$data = $response->get_data();
-
-			$this->assertArrayHasKey( 'code', $data, $valid_redirect_uris );
-			$this->assertIsString( $data['code'], $valid_redirect_uris );
-			$this->assertEquals( $data['code'], 'invalid-scopes', $valid_redirect_uris );
-		}
-
-		foreach ( array(
 			'',
 			'hello',
 		) as $invalid_scopes ) {
@@ -147,42 +134,6 @@ class AppsEndpoint_Test extends Mastodon_API_TestCase {
 			$this->assertArrayHasKey( 'code', $data, $invalid_scopes );
 			$this->assertIsString( $data['code'], $invalid_scopes );
 			$this->assertEquals( $data['code'], 'invalid-scopes', $invalid_scopes );
-		}
-
-		foreach ( array(
-			'hello',
-		) as $invalid_website ) {
-			$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/apps' );
-			$request->set_param( 'client_name', 'test123' );
-			$request->set_param( 'redirect_uris', 'https://test' );
-			$request->set_param( 'website', $invalid_website );
-			$response = $wp_rest_server->dispatch( $request );
-			$this->assertEquals( 422, $response->get_status() );
-
-			$data = $response->get_data();
-
-			$this->assertArrayHasKey( 'code', $data, $invalid_website );
-			$this->assertIsString( $data['code'], $invalid_website );
-			$this->assertEquals( $data['code'], 'invalid-scopes', $invalid_website );
-		}
-
-		foreach ( array(
-			'',
-			'https://test',
-			'protocol:test',
-		) as $valid_website ) {
-			$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/apps' );
-			$request->set_param( 'client_name', 'test123' );
-			$request->set_param( 'redirect_uris', 'https://test' );
-			$request->set_param( 'website', $valid_website );
-			$response = $wp_rest_server->dispatch( $request );
-			$this->assertEquals( 422, $response->get_status() );
-
-			$data = $response->get_data();
-
-			$this->assertArrayHasKey( 'code', $data, $valid_website );
-			$this->assertIsString( $data['code'], $valid_website );
-			$this->assertEquals( $data['code'], 'invalid-scopes', $valid_website );
 		}
 
 		foreach ( array(

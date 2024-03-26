@@ -24,7 +24,7 @@ class TimelineEndpoint_Test extends Mastodon_API_TestCase {
 		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/timelines/home' );
 		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
 		$response = $wp_rest_server->dispatch( $request );
-		$data = $response->get_data();
+		$data = json_decode( json_encode( $response->get_data() ), true );
 
 		$this->assertArrayHasKey( 0, $data );
 		$this->assertArrayHasKey( 'id', $data[0] );
@@ -32,8 +32,7 @@ class TimelineEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertEquals( $data[0]['id'], strval( $this->friend_post ) );
 
 		$this->assertArrayHasKey( 'media_attachments', $data[0] );
-		$this->assertArrayHasKey( 0, $data[0]['media_attachments'] );
-		$this->assertEquals( '513722435', $data[0]['media_attachments'][0]['id'] );
+		$this->assertEquals( $this->friend_attachment_id, $data[0]['media_attachments'][0]['id'] );
 
 		$this->assertArrayHasKey( 1, $data );
 		$this->assertArrayHasKey( 'id', $data[1] );
@@ -42,8 +41,8 @@ class TimelineEndpoint_Test extends Mastodon_API_TestCase {
 	}
 
 	public function test_timelines_segmentation() {
-		$post = get_post( $this->post );
-		$friend_post = get_post( $this->friend_post );
+		$first_post = get_post( $this->post );
+		$second_post = get_post( $this->friend_post );
 
 		$third_post_id = wp_insert_post(
 			array(
@@ -51,7 +50,7 @@ class TimelineEndpoint_Test extends Mastodon_API_TestCase {
 				'post_content' => '',
 				'post_title'   => 'Third title',
 				'post_status'  => 'publish',
-				'post_type'    => 'friend_post_cache',
+				'post_type'    => 'post',
 				'post_date'    => '2023-01-05 00:00:00',
 			)
 		);
@@ -60,64 +59,84 @@ class TimelineEndpoint_Test extends Mastodon_API_TestCase {
 
 		// We now have three posts from oldest to newest: post, friend_post, third_post.
 
-		$this->assertLessThan( $friend_post->ID, $post->ID );
-		$this->assertLessThan( $friend_post->post_date, $post->post_date );
-		$this->assertLessThan( $third_post->post_date, $friend_post->post_date );
+		$this->assertLessThan( $second_post->ID, $first_post->ID );
+		$this->assertLessThan( $second_post->post_date, $first_post->post_date );
+		$this->assertLessThan( $third_post->post_date, $second_post->post_date );
 
 		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
 
 		global $wp_rest_server;
 		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/timelines/home' );
 		$response = $wp_rest_server->dispatch( $request );
-		$data = $response->get_data();
+		$data = json_decode( json_encode( $response->get_data() ), true );
 
+		$this->assertArrayHasKey( 'prev', $response->get_links() );
+		$this->assertStringContainsString( 'min_id=' . $third_post->ID, $response->get_links()['prev'][0]['href'] );
+		$this->assertArrayHasKey( 'next', $response->get_links() );
+		$this->assertStringContainsString( 'max_id=' . $first_post->ID, $response->get_links()['next'][0]['href'] );
 		$this->assertCount( 3, $data );
 		$this->assertArrayHasKey( 0, $data );
 		$this->assertArrayHasKey( 'id', $data[0] );
 		$this->assertIsString( $data[0]['id'] );
 		$this->assertEquals( $data[0]['id'], strval( $third_post->ID ) );
-		$this->assertEquals( $data[1]['id'], strval( $friend_post->ID ) );
-		$this->assertEquals( $data[2]['id'], strval( $post->ID ) );
+		$this->assertEquals( $data[1]['id'], strval( $second_post->ID ) );
+		$this->assertEquals( $data[2]['id'], strval( $first_post->ID ) );
 
 		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/timelines/home' );
-		$request->set_param( 'min_id', $post->ID );
+		$request->set_param( 'min_id', $first_post->ID );
 		$response = $wp_rest_server->dispatch( $request );
-		$data = $response->get_data();
+		$data = json_decode( json_encode( $response->get_data() ), true );
 
+		$this->assertArrayHasKey( 'next', $response->get_links() );
+		$this->assertStringContainsString( 'max_id=' . $second_post->ID, $response->get_links()['next'][0]['href'] );
+		$this->assertArrayHasKey( 'prev', $response->get_links() );
+		$this->assertStringContainsString( 'min_id=' . $third_post->ID, $response->get_links()['prev'][0]['href'] );
 		$this->assertCount( 2, $data );
 		$this->assertArrayHasKey( 0, $data );
 		$this->assertArrayHasKey( 'id', $data[0] );
 		$this->assertIsString( $data[0]['id'] );
 		$this->assertEquals( $data[0]['id'], strval( $third_post->ID ) );
+		$this->assertEquals( $data[1]['id'], strval( $second_post->ID ) );
 
 		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/timelines/home' );
-		$request->set_param( 'max_id', $friend_post->ID );
+		$request->set_param( 'max_id', $second_post->ID );
 		$response = $wp_rest_server->dispatch( $request );
-		$data = $response->get_data();
+		$data = json_decode( json_encode( $response->get_data() ), true );
+
+		$this->assertArrayHasKey( 'next', $response->get_links() );
+		$this->assertStringContainsString( 'max_id=' . $first_post->ID, $response->get_links()['next'][0]['href'] );
 
 		$this->assertCount( 1, $data );
 		$this->assertArrayHasKey( 0, $data );
 		$this->assertArrayHasKey( 'id', $data[0] );
 		$this->assertIsString( $data[0]['id'] );
-		$this->assertEquals( $data[0]['id'], strval( $post->ID ) );
+		$this->assertEquals( $data[0]['id'], strval( $first_post->ID ) );
 
 		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/timelines/home' );
-		$request->set_param( 'min_id', $post->ID );
+		$request->set_param( 'min_id', $first_post->ID );
 		$request->set_param( 'max_id', $third_post->ID );
 		$response = $wp_rest_server->dispatch( $request );
-		$data = $response->get_data();
+		$data = json_decode( json_encode( $response->get_data() ), true );
 
+		$this->assertArrayHasKey( 'next', $response->get_links() );
+		$this->assertStringContainsString( 'max_id=' . $second_post->ID, $response->get_links()['next'][0]['href'] );
+		$this->assertArrayHasKey( 'prev', $response->get_links() );
+		$this->assertStringContainsString( 'min_id=' . $second_post->ID, $response->get_links()['prev'][0]['href'] );
 		$this->assertCount( 1, $data );
 		$this->assertArrayHasKey( 0, $data );
 		$this->assertArrayHasKey( 'id', $data[0] );
 		$this->assertIsString( $data[0]['id'] );
-		$this->assertEquals( $data[0]['id'], strval( $friend_post->ID ) );
+		$this->assertEquals( $data[0]['id'], strval( $second_post->ID ) );
 
 		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/timelines/home' );
 		$request->set_param( 'limit', 1 );
 		$response = $wp_rest_server->dispatch( $request );
-		$data = $response->get_data();
+		$data = json_decode( json_encode( $response->get_data() ), true );
 
+		$this->assertArrayHasKey( 'next', $response->get_links() );
+		$this->assertStringContainsString( 'max_id=' . $third_post->ID, $response->get_links()['next'][0]['href'] );
+		$this->assertArrayHasKey( 'prev', $response->get_links() );
+		$this->assertStringContainsString( 'min_id=' . $third_post->ID, $response->get_links()['prev'][0]['href'] );
 		$this->assertCount( 1, $data );
 		$this->assertArrayHasKey( 0, $data );
 		$this->assertArrayHasKey( 'id', $data[0] );
@@ -127,39 +146,105 @@ class TimelineEndpoint_Test extends Mastodon_API_TestCase {
 		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/timelines/home' );
 		$request->set_param( 'limit', 2 );
 		$response = $wp_rest_server->dispatch( $request );
-		$data = $response->get_data();
+		$data = json_decode( json_encode( $response->get_data() ), true );
 
 		$this->assertCount( 2, $data );
 		$this->assertArrayHasKey( 0, $data );
 		$this->assertArrayHasKey( 'id', $data[0] );
 		$this->assertIsString( $data[0]['id'] );
 		$this->assertEquals( $data[0]['id'], strval( $third_post->ID ) );
-		$this->assertEquals( $data[1]['id'], strval( $friend_post->ID ) );
+		$this->assertEquals( $data[1]['id'], strval( $second_post->ID ) );
 
 		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/timelines/home' );
 		$request->set_param( 'limit', 3 );
 		$response = $wp_rest_server->dispatch( $request );
-		$data = $response->get_data();
+		$data = json_decode( json_encode( $response->get_data() ), true );
+
+		$this->assertArrayHasKey( 'next', $response->get_links() );
+		$this->assertStringContainsString( 'max_id=' . $first_post->ID, $response->get_links()['next'][0]['href'] );
+		$this->assertArrayHasKey( 'prev', $response->get_links() );
+		$this->assertStringContainsString( 'min_id=' . $third_post->ID, $response->get_links()['prev'][0]['href'] );
 
 		$this->assertCount( 3, $data );
 		$this->assertArrayHasKey( 0, $data );
 		$this->assertArrayHasKey( 'id', $data[0] );
 		$this->assertIsString( $data[0]['id'] );
 		$this->assertEquals( $data[0]['id'], strval( $third_post->ID ) );
-		$this->assertEquals( $data[1]['id'], strval( $friend_post->ID ) );
-		$this->assertEquals( $data[2]['id'], strval( $post->ID ) );
+		$this->assertEquals( $data[1]['id'], strval( $second_post->ID ) );
+		$this->assertEquals( $data[2]['id'], strval( $first_post->ID ) );
 
 		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/timelines/home' );
 		$request->set_param( 'limit', 5 );
 		$response = $wp_rest_server->dispatch( $request );
-		$data = $response->get_data();
+		$data = json_decode( json_encode( $response->get_data() ), true );
+
+		$this->assertArrayHasKey( 'next', $response->get_links() );
+		$this->assertStringContainsString( 'max_id=' . $first_post->ID, $response->get_links()['next'][0]['href'] );
+		$this->assertArrayHasKey( 'prev', $response->get_links() );
+		$this->assertStringContainsString( 'min_id=' . $third_post->ID, $response->get_links()['prev'][0]['href'] );
 
 		$this->assertCount( 3, $data );
 		$this->assertArrayHasKey( 0, $data );
 		$this->assertArrayHasKey( 'id', $data[0] );
 		$this->assertIsString( $data[0]['id'] );
 		$this->assertEquals( $data[0]['id'], strval( $third_post->ID ) );
-		$this->assertEquals( $data[1]['id'], strval( $friend_post->ID ) );
-		$this->assertEquals( $data[2]['id'], strval( $post->ID ) );
+		$this->assertEquals( $data[1]['id'], strval( $second_post->ID ) );
+		$this->assertEquals( $data[2]['id'], strval( $first_post->ID ) );
+
+		$pages = array( $third_post->ID, $second_post->ID, $first_post->ID );
+		$response = false;
+		do {
+			$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/timelines/home' );
+			$request->set_param( 'limit', 1 );
+			if ( $response && isset( $response->get_links()['next'] ) ) {
+				parse_str( parse_url( $response->get_links()['next'][0]['href'], PHP_URL_QUERY ), $query );
+				foreach ( $query as $key => $value ) {
+					$request->set_param( $key, $value );
+				}
+			}
+			$response = $wp_rest_server->dispatch( $request );
+			$data = json_decode( json_encode( $response->get_data() ), true );
+
+			if ( empty( $pages ) ) {
+				$this->assertCount( 0, $data );
+			} else {
+				$current_page = array_shift( $pages );
+
+				$this->assertCount( 1, $data, 'Page: ' . $current_page );
+				$this->assertArrayHasKey( 0, $data, 'Page: ' . $current_page );
+				$this->assertArrayHasKey( 'id', $data[0], 'Page: ' . $current_page );
+				$this->assertIsString( $data[0]['id'], 'Page: ' . $current_page );
+				$this->assertEquals( $data[0]['id'], strval( $current_page ), 'Page: ' . $current_page );
+			}
+		} while ( isset( $response->get_links()['next'] ) );
+
+		$pages = array( $third_post->ID, $second_post->ID, $first_post->ID );
+		$response = false;
+		do {
+			$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/timelines/home' );
+			$request->set_param( 'limit', 1 );
+			if ( $response && isset( $response->get_links()['prev'] ) ) {
+				parse_str( parse_url( $response->get_links()['prev'][0]['href'], PHP_URL_QUERY ), $query );
+				foreach ( $query as $key => $value ) {
+					$request->set_param( $key, $value );
+				}
+			} else {
+				$request->set_param( 'max_id', $second_post->ID );
+			}
+			$response = $wp_rest_server->dispatch( $request );
+			$data = json_decode( json_encode( $response->get_data() ), true );
+
+			if ( empty( $pages ) ) {
+				$this->assertCount( 0, $data );
+			} else {
+				$current_page = array_pop( $pages );
+
+				$this->assertCount( 1, $data, 'Page: ' . $current_page );
+				$this->assertArrayHasKey( 0, $data, 'Page: ' . $current_page );
+				$this->assertArrayHasKey( 'id', $data[0], 'Page: ' . $current_page );
+				$this->assertIsString( $data[0]['id'], 'Page: ' . $current_page );
+				$this->assertEquals( $data[0]['id'], strval( $current_page ), 'Page: ' . $current_page );
+			}
+		} while ( isset( $response->get_links()['prev'] ) );
 	}
 }

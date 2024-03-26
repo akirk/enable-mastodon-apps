@@ -24,7 +24,7 @@ class Pixelfed {
 	}
 
 	public function mastodon_api_pixelfed_nodeinfo_software( $software ) {
-		if ( 'okhttp/4.9.2' === $_SERVER['HTTP_USER_AGENT'] ) {
+		if ( false !== strpos( $_SERVER['HTTP_USER_AGENT'], 'Pixelfed' ) ) {
 			return array(
 				'name'    => 'pixelfed',
 				'version' => '0.11.5',
