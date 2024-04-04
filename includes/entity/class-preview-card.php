@@ -41,70 +41,70 @@ class Preview_Card extends Entity {
 	 *
 	 * @var string
 	 */
-	public string $url;
+	protected string $url;
 
 	/**
 	 * Title of linked resource.
 	 *
 	 * @var string
 	 */
-	public string $title;
+	protected string $title;
 
 	/**
 	 * Description of preview.
 	 *
 	 * @var string
 	 */
-	public string $description;
+	protected string $description;
 
 	/**
 	 * The type of the preview card.
 	 *
 	 * @var string
 	 */
-	public string $type;
+	protected string $type;
 
 	/**
 	 * The author of the original resource.
 	 *
 	 * @var string
 	 */
-	public string $author_name;
+	protected string $author_name;
 
 	/**
 	 * A link to the author of the original resource.
 	 *
 	 * @var string
 	 */
-	public string $author_url;
+	protected string $author_url;
 
 	/**
 	 * The provider of the original resource.
 	 *
 	 * @var string
 	 */
-	public string $provider_name;
+	protected string $provider_name;
 
 	/**
 	 * A link to the provider of the original resource.
 	 *
 	 * @var string
 	 */
-	public string $provider_url;
+	protected string $provider_url;
 
 	/**
 	 * HTML to be used for generating the preview card.
 	 *
 	 * @var string
 	 */
-	public string $html;
+	protected string $html;
 
 	/**
 	 * Used for photo embeds, instead of custom html.
 	 *
 	 * @var string
 	 */
-	public string $embed_url;
+	protected string $embed_url;
 
 	/**
 	 * A hash for generating colorful preview thumbnails when media has not been
@@ -112,26 +112,26 @@ class Preview_Card extends Entity {
 	 *
 	 * @var null|string
 	 */
-	public ?string $blurhash = null;
+	protected ?string $blurhash = null;
 
 	/**
 	 * Preview thumbnail.
 	 *
 	 * @var null|string
 	 */
-	public ?string $image = null;
+	protected ?string $image = null;
 
 	/**
 	 * Width of preview, in pixels.
 	 *
 	 * @var int
 	 */
-	public int $width;
+	protected int $width;
 
 	/**
 	 * Height of preview, in pixels.
 	 *
 	 * @var int
 	 */
-	public int $height;
+	protected int $height;
 }

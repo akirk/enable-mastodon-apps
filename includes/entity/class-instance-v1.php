@@ -45,110 +45,110 @@ class Instance_V1 extends Entity {
 	 *
 	 * @var string
 	 */
-	public string $uri = '';
+	protected string $uri = '';
 
 	/**
 	 * The title of the instance.
 	 *
 	 * @var string
 	 */
-	public string $title = '';
+	protected string $title = '';
 
 	/**
 	 * A short description of the instance.
 	 *
 	 * @var string
 	 */
-	public string $short_description = '';
+	protected string $short_description = '';
 
 	/**
 	 * Description of the instance.
 	 *
 	 * @var string
 	 */
-	public string $description = '';
+	protected string $description = '';
 
 	/**
 	 * An email that may be contacted for any inquiries.
 	 *
 	 * @var string
 	 */
-	public string $email = '';
+	protected string $email = '';
 
 	/**
 	 * The version of Mastodon installed on the instance.
 	 *
 	 * @var string
 	 */
-	public string $version = '';
+	protected string $version = '';
 
 	/**
 	 * URLs of interest for clients apps.
 	 *
 	 * @var array[]
 	 */
-	public array $urls = array();
+	protected array $urls = array();
 
 	/**
 	 * Statistics about how much information the instance contains.
 	 *
 	 * @var array[]
 	 */
-	public array $stats = array();
+	protected array $stats = array();
 
 	/**
 	 * An image used to represent this instance.
 	 *
 	 * @var string
 	 */
-	public string $thumbnail = '';
+	protected string $thumbnail = '';
 
 	/**
 	 * Primary languages of the website and its staff.
 	 *
 	 * @var string[]
 	 */
-	public array $languages = array();
+	protected array $languages = array();
 
 	/**
 	 * Whether registrations are enabled.
 	 *
 	 * @var bool
 	 */
-	public bool $registrations = false;
+	protected bool $registrations = false;
 
 	/**
 	 * Whether registrations require moderator approval.
 	 *
 	 * @var bool
 	 */
-	public bool $approval_required = false;
+	protected bool $approval_required = false;
 
 	/**
 	 * Whether invites are enabled.
 	 *
 	 * @var bool
 	 */
-	public bool $invites_enabled = false;
+	protected bool $invites_enabled = false;
 
 	/**
 	 * Configured values and limits for this website.
 	 *
 	 * @var array[]
 	 */
-	public array $configuration = array();
+	protected array $configuration = array();
 
 	/**
 	 * A user that can be contacted, as an alternative to `email`.
 	 *
 	 * @var Account|null
 	 */
-	public $contact_account = null;
+	protected $contact_account = null;
 
 	/**
 	 * An itemized list of rules for this website.
 	 *
 	 * @var Rule[]
 	 */
-	public array $rules = array();
+	protected array $rules = array();
 }

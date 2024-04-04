@@ -28,19 +28,19 @@ class Search extends Entity {
 	 *
 	 * @var Account[]
 	 */
-	public array $accounts;
+	protected array $accounts;
 
 	/**
 	 * Statuses as search result.
 	 *
 	 * @var Status[]
 	 */
-	public array $statuses;
+	protected array $statuses;
 
 	/**
 	 * Tags as search results.
 	 *
 	 * @var Tag[]
 	 */
-	public array $hashtags;
+	protected array $hashtags;
 }

@@ -32,12 +32,12 @@ class Extended_Description extends Entity {
 	 *
 	 * @var string
 	 */
-	public string $updated_at = '';
+	protected string $updated_at = '';
 
 	/**
 	 * The extended description for the instance.
 	 *
 	 * @var string
 	 */
-	public string $content = '';
+	protected string $content = '';
 }

@@ -55,133 +55,133 @@ class Account extends Entity {
 	 *
 	 * @var string
 	 */
-	public $id;
+	protected $id;
 
 	/**
 	 * The username of the account, not including domain.
 	 *
 	 * @var string
 	 */
-	public $username;
+	protected $username;
 
 	/**
 	 * The Webfinger account URI. Equal to username for local users, or username@domain for remote users.
 	 *
 	 * @var string
 	 */
-	public $acct;
+	protected $acct;
 
 	/**
 	 * The location of the user’s profile page.
 	 *
 	 * @var string
 	 */
-	public $url;
+	protected $url;
 
 	/**
 	 * The profile’s display name.
 	 *
 	 * @var string
 	 */
-	public $display_name;
+	protected $display_name;
 
 	/**
 	 * The profile’s bio or description.
 	 *
 	 * @var string
 	 */
-	public $note = '';
+	protected $note = '';
 
 	/**
 	 * An image icon that is shown next to statuses and in the profile.
 	 *
 	 * @var string
 	 */
-	public $avatar = '';
+	protected $avatar = '';
 
 	/**
 	 * A static version of the avatar. Equal to avatar if its value is a static image; different if avatar is an animated GIF.
 	 *
 	 * @var string
 	 */
-	public $avatar_static = '';
+	protected $avatar_static = '';
 
 	/**
 	 * An image banner that is shown above the profile and in profile cards.
 	 *
 	 * @var string
 	 */
-	public $header = '';
+	protected $header = '';
 
 	/**
 	 * A static version of the header. Equal to header if its value is a static image; different if header is an animated GIF.
 	 *
 	 * @var string
 	 */
-	public $header_static = '';
+	protected $header_static = '';
 
 	/**
 	 * Whether the account manually approves follow requests.
 	 *
 	 * @var bool
 	 */
-	public $locked = false;
+	protected $locked = false;
 
 	/**
 	 * Additional metadata attached to a profile as name-value pairs.
 	 *
 	 * @var array
 	 */
-	public $fields = array();
+	protected $fields = array();
 
 	/**
 	 * Custom emoji entities to be used when rendering the profile.
 	 *
 	 * @var array
 	 */
-	public $emojis = array();
+	protected $emojis = array();
 
 	/**
 	 * Indicates that the account may perform automated actions, may not be monitored, or identifies as a robot.
 	 *
 	 * @var bool
 	 */
-	public $bot = false;
+	protected $bot = false;
 
 	/**
 	 * Indicates that the account represents a Group actor.
 	 *
 	 * @var bool
 	 */
-	public $group = false;
+	protected $group = false;
 
 	/**
 	 * Whether the account has opted into discovery features such as the profile directory.
 	 *
 	 * @var bool
 	 */
-	public $discoverable = true;
+	protected $discoverable = true;
 
 	/**
 	 * Whether the local user has opted out of being indexed by search engines.
 	 *
 	 * @var bool
 	 */
-	public $noindex = false;
+	protected $noindex = false;
 
 	/**
 	 * Indicates that the profile is currently inactive and that its user has moved to a new account.
 	 *
 	 * @var Account|null
 	 */
-	public $moved;
+	protected $moved;
 
 	/**
 	 * An extra attribute returned only when an account is suspended.
 	 *
 	 * @var bool
 	 */
-	public $suspended = false;
+	protected $suspended = false;
 
 	/**
 	 * An extra attribute returned only when an account is silenced.
@@ -189,49 +189,49 @@ class Account extends Entity {
 	 *
 	 * @var bool
 	 */
-	public $limited = false;
+	protected $limited = false;
 
 	/**
 	 * When the account was created.
 	 *
 	 * @var string
 	 */
-	public $created_at;
+	protected $created_at;
 
 	/**
 	 * When the most recent status was posted.
 	 *
 	 * @var string|null
 	 */
-	public $last_status_at;
+	protected $last_status_at;
 
 	/**
 	 * How many statuses are attached to this account.
 	 *
 	 * @var int
 	 */
-	public $statuses_count = 0;
+	protected $statuses_count = 0;
 
 	/**
 	 * The reported followers of this profile.
 	 *
 	 * @var int
 	 */
-	public $followers_count = 0;
+	protected $followers_count = 0;
 
 	/**
 	 * The reported follows of this profile.
 	 *
 	 * @var int
 	 */
-	public $following_count = 0;
+	protected $following_count = 0;
 
 	/**
 	 * The account source.
 	 *
 	 * @var array
 	 */
-	public $source = array(
+	protected $source = array(
 		'privacy'   => 'public',
 		'sensitive' => false,
 		'language'  => 'en',

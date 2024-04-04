@@ -30,7 +30,7 @@ class Media_Attachment extends Entity {
 	 *
 	 * @var string
 	 */
-	public string $id = '';
+	protected string $id = '';
 
 	/**
 	 * The media attachment type.
@@ -39,35 +39,35 @@ class Media_Attachment extends Entity {
 	 *
 	 * @var string
 	 */
-	public string $type = 'unknown';
+	protected string $type = 'unknown';
 
 	/**
 	 * The media attachment url.
 	 *
 	 * @var string
 	 */
-	public string $url = '';
+	protected string $url = '';
 
 	/**
 	 * The media attachment preview url.
 	 *
 	 * @var string
 	 */
-	public string $preview_url = '';
+	protected string $preview_url = '';
 
 	/**
 	 * The media attachment remote url.
 	 *
 	 * @var string|null
 	 */
-	public $remote_url = null;
+	protected $remote_url = null;
 
 	/**
 	 * The media attachment text url.
 	 *
 	 * @var string
 	 */
-	public string $text_url = '';
+	protected string $text_url = '';
 
 	/**
 	 * The media attachment meta.
@@ -76,19 +76,19 @@ class Media_Attachment extends Entity {
 	 *
 	 * @var array
 	 */
-	public array $meta = array();
+	protected array $meta = array();
 
 	/**
 	 * The media attachment description.
 	 *
 	 * @var string|null
 	 */
-	public $description = null;
+	protected $description = null;
 
 	/**
 	 * The media attachment blurhash.
 	 *
 	 * @var string
 	 */
-	public string $blurhash = '';
+	protected string $blurhash = '';
 }

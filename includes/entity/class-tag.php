@@ -29,7 +29,7 @@ class Tag extends Entity {
 	 *
 	 * @var string
 	 */
-	public string $name;
+	protected string $name;
 
 
 	/**
@@ -37,7 +37,7 @@ class Tag extends Entity {
 	 *
 	 * @var string
 	 */
-	public string $url;
+	protected string $url;
 
 
 	/**
@@ -45,7 +45,7 @@ class Tag extends Entity {
 	 *
 	 * @var array
 	 */
-	public array $history;
+	protected array $history;
 
 
 	/**
@@ -53,5 +53,5 @@ class Tag extends Entity {
 	 *
 	 * @var bool
 	 */
-	public bool $following;
+	protected bool $following;
 }

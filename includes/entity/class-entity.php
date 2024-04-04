@@ -79,4 +79,12 @@ abstract class Entity implements \JsonSerializable {
 		$array = $this->jsonSerialize();
 		return empty( $array['error'] );
 	}
+
+	public function __get( $name ) {
+		return $this->$name;
+	}
+
+	public function __set( $name, $value ) {
+		$this->$name = $value;
+	}
 }

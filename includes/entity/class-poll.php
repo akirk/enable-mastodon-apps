@@ -40,35 +40,35 @@ class Poll extends Entity {
 	 *
 	 * @var string
 	 */
-	public string $id;
+	protected string $id;
 
 	/**
 	 * When the poll ends.
 	 *
 	 * @var null|string
 	 */
-	public ?string $expires_at;
+	protected ?string $expires_at;
 
 	/**
 	 * Is the poll currently expired?
 	 *
 	 * @var bool
 	 */
-	public bool $expired;
+	protected bool $expired;
 
 	/**
 	 * Does the poll allow multiple-choice answers?
 	 *
 	 * @var bool
 	 */
-	public bool $multiple;
+	protected bool $multiple;
 
 	/**
 	 * How many votes have been received.
 	 *
 	 * @var int
 	 */
-	public int $votes_count;
+	protected int $votes_count;
 
 	/**
 	 * How many unique accounts have voted on a multiple-choice poll.
@@ -76,7 +76,7 @@ class Poll extends Entity {
 	 *
 	 * @var null|int
 	 */
-	public ?int $voters_count = 0;
+	protected ?int $voters_count = 0;
 
 	/**
 	 * Possible answers for the poll.
@@ -84,7 +84,7 @@ class Poll extends Entity {
 	 *
 	 * @var array
 	 */
-	public array $options;
+	protected array $options;
 
 	/**
 	 * Custom emoji to be used for rendering poll options.
@@ -92,14 +92,14 @@ class Poll extends Entity {
 	 *
 	 * @var array
 	 */
-	public array $emojis;
+	protected array $emojis;
 
 	/**
 	 * When called with a user token, has the authorized user voted?
 	 *
 	 * @var bool
 	 */
-	public bool $voted = false;
+	protected bool $voted = false;
 
 	/**
 	 * When called with a user token, which options has the authorized user chosen?
@@ -107,5 +107,5 @@ class Poll extends Entity {
 	 *
 	 * @var int[]
 	 */
-	public array $own_votes = array();
+	protected array $own_votes = array();
 }

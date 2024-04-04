@@ -30,33 +30,33 @@ class Notification extends Entity {
 	 *
 	 * @var string
 	 */
-	public string $id;
+	protected string $id;
 
 	/**
 	 * The notification type.
 	 *
 	 * @var string
 	 */
-	public string $type;
+	protected string $type;
 
 	/**
 	 * The notification timestamp.
 	 *
 	 * @var string
 	 */
-	public string $created_at;
+	protected string $created_at;
 
 	/**
 	 * The account connected to notification.
 	 *
 	 * @var Account
 	 */
-	public Account $account;
+	protected Account $account;
 
 	/**
 	 * The notification id.
 	 *
 	 * @var Status
 	 */
-	public Status $status;
+	protected Status $status;
 }

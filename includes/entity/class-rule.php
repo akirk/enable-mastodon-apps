@@ -32,12 +32,12 @@ class Rule extends Entity {
 	 *
 	 * @var string
 	 */
-	public string $id;
+	protected string $id;
 
 	/**
 	 * The rule to be followed.
 	 *
 	 * @var string
 	 */
-	public string $text;
+	protected string $text;
 }

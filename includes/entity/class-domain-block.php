@@ -34,26 +34,26 @@ class Domain_Block extends Entity {
 	 *
 	 * @var string
 	 */
-	public string $domain = '';
+	protected string $domain = '';
 
 	/**
 	 * The SHA256 hash of the domain that is blocked.
 	 *
 	 * @var string
 	 */
-	public string $digest = '';
+	protected string $digest = '';
 
 	/**
 	 * The severity of the domain block.
 	 *
 	 * @var string
 	 */
-	public string $severity = '';
+	protected string $severity = '';
 
 	/**
 	 * An optional reason for the domain block.
 	 *
 	 * @var string
 	 */
-	public string $comment = '';
+	protected string $comment = '';
 }

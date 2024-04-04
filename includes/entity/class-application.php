@@ -30,26 +30,26 @@ class Application extends Entity {
 	 *
 	 * @var string
 	 */
-	public string $name = '';
+	protected string $name = '';
 
 	/**
 	 * Client ID key, to be used for obtaining OAuth tokens.
 	 *
 	 * @var string
 	 */
-	public string $client_id = '';
+	protected string $client_id = '';
 
 	/**
 	 * Client secret key, to be used for obtaining OAuth tokens.
 	 *
 	 * @var string
 	 */
-	public string $client_secret = '';
+	protected string $client_secret = '';
 
 	/**
 	 * The website associated with your application.
 	 *
 	 * @var null|string
 	 */
-	public ?string $website = null;
+	protected ?string $website = null;
 }

@@ -65,126 +65,126 @@ class Status extends Entity {
 	 *
 	 * @var string
 	 */
-	public string $id;
+	protected string $id;
 
 	/**
 	 * When the status was created.
 	 *
 	 * @var string
 	 */
-	public $created_at;
+	protected $created_at;
 
 	/**
 	 * When the status was edited.
 	 *
 	 * @var null|string
 	 */
-	public $edited_at = null;
+	protected $edited_at = null;
 
 	/**
 	 * Text to be shown as a warning or subject before the actual content.
 	 *
 	 * @var string
 	 */
-	public string $spoiler_text = '';
+	protected string $spoiler_text = '';
 
 	/**
 	 * The visibility of the status.
 	 *
 	 * @var string
 	 */
-	public string $visibility = 'public';
+	protected string $visibility = 'public';
 
 	/**
 	 * ISO 639 language code for this status.
 	 *
 	 * @var null|string
 	 */
-	public ?string $language = null;
+	protected ?string $language = null;
 
 	/**
 	 * The URI to this status.
 	 *
 	 * @var string
 	 */
-	public string $uri;
+	protected string $uri;
 
 	/**
 	 * The URL to this status.
 	 *
 	 * @var null|string
 	 */
-	public ?string $url = null;
+	protected ?string $url = null;
 
 	/**
 	 * The HTML-encoded content of this status.
 	 *
 	 * @var string
 	 */
-	public string $content;
+	protected string $content;
 
 	/**
 	 * The plain-text content of this status.
 	 *
 	 * @var null|string
 	 */
-	public ?string $text = null;
+	protected ?string $text = null;
 
 	/**
 	 * The ID of a status this status is a reply to.
 	 *
 	 * @var null|string
 	 */
-	public ?string $in_reply_to_id = null;
+	protected ?string $in_reply_to_id = null;
 
 	/**
 	 * The account ID of a status this status is a reply to.
 	 *
 	 * @var null|string
 	 */
-	public ?string $in_reply_to_account_id = null;
+	protected ?string $in_reply_to_account_id = null;
 
 	/**
 	 * Whether this status contains sensitive content.
 	 *
 	 * @var bool
 	 */
-	public bool $sensitive = false;
+	protected bool $sensitive = false;
 
 	/**
 	 * Whether this status is a favorite.
 	 *
 	 * @var bool
 	 */
-	public bool $favourited = false;
+	protected bool $favourited = false;
 
 	/**
 	 * Whether this status has been reblogged.
 	 *
 	 * @var bool
 	 */
-	public bool $reblogged = false;
+	protected bool $reblogged = false;
 
 	/**
 	 * Whether this status is muted.
 	 *
 	 * @var bool
 	 */
-	public bool $muted = false;
+	protected bool $muted = false;
 
 	/**
 	 * Whether this status has been bookmarked.
 	 *
 	 * @var bool
 	 */
-	public bool $bookmarked = false;
+	protected bool $bookmarked = false;
 
 	/**
 	 * Whether this status has been pinned.
 	 *
 	 * @var bool
 	 */
-	public bool $pinned = false;
+	protected bool $pinned = false;
 
 	/**
 	 * The filter and keywords that matched this status.
@@ -192,14 +192,14 @@ class Status extends Entity {
 	 *
 	 * @var array
 	 */
-	public array $filtered = array();
+	protected array $filtered = array();
 
 	/**
 	 * List of media attachments of this status.
 	 *
 	 * @var array
 	 */
-	public array $media_attachments = array();
+	protected array $media_attachments = array();
 
 	/**
 	 * List of mentions.
@@ -207,7 +207,7 @@ class Status extends Entity {
 	 *
 	 * @var array
 	 */
-	public array $mentions = array();
+	protected array $mentions = array();
 
 	/**
 	 * List of tags of this status.
@@ -215,7 +215,7 @@ class Status extends Entity {
 	 *
 	 * @var array
 	 */
-	public array $tags = array();
+	protected array $tags = array();
 
 	/**
 	 * List of emojis.
@@ -223,63 +223,63 @@ class Status extends Entity {
 	 *
 	 * @var array
 	 */
-	public array $emojis = array();
+	protected array $emojis = array();
 
 	/**
 	 * The amount of replies to this status.
 	 *
 	 * @var int
 	 */
-	public int $replies_count = 0;
+	protected int $replies_count = 0;
 
 	/**
 	 * The amount of reblogs of this status.
 	 *
 	 * @var int
 	 */
-	public int $reblogs_count = 0;
+	protected int $reblogs_count = 0;
 
 	/**
 	 * The amount of favorites for this status.
 	 *
 	 * @var int
 	 */
-	public int $favourites_count = 0;
+	protected int $favourites_count = 0;
 
 	/**
 	 * The account this status belongs to.
 	 *
 	 * @var Account
 	 */
-	public Account $account;
+	protected Account $account;
 
 	/**
 	 * The status object that gets reblogged.
 	 *
 	 * @var null|Status
 	 */
-	public ?Status $reblog = null;
+	protected ?Status $reblog = null;
 
 	/**
 	 * The application of this status.
 	 *
 	 * @var null|Application
 	 */
-	public ?Application $application = null;
+	protected ?Application $application = null;
 
 	/**
 	 * Preview card for links included within status content.
 	 *
 	 * @var null|Preview_Card
 	 */
-	public ?Preview_Card $card = null;
+	protected ?Preview_Card $card = null;
 
 	/**
 	 * The poll attached to the status.
 	 *
 	 * @var null|Poll
 	 */
-	public ?Poll $poll = null;
+	protected ?Poll $poll = null;
 
 	public function __get( $k ) {
 		if ( 'content' === $k ) {

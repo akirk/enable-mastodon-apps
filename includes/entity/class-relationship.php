@@ -44,103 +44,103 @@ class Relationship extends Entity {
 	 *
 	 * @var string
 	 */
-	public string $id = '';
+	protected string $id = '';
 
 	/**
 	 * Whether the user is following the account.
 	 *
 	 * @var bool
 	 */
-	public bool $following = false;
+	protected bool $following = false;
 
 	/**
 	 * Whether the user is followed by the account.
 	 *
 	 * @var bool
 	 */
-	public bool $showing_reblogs = false;
+	protected bool $showing_reblogs = false;
 
 	/**
 	 * Whether the user has enabled notifications for the account.
 	 *
 	 * @var bool
 	 */
-	public bool $notifying = false;
+	protected bool $notifying = false;
 
 	/**
 	 * The languages the user is following in.
 	 *
 	 * @var string[] Array of ISO 639-1 language two-letter codes.
 	 */
-	public array $languages = array();
+	protected array $languages = array();
 
 	/**
 	 * Whether the user is followed by the account.
 	 *
 	 * @var bool
 	 */
-	public bool $followed_by = false;
+	protected bool $followed_by = false;
 
 	/**
 	 * Whether the user is blocking the account.
 	 *
 	 * @var bool
 	 */
-	public bool $blocking = false;
+	protected bool $blocking = false;
 
 	/**
 	 * Whether the user is blocked by the account.
 	 *
 	 * @var bool
 	 */
-	public bool $blocked_by = false;
+	protected bool $blocked_by = false;
 
 	/**
 	 * Whether the user is muting the account.
 	 *
 	 * @var bool
 	 */
-	public bool $muting = false;
+	protected bool $muting = false;
 
 	/**
 	 * Whether the user is muting the account's notifications.
 	 *
 	 * @var bool
 	 */
-	public bool $muting_notifications = false;
+	protected bool $muting_notifications = false;
 
 	/**
 	 * Whether the user has requested to follow the account.
 	 *
 	 * @var bool
 	 */
-	public bool $requested = false;
+	protected bool $requested = false;
 
 	/**
 	 * Whether the user has requested to follow the account.
 	 *
 	 * @var bool
 	 */
-	public bool $requested_by = false;
+	protected bool $requested_by = false;
 
 	/**
 	 * Whether the user is blocking the account's domain.
 	 *
 	 * @var bool
 	 */
-	public bool $domain_blocking = false;
+	protected bool $domain_blocking = false;
 
 	/**
 	 * Whether the user is endorsing the account.
 	 *
 	 * @var bool
 	 */
-	public bool $endorsed = false;
+	protected bool $endorsed = false;
 
 	/**
 	 * This user’s profile bio.
 	 *
 	 * @var string
 	 */
-	public string $note = '';
+	protected string $note = '';
 }
