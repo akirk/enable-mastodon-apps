@@ -139,7 +139,7 @@ class Notification extends Handler {
 					continue;
 				}
 
-				$account = apply_filters( 'mastodon_api_account', null, $post->post_author );
+				$account = apply_filters( 'mastodon_api_account', null, $post->post_author, null, null );
 				$status  = apply_filters( 'mastodon_api_status', null, $post->ID );
 
 				$notifications[] = $this->get_notification_array(

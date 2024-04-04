@@ -54,7 +54,7 @@ class Search extends Handler {
 
 		if ( ! $type || 'accounts' === $type ) {
 			if ( preg_match( '/^@?' . Mastodon_API::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $q ) && ! $request->get_param( 'offset' ) ) {
-				$ret['accounts'][] = apply_filters( 'mastodon_api_account', null, $q );
+				$ret['accounts'][] = apply_filters( 'mastodon_api_account', null, $q, null, null );
 			}
 			$query = new \WP_User_Query(
 				array(
@@ -72,7 +72,7 @@ class Search extends Handler {
 			);
 			$users = $query->get_results();
 			foreach ( $users as $user ) {
-				$ret['accounts'][] = apply_filters( 'mastodon_api_account', null, $user->ID );
+				$ret['accounts'][] = apply_filters( 'mastodon_api_account', null, $user->ID, null, null );
 			}
 		}
 		if ( ! $type || 'statuses' === $type ) {
