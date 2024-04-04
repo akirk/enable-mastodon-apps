@@ -41,7 +41,7 @@ class Mastodon_API {
 
 	const PREFIX = 'enable-mastodon-apps';
 	const APP_TAXONOMY = 'mastodon-app';
-	const REMOTE_USER_TAXONOMY = 'mastodon-api-remote-user';
+	const REMAP_TAXONOMY = 'mastodon-api-remap';
 	const CPT = 'enable-mastodon-apps';
 
 	/**
@@ -147,7 +147,9 @@ class Mastodon_API {
 			'rewrite'      => false,
 		);
 
-		register_taxonomy( self::REMOTE_USER_TAXONOMY, null, $args );
+		register_taxonomy( self::REMAP_TAXONOMY, null, $args );
+
+		register_term_meta( self::REMAP_TAXONOMY, 'meta', array( 'type' => 'string' ) );
 	}
 
 	public function register_custom_post_type() {
@@ -1577,7 +1579,7 @@ class Mastodon_API {
 		$user_id = $request->get_param( 'user_id' );
 
 		if ( $user_id > 1e10 ) {
-			$remote_user_id = get_term_by( 'id', intval( $user_id ) - 1e10, self::REMOTE_USER_TAXONOMY );
+			$remote_user_id = get_term_by( 'id', intval( $user_id ) - 1e10, self::REMAP_TAXONOMY );
 			if ( $remote_user_id ) {
 				return $remote_user_id->name;
 			}
@@ -1599,6 +1601,7 @@ class Mastodon_API {
 		}
 
 		if ( ! $entity->is_valid() ) {
+			var_dump( $entity );
 			return new \WP_Error( 'integrity-error', 'Integrity Error', array( 'status' => 500 ) );
 		}
 
@@ -1614,18 +1617,20 @@ class Mastodon_API {
 		if ( ! is_array( $entities ) ) {
 			return array();
 		}
-		$entities = array_filter(
-			$entities,
-			function ( $entity ) use ( $type ) {
-				if ( ! $entity instanceof $type ) {
-					return false;
-				}
+		$entities = array_values(
+			array_filter(
+				$entities,
+				function ( $entity ) use ( $type ) {
+					if ( ! $entity instanceof $type ) {
+						return false;
+					}
 
-				if ( ! $entity->is_valid() ) {
-					return false;
+					if ( ! $entity->is_valid() ) {
+						return false;
+					}
+					return true;
 				}
-				return true;
-			}
+			)
 		);
 		if ( $wp_rest_response ) {
 			$wp_rest_response->data = $entities;
@@ -2571,17 +2576,54 @@ class Mastodon_API {
 	}
 
 	public static function remap_user_id( $user_id ) {
-		$remote_user_id = get_term_by( 'name', $user_id, \Enable_Mastodon_Apps\Mastodon_API::REMOTE_USER_TAXONOMY );
-		if ( $remote_user_id ) {
-			$remote_user_id = $remote_user_id->term_id;
+		$term = get_term_by( 'name', $user_id, \Enable_Mastodon_Apps\Mastodon_API::REMAP_TAXONOMY );
+		$remote_user_id = 0;
+		if ( $term ) {
+			$remote_user_id = $term->term_id;
 		} else {
-			$remote_user_id = wp_insert_term( $user_id, \Enable_Mastodon_Apps\Mastodon_API::REMOTE_USER_TAXONOMY );
-			if ( ! is_wp_error( $remote_user_id ) ) {
-				$remote_user_id = $remote_user_id['term_id'];
+			$term = wp_insert_term( $user_id, \Enable_Mastodon_Apps\Mastodon_API::REMAP_TAXONOMY );
+			if ( is_wp_error( $term ) ) {
+				return $remote_user_id;
 			}
+			$remote_user_id = $term['term_id'];
 		}
 
 		return 1e10 + $remote_user_id;
+	}
+
+	public static function remap_url( $url, $meta = array() ) {
+		$term = get_term_by( 'name', $url, \Enable_Mastodon_Apps\Mastodon_API::REMAP_TAXONOMY );
+		$remapped_id = 0;
+		if ( $term ) {
+			$remapped_id = $term->term_id;
+		} else {
+			$term = wp_insert_term( $url, \Enable_Mastodon_Apps\Mastodon_API::REMAP_TAXONOMY );
+			if ( ! is_wp_error( $term ) ) {
+				$remapped_id = $term['term_id'];
+				if ( $meta ) {
+					update_term_meta( $remapped_id, 'meta', wp_json_encode( $meta ) );
+				}
+			}
+		}
+
+		return 2e10 + $remapped_id;
+	}
+
+	public static function get_remapped_url( $id ) {
+		if ( $id > 2e10 ) {
+			$term = get_term_by( 'id', intval( $id ) - 2e10, self::REMAP_TAXONOMY );
+			if ( $term ) {
+				return $term->name;
+			}
+		}
+		return null;
+	}
+
+	public static function get_remapped_url_meta( $id ) {
+		if ( $id > 2e10 ) {
+			return json_decode( get_term_meta( intval( $id ) - 2e10, 'meta', true ), true );
+		}
+		return null;
 	}
 
 	private function software_string() {

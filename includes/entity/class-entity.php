@@ -99,6 +99,36 @@ abstract class Entity implements \JsonSerializable {
 				);
 			}
 
+			if ( preg_match( '/array\[([^\]]+)\]/', $object, $matches ) ) {
+				$object = $matches[1];
+				if ( ! class_exists( '\\Enable_Mastodon_Apps\\Entity\\' . $object ) ) {
+					return array(
+						'error' => 'Invalid object type: ' . $object,
+					);
+				}
+				if ( ! is_array( $this->$var ) ) {
+					if ( $optional ) {
+						continue;
+					}
+
+					return array(
+						'error' => 'Required object is missing: ' . $var,
+					);
+				}
+
+				$array[ $var ] = array();
+				foreach ( $this->__get( $var ) as $key => $value ) {
+					if ( $value instanceof Entity ) {
+						$array[ $var ][ $key ] = $value->jsonSerialize();
+						if ( isset( $array[ $var ][ $key ]['error'] ) ) {
+							return $array[ $var ][ $key ];
+						}
+						continue;
+					}
+				}
+				continue;
+			}
+
 			if ( class_exists( '\\Enable_Mastodon_Apps\\Entity\\' . $object ) ) {
 				if ( $this->$var instanceof Entity ) {
 					$array[ $var ] = $this->__get( $var )->jsonSerialize();

@@ -19,9 +19,8 @@ class Media_Attachment extends Entity {
 		'url'         => 'string',
 		'preview_url' => 'string',
 		'remote_url'  => 'string??',
-		'text_url'    => 'string',
 		'meta'        => 'array',
-		'description' => 'string',
+		'description' => 'string??',
 		'blurhash'    => 'string',
 	);
 
@@ -61,13 +60,6 @@ class Media_Attachment extends Entity {
 	 * @var string|null
 	 */
 	public $remote_url = null;
-
-	/**
-	 * The media attachment text url.
-	 *
-	 * @var string
-	 */
-	public string $text_url = '';
 
 	/**
 	 * The media attachment meta.

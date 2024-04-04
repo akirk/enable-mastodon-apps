@@ -159,6 +159,12 @@ class Status extends Handler {
 	 * @return array
 	 */
 	public function api_statuses( ?array $statuses, array $args, ?int $min_id = null, ?int $max_id = null ): \WP_REST_Response {
+		if ( $statuses ) {
+			if ( ! $statuses instanceof \WP_REST_Response ) {
+				$statuses = new \WP_REST_Response( array_values( $statuses ) );
+			}
+			return $statuses;
+		}
 		return $this->get_posts( $args, $min_id, $max_id );
 	}
 

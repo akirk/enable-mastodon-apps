@@ -55,7 +55,12 @@ class Handler {
 			$args['p'] = $post_id;
 		}
 
-		return apply_filters( 'mastodon_api_get_posts_query_args', $args, $request );
+		$args = apply_filters( 'mastodon_api_get_posts_query_args', $args, $request );
+		if ( isset( $args['author'] ) && is_string( $args['author'] ) ) {
+			// Author could not be found by a plugin.
+			return array();
+		}
+		return $args;
 	}
 
 	protected function get_posts( $args, $min_id = null, $max_id = null ): \WP_REST_Response {
