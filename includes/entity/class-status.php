@@ -286,7 +286,7 @@ class Status extends Entity {
 			return $this->normalize_whitespace( $this->content );
 		}
 
-		return $this->$k;
+		return parent::__get( $k );
 	}
 
 	/**

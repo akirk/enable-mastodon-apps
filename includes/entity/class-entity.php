@@ -65,13 +65,13 @@ abstract class Entity implements \JsonSerializable {
 				}
 
 				settype( $this->$var, $object );
-				$array[ $var ] = $this->$var;
+				$array[ $var ] = $this->__get( $var );
 				continue;
 			}
 
 			if ( 'DateTime' === $object ) {
 				if ( $this->$var instanceof \DateTime ) {
-					$array[ $var ] = preg_replace( '/\+00:00$/', 'Z', $this->$var->format( 'Y-m-d\TH:i:s.000P' ) );
+					$array[ $var ] = preg_replace( '/\+00:00$/', 'Z', $this->__get( $var )->format( 'Y-m-d\TH:i:s.000P' ) );
 					continue;
 				}
 
@@ -86,7 +86,7 @@ abstract class Entity implements \JsonSerializable {
 
 			if ( class_exists( '\\Enable_Mastodon_Apps\\Entity\\' . $object ) ) {
 				if ( $this->$var instanceof Entity ) {
-					$array[ $var ] = $this->$var->jsonSerialize();
+					$array[ $var ] = $this->__get( $var )->jsonSerialize();
 					continue;
 				}
 
@@ -106,5 +106,9 @@ abstract class Entity implements \JsonSerializable {
 	public function is_valid() {
 		$array = $this->jsonSerialize();
 		return empty( $array['error'] );
+	}
+
+	public function __get( $name ) {
+		return $this->$name;
 	}
 }

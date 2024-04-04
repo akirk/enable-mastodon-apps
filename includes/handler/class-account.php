@@ -65,6 +65,9 @@ class Account extends Handler {
 	}
 
 	public function api_account_ensure_numeric_id( $user_data, $user_id ) {
+		if ( ! is_object( $user_data ) ) {
+			return $user_data;
+		}
 		if ( ! is_numeric( $user_data->id ) ) {
 			$user_data->id = \Enable_Mastodon_Apps\Mastodon_API::remap_user_id( $user_data->id );
 		}
