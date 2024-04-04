@@ -59,32 +59,35 @@ class Handler {
 	}
 
 	protected function get_posts( $args, $min_id = null, $max_id = null ): \WP_REST_Response {
-		if ( $min_id ) {
-			$min_filter_handler = function ( $where ) use ( $min_id ) {
-				global $wpdb;
-				return $where . $wpdb->prepare( " AND {$wpdb->posts}.ID > %d", $min_id );
-			};
-			$args['order'] = 'ASC';
-			add_filter( 'posts_where', $min_filter_handler );
-		}
+		$posts = array();
 
-		if ( $max_id ) {
-			$max_filter_handler = function ( $where ) use ( $max_id ) {
-				global $wpdb;
-				return $where . $wpdb->prepare( " AND {$wpdb->posts}.ID < %d", $max_id );
-			};
-			add_filter( 'posts_where', $max_filter_handler );
-		}
+		// It's possible that the $args are set to something falsy by a filter.
+		if ( $args ) {
+			if ( $min_id ) {
+				$min_filter_handler = function ( $where ) use ( $min_id ) {
+					global $wpdb;
+					return $where . $wpdb->prepare( " AND {$wpdb->posts}.ID > %d", $min_id );
+				};
+				$args['order'] = 'ASC';
+				add_filter( 'posts_where', $min_filter_handler );
+			}
 
-		$posts = get_posts( $args );
+			if ( $max_id ) {
+				$max_filter_handler = function ( $where ) use ( $max_id ) {
+					global $wpdb;
+					return $where . $wpdb->prepare( " AND {$wpdb->posts}.ID < %d", $max_id );
+				};
+				add_filter( 'posts_where', $max_filter_handler );
+			}
+			$posts = get_posts( $args );
 
-		if ( $min_id ) {
-			remove_filter( 'posts_where', $min_filter_handler );
+			if ( $min_id ) {
+				remove_filter( 'posts_where', $min_filter_handler );
+			}
+			if ( $max_id ) {
+				remove_filter( 'posts_where', $max_filter_handler );
+			}
 		}
-		if ( $max_id ) {
-			remove_filter( 'posts_where', $max_filter_handler );
-		}
-
 		$k = 0;
 		$statuses = array();
 		foreach ( $posts as $post ) {
@@ -108,7 +111,7 @@ class Handler {
 			}
 
 			if ( ! $status->is_valid() ) {
-				error_log( wp_json_encode( $status ) );
+				error_log( wp_json_encode( compact( 'status', 'post' ) ) );
 				continue;
 			}
 

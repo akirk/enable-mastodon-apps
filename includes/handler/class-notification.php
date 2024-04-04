@@ -133,21 +133,16 @@ class Notification extends Handler {
 				$args['tag__not_in'] = array( $notification_dismissed_tag->term_id );
 			}
 			foreach ( get_posts( $args ) as $post ) {
-				// TODO: Check if still the right way.
-				$meta = get_post_meta( $post->ID, 'activitypub', true );
-				if ( ! $meta ) {
-					continue;
+				$account = apply_filters( 'mastodon_api_account', null, $post->post_author, null, $post );
+				$status  = apply_filters( 'mastodon_api_status', null, $post->ID, array() );
+				if ( $account && $status ) {
+					$notifications[] = $this->get_notification_array(
+						'mention',
+						mysql2date( 'Y-m-d\TH:i:s.000P', $post->post_date, false ),
+						$account,
+						$status
+					);
 				}
-
-				$account = apply_filters( 'mastodon_api_account', null, $post->post_author, null, null );
-				$status  = apply_filters( 'mastodon_api_status', null, $post->ID );
-
-				$notifications[] = $this->get_notification_array(
-					'mention',
-					mysql2date( 'Y-m-d\TH:i:s.000P', $post->post_date, false ),
-					$account,
-					$status
-				);
 			}
 		}
 
