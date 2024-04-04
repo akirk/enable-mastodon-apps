@@ -40,7 +40,7 @@ class Timeline extends Handler {
 	 * @return Entity\Status[]|array An array of Status objects.
 	 */
 	public function api_timelines( $statuses, $request ) {
-		$args = $this->get_posts_query_args( $request );
+		$args = $this->get_posts_query_args( array(), $request );
 		if ( empty( $args ) ) {
 			return array();
 		}
@@ -67,7 +67,7 @@ class Timeline extends Handler {
 	 * @return Entity\Status[]|array An array of Status objects.
 	 */
 	public function api_tag_timeline( $statuses, $request ) {
-		$args = $this->get_posts_query_args( $request );
+		$args = $this->get_posts_query_args( array(), $request );
 		$args['tag'] = $request->get_param( 'hashtag' );
 
 		$ppp_param = $request->get_param( 'limit' );
@@ -97,7 +97,7 @@ class Timeline extends Handler {
 	 * @return Entity\Status[]|array An array of Status objects.
 	 */
 	public function api_public_timeline( $statuses, $request ) {
-		$args = $this->get_posts_query_args( $request );
+		$args = $this->get_posts_query_args( array(), $request );
 		if ( empty( $args ) ) {
 			return array();
 		}

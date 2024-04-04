@@ -2435,9 +2435,6 @@ class Mastodon_API {
 
 	public function api_account_statuses( $request ) {
 		$user_id = $this->get_user_id_from_request( $request );
-		if ( preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id ) ) {
-			// TODO: use the ActivityPub plugin to retrieve the user statuses from their outbox.
-		}
 
 		$args = array(
 			'author' => $user_id,

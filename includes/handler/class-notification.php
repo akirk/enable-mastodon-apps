@@ -124,7 +124,7 @@ class Notification extends Handler {
 			if ( ! $external_user || ! ( $external_user instanceof \WP_User ) ) {
 				return array();
 			}
-			$args                   = $this->get_posts_query_args( $request );
+			$args                   = $this->get_posts_query_args( array(), $request );
 			$args['posts_per_page'] = $limit + 2;
 			$args['author']         = $external_user->ID;
 

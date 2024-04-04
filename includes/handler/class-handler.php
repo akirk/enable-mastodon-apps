@@ -16,18 +16,16 @@ use Enable_Mastodon_Apps\Mastodon_App;
  * This is the generic handler to provide needed helper functions.
  */
 class Handler {
-	protected function get_posts_query_args( $request ) {
+	protected function get_posts_query_args( $args = array(), $request ) {
 		$limit = $request->get_param( 'limit' );
 		if ( $limit < 1 ) {
 			$limit = 20;
 		}
 
-		$args = array(
-			'posts_per_page'   => $limit,
-			'post_type'        => array( 'post' ),
-			'suppress_filters' => false,
-			'post_status'      => array( 'publish', 'private' ),
-		);
+		$args['posts_per_page']   = $limit;
+		$args['post_type']        = array( 'post' );
+		$args['suppress_filters'] = false;
+		$args['post_status']      = array( 'publish', 'private' );
 
 		$pinned = $request->get_param( 'pinned' );
 		if ( $pinned || 'true' === $pinned ) {
@@ -57,7 +55,7 @@ class Handler {
 			$args['p'] = $post_id;
 		}
 
-		return apply_filters( 'enable_mastodon_apps_get_posts_query_args', $args, $request );
+		return apply_filters( 'mastodon_api_get_posts_query_args', $args, $request );
 	}
 
 	protected function get_posts( $args, $min_id = null, $max_id = null ): \WP_REST_Response {

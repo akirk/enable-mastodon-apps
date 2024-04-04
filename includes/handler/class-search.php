@@ -76,7 +76,7 @@ class Search extends Handler {
 			}
 		}
 		if ( ! $type || 'statuses' === $type ) {
-			$args = $this->get_posts_query_args( $request );
+			$args = $this->get_posts_query_args( array(), $request );
 			if ( empty( $args ) ) {
 				return array();
 			}

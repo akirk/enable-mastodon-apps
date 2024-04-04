@@ -28,6 +28,7 @@ class Status extends Handler {
 	public function register_hooks() {
 		add_filter( 'mastodon_api_status', array( $this, 'api_status' ), 10, 3 );
 		add_filter( 'mastodon_api_status', array( $this, 'api_status_account_ensure_numeric_id' ), 100 );
+		add_filter( 'mastodon_api_account_statuses_args', array( $this, 'mastodon_api_account_statuses_args' ), 10, 2 );
 		add_filter( 'mastodon_api_statuses', array( $this, 'api_statuses' ), 10, 4 );
 	}
 
@@ -159,6 +160,10 @@ class Status extends Handler {
 	 */
 	public function api_statuses( ?array $statuses, array $args, ?int $min_id = null, ?int $max_id = null ): \WP_REST_Response {
 		return $this->get_posts( $args, $min_id, $max_id );
+	}
+
+	public function mastodon_api_account_statuses_args( $args, $request ) {
+		return $this->get_posts_query_args( $args, $request );
 	}
 
 
