@@ -59,7 +59,7 @@ class Instance extends Handler {
 		$instance->email             = get_option( 'admin_email' );
 		$instance->stats             = array(
 			'user_count'   => count_users()['total_users'],
-			'status_count' => wp_count_posts(),
+			'status_count' => intval( wp_count_posts()->publish ),
 			'domain_count' => 1,
 		);
 		$instance->thumbnail         = \get_site_icon_url();
