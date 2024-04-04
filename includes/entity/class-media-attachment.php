@@ -18,7 +18,7 @@ class Media_Attachment extends Entity {
 		'type'        => 'string',
 		'url'         => 'string',
 		'preview_url' => 'string',
-		'remote_url'  => 'string',
+		'remote_url'  => 'string??',
 		'text_url'    => 'string',
 		'meta'        => 'array',
 		'description' => 'string',
