@@ -84,9 +84,27 @@ abstract class Entity implements \JsonSerializable {
 				);
 			}
 
+			if ( 'Date' === $object ) {
+				if ( $this->$var instanceof \DateTime ) {
+					$array[ $var ] = $this->__get( $var )->format( 'Y-m-d' );
+					continue;
+				}
+
+				if ( $optional ) {
+					continue;
+				}
+
+				return array(
+					'error' => 'Required object is missing: ' . $var,
+				);
+			}
+
 			if ( class_exists( '\\Enable_Mastodon_Apps\\Entity\\' . $object ) ) {
 				if ( $this->$var instanceof Entity ) {
 					$array[ $var ] = $this->__get( $var )->jsonSerialize();
+					if ( isset( $array[ $var ]['error'] ) ) {
+						return $array[ $var ];
+					}
 					continue;
 				}
 

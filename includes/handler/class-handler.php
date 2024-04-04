@@ -100,7 +100,7 @@ class Handler {
 			 */
 			$status = apply_filters( 'mastodon_api_status', null, $post->ID, array() );
 
-			if ( $status && ! is_wp_error( $status ) ) {
+			if ( $status && ! is_wp_error( $status ) && $status->is_valid() ) {
 				$statuses[ $post->post_date . '.' . ++$k ] = $status;
 			}
 		}
