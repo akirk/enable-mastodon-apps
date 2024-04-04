@@ -12,6 +12,8 @@ namespace Enable_Mastodon_Apps;
 use WP_REST_Request;
 use WP_REST_Response;
 
+use function PHPUnit\Framework\returnCallback;
+
 /**
  * This is the class that implements the Mastodon API endpoints.
  *
@@ -72,7 +74,7 @@ class Mastodon_API {
 		add_filter( 'rest_post_dispatch', array( $this, 'send_http_links' ), 10, 1 );
 		add_filter( 'rest_pre_echo_response', array( $this, 'reformat_error_response' ), 10, 3 );
 		add_filter( 'template_include', array( $this, 'log_404s' ) );
-		add_filter( 'enable_mastodon_apps_get_json', array( $this, 'get_json' ), 10, 4 );
+		add_filter( 'rest_json_encode_options', array( $this, 'rest_json_encode_options' ), 10, 2 );
 		add_action( 'default_option_mastodon_api_default_post_formats', array( $this, 'default_option_mastodon_api_default_post_formats' ) );
 		add_filter( 'rest_request_before_callbacks', array( $this, 'rest_request_before_callbacks' ) );
 	}
@@ -121,6 +123,14 @@ class Mastodon_API {
 			'error'             => empty( $result['code'] ) ? __( 'unknown_error', 'enable-mastodon-apps' ) : $result['code'],
 			'error_description' => empty( $result['message'] ) ? __( 'Unknown error', 'enable-mastodon-apps' ) : $result['message'],
 		);
+	}
+
+	public function rest_json_encode_options( $options, $request ) {
+		if ( 0 === strpos( $request->get_route(), '/' . self::PREFIX ) ) {
+			$options |= JSON_UNESCAPED_SLASHES;
+			$options |= JSON_UNESCAPED_UNICODE;
+		}
+		return $options;
 	}
 
 	public function register_taxonomy() {

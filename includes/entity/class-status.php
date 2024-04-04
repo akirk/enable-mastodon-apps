@@ -25,21 +25,21 @@ class Status extends Entity {
 		'uri'                    => 'string',
 		'content'                => 'string',
 
-		'url'                    => 'string?',
-		'language'               => 'string?',
-		'in_reply_to_id'         => 'string?',
-		'in_reply_to_account_id' => 'string?',
-		'text'                   => 'string?',
-		'edited_at'              => 'DateTime?',
+		'url'                    => 'string??',
+		'language'               => 'string??',
+		'in_reply_to_id'         => 'string??',
+		'in_reply_to_account_id' => 'string??',
+		'text'                   => 'string??',
+		'edited_at'              => 'DateTime??',
 
 		'sensitive'              => 'bool',
-		'favourited'             => 'bool',
-		'reblogged'              => 'bool',
-		'muted'                  => 'bool',
-		'bookmarked'             => 'bool',
-		'pinned'                 => 'bool',
+		'favourited'             => 'bool?',
+		'reblogged'              => 'bool?',
+		'muted'                  => 'bool?',
+		'bookmarked'             => 'bool?',
+		'pinned'                 => 'bool?',
 
-		'filtered'               => 'array',
+		'filtered'               => 'array?',
 		'media_attachments'      => 'array',
 		'mentions'               => 'array',
 		'tags'                   => 'array',
@@ -49,13 +49,13 @@ class Status extends Entity {
 		'reblogs_count'          => 'int',
 		'favourites_count'       => 'int',
 
-		'card'                   => 'Preview_Card?',
+		'card'                   => 'Preview_Card??',
 
-		'poll'                   => 'Poll?',
+		'poll'                   => 'Poll??',
 
 		'account'                => 'Account',
 
-		'reblog'                 => 'Status?',
+		'reblog'                 => 'Status??',
 
 		'application'            => 'Application?',
 	);

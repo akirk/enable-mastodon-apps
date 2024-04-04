@@ -11,6 +11,21 @@ namespace Enable_Mastodon_Apps\Entity;
  * Class Entity
  */
 abstract class Entity implements \JsonSerializable {
+	/**
+	 * The types of variables that are expected.
+	 *
+	 * Example:
+	 * ```
+	 * protected $_types = array(
+	 *     'id'             => 'string',
+	 *     'created_at'     => 'DateTime', // DateTime is the PHP class.
+	 *     'text'           => 'string',
+	 *     'language'       => 'string?',  //  ? = Optional.
+	 *     'in_reply_to_id' => 'string??', // ?? = Nullable.
+	 * );
+	 *
+	 * @var array
+	 */
 	protected $_types;
 
 	/**
@@ -28,26 +43,39 @@ abstract class Entity implements \JsonSerializable {
 				continue;
 			}
 
-			$object = trim( $type, '?' );
-			$required = strlen( $object ) === strlen( $type );
+			$object = rtrim( $type, '?' );
+			$nullable = preg_match( '/\?\?$/', $type );
+			$optional = preg_match( '/\?$/', $type );
+
+			if ( ! isset( $this->$var ) && $nullable ) {
+				$array[ $var ] = null;
+				continue;
+			}
 
 			if ( in_array( $object, array( 'string', 'int', 'bool', 'array' ) ) ) {
-				if ( ! $required ) {
+				if ( ! isset( $this->$var ) ) {
+					if ( $optional ) {
+						continue;
+					}
+
+					return array(
+						'error' => 'Required variable is missing: ' . $var,
+					);
 					continue;
 				}
 
-				settype( $this->$var, $type );
+				settype( $this->$var, $object );
 				$array[ $var ] = $this->$var;
 				continue;
 			}
 
 			if ( 'DateTime' === $object ) {
 				if ( $this->$var instanceof \DateTime ) {
-					$array[ $var ] = $this->$var->format( 'Y-m-d\TH:i:s.000P' );
+					$array[ $var ] = preg_replace( '/\+00:00$/', 'Z', $this->$var->format( 'Y-m-d\TH:i:s.000P' ) );
 					continue;
 				}
 
-				if ( ! $required ) {
+				if ( $optional ) {
 					continue;
 				}
 
@@ -62,7 +90,7 @@ abstract class Entity implements \JsonSerializable {
 					continue;
 				}
 
-				if ( ! $required ) {
+				if ( $optional ) {
 					continue;
 				}
 
