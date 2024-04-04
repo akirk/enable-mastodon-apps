@@ -179,6 +179,7 @@ class Mastodon_API {
 				'api/v1/accounts/verify_credentials',
 				'api/v1/accounts/familiar_followers',
 				'api/v1/accounts/search',
+				'api/v1/accounts/lookup',
 				'api/v1/announcements',
 				'api/v1/apps',
 				'api/v1/bookmarks',
@@ -732,6 +733,23 @@ class Mastodon_API {
 						'type'        => 'boolean',
 						'description' => 'Only return accounts the current user is following.',
 						'default'     => false,
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/accounts/lookup',
+			array(
+				'methods'             => array( 'GET', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_accounts_lookup' ),
+				'permission_callback' => array( $this, 'public_api_permission' ),
+				'args'                => array(
+					'acct' => array(
+						'type'        => 'string',
+						'description' => 'What to lookup.',
+						'required'    => true,
 					),
 				),
 			)
@@ -1929,6 +1947,17 @@ class Mastodon_API {
 	 */
 	public function api_search( object $request ) {
 		return apply_filters( 'mastodon_api_search', null, $request );
+	}
+
+	public function api_accounts_lookup( object $request ) {
+		$acct = $request->get_param( 'acct' );
+		if ( ! $acct ) {
+			return new \WP_Error( 'mastodon_api_accounts_lookup', 'Validation failed: acct can\'t be blank', array( 'status' => 422 ) );
+		}
+
+		$account = \apply_filters( 'mastodon_api_account', null, $acct, $request, null );
+
+		return $this->validate_entity( $account, Entity\Account::class );
 	}
 
 	public function api_push_subscription( $request ) {
