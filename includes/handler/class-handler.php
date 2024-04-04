@@ -100,9 +100,21 @@ class Handler {
 			 */
 			$status = apply_filters( 'mastodon_api_status', null, $post->ID, array() );
 
-			if ( $status && ! is_wp_error( $status ) && $status->is_valid() ) {
-				$statuses[ $post->post_date . '.' . ++$k ] = $status;
+			if ( ! $status ) {
+				continue;
 			}
+
+			if ( is_wp_error( $status ) ) {
+				error_log( print_r( $status, true ) );
+				continue;
+			}
+
+			if ( ! $status->is_valid() ) {
+				error_log( wp_json_encode( $status ) );
+				continue;
+			}
+
+			$statuses[ $post->post_date . '.' . ++$k ] = $status;
 		}
 		if ( ! isset( $args['pinned'] ) || ! $args['pinned'] ) {
 			// Comments cannot be pinned for now.
