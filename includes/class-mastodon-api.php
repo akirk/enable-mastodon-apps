@@ -2511,7 +2511,7 @@ class Mastodon_API {
 		 *     $account->display_name   = $user->display_name;
 		 *
 		 *     return $account;
-		 * } );
+		 * }, 10, 2 );
 		 * ```
 		 */
 		$account = \apply_filters( 'mastodon_api_account', null, $user_id, $request, null );
