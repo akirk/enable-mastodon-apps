@@ -2496,11 +2496,11 @@ class Mastodon_API {
 		 *
 		 * @param Entity\Account|null $account The account data.
 		 * @param int $user_id The requested user ID.
-		 * @param WP_REST_Request $request The request object.
+		 * @param WP_REST_Request|null $request The request object.
 		 * @param WP_Post|null $post The post object.
 		 * @return Entity\Account|null The modified account data.
 		 *
-		 * Example:
+		 * ### Example
 		 * ```php
 		 * add_filter( 'mastodon_api_account', function( $user_data, $user_id ) {
 		 *     $user = get_user_by( 'ID', $user_id );
