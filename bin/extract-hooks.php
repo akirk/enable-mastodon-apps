@@ -84,6 +84,26 @@ foreach ( $files as $file ) {
 			$filters[ $hook ]['files'][] = $dir . '/' . $file->getFilename() . ':' . $token[2];
 			$filters[ $hook ]['base_dirs'][ $main_dir ] = true;
 
+			if ( ! $comment ) {
+				$comment = '/**' . PHP_EOL;
+				// generate a fake doccomment if it's missing.
+				for ( $j = $i + 1; $j < $i + 10; $j++ ) {
+					if ( ! isset( $tokens[ $j ] ) ) {
+						break;
+					}
+
+					if ( ! is_array( $tokens[ $j ] ) ) {
+						continue;
+					}
+
+					if ( T_VARIABLE === $tokens[ $j ][0] ) {
+						$comment .= ' * @param unknown ' . $tokens[ $j ][1] . PHP_EOL;
+					}
+				}
+
+				$comment .= '*/';
+			}
+
 			if ( $comment ) {
 				$docblock = parse_docblock( $comment );
 				if ( ! empty( $docblock['comment'] ) && ! preg_match( '#^Documented in#i', $docblock['comment'] ) ) {
@@ -192,17 +212,58 @@ foreach ( $filters as $hook => $data ) {
 	$index .= PHP_EOL;
 
 	if ( ! empty( $data['param'] ) ) {
+		if ( 'do_action' === $data['type'] ) {
+			$signature = 'add_action(';
+		} else {
+			$signature = 'add_filter(';
+		}
+		$signature .= PHP_EOL . '    \'' . $hook . '\',';
+		$signature .= PHP_EOL . '    function (';
+
 		$doc .= "## Parameters\n";
+		$first = false;
+		$count = 0;
 		foreach ( (array) $data['param'] as $param ) {
+			$count += 1;
 			$p = explode( ' ', $param, 3 );
 			if ( '\\' === substr( $p[0], 0, 1 ) ) {
 				$p[0] = substr( $p[0], 1 );
-			} elseif ( ! in_array( $p[0], array( 'int', 'string', 'bool', 'array' ) ) ) {
+			} elseif ( ! in_array( $p[0], array( 'int', 'string', 'bool', 'array', 'unknown' ) ) ) {
 				$p[0] = 'Enable_Mastodon_Apps\\' . $p[0];
 			}
-			$doc .= "\n- *`{$p[0]}`* `{$p[1]}` {$p[2]}";
+			if ( ! $first ) {
+				$first = $p[1];
+			}
+			if ( 'unknown' === $p[0] ) {
+				$doc .= "\n- `{$p[1]}`";
+				$signature .= "\n        {$p[1]},";
+			} else {
+				$doc .= "\n- *`{$p[0]}`* `{$p[1]}`";
+				if ( isset( $p[2] ) ) {
+					$doc .= ' ' . $p[2];
+				}
+				$signature .= "\n        {$p[0]} {$p[1]},";
+			}
 		}
+		if ( 1 === $count ) {
+			$signature = str_replace( 'function (' . PHP_EOL . '        ', 'function ( ', substr( $signature, 0, -1 ) );
+			$signature .= ' ) {';
+		} else {
+			$signature = substr( $signature, 0, -1 ) . PHP_EOL . '    ) {';
+		}
+		$signature .= PHP_EOL . '        // Your code here';
+		if ( 'do_action' !== $data['type'] ) {
+			$signature .= PHP_EOL . '        return ' . $first . ';';
+		}
+		$signature .= PHP_EOL . '    }';
+		if ( $count > 1 ) {
+			$signature .= ',';
+			$signature .= PHP_EOL . '    10,';
+			$signature .= PHP_EOL . '    ' . $count;
+		}
+		$signature .= PHP_EOL . ');';
 
+		$doc = '```php' . PHP_EOL . $signature . PHP_EOL . '```' . PHP_EOL . $doc;
 		$doc .= PHP_EOL . PHP_EOL;
 	}
 
