@@ -1,13 +1,55 @@
 <?php
 /**
- * Extract hooks from the codebase.
+ * Extract hooks from this codebase.
  *
- * @package Enable_Mastodon_Apps
+ * @author Alex Kirk
  */
 
-$ignore_filters = array();
+// phpcs:disable WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+// phpcs:disable WordPress.WP.AlternativeFunctions.file_system_operations_mkdir
+// phpcs:disable WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
 
-$base = dirname( __DIR__ );
+function sample_ini() {
+	return <<<INI
+namespace = App_Namespace
+base_dir = ..
+wiki_directory = ../repo.wiki
+github_blob_url = https://github.com/username/repo/blob/main/
+[hooks]
+ignore_filter[] = filter_name1
+ignore_filter[] = filter_name2
+INI;
+}
+foreach ( array( getcwd(), __DIR__ ) as $dir ) {
+	$ini_file = $dir . '/extract-hooks.ini';
+	if ( file_exists( $ini_file ) ) {
+		break;
+	}
+}
+
+if ( ! file_exists( $ini_file ) ) {
+	echo 'Please provide an extract-hooks.ini file in the current directory or the same directory as this script. Example: ', PHP_EOL, esc_attr( sample_ini() );
+	exit( 1 );
+}
+$ini = parse_ini_file( $ini_file );
+
+foreach ( array( 'namespace', 'base_dir', 'wiki_directory', 'github_url' ) as $key ) {
+	if ( ! isset( $ini[ $key ] ) ) {
+		echo 'Missing ini entry ', esc_attr( $key ), '. Example: ', PHP_EOL, esc_attr( sample_ini() );
+		exit( 1 );
+	}
+}
+
+if ( empty( $ini['ignore_filter'] ) ) {
+	$ini['ignore_filter'] = array();
+}
+// if the base dir is not absolute (also on windows), prepend it with $dir.
+if ( file_exists( $ini['base_dir'] ) ) {
+	$base = $ini['base_dir'];
+} else {
+	$base = $dir . '/' . $ini['base_dir'];
+}
+
 $files = new RecursiveIteratorIterator(
 	new RecursiveDirectoryIterator( $base ),
 	RecursiveIteratorIterator::LEAVES_ONLY
@@ -23,11 +65,14 @@ foreach ( $files as $file ) {
 	if ( in_array(
 		$main_dir,
 		array(
+			'blocks',
+			'libs',
 			'tests',
 		)
 	) ) {
 		continue;
 	}
+
 	$tokens = token_get_all( file_get_contents( $file ) );
 	foreach ( $tokens as $i => $token ) {
 		if ( ! is_array( $token ) || ! isset( $token[1] ) ) {
@@ -37,7 +82,7 @@ foreach ( $files as $file ) {
 			continue;
 		}
 
-		$comment = false;
+		$comment = '';
 		$hook = false;
 
 		for ( $j = $i; $j > max( 0, $i - 10 ); $j-- ) {
@@ -68,44 +113,30 @@ foreach ( $files as $file ) {
 		}
 
 		if (
-			$hook
-			&& ! in_array( $hook, $ignore_filters )
-			&& ! preg_match( '/^(friends_)/', $hook )
+		$hook
+		&& ! in_array( $hook, $ini['ignore_filter'] )
+		&& ! preg_match( '/^(activitypub_)/', $hook )
 
 		) {
 			if ( ! isset( $filters[ $hook ] ) ) {
 				$filters[ $hook ] = array(
-					'files'   => array(),
-					'section' => $file->getFilename(),
-					'type'    => $token[1],
+					'files'      => array(),
+					'section'    => $main_dir,
+					'type'       => $token[1],
+					'params'     => array(),
+					'signatures' => array(),
 				);
 			}
 
-			$filters[ $hook ]['files'][] = $dir . '/' . $file->getFilename() . ':' . $token[2];
+			$ret = extract_vars( $filters[ $hook ]['params'], $tokens, $i );
+			$filters[ $hook ]['files'][ $dir . '/' . $file->getFilename() . ':' . $token[2] ] = $ret[1];
 			$filters[ $hook ]['base_dirs'][ $main_dir ] = true;
-
-			if ( ! $comment ) {
-				$comment = '/**' . PHP_EOL;
-				// generate a fake doccomment if it's missing.
-				for ( $j = $i + 1; $j < $i + 10; $j++ ) {
-					if ( ! isset( $tokens[ $j ] ) || ! is_array( $tokens[ $j ] ) ) {
-						continue;
-					}
-
-					if ( T_VARIABLE === $tokens[ $j ][0] ) {
-						$comment .= ' * @param unknown ' . $tokens[ $j ][1] . PHP_EOL;
-					}
-				}
-
-				$comment .= '*/';
-			}
-
-			if ( $comment ) {
-				$filters[ $hook ] = array_merge( parse_docblock( $comment ), $filters[ $hook ] );
-			}
+			$filters[ $hook ]['params'] = $ret[0];
+			$filters[ $hook ] = array_merge( parse_docblock( $comment, $filters[ $hook ]['params'] ), $filters[ $hook ] );
 		}
 	}
 }
+
 uksort(
 	$filters,
 	function ( $a, $b ) use ( $filters ) {
@@ -116,12 +147,86 @@ uksort(
 	}
 );
 
-function parse_docblock( $raw_comment ) {
+function extract_vars( $params, $tokens, $i ) {
+	$parens = array();
+	$var = 0;
+	$vars = array( '' );
+	$signature = $tokens[ $i ][1];
+	$line = $tokens[ $i ][2];
+	for ( $j = $i + 1; $j < $i + 100; $j++ ) {
+		if ( ! isset( $tokens[ $j ] ) ) {
+			break;
+		}
+		$token = $tokens[ $j ];
+		if ( is_string( $token ) ) {
+			$open_paren = false;
+			$signature .= $token;
+			switch ( $token ) {
+				case '[':
+				case '(':
+				case '{':
+					$vars[ $var ] .= $token;
+					$parens[] = $token;
+
+					break;
+				case ')':
+					$open_paren = '(';
+					// Intentional fallthrough.
+				case ']':
+					if ( ! $open_paren ) {
+						$open_paren = '[';
+					}
+					// Intentional fallthrough.
+				case '}':
+					if ( ! $open_paren ) {
+						$open_paren = '{';
+					}
+					$vars[ $var ] .= $token;
+
+					if ( end( $parens ) === $open_paren ) {
+						array_pop( $parens );
+					}
+					if ( empty( $parens ) ) {
+						$vars[ $var ] = substr( $vars[ $var ], 0, -1 );
+						// all of the filter has been consumed.
+						break 2;
+					}
+					break;
+				case ',':
+					if ( count( $parens ) === 1 ) {
+						++$var;
+						$vars[ $var ] = '';
+					} else {
+						$vars[ $var ] .= $token;
+					}
+					break;
+				default:
+					$vars[ $var ] .= $token;
+					break;
+			}
+		} elseif ( is_array( $token ) ) {
+			$signature .= $token[1];
+			if ( T_WHITESPACE !== $token[0] ) {
+				$vars[ $var ] .= $token[1];
+			}
+		}
+	}
+	array_shift( $vars );
+	foreach ( $vars as $k => $var ) {
+		if ( isset( $params[ $k ] ) ) {
+			if ( $params[ $k ] !== $var ) {
+				$params[ $k ] .= '|' . $var;
+			}
+		} else {
+			$params[ $k ] = $var;
+		}
+	}
+	return array( $params, $signature );
+}
+
+function parse_docblock( $raw_comment, $params ) {
 	// Adapted from https://github.com/kamermans/docblock-reflection.
 	$tags = array();
-	if ( preg_match( '#Documented in#i', $raw_comment ) ) {
-		return array();
-	}
 	$lines = explode( PHP_EOL, trim( $raw_comment ) );
 	$matches = null;
 	$comment = '';
@@ -137,9 +242,9 @@ function parse_docblock( $raw_comment ) {
 			$lines[0] = \substr( $lines[0], 3, -2 );
 			break;
 
+		case 0:
 		case 2:
-			// Probably malformed.
-			return array();
+			break;
 
 		default:
 			// Handle multi-line docblock.
@@ -152,7 +257,7 @@ function parse_docblock( $raw_comment ) {
 		$line = preg_replace( '#^[ \t]*\* ?#', '', $line );
 
 		if ( preg_match( '#@([^ ]+)(.*)#', $line, $matches ) ) {
-			$tag_name = $matches[1];
+			$tag_name = $matches[1] . 's';
 			$tag_value = \trim( $matches[2] );
 
 			// If this tag was already parsed, make its value an array.
@@ -170,6 +275,15 @@ function parse_docblock( $raw_comment ) {
 
 		$comment .= "$line\n";
 	}
+	if ( ! isset( $tags['params'] ) ) {
+		$tags['params'] = array();
+	}
+	foreach ( $params as $k => $param ) {
+		if ( ! isset( $tags['params'][ $k ] ) ) {
+			$tags['params'][ $k ] = $param;
+		}
+	}
+
 	$ret = array_filter(
 		array_merge(
 			$tags,
@@ -185,7 +299,7 @@ function parse_docblock( $raw_comment ) {
 	return $ret;
 }
 
-$docs = $base . '/../enable-mastodon-apps.wiki/';
+$docs = $base . '/' . $ini['wiki_directory'];
 if ( ! file_exists( $docs ) ) {
 	mkdir( $docs, 0777, true );
 }
@@ -207,7 +321,7 @@ foreach ( $filters as $hook => $data ) {
 
 	$index .= PHP_EOL;
 
-	if ( ! empty( $data['param'] ) ) {
+	if ( ! empty( $data['params'] ) ) {
 		if ( 'do_action' === $data['type'] ) {
 			$signature = 'add_action(';
 		} else {
@@ -219,13 +333,69 @@ foreach ( $filters as $hook => $data ) {
 		$params = "## Parameters\n";
 		$first = false;
 		$count = 0;
-		foreach ( (array) $data['param'] as $param ) {
+		foreach ( $data['params'] as $i => $param ) {
+			if ( false === strpos( $param, ' ' ) || false !== strpos( $param, '\'' ) ) {
+				// This was an extracted variable, so let's create a parameter definition.
+				$vars = explode( '|', $param );
+				foreach ( array_keys( $vars ) as $k ) {
+					if ( preg_match( '#array\(#', $vars[ $k ], $matches ) ) {
+						$vars[ $k ] = '$array';
+					}
+					if ( preg_match( '#\$(?:[a-zA-Z0-9_]+)\[[\'"]([^\'"]+)[\'"]#', $vars[ $k ], $matches ) ) {
+						$vars[ $k ] = '$' . $matches[1];
+					}
+					if ( preg_match( '#\$(?:[a-zA-Z0-9_]+)->(.+)$#', $vars[ $k ], $matches ) ) {
+						$vars[ $k ] = '$' . $matches[1];
+					}
+					if ( preg_match( '#_[_xn]\(\s*([\'"][^\'"]+[\'"])#', $vars[ $k ], $matches ) ) {
+						$vars[ $k ] = $matches[1];
+					}
+				}
+
+				foreach ( $vars as $k => $var ) {
+					if ( $var && trim( $var, '})]' ) === $var ) {
+						unset( $vars[ $k ] );
+						$type = 'unknown';
+						if ( strlen( $var ) - strlen( trim( $var, '"\'' ) ) === 2 ) {
+							$type = 'string';
+							$var = '$string';
+						} elseif ( is_numeric( $var ) ) {
+							$type = 'int';
+							$var = '$int';
+						} elseif ( 'true' === $var || 'false' === $var ) {
+							$type = 'bool';
+							$var = '$' . $var;
+						} elseif ( 'null' === $var ) {
+							if ( count( $vars ) > 0 ) {
+								continue;
+							}
+							$var = '$ret';
+						} elseif ( in_array( $var, array( '$url' ), true ) ) {
+							$type = 'string';
+						} elseif ( '$array' === $var ) {
+							$type = 'array';
+							$var = '$array';
+						}
+						$param = $type . ' ' . $var;
+						$other = array_diff( array( $var ), $vars );
+						if ( $other ) {
+							$param .= ' Other examples: `' . implode( '`, `', $other ) . '`';
+						}
+						break;
+					}
+				}
+				if ( false === strpos( $param, ' ' ) ) {
+					// If we didn't manage to find a type, let's use unknown.
+					$param = 'unknown ' . $param;
+				}
+			}
+
 			$count += 1;
 			$p = preg_split( '/ +/', $param, 3 );
 			if ( '\\' === substr( $p[0], 0, 1 ) ) {
 				$p[0] = substr( $p[0], 1 );
 			} elseif ( ! in_array( strtok( $p[0], '|' ), array( 'int', 'string', 'bool', 'array', 'unknown' ) ) && substr( $p[0], 0, 3 ) !== 'WP_' ) {
-				$p[0] = 'Enable_Mastodon_Apps\\' . $p[0];
+				$p[0] = $ini['namespace'] . '\\' . $p[0];
 			}
 			if ( ! $first ) {
 				$first = $p[1];
@@ -233,6 +403,9 @@ foreach ( $filters as $hook => $data ) {
 			if ( 'unknown' === $p[0] ) {
 				$params .= "\n- `{$p[1]}`";
 				$signature .= "\n        {$p[1]},";
+				if ( isset( $p[2] ) ) {
+					$params .= ' ' . $p[2];
+				}
 			} else {
 				$params .= "\n- *`{$p[0]}`* `{$p[1]}`";
 				if ( isset( $p[2] ) ) {
@@ -267,13 +440,13 @@ foreach ( $filters as $hook => $data ) {
 		$doc .= $params . PHP_EOL . PHP_EOL;
 	}
 
-	if ( ! empty( $data['return'] ) ) {
+	if ( ! empty( $data['returns'] ) ) {
 		$doc .= "## Returns\n";
-		$p = preg_split( '/ +/', $data['return'], 2 );
+		$p = preg_split( '/ +/', $data['returns'], 2 );
 		if ( '\\' === substr( $p[0], 0, 1 ) ) {
 			$p[0] = substr( $p[0], 1 );
 		} elseif ( ! in_array( strtok( $p[0], '|' ), array( 'int', 'string', 'bool', 'array', 'unknown' ) ) && substr( $p[0], 0, 3 ) !== 'WP_' ) {
-			$p[0] = 'Enable_Mastodon_Apps\\' . $p[0];
+			$p[0] = $ini['namespace'] . '\\' . $p[0];
 		}
 		$doc .= "\n`{$p[0]}` {$p[1]}";
 
@@ -281,8 +454,9 @@ foreach ( $filters as $hook => $data ) {
 	}
 
 	$doc .= "## Files\n\n";
-	foreach ( $data['files'] as $file ) {
-		$doc .= "- [$file](https://github.com/akirk/enable-mastodon-apps/blob/main/" . str_replace( ':', '#L', $file ) . ")\n";
+	foreach ( $data['files'] as $file => $signature ) {
+		$doc .= "- [$file](" . $ini['github_url'] . str_replace( ':', '#L', $file ) . ")\n";
+		$doc .= '```php' . PHP_EOL . $signature . PHP_EOL . '```' . PHP_EOL . PHP_EOL;
 	}
 	$doc .= "\n\n[Hooks](Hooks)\n";
 
