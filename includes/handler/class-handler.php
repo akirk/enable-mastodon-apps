@@ -132,15 +132,10 @@ class Handler {
 			);
 
 			foreach ( $comments as $comment ) {
-				$post_id = $this->remap_comment_id( $comment->comment_ID );
+				$post_id = Mastodon_API::remap_comment_id( $comment->comment_ID );
 
 				/**
-				 * Modify the status data.
-				 *
-				 * @param array|null $account The status data.
-				 * @param int $post_id The object ID to get the status from.
-					 * @param array $data Additional status data.
-				 * @return array|null The modified status data.
+				 * Documented in this file already.
 				 */
 				$status = apply_filters(
 					'mastodon_api_status',

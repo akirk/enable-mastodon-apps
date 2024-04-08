@@ -1649,11 +1649,14 @@ class Mastodon_API {
 			return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Validation failed: Text can\'t be blank', array( 'status' => 422 ) );
 		}
 
-		$status = make_clickable( $status );
-		if ( class_exists( '\Activitypub\Mention' ) ) {
-			$status = \Activitypub\Mention::the_content( $status );
-		}
-		$status = trim( $status );
+		/**
+		 * Allow modifying the status text before it gets posted.
+		 *
+		 * @param string $status The user submitted status text.
+		 * @param WP_REST_Request $request The REST request object.
+		 * @return string The potentially modified status text.
+		 */
+		$status = apply_filters( 'mastodon_api_submit_status_text', $status, $request );
 
 		$visibility = $request->get_param( 'visibility' );
 		if ( empty( $visibility ) ) {
@@ -1662,16 +1665,16 @@ class Mastodon_API {
 		$post_data = array();
 
 		$parent_post    = false;
-		$parent_post_id = $request->get_param( 'in_reply_to_id' );
+		$parent_post_id = self::maybe_get_remapped_reblog_id( $request->get_param( 'in_reply_to_id' ) );
 		if ( ! empty( $parent_post_id ) ) {
 			$parent_post = get_post( $parent_post_id );
-			if ( $parent_post && get_option( 'mastodon_api_reply_as_comment' ) ) {
+			if ( $parent_post ) {
 				$user = wp_get_current_user();
 
 				$commentdata = array(
 					'comment_post_ID'      => $parent_post_id,
 					'comment_author'       => $user->user_nicename,
-					'user_id'              => get_current_user_id(),
+					'user_id'              => $user->ID,
 					'comment_author_email' => $user->user_email,
 					'comment_author_url'   => $user->user_url,
 					'comment_content'      => $status,

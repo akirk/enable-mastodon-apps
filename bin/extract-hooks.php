@@ -101,10 +101,7 @@ foreach ( $files as $file ) {
 			}
 
 			if ( $comment ) {
-				$docblock = parse_docblock( $comment );
-				if ( ( ! empty( $docblock['comment'] ) && ! preg_match( '#^Documented in#i', $docblock['comment'] ) ) || ! empty( $docblock['param'] ) ) {
-					$filters[ $hook ] = array_merge( $docblock, $filters[ $hook ] );
-				}
+				$filters[ $hook ] = array_merge( parse_docblock( $comment ), $filters[ $hook ] );
 			}
 		}
 	}
@@ -122,6 +119,9 @@ uksort(
 function parse_docblock( $raw_comment ) {
 	// Adapted from https://github.com/kamermans/docblock-reflection.
 	$tags = array();
+	if ( preg_match( '#Documented in#i', $raw_comment ) ) {
+		return array();
+	}
 	$lines = explode( PHP_EOL, trim( $raw_comment ) );
 	$matches = null;
 	$comment = '';
@@ -221,7 +221,7 @@ foreach ( $filters as $hook => $data ) {
 		$count = 0;
 		foreach ( (array) $data['param'] as $param ) {
 			$count += 1;
-			$p = explode( ' ', $param, 3 );
+			$p = preg_split( '/ +/', $param, 3 );
 			if ( '\\' === substr( $p[0], 0, 1 ) ) {
 				$p[0] = substr( $p[0], 1 );
 			} elseif ( ! in_array( strtok( $p[0], '|' ), array( 'int', 'string', 'bool', 'array', 'unknown' ) ) && substr( $p[0], 0, 3 ) !== 'WP_' ) {
@@ -269,10 +269,10 @@ foreach ( $filters as $hook => $data ) {
 
 	if ( ! empty( $data['return'] ) ) {
 		$doc .= "## Returns\n";
-		$p = explode( ' ', $data['return'], 2 );
+		$p = preg_split( '/ +/', $data['return'], 2 );
 		if ( '\\' === substr( $p[0], 0, 1 ) ) {
 			$p[0] = substr( $p[0], 1 );
-		} elseif ( ! in_array( $p[0], array( 'int', 'string', 'bool', 'array' ) ) ) {
+		} elseif ( ! in_array( strtok( $p[0], '|' ), array( 'int', 'string', 'bool', 'array', 'unknown' ) ) && substr( $p[0], 0, 3 ) !== 'WP_' ) {
 			$p[0] = 'Enable_Mastodon_Apps\\' . $p[0];
 		}
 		$doc .= "\n`{$p[0]}` {$p[1]}";
