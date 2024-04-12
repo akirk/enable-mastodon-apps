@@ -2397,7 +2397,7 @@ class Mastodon_API {
 		 *      $relationship->id = strval( $user->ID );
 		 *
 		 *      return $relationship;
-		 * } );
+		 * }, 10, 3 );
 		 * ```
 		 */
 		$relationship = apply_filters( 'mastodon_api_relationship', null, $user_id, $request );
