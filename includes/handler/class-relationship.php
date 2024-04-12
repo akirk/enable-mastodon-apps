@@ -47,7 +47,7 @@ class Relationship extends Handler {
 		$relationship->id = $user_id;
 
 		if ( $user_id > 1e10 ) {
-			$remote_user_id = get_term_by( 'id', $user_id - 1e10, Mastodon_API::REMOTE_USER_TAXONOMY );
+			$remote_user_id = get_term_by( 'id', $user_id - 1e10, Mastodon_API::REMAP_TAXONOMY );
 			if ( $remote_user_id ) {
 				$user_id = $remote_user_id->name;
 			}

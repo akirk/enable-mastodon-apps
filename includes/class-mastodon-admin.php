@@ -251,12 +251,6 @@ class Mastodon_Admin {
 			delete_option( 'mastodon_api_auto_app_reregister' );
 		}
 
-		if ( isset( $_POST['mastodon_api_reply_as_comment'] ) ) {
-			update_option( 'mastodon_api_reply_as_comment', true );
-		} else {
-			delete_option( 'mastodon_api_reply_as_comment' );
-		}
-
 		if ( isset( $_POST['mastodon_api_debug_mode'] ) ) {
 			update_option( 'mastodon_api_debug_mode', time() + 5 * MINUTE_IN_SECONDS );
 		} else {
@@ -466,18 +460,6 @@ class Mastodon_Admin {
 								</label>
 							</fieldset>
 							<p class="description"><?php esc_html_e( 'When you (accidentally) delete an app, this allows to use the app when it tries to authorize again.', 'enable-mastodon-apps' ); ?><br/><?php esc_html_e( 'This setting will turn itself off again as soon as an app has done so.', 'enable-mastodon-apps' ); ?></p>
-						</td>
-					</tr>
-					<tr>
-						<th scope="row"><?php esc_html_e( 'Replies', 'enable-mastodon-apps' ); ?></th>
-						<td>
-							<fieldset>
-								<label for="mastodon_api_reply_as_comment">
-									<input name="mastodon_api_reply_as_comment" type="checkbox" id="mastodon_api_reply_as_comment" value="1" <?php checked( get_option( 'mastodon_api_reply_as_comment' ) ); ?> />
-									<span><?php esc_html_e( 'Post replies to posts as comments.', 'enable-mastodon-apps' ); ?></span>
-								</label>
-							</fieldset>
-							<p class="description"><?php esc_html_e( 'Since the ActivityPub plugin handles incoming replies this way, you might want to do this for your own replies as well.', 'enable-mastodon-apps' ); ?></p>
 						</td>
 					</tr>
 					<tr>

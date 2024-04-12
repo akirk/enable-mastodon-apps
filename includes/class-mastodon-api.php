@@ -12,6 +12,8 @@ namespace Enable_Mastodon_Apps;
 use WP_REST_Request;
 use WP_REST_Response;
 
+use function PHPUnit\Framework\returnCallback;
+
 /**
  * This is the class that implements the Mastodon API endpoints.
  *
@@ -39,7 +41,7 @@ class Mastodon_API {
 
 	const PREFIX = 'enable-mastodon-apps';
 	const APP_TAXONOMY = 'mastodon-app';
-	const REMOTE_USER_TAXONOMY = 'mastodon-api-remote-user';
+	const REMAP_TAXONOMY = 'mastodon-api-remap';
 	const CPT = 'enable-mastodon-apps';
 
 	/**
@@ -72,7 +74,7 @@ class Mastodon_API {
 		add_filter( 'rest_post_dispatch', array( $this, 'send_http_links' ), 10, 1 );
 		add_filter( 'rest_pre_echo_response', array( $this, 'reformat_error_response' ), 10, 3 );
 		add_filter( 'template_include', array( $this, 'log_404s' ) );
-		add_filter( 'enable_mastodon_apps_get_json', array( $this, 'get_json' ), 10, 4 );
+		add_filter( 'rest_json_encode_options', array( $this, 'rest_json_encode_options' ), 10, 2 );
 		add_action( 'default_option_mastodon_api_default_post_formats', array( $this, 'default_option_mastodon_api_default_post_formats' ) );
 		add_filter( 'rest_request_before_callbacks', array( $this, 'rest_request_before_callbacks' ) );
 	}
@@ -123,6 +125,14 @@ class Mastodon_API {
 		);
 	}
 
+	public function rest_json_encode_options( $options, $request ) {
+		if ( 0 === strpos( $request->get_route(), '/' . self::PREFIX ) ) {
+			$options |= JSON_UNESCAPED_SLASHES;
+			$options |= JSON_UNESCAPED_UNICODE;
+		}
+		return $options;
+	}
+
 	public function register_taxonomy() {
 		$args = array(
 			'labels'       => array(
@@ -137,7 +147,9 @@ class Mastodon_API {
 			'rewrite'      => false,
 		);
 
-		register_taxonomy( self::REMOTE_USER_TAXONOMY, null, $args );
+		register_taxonomy( self::REMAP_TAXONOMY, null, $args );
+
+		register_term_meta( self::REMAP_TAXONOMY, 'meta', array( 'type' => 'string' ) );
 	}
 
 	public function register_custom_post_type() {
@@ -169,6 +181,7 @@ class Mastodon_API {
 				'api/v1/accounts/verify_credentials',
 				'api/v1/accounts/familiar_followers',
 				'api/v1/accounts/search',
+				'api/v1/accounts/lookup',
 				'api/v1/announcements',
 				'api/v1/apps',
 				'api/v1/bookmarks',
@@ -722,6 +735,23 @@ class Mastodon_API {
 						'type'        => 'boolean',
 						'description' => 'Only return accounts the current user is following.',
 						'default'     => false,
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/accounts/lookup',
+			array(
+				'methods'             => array( 'GET', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_accounts_lookup' ),
+				'permission_callback' => array( $this, 'public_api_permission' ),
+				'args'                => array(
+					'acct' => array(
+						'type'        => 'string',
+						'description' => 'What to lookup.',
+						'required'    => true,
 					),
 				),
 			)
@@ -1504,7 +1534,6 @@ class Mastodon_API {
 		return $response;
 	}
 
-
 	public function api_verify_credentials( $request ) {
 		$request->set_param( 'user_id', get_current_user_id() );
 		return $this->api_account( $request );
@@ -1516,7 +1545,7 @@ class Mastodon_API {
 		}
 
 		$post = (object) array(
-			'ID'           => $this->remap_comment_id( $comment->comment_ID ),
+			'ID'           => self::remap_comment_id( $comment->comment_ID ),
 			'guid'         => $comment->guid . '#comment-' . $comment->comment_ID,
 			'post_author'  => $comment->user_id,
 			'post_content' => $comment->comment_content,
@@ -1550,7 +1579,7 @@ class Mastodon_API {
 		$user_id = $request->get_param( 'user_id' );
 
 		if ( $user_id > 1e10 ) {
-			$remote_user_id = get_term_by( 'id', intval( $user_id ) - 1e10, self::REMOTE_USER_TAXONOMY );
+			$remote_user_id = get_term_by( 'id', intval( $user_id ) - 1e10, self::REMAP_TAXONOMY );
 			if ( $remote_user_id ) {
 				return $remote_user_id->name;
 			}
@@ -1572,10 +1601,42 @@ class Mastodon_API {
 		}
 
 		if ( ! $entity->is_valid() ) {
+			var_dump( $entity );
 			return new \WP_Error( 'integrity-error', 'Integrity Error', array( 'status' => 500 ) );
 		}
 
 		return $entity;
+	}
+
+	private function filter_non_entities( $entities, $type ) {
+		$wp_rest_response = false;
+		if ( $entities instanceof \WP_REST_Response ) {
+			$wp_rest_response = $entities;
+			$entities = $entities->data;
+		}
+		if ( ! is_array( $entities ) ) {
+			return array();
+		}
+		$entities = array_values(
+			array_filter(
+				$entities,
+				function ( $entity ) use ( $type ) {
+					if ( ! $entity instanceof $type ) {
+						return false;
+					}
+
+					if ( ! $entity->is_valid() ) {
+						return false;
+					}
+					return true;
+				}
+			)
+		);
+		if ( $wp_rest_response ) {
+			$wp_rest_response->data = $entities;
+			return $wp_rest_response;
+		}
+		return $entities;
 	}
 
 	public function api_submit_post( $request ) {
@@ -1588,11 +1649,14 @@ class Mastodon_API {
 			return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Validation failed: Text can\'t be blank', array( 'status' => 422 ) );
 		}
 
-		$status = make_clickable( $status );
-		if ( class_exists( '\Activitypub\Mention' ) ) {
-			$status = \Activitypub\Mention::the_content( $status );
-		}
-		$status = trim( $status );
+		/**
+		 * Allow modifying the status text before it gets posted.
+		 *
+		 * @param string $status The user submitted status text.
+		 * @param WP_REST_Request $request The REST request object.
+		 * @return string The potentially modified status text.
+		 */
+		$status = apply_filters( 'mastodon_api_submit_status_text', $status, $request );
 
 		$visibility = $request->get_param( 'visibility' );
 		if ( empty( $visibility ) ) {
@@ -1601,16 +1665,16 @@ class Mastodon_API {
 		$post_data = array();
 
 		$parent_post    = false;
-		$parent_post_id = $request->get_param( 'in_reply_to_id' );
+		$parent_post_id = self::maybe_get_remapped_reblog_id( $request->get_param( 'in_reply_to_id' ) );
 		if ( ! empty( $parent_post_id ) ) {
 			$parent_post = get_post( $parent_post_id );
-			if ( $parent_post && get_option( 'mastodon_api_reply_as_comment' ) ) {
+			if ( $parent_post ) {
 				$user = wp_get_current_user();
 
 				$commentdata = array(
 					'comment_post_ID'      => $parent_post_id,
 					'comment_author'       => $user->user_nicename,
-					'user_id'              => get_current_user_id(),
+					'user_id'              => $user->ID,
 					'comment_author_email' => $user->user_email,
 					'comment_author_url'   => $user->user_url,
 					'comment_content'      => $status,
@@ -1893,6 +1957,17 @@ class Mastodon_API {
 		return apply_filters( 'mastodon_api_search', null, $request );
 	}
 
+	public function api_accounts_lookup( object $request ) {
+		$acct = $request->get_param( 'acct' );
+		if ( ! $acct ) {
+			return new \WP_Error( 'mastodon_api_accounts_lookup', 'Validation failed: acct can\'t be blank', array( 'status' => 422 ) );
+		}
+
+		$account = \apply_filters( 'mastodon_api_account', null, $acct, $request, null );
+
+		return $this->validate_entity( $account, Entity\Account::class );
+	}
+
 	public function api_push_subscription( $request ) {
 		return array();
 	}
@@ -1903,7 +1978,7 @@ class Mastodon_API {
 			return false;
 		}
 
-		$post_id = $this->maybe_get_remapped_reblog_id( $post_id );
+		$post_id = self::maybe_get_remapped_reblog_id( $post_id );
 
 		$context = array(
 			'ancestors'   => array(),
@@ -1957,7 +2032,7 @@ class Mastodon_API {
 			}
 		}
 
-		$comment_id = $this->get_remapped_comment_id( $post_id );
+		$comment_id = self::get_remapped_comment_id( $post_id );
 		if ( $comment_id ) {
 			$comment = get_comment( $comment_id );
 			$post_id = $comment->comment_post_ID;
@@ -1996,7 +2071,7 @@ class Mastodon_API {
 			return false;
 		}
 
-		$post_id = $this->maybe_get_remapped_reblog_id( $post_id );
+		$post_id = self::maybe_get_remapped_reblog_id( $post_id );
 
 		// 2b50 = star
 		// 2764 = heart
@@ -2021,7 +2096,7 @@ class Mastodon_API {
 			return false;
 		}
 
-		$post_id = $this->maybe_get_remapped_reblog_id( $post_id );
+		$post_id = self::maybe_get_remapped_reblog_id( $post_id );
 
 		// 2b50 = star
 		// 2764 = heart
@@ -2046,7 +2121,7 @@ class Mastodon_API {
 			return false;
 		}
 
-		$post_id = $this->maybe_get_remapped_reblog_id( $post_id );
+		$post_id = self::maybe_get_remapped_reblog_id( $post_id );
 
 		$post = get_post( $post_id );
 
@@ -2073,7 +2148,7 @@ class Mastodon_API {
 			return false;
 		}
 
-		$post_id = $this->maybe_get_remapped_reblog_id( $post_id );
+		$post_id = self::maybe_get_remapped_reblog_id( $post_id );
 
 		$post = get_post( $post_id );
 		if ( $post ) {
@@ -2099,7 +2174,7 @@ class Mastodon_API {
 			return false;
 		}
 
-		$comment_id = $this->get_remapped_comment_id( $post_id );
+		$comment_id = self::get_remapped_comment_id( $post_id );
 		if ( $comment_id ) {
 			$comment = get_comment( $comment_id );
 			if ( intval( $comment->user_id ) === get_current_user_id() ) {
@@ -2136,12 +2211,12 @@ class Mastodon_API {
 			return new WP_REST_Response( array( 'error' => 'Record not found' ), 404 );
 		}
 
-		$comment_id = $this->get_remapped_comment_id( $post_id );
+		$comment_id = self::get_remapped_comment_id( $post_id );
 		if ( $comment_id ) {
 			return $this->get_comment_status_array( get_comment( $comment_id ) );
 		}
 
-		$post_id = $this->maybe_get_remapped_reblog_id( $post_id );
+		$post_id = self::maybe_get_remapped_reblog_id( $post_id );
 		$post = get_post( $post_id );
 
 		if ( ! $post ) {
@@ -2388,6 +2463,34 @@ class Mastodon_API {
 		return $preferences;
 	}
 
+	public static function get_mastodon_language( $lang ) {
+		if ( false === strpos( $lang, '_' ) ) {
+			return $lang . '_' . strtoupper( $lang );
+		}
+		return $lang;
+	}
+
+	public function api_account_statuses( $request ) {
+		$user_id = $this->get_user_id_from_request( $request );
+
+		$args = array(
+			'author' => $user_id,
+		);
+		$args = apply_filters( 'mastodon_api_account_statuses_args', $args, $request );
+
+		/**
+		 * Filter the account statuses.
+		 *
+		 * @param array|null $statuses Current statuses.
+		 * @param array $args Current statuses arguments.
+		 * @param int|null $min_id Optional minimum status ID.
+		 * @param int|null $max_id Optional maximum status ID.
+		 */
+		$statuses = apply_filters( 'mastodon_api_statuses', null, $args, $request->get_param( 'min_id' ), $request->get_param( 'max_id' ) );
+
+		return $this->filter_non_entities( $statuses, Entity\Status::class );
+	}
+
 	public function api_account( $request ) {
 		$user_id = $this->get_user_id_from_request( $request );
 
@@ -2396,10 +2499,11 @@ class Mastodon_API {
 		 *
 		 * @param Entity\Account|null $account The account data.
 		 * @param int $user_id The requested user ID.
-		 * @param WP_REST_Request $request The request object.
+		 * @param WP_REST_Request|null $request The request object.
+		 * @param WP_Post|null $post The post object.
 		 * @return Entity\Account|null The modified account data.
 		 *
-		 * Example:
+		 * ### Example
 		 * ```php
 		 * add_filter( 'mastodon_api_account', function( $user_data, $user_id ) {
 		 *     $user = get_user_by( 'ID', $user_id );
@@ -2410,468 +2514,15 @@ class Mastodon_API {
 		 *     $account->display_name   = $user->display_name;
 		 *
 		 *     return $account;
-		 * } );
+		 * }, 10, 2 );
 		 * ```
 		 */
-		$account = \apply_filters( 'mastodon_api_account', null, $user_id, $request );
+		$account = \apply_filters( 'mastodon_api_account', null, $user_id, $request, null );
 
 		return $this->validate_entity( $account, Entity\Account::class );
 	}
 
-	/**
-	 * Check whether this is a valid URL
-	 *
-	 * @param string $url The URL to check.
-	 * @return false|string URL or false on failure.
-	 */
-	public static function check_url( $url ) {
-		$host = parse_url( $url, PHP_URL_HOST );
-
-		$check_url = apply_filters( 'friends_host_is_valid', null, $host );
-		if ( ! is_null( $check_url ) ) {
-			return $check_url;
-		}
-
-		return wp_http_validate_url( $url );
-	}
-
-	public function get_json( $url, $transient_key, $fallback = null, $force_retrieval = false ) {
-		$expiry_key = $transient_key . '_expiry';
-		$transient_expiry = \get_transient( $expiry_key );
-		$response = \get_transient( $transient_key );
-		if ( $transient_expiry < time() ) {
-			// Re-retrieve it later.
-			wp_schedule_single_event( time(), 'enable_mastodon_apps_get_json', array( $url, $transient_key, $fallback, true ) );
-		}
-		if ( $response && ! $force_retrieval ) {
-			if ( is_wp_error( $response ) ) {
-				if ( $fallback && 'http_request_failed' !== $response->get_error_code() ) {
-					return $fallback;
-				}
-			} else {
-				return $response;
-			}
-		}
-
-		$response = \wp_remote_get(
-			$url,
-			array(
-				'headers'     => array( 'Accept' => 'application/activity+json' ),
-				'redirection' => 2,
-				'timeout'     => 5,
-			)
-		);
-
-		if ( \is_wp_error( $response ) ) {
-			\set_transient( $transient_key, $response, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
-			if ( $fallback ) {
-				return $fallback;
-			}
-			return $response;
-		}
-
-		if ( \is_wp_error( $response ) ) {
-			\set_transient( $transient_key, $response, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
-			if ( $fallback ) {
-				return $fallback;
-			}
-			return $response;
-		}
-
-		$body = \wp_remote_retrieve_body( $response );
-		$body = \json_decode( $body, true );
-
-		\set_transient( $transient_key, $body, YEAR_IN_SECONDS );
-		\set_transient( $expiry_key, time() + HOUR_IN_SECONDS );
-
-		return $body;
-	}
-
-	private function update_account_data_with_meta( $data, $meta, $full_metadata = false ) {
-		if ( ! $meta || is_wp_error( $meta ) || isset( $meta['error'] ) ) {
-			if ( empty( $data['username'] ) || ! $data['username'] ) {
-				$data['username'] = strtok( $data['id'], '@' );
-			}
-			if ( empty( $data['display_name'] ) || ! $data['display_name'] ) {
-				$data['display_name'] = $data['username'];
-			}
-
-			if ( empty( $data['created_at'] ) || ! $data['created_at'] ) {
-				$data['created_at'] = '1970-01-01T00:00:00Z';
-			}
-			if ( ! $data['last_status_at'] ) {
-				$data['last_status_at'] = $data['created_at'];
-			}
-
-			return $data;
-		}
-		if ( $full_metadata ) {
-			$followers = $this->get_json( $meta['followers'], 'followers-' . $data['acct'], array( 'totalItems' => 0 ) );
-			$following = $this->get_json( $meta['following'], 'following-' . $data['acct'], array( 'totalItems' => 0 ) );
-			$outbox = $this->get_json( $meta['outbox'], 'outbox-' . $data['acct'], array( 'totalItems' => 0 ) );
-			$data['followers_count'] = intval( $followers['totalItems'] );
-			$data['following_count'] = intval( $following['totalItems'] );
-			$data['statuses_count'] = intval( $outbox['totalItems'] );
-		}
-
-		if ( empty( $data['username'] ) || ! $data['username'] ) {
-			if ( isset( $meta['preferredUsername'] ) && $meta['preferredUsername'] ) {
-				$data['username'] = $meta['preferredUsername'];
-			} else {
-				$data['username'] = strtok( $data['id'], '@' );
-			}
-		}
-		if ( empty( $data['display_name'] ) || ! $data['display_name'] ) {
-			if ( isset( $meta['name'] ) && $meta['name'] ) {
-				$data['display_name'] = $meta['name'];
-			} else {
-				$data['display_name'] = $data['username'];
-			}
-		}
-		if ( ! empty( $meta['summary'] ) ) {
-			$data['note'] = (string) $meta['summary'];
-		}
-		if ( empty( $data['created_at'] ) || ! $data['created_at'] ) {
-			if ( isset( $meta['published'] ) && $meta['published'] ) {
-				$data['created_at'] = $meta['published'];
-			} else {
-				$data['created_at'] = '1970-01-01T00:00:00Z';
-			}
-		}
-		if ( ! $data['last_status_at'] ) {
-			$data['last_status_at'] = $data['created_at'];
-		}
-		$data['url'] = $meta['url'];
-		if ( isset( $meta['icon'] ) ) {
-			$data['avatar'] = $meta['icon']['url'];
-			$data['avatar_static'] = $meta['icon']['url'];
-		}
-		if ( isset( $meta['image'] ) ) {
-			$data['header'] = $meta['image']['url'];
-			$data['header_static'] = $meta['image']['url'];
-		}
-		if ( isset( $meta['discoverable'] ) ) {
-			$data['discoverable'] = $meta['discoverable'];
-		}
-		return $data;
-	}
-
-	private function get_friend_account_data( $user_id, $meta = array(), $full_metadata = false ) {
-		$external_user = apply_filters( 'mastodon_api_external_mentions_user', null );
-		$is_external_mention = $external_user && strval( $external_user->ID ) === strval( $user_id );
-		if ( $is_external_mention && isset( $meta['attributedTo']['id'] ) ) {
-			$user_id = $meta['attributedTo']['id'];
-		}
-
-		$cache_key = 'account-' . $user_id;
-
-		$url = false;
-		if (
-			preg_match( '#^https?://[^/]+/@[a-z0-9-]+$#i', $user_id )
-			|| preg_match( '#^https?://[^/]+/(users|author)/[a-z0-9-]+$#i', $user_id )
-		) {
-			$url = $user_id;
-		}
-
-		if (
-			preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id )
-			|| $url
-		) {
-			if ( ! is_user_logged_in() ) {
-				return new \WP_Error( 'not-logged-in', 'Not logged in', array( 'status' => 401 ) );
-			}
-			$account = $this->get_acct( $user_id );
-
-			if ( $account ) {
-				$remote_user_id = get_term_by( 'name', $account, self::REMOTE_USER_TAXONOMY );
-				if ( $remote_user_id ) {
-					$remote_user_id = $remote_user_id->term_id;
-				} else {
-					$remote_user_id = wp_insert_term( $account, self::REMOTE_USER_TAXONOMY );
-					if ( ! is_wp_error( $remote_user_id ) ) {
-						$remote_user_id = $remote_user_id['term_id'];
-					}
-				}
-			} elseif ( $user_id ) {
-				$remote_user_id = get_term_by( 'name', $user_id, self::REMOTE_USER_TAXONOMY );
-				if ( $remote_user_id ) {
-					$remote_user_id = $remote_user_id->term_id;
-				} else {
-					$remote_user_id = wp_insert_term( $user_id, self::REMOTE_USER_TAXONOMY );
-					if ( ! is_wp_error( $remote_user_id ) ) {
-						$remote_user_id = $remote_user_id['term_id'];
-					}
-				}
-			}
-
-			if ( $remote_user_id ) {
-				$cache_key = 'account-' . ( 1e10 + $remote_user_id );
-			}
-		}
-
-		$ret = wp_cache_get( $cache_key, 'enable-mastodon-apps' );
-		if ( false !== $ret ) {
-			return $ret;
-		}
-
-		// Data URL of an 1x1px transparent png.
-		$placeholder_image = 'https://files.mastodon.social/media_attachments/files/003/134/405/original/04060b07ddf7bb0b.png';
-		// $placeholder_image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
-
-		if (
-			preg_match( '/^@?' . self::ACTIVITYPUB_USERNAME_REGEXP . '$/i', $user_id )
-			|| $url
-		) {
-			if ( ! $remote_user_id ) {
-				return null;
-			}
-
-			if ( ! $url ) {
-				if ( isset( $meta['attributedTo']['id'] ) ) {
-					$url = $meta['attributedTo']['id'];
-					$user_id = $meta['attributedTo']['id'];
-				} else {
-					$url = $this->get_activitypub_url( $user_id );
-				}
-			}
-			if ( ! $url ) {
-				$data = new \WP_Error( 'user-not-found', 'User not found.', array( 'status' => 404 ) );
-				wp_cache_set( $cache_key, $data, 'enable-mastodon-apps' );
-				return $data;
-			}
-			$meta = apply_filters( 'friends_get_activitypub_metadata', array(), $url );
-
-			$data = array(
-				'id'              => strval( 1e10 + $remote_user_id ),
-				'username'        => '',
-				'acct'            => $account,
-				'display_name'    => '',
-				'locked'          => false,
-				'bot'             => false,
-				'discoverable'    => true,
-				'group'           => false,
-				'created_at'      => gmdate( 'Y-m-d\TH:i:s.000P' ),
-				'note'            => '',
-				'url'             => '',
-				'avatar'          => $placeholder_image,
-				'avatar_static'   => $placeholder_image,
-				'header'          => $placeholder_image,
-				'header_static'   => $placeholder_image,
-				'followers_count' => 0,
-				'following_count' => 0,
-				'statuses_count'  => 0,
-				'last_status_at'  => gmdate( 'Y-m-d' ),
-				'emojis'          => array(),
-				'fields'          => array(),
-			);
-
-			$data = $this->update_account_data_with_meta( $data, $meta, $full_metadata );
-
-			wp_cache_set( $cache_key, $data, 'enable-mastodon-apps' );
-
-			return $data;
-		}
-
-		$user = false;
-		if ( class_exists( '\Friends\User' ) ) {
-			$user = \Friends\User::get_user_by_id( $user_id );
-
-			if ( $user instanceof \Friends\Subscription ) {
-				$remote_user_id = get_term_by( 'name', $user->ID, self::REMOTE_USER_TAXONOMY );
-				if ( $remote_user_id ) {
-					$remote_user_id = $remote_user_id->term_id;
-				} else {
-					$remote_user_id = wp_insert_term( $user->ID, self::REMOTE_USER_TAXONOMY );
-					if ( ! is_wp_error( $remote_user_id ) ) {
-						$remote_user_id = $remote_user_id['term_id'];
-					}
-				}
-				$user->ID = 1e10 + $remote_user_id;
-			}
-		}
-
-		if ( ! $user || is_wp_error( $user ) ) {
-			$user = new \WP_User( $user_id );
-			if ( ! $user || is_wp_error( $user ) ) {
-				$data = new \WP_Error( 'user-not-found', 'User not found.', array( 'status' => 404 ) );
-				wp_cache_set( $cache_key, $data, 'enable-mastodon-apps' );
-				return $data;
-			}
-		}
-		$followers_count = 0;
-		$following_count = 0;
-		$avatar = get_avatar_url( $user->ID );
-		if ( $user instanceof \Friends\User ) {
-			$posts = $user->get_post_count_by_post_format();
-		} else {
-			// Get post count for the post format status for the user.
-			$posts = array(
-				'status' => count_user_posts( $user->ID, 'post', true ),
-			);
-		}
-		if ( get_current_user_id() === $user->ID ) {
-			if ( class_exists( '\Activitypub\Peer\Followers', false ) ) {
-				$followers_count = count( \Activitypub\Peer\Followers::get_followers( $user->ID ) );
-			}
-			if ( class_exists( '\Activitypub\Collection\Followers', false ) ) {
-				$followers_count = count( \Activitypub\Collection\Followers::get_followers( $user->ID ) );
-			}
-		}
-
-		$data = array(
-			'id'              => strval( $user->ID ),
-			'username'        => $user->user_login,
-			'display_name'    => $user->display_name,
-			'avatar'          => $avatar,
-			'avatar_static'   => $avatar,
-			'header'          => $placeholder_image,
-			'header_static'   => $placeholder_image,
-			'acct'            => $user->user_login,
-			'note'            => '',
-			'created_at'      => mysql2date( 'Y-m-d\TH:i:s.000P', $user->user_registered, false ),
-			'followers_count' => $followers_count,
-			'following_count' => $following_count,
-			'statuses_count'  => isset( $posts['status'] ) ? intval( $posts['status'] ) : 0,
-			'last_status_at'  => mysql2date( 'Y-m-d\TH:i:s.000P', $user->user_registered, false ),
-			'fields'          => array(),
-			'locked'          => false,
-			'emojis'          => array(),
-			'url'             => get_author_posts_url( $user->ID ),
-			'source'          => array(
-				'privacy'   => apply_filters( 'mastodon_api_account_visibility', 'public', $user ),
-				'sensitive' => false,
-				'language'  => self::get_mastodon_language( get_user_locale( $user->ID ) ),
-				'note'      => '',
-				'fields'    => array(),
-			),
-			'bot'             => false,
-			'discoverable'    => true,
-		);
-
-		if ( isset( $meta['attributedTo']['id'] ) && $is_external_mention ) {
-			$data['acct'] = $this->get_acct( $meta['attributedTo']['id'] );
-			$data['id'] = $data['acct'];
-			$data['username'] = strtok( $data['acct'], '@' );
-
-			$meta = apply_filters( 'friends_get_activitypub_metadata', array(), $meta['attributedTo']['id'] );
-			$data = $this->update_account_data_with_meta( $data, $meta, $full_metadata );
-		} else {
-			$acct = $this->get_user_acct( $user );
-			if ( $acct ) {
-				$data['acct'] = $acct;
-			}
-
-			foreach ( apply_filters( 'friends_get_user_feeds', array(), $user ) as $feed ) {
-				$meta = apply_filters( 'friends_get_feed_metadata', array(), $feed );
-				if ( $meta && ! is_wp_error( $meta ) && ! isset( $meta['error'] ) ) {
-					$data['acct'] = $this->get_acct( $meta['id'] );
-					$data = $this->update_account_data_with_meta( $data, $meta, $full_metadata );
-					break;
-				}
-			}
-		}
-
-		wp_cache_set( $cache_key, $data, 'enable-mastodon-apps' );
-		return $data;
-	}
-
-	public static function get_mastodon_language( $lang ) {
-		if ( false === strpos( $lang, '_' ) ) {
-			return $lang . '_' . strtoupper( $lang );
-		}
-		return $lang;
-	}
-
-	public function get_user_acct( $user ) {
-		return strtok( $this->get_acct( get_author_posts_url( $user->ID ) ), '@' );
-	}
-
-	public function get_acct( $id_or_url ) {
-		if ( is_wp_error( $id_or_url ) ) {
-			return '';
-		}
-		$webfinger = $this->webfinger( $id_or_url );
-		if ( is_wp_error( $webfinger ) || ! isset( $webfinger['subject'] ) ) {
-			return '';
-		}
-		if ( substr( $webfinger['subject'], 0, 5 ) === 'acct:' ) {
-			return substr( $webfinger['subject'], 5 );
-		}
-		return $webfinger['subject'];
-	}
-
-	public function get_activitypub_url( $id_or_url ) {
-		$webfinger = $this->webfinger( $id_or_url );
-		if ( is_wp_error( $webfinger ) || empty( $webfinger['links'] ) ) {
-			return false;
-		}
-		foreach ( $webfinger['links'] as $link ) {
-			if ( ! isset( $link['rel'] ) ) {
-				continue;
-			}
-			if ( 'self' === $link['rel'] && 'application/activity+json' === $link['type'] && in_array( $link['href'], $webfinger['aliases'] ) ) {
-				return $link['href'];
-			}
-		}
-
-		if ( ! empty( $webfinger['aliases'] ) ) {
-			return $webfinger['aliases'][0];
-		}
-
-		return false;
-	}
-
-	private function webfinger( $id_or_url ) {
-		if ( strpos( $id_or_url, 'acct:' ) === 0 ) {
-			$id_or_url = substr( $id_or_url, 5 );
-		}
-
-		$body = apply_filters( 'mastodon_api_webfinger', null, $id_or_url );
-		if ( $body ) {
-			return $body;
-		}
-
-		$id = $id_or_url;
-		if ( preg_match( '#^https://([^/]+)/(?:@|users/|author/)([^/]+)/?$#', $id_or_url, $m ) ) {
-			$id = $m[2] . '@' . $m[1];
-			$host = $m[1];
-		} elseif ( false !== strpos( $id_or_url, '@' ) ) {
-			$parts = explode( '@', ltrim( $id_or_url, '@' ) );
-			$host = $parts[1];
-		} else {
-			return null;
-		}
-
-		$transient_key = 'mastodon_api_webfinger_' . md5( $id_or_url );
-
-		$body = \get_transient( $transient_key );
-		if ( $body ) {
-			if ( is_wp_error( $body ) ) {
-				return $id;
-			}
-			return $body;
-		}
-
-		$url = \add_query_arg( 'resource', 'acct:' . ltrim( $id, '@' ), 'https://' . $host . '/.well-known/webfinger' );
-		if ( ! self::check_url( $url ) ) {
-			$response = new \WP_Error( 'invalid_webfinger_url', null, $url );
-			\set_transient( $transient_key, $response, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
-			return $response;
-		}
-
-		$body = $this->get_json( $url, $transient_key );
-
-		if ( \is_wp_error( $body ) ) {
-			$body = new \WP_Error( 'webfinger_url_not_accessible', null, $url );
-			\set_transient( $transient_key, $body, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
-			return $body;
-		}
-
-		\set_transient( $transient_key, $body, WEEK_IN_SECONDS );
-		return $body;
-	}
-
-	private function remap_reblog_id( $post_id ) {
+	public static function remap_reblog_id( $post_id ) {
 		$remapped_post_id = get_post_meta( $post_id, 'mastodon_reblog_id', true );
 		if ( ! $remapped_post_id ) {
 			$remapped_post_id = wp_insert_post(
@@ -2891,7 +2542,7 @@ class Mastodon_API {
 		return $remapped_post_id;
 	}
 
-	private function maybe_get_remapped_reblog_id( $remapped_post_id ) {
+	public static function maybe_get_remapped_reblog_id( $remapped_post_id ) {
 		$post_id = get_post_meta( $remapped_post_id, 'mastodon_reblog_id', true );
 		if ( $post_id ) {
 			return $post_id;
@@ -2899,7 +2550,7 @@ class Mastodon_API {
 		return $remapped_post_id;
 	}
 
-	private function remap_comment_id( $comment_id ) {
+	public static function remap_comment_id( $comment_id ) {
 		$remapped_comment_id = get_comment_meta( $comment_id, 'mastodon_comment_id', true );
 		if ( ! $remapped_comment_id ) {
 			$remapped_comment_id = wp_insert_post(
@@ -2919,12 +2570,63 @@ class Mastodon_API {
 		return $remapped_comment_id;
 	}
 
-	private function get_remapped_comment_id( $remapped_comment_id ) {
+	public static function get_remapped_comment_id( $remapped_comment_id ) {
 		$comment_id = get_post_meta( $remapped_comment_id, 'mastodon_comment_id', true );
 		if ( $comment_id ) {
 			return $comment_id;
 		}
 		return false;
+	}
+
+	public static function remap_user_id( $user_id ) {
+		$term = get_term_by( 'name', $user_id, \Enable_Mastodon_Apps\Mastodon_API::REMAP_TAXONOMY );
+		$remote_user_id = 0;
+		if ( $term ) {
+			$remote_user_id = $term->term_id;
+		} else {
+			$term = wp_insert_term( $user_id, \Enable_Mastodon_Apps\Mastodon_API::REMAP_TAXONOMY );
+			if ( is_wp_error( $term ) ) {
+				return $remote_user_id;
+			}
+			$remote_user_id = $term['term_id'];
+		}
+
+		return 1e10 + $remote_user_id;
+	}
+
+	public static function remap_url( $url, $meta = array() ) {
+		$term = get_term_by( 'name', $url, \Enable_Mastodon_Apps\Mastodon_API::REMAP_TAXONOMY );
+		$remapped_id = 0;
+		if ( $term ) {
+			$remapped_id = $term->term_id;
+		} else {
+			$term = wp_insert_term( $url, \Enable_Mastodon_Apps\Mastodon_API::REMAP_TAXONOMY );
+			if ( ! is_wp_error( $term ) ) {
+				$remapped_id = $term['term_id'];
+				if ( $meta ) {
+					update_term_meta( $remapped_id, 'meta', wp_json_encode( $meta ) );
+				}
+			}
+		}
+
+		return 2e10 + $remapped_id;
+	}
+
+	public static function get_remapped_url( $id ) {
+		if ( $id > 2e10 ) {
+			$term = get_term_by( 'id', intval( $id ) - 2e10, self::REMAP_TAXONOMY );
+			if ( $term ) {
+				return $term->name;
+			}
+		}
+		return null;
+	}
+
+	public static function get_remapped_url_meta( $id ) {
+		if ( $id > 2e10 ) {
+			return json_decode( get_term_meta( intval( $id ) - 2e10, 'meta', true ), true );
+		}
+		return null;
 	}
 
 	private function software_string() {

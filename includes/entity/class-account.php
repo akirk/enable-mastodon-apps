@@ -32,10 +32,10 @@ class Account extends Entity {
 		'locked'          => 'bool',
 		'bot'             => 'bool',
 		'group'           => 'bool',
-		'discoverable'    => 'bool',
-		'noindex'         => 'bool',
-		'suspended'       => 'bool',
-		'limited'         => 'bool',
+		'discoverable'    => 'bool?',
+		'noindex'         => 'bool?',
+		'suspended'       => 'bool?',
+		'limited'         => 'bool?',
 
 		'statuses_count'  => 'int',
 		'followers_count' => 'int',
@@ -48,7 +48,7 @@ class Account extends Entity {
 		'moved'           => 'Account?',
 
 		'created_at'      => 'DateTime',
-		'last_status_at'  => 'DateTime?',
+		'last_status_at'  => 'Date?',
 	);
 	/**
 	 * The account id.
@@ -194,14 +194,14 @@ class Account extends Entity {
 	/**
 	 * When the account was created.
 	 *
-	 * @var string
+	 * @var \DateTime
 	 */
 	public $created_at;
 
 	/**
 	 * When the most recent status was posted.
 	 *
-	 * @var string|null
+	 * @var \DateTime|null
 	 */
 	public $last_status_at;
 

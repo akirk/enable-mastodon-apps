@@ -124,7 +124,7 @@ class Notification extends Handler {
 			if ( ! $external_user || ! ( $external_user instanceof \WP_User ) ) {
 				return array();
 			}
-			$args                   = $this->get_posts_query_args( $request );
+			$args                   = $this->get_posts_query_args( array(), $request );
 			$args['posts_per_page'] = $limit + 2;
 			$args['author']         = $external_user->ID;
 
@@ -133,22 +133,16 @@ class Notification extends Handler {
 				$args['tag__not_in'] = array( $notification_dismissed_tag->term_id );
 			}
 			foreach ( get_posts( $args ) as $post ) {
-				// TODO: Check if still the right way.
-				$meta = get_post_meta( $post->ID, 'activitypub', true );
-				if ( ! $meta ) {
-					continue;
+				$account = apply_filters( 'mastodon_api_account', null, $post->post_author, null, $post );
+				$status  = apply_filters( 'mastodon_api_status', null, $post->ID, array() );
+				if ( $account && $status ) {
+					$notifications[] = $this->get_notification_array(
+						'mention',
+						mysql2date( 'Y-m-d\TH:i:s.000P', $post->post_date, false ),
+						$account,
+						$status
+					);
 				}
-
-				$account = apply_filters( 'mastodon_api_account', null, $post->post_author );
-				$status  = apply_filters( 'mastodon_api_status', null, $post->ID );
-
-				// @TODO: fix use of get_friend_account_data and get_status_array
-				$notifications[] = $this->get_notification_array(
-					'mention',
-					mysql2date( 'Y-m-d\TH:i:s.000P', $post->post_date, false ),
-					$account,
-					$status
-				);
 			}
 		}
 

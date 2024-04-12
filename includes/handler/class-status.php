@@ -27,6 +27,8 @@ class Status extends Handler {
 
 	public function register_hooks() {
 		add_filter( 'mastodon_api_status', array( $this, 'api_status' ), 10, 3 );
+		add_filter( 'mastodon_api_status', array( $this, 'api_status_account_ensure_numeric_id' ), 100 );
+		add_filter( 'mastodon_api_account_statuses_args', array( $this, 'mastodon_api_account_statuses_args' ), 10, 2 );
 		add_filter( 'mastodon_api_statuses', array( $this, 'api_statuses' ), 10, 4 );
 	}
 
@@ -122,7 +124,9 @@ class Status extends Handler {
 		$post = get_post( $object_id );
 
 		if ( $post instanceof \WP_Post ) {
-			$account = apply_filters( 'mastodon_api_account', null, $post->post_author );
+			// Documented in class-mastodon-api.php.
+			$account = apply_filters( 'mastodon_api_account', null, $post->post_author, null, $post );
+
 			if ( ! ( $account instanceof \Enable_Mastodon_Apps\Entity\Account ) ) {
 				return $status;
 			}
@@ -155,6 +159,27 @@ class Status extends Handler {
 	 * @return array
 	 */
 	public function api_statuses( ?array $statuses, array $args, ?int $min_id = null, ?int $max_id = null ): \WP_REST_Response {
+		if ( $statuses ) {
+			if ( ! $statuses instanceof \WP_REST_Response ) {
+				$statuses = new \WP_REST_Response( array_values( $statuses ) );
+			}
+			return $statuses;
+		}
 		return $this->get_posts( $args, $min_id, $max_id );
+	}
+
+	public function mastodon_api_account_statuses_args( $args, $request ) {
+		return $this->get_posts_query_args( $args, $request );
+	}
+
+
+	public function api_status_account_ensure_numeric_id( $status ) {
+		if ( isset( $status->account->id ) && ! is_numeric( $status->account->id ) ) {
+			$status->account->id = \Enable_Mastodon_Apps\Mastodon_API::remap_user_id( $status->account->id );
+		}
+		if ( isset( $status->reblog->account->id ) && ! is_numeric( $status->reblog->account->id ) ) {
+			$status->reblog->account->id = \Enable_Mastodon_Apps\Mastodon_API::remap_user_id( $status->reblog->account->id );
+		}
+		return $status;
 	}
 }
