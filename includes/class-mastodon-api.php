@@ -1539,42 +1539,6 @@ class Mastodon_API {
 		return $this->api_account( $request );
 	}
 
-	private function get_comment_status_array( \WP_Comment $comment ) {
-		if ( ! $comment ) {
-			return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Record not found', array( 'status' => 404 ) );
-		}
-
-		$post = (object) array(
-			'ID'           => self::remap_comment_id( $comment->comment_ID ),
-			'guid'         => $comment->guid . '#comment-' . $comment->comment_ID,
-			'post_author'  => $comment->user_id,
-			'post_content' => $comment->comment_content,
-			'post_date'    => $comment->comment_date,
-			'post_status'  => $comment->post_status,
-			'post_type'    => $comment->post_type,
-			'post_title'   => '',
-		);
-
-		/**
-		 * Modify the status data.
-		 *
-		 * @param array|null $account The status data.
-		 * @param int $post_id The object ID to get the status from.
-		 * @param array $data Additional status data.
-		 * @return array|null The modified status data.
-		 */
-		$status = apply_filters(
-			'mastodon_api_status',
-			null,
-			$post->ID,
-			array(
-				'in_reply_to_id' => $comment->comment_post_ID,
-			)
-		);
-
-		return $status;
-	}
-
 	private function get_user_id_from_request( $request ) {
 		$user_id = $request->get_param( 'user_id' );
 
@@ -1691,7 +1655,25 @@ class Mastodon_API {
 
 				\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
 
-				return $this->get_comment_status_array( get_comment( $id ) );
+				/**
+				 * Modify the status data.
+				 *
+				 * @param array|null $account The status data.
+				 * @param int $post_id The object ID to get the status from.
+				 * @param array $data Additional status data.
+				 * @return array|null The modified status data.
+				 */
+				$status = apply_filters(
+					'mastodon_api_status',
+					null,
+					$post_id,
+					array(
+						'in_reply_to_id' => $comment->comment_post_ID,
+						'comment'        => $comment,
+					)
+				);
+
+				return $status;
 			}
 
 			if ( ! $parent_post ) {
@@ -1982,57 +1964,44 @@ class Mastodon_API {
 			'descendants' => array(),
 		);
 
-		$meta = get_post_meta( $post_id, 'activitypub', true );
-		if ( $meta ) {
-			$transient_key = 'mastodon_api_get_post_context_' . $post_id;
-			$saved_context = get_transient( $transient_key );
-			if ( $saved_context ) {
-				// $context = $saved_context;
-			} else {
-				$post = get_post( $post_id );
-				if ( preg_match( '#^https://([^/]+)/(?:users/)?[^/]+(?:/statuses)?/(.+)$#', $post->guid, $matches ) ) {
-					$domain = $matches[1];
-					$id = $matches[2];
-					$context_api_url = 'https://' . $domain . '/api/v1/statuses/' . $id . '/context';
-					$response = wp_safe_remote_get(
-						$context_api_url,
-						array(
-							'timeout'     => apply_filters( 'friends_http_timeout', 20 ),
-							'redirection' => 1,
-						)
-					);
-
-					if ( ! is_wp_error( $response ) ) {
-						$context = json_decode( wp_remote_retrieve_body( $response ), true );
-						if ( isset( $context['error'] ) ) {
-							$context = array_merge(
-								$context,
-								array(
-									'ancestors'   => array(),
-									'descendants' => array(),
-								)
-							);
-						} else {
-							foreach ( $context as $key => $posts ) {
-								foreach ( $posts as $index => $post ) {
-									if ( false === strpos( $post['account']['acct'], '@' ) ) {
-										$post['account']['acct'] .= '@' . $domain;
-									}
-									$context[ $key ][ $index ]['account']['id'] = $post['account']['acct'];
-								}
-							}
-						}
-
-						set_transient( $transient_key, $context, HOUR_IN_SECONDS );
-					}
-				}
-			}
-		}
-
 		$comment_id = self::get_remapped_comment_id( $post_id );
 		if ( $comment_id ) {
 			$comment = get_comment( $comment_id );
 			$post_id = $comment->comment_post_ID;
+			while ( $comment ) {
+				/**
+				 * Modify the status data.
+				 *
+				 * @param array|null $account The status data.
+				 * @param int $post_id The object ID to get the status from.
+				 * @param array $data Additional status data.
+				 * @return array|null The modified status data.
+				 */
+				$status = apply_filters(
+					'mastodon_api_status',
+					null,
+					$post_id,
+					array(
+						'in_reply_to_id' => $comment->comment_post_ID,
+						'comment'        => $comment,
+					)
+				);
+
+				if ( $status ) {
+					$context['ancestors'][] = $status;
+				}
+				if ( $comment->comment_parent ) {
+					$comment = get_comment( $comment->comment_parent );
+				} else {
+					$comment = false;
+				}
+			}
+		}
+
+		foreach ( get_comments( array( 'post_id' => $post_id ) ) as $comment ) {
+			if ( intval( $comment->comment_ID ) === $comment_id ) {
+				continue;
+			}
 
 			/**
 			 * Modify the status data.
@@ -2042,18 +2011,15 @@ class Mastodon_API {
 			 * @param array $data Additional status data.
 			 * @return array|null The modified status data.
 			 */
-			$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
-
-			if ( $status ) {
-				$context['ancestors'][] = $status;
-			}
-		}
-
-		foreach ( get_comments( array( 'post_id' => $post_id ) ) as $comment ) {
-			if ( intval( $comment->comment_ID ) === $comment_id ) {
-				continue;
-			}
-			$status = $this->get_comment_status_array( $comment );
+			$status = apply_filters(
+				'mastodon_api_status',
+				null,
+				$post_id,
+				array(
+					'in_reply_to_id' => $comment->comment_post_ID,
+					'comment'        => $comment,
+				)
+			);
 			if ( $status ) {
 				$context['descendants'][] = $status;
 			}
@@ -2177,7 +2143,26 @@ class Mastodon_API {
 			if ( intval( $comment->user_id ) === get_current_user_id() ) {
 				wp_trash_comment( $comment_id );
 			}
-			return $this->get_comment_status_array( get_comment( $comment_id ) );
+
+			/**
+			 * Modify the status data.
+			 *
+			 * @param array|null $account The status data.
+			 * @param int $post_id The object ID to get the status from.
+			 * @param array $data Additional status data.
+			 * @return array|null The modified status data.
+			 */
+			$status = apply_filters(
+				'mastodon_api_status',
+				null,
+				$post_id,
+				array(
+					'in_reply_to_id' => $comment->comment_post_ID,
+					'comment'        => $comment,
+				)
+			);
+
+			return $status;
 		}
 
 		$post = get_post( $post_id );
@@ -2210,7 +2195,25 @@ class Mastodon_API {
 
 		$comment_id = self::get_remapped_comment_id( $post_id );
 		if ( $comment_id ) {
-			return $this->get_comment_status_array( get_comment( $comment_id ) );
+			$comment = get_comment( $comment_id );
+			/**
+			 * Modify the status data.
+			 *
+			 * @param array|null $account The status data.
+			 * @param int $post_id The object ID to get the status from.
+			 * @param array $data Additional status data.
+			 * @return array|null The modified status data.
+			 */
+			$status = apply_filters(
+				'mastodon_api_status',
+				null,
+				$post_id,
+				array(
+					'in_reply_to_id' => $comment->comment_post_ID,
+					'comment'        => $comment,
+				)
+			);
+			return $status;
 		}
 
 		$post_id = self::maybe_get_remapped_reblog_id( $post_id );

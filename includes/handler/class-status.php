@@ -10,6 +10,7 @@
 namespace Enable_Mastodon_Apps\Handler;
 
 use Enable_Mastodon_Apps\Handler\Handler;
+use Enable_Mastodon_Apps\Mastodon_API;
 use Enable_Mastodon_Apps\Entity\Status as Status_Entity;
 use WP_REST_Response;
 
@@ -129,12 +130,17 @@ class Status extends Handler {
 				return $status;
 			}
 			$status = new Status_Entity();
-			$status->id = strval( $comment->comment_ID );
+			$status->id = strval( Mastodon_API::remap_comment_id( $comment->comment_ID ) );
 			$status->created_at = new \DateTime( $comment->comment_date );
 			$status->visibility = 'public';
 			$status->uri = get_comment_link( $comment );
 			$status->content = $comment->comment_content;
 			$status->account = $account;
+			if ( $comment->comment_parent ) {
+				$status->in_reply_to_id = strval( Mastodon_API::remap_comment_id( $comment->comment_parent ) );
+			} else {
+				$status->in_reply_to_id = strval( Mastodon_API::remap_reblog_id( $comment->comment_post_ID ) );
+			}
 		} elseif ( $post instanceof \WP_Post ) {
 			// Documented in class-mastodon-api.php.
 			$account = apply_filters( 'mastodon_api_account', null, $post->post_author, null, $post );
