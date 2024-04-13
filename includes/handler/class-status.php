@@ -120,10 +120,22 @@ class Status extends Handler {
 		if ( $status instanceof Status_Entity ) {
 			return $status;
 		}
-
 		$post = get_post( $object_id );
 
-		if ( $post instanceof \WP_Post ) {
+		if ( isset( $data['comment'] ) && $data['comment'] instanceof \WP_Comment ) {
+			$comment = $data['comment'];
+			$account = apply_filters( 'mastodon_api_account', null, $comment->user_id, null, $comment );
+			if ( ! ( $account instanceof \Enable_Mastodon_Apps\Entity\Account ) ) {
+				return $status;
+			}
+			$status = new Status_Entity();
+			$status->id = strval( $comment->comment_ID );
+			$status->created_at = new \DateTime( $comment->comment_date );
+			$status->visibility = 'public';
+			$status->uri = get_comment_link( $comment );
+			$status->content = $comment->comment_content;
+			$status->account = $account;
+		} elseif ( $post instanceof \WP_Post ) {
 			// Documented in class-mastodon-api.php.
 			$account = apply_filters( 'mastodon_api_account', null, $post->post_author, null, $post );
 

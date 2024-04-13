@@ -142,6 +142,7 @@ class Handler {
 					null,
 					$post_id,
 					array(
+						'comment'        => $comment,
 						'in_reply_to_id' => $comment->comment_post_ID,
 					)
 				);
