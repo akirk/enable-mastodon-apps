@@ -1511,13 +1511,9 @@ class Mastodon_API {
 	 * @return     array   The potentially modified default value.
 	 */
 	public function default_option_mastodon_api_default_post_formats( $post_formats ) {
-		if ( ! defined( 'FRIENDS_VERSION' ) ) {
-			$post_formats = array(
-				'standard',
-			);
-		}
-
-		return $post_formats;
+		return array(
+			'standard',
+		);
 	}
 
 	/**
@@ -2632,9 +2628,6 @@ class Mastodon_API {
 	private function software_string() {
 		global $wp_version;
 		$software = 'WordPress/' . $wp_version;
-		if ( defined( 'FRIENDS_VERSION' ) ) {
-			$software .= ', Friends/' . FRIENDS_VERSION;
-		}
 		if ( defined( 'ACTIVITYPUB_VERSION' ) ) {
 			$software .= ', ActivityPub/' . ACTIVITYPUB_VERSION;
 		}

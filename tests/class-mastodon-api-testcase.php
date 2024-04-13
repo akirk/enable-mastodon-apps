@@ -126,6 +126,13 @@ class Mastodon_API_TestCase extends \WP_UnitTestCase {
 		$userdata = get_userdata( $this->administrator );
 		$oauth->get_token_storage()->setAccessToken( $this->token, $this->app->get_client_id(), $userdata->ID, time() + HOUR_IN_SECONDS, $this->app->get_scopes() );
 		unset( $_SERVER['HTTP_AUTHORIZATION'] );
+		add_filter(
+			'default_option_mastodon_api_default_post_formats',
+			function ( $post_formats ) {
+				return array( 'status' );
+			},
+			20
+		);
 
 		add_filter( 'pre_http_request', array( $this, 'block_http_requests' ), 10 );
 	}

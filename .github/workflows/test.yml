@@ -38,12 +38,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Checkout friends
-        uses: actions/checkout@v3
-        with:
-          repository: akirk/friends
-          path: friends
-
       - name: Setup PHP with tools
         uses: shivammathur/setup-php@v2
         with:
