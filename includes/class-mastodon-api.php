@@ -1960,6 +1960,22 @@ class Mastodon_API {
 			'descendants' => array(),
 		);
 
+		$post = get_post( $post_id );
+		if ( $post ) {
+			/**
+			 * Modify the status data.
+			 *
+			 * @param array|null $account The status data.
+			 * @param int $post_id The object ID to get the status from.
+			 * @param array $data Additional status data.
+			 * @return array|null The modified status data.
+			 */
+			$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
+			if ( $status ) {
+				$context['ancestors'][] = $status;
+			}
+		}
+
 		$comment_id = self::get_remapped_comment_id( $post_id );
 		if ( $comment_id ) {
 			$comment = get_comment( $comment_id );

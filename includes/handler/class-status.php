@@ -139,7 +139,7 @@ class Status extends Handler {
 			if ( $comment->comment_parent ) {
 				$status->in_reply_to_id = strval( Mastodon_API::remap_comment_id( $comment->comment_parent ) );
 			} else {
-				$status->in_reply_to_id = strval( Mastodon_API::remap_reblog_id( $comment->comment_post_ID ) );
+				$status->in_reply_to_id = strval( $comment->comment_post_ID );
 			}
 		} elseif ( $post instanceof \WP_Post ) {
 			// Documented in class-mastodon-api.php.
