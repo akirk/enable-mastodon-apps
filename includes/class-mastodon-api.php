@@ -1680,9 +1680,6 @@ class Mastodon_API {
 					'comment_content'      => $status,
 					'comment_type'         => 'comment',
 					'comment_parent'       => 0,
-					'comment_meta'         => array(
-						'protocol' => 'activitypub',
-					),
 				);
 
 				\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
