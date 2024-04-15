@@ -1650,7 +1650,7 @@ class Mastodon_API {
 				}
 
 				\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
-
+				$comment = get_comment( $id );
 				/**
 				 * Modify the status data.
 				 *
@@ -1662,7 +1662,7 @@ class Mastodon_API {
 				$status = apply_filters(
 					'mastodon_api_status',
 					null,
-					$post_id,
+					$comment->comment_post_ID,
 					array(
 						'in_reply_to_id' => $comment->comment_post_ID,
 						'comment'        => $comment,
@@ -1670,12 +1670,6 @@ class Mastodon_API {
 				);
 
 				return $status;
-			}
-
-			if ( ! $parent_post ) {
-				$post_data['post_meta_input'] = array(
-					'activitypub_in_reply_to' => $parent_post_id,
-				);
 			}
 		}
 
@@ -1700,8 +1694,8 @@ class Mastodon_API {
 			$post_data['post_content'] = trim( $post_content );
 		}
 
-		if ( $parent_post ) {
-			$post_data['post_parent'] = $parent_post->ID;
+		if ( $parent_post_id ) {
+			$post_data['post_parent'] = $parent_post_id;
 		}
 
 		$scheduled_at = $request->get_param( 'scheduled_at' );
@@ -1960,8 +1954,12 @@ class Mastodon_API {
 			'descendants' => array(),
 		);
 
-		$post = get_post( $post_id );
-		if ( $post ) {
+		$compare_id = $post_id;
+		$comment_id = self::get_remapped_comment_id( $post_id );
+		if ( $comment_id ) {
+			$comment = get_comment( $comment_id );
+			$post_id = $comment->comment_post_ID;
+
 			/**
 			 * Modify the status data.
 			 *
@@ -1970,48 +1968,26 @@ class Mastodon_API {
 			 * @param array $data Additional status data.
 			 * @return array|null The modified status data.
 			 */
-			$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
+			$status = apply_filters(
+				'mastodon_api_status',
+				null,
+				$post_id,
+				array()
+			);
 			if ( $status ) {
-				$context['ancestors'][] = $status;
+				$context['ancestors'][ $status->id ] = $status;
 			}
 		}
-
-		$comment_id = self::get_remapped_comment_id( $post_id );
-		if ( $comment_id ) {
-			$comment = get_comment( $comment_id );
-			$post_id = $comment->comment_post_ID;
-			while ( $comment ) {
-				/**
-				 * Modify the status data.
-				 *
-				 * @param array|null $account The status data.
-				 * @param int $post_id The object ID to get the status from.
-				 * @param array $data Additional status data.
-				 * @return array|null The modified status data.
-				 */
-				$status = apply_filters(
-					'mastodon_api_status',
-					null,
-					$post_id,
-					array(
-						'in_reply_to_id' => $comment->comment_post_ID,
-						'comment'        => $comment,
-					)
-				);
-
-				if ( $status ) {
-					$context['ancestors'][] = $status;
-				}
-				if ( $comment->comment_parent ) {
-					$comment = get_comment( $comment->comment_parent );
-				} else {
-					$comment = false;
-				}
-			}
-		}
-
-		foreach ( get_comments( array( 'post_id' => $post_id ) ) as $comment ) {
-			if ( intval( $comment->comment_ID ) === $comment_id ) {
+		foreach ( array_merge(
+			get_comments( array( 'post_id' => $post_id ) ),
+			get_comments( array( 'parent__in' => $comment_id ) )
+		) as $comment ) {
+			if (
+				intval( $comment->comment_ID ) === intval( $comment_id )
+				|| intval( $comment->comment_ID ) === intval( $post_id )
+				|| isset( $context['ancestors'][ $comment->comment_ID ] )
+				|| isset( $context['descendants'][ $comment->comment_ID ] )
+			) {
 				continue;
 			}
 
@@ -2033,9 +2009,19 @@ class Mastodon_API {
 				)
 			);
 			if ( $status ) {
-				$context['descendants'][] = $status;
+				if ( intval( $status->id ) < intval( $compare_id ) ) {
+					$context['ancestors'][ $status->id ] = $status;
+				} else {
+					$context['descendants'][ $status->id ] = $status;
+				}
 			}
 		}
+		ksort( $context['ancestors'] );
+
+		ksort( $context['descendants'] );
+
+		$context['ancestors'] = array_values( $context['ancestors'] );
+		$context['descendants'] = array_values( $context['descendants'] );
 
 		return $context;
 	}
