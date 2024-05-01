@@ -295,7 +295,7 @@ class Status extends Handler {
 	}
 
 	public function api_submit_comment( $status, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at ) {
-		if ( $status instanceof \WP_Error || $status instanceof Status_Entity ) {
+		if ( $status instanceof \WP_Error || $status instanceof Status_Entity || ! $in_reply_to_id ) {
 			return $status;
 		}
 		$comment_data = array();

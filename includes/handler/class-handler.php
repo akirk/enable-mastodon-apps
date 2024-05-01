@@ -16,7 +16,7 @@ use Enable_Mastodon_Apps\Mastodon_App;
  * This is the generic handler to provide needed helper functions.
  */
 class Handler {
-	protected function get_posts_query_args( $args = array(), $request ) {
+	protected function get_posts_query_args( $args, $request ) {
 		$limit = $request->get_param( 'limit' );
 		if ( $limit < 1 ) {
 			$limit = 20;

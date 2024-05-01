@@ -206,6 +206,7 @@ class Mastodon_API {
 				'api/v1/trends/statuses',
 				'api/v1/push/subscription',
 				'api/v1/streaming',
+				'api/v1/search',
 				'api/v2/media',
 			)
 		);
@@ -1798,7 +1799,7 @@ class Mastodon_API {
 	 * @return object
 	 */
 	public function api_search( object $request ) {
-		return apply_filters( 'mastodon_api_search', null, $request );
+		return apply_filters( 'mastodon_api_search', array(), $request );
 	}
 
 	public function api_accounts_lookup( object $request ) {
@@ -1823,13 +1824,14 @@ class Mastodon_API {
 		}
 
 		$context_post_id = self::maybe_get_remapped_reblog_id( $context_post_id );
+		$url = get_permalink( $context_post_id );
 
 		$context = array(
 			'ancestors'   => array(),
 			'descendants' => array(),
 		);
 
-		return apply_filters( 'mastodon_api_status_context', $context, $context_post_id );
+		return apply_filters( 'mastodon_api_status_context', $context, $context_post_id, $url );
 	}
 
 	public function api_favourite_post( $request ) {
@@ -1941,34 +1943,6 @@ class Mastodon_API {
 			return false;
 		}
 
-		$comment_id = self::get_remapped_comment_id( $post_id );
-		if ( $comment_id ) {
-			$comment = get_comment( $comment_id );
-			if ( intval( $comment->user_id ) === get_current_user_id() ) {
-				wp_trash_comment( $comment_id );
-			}
-
-			/**
-			 * Modify the status data.
-			 *
-			 * @param array|null $account The status data.
-			 * @param int $post_id The object ID to get the status from.
-			 * @param array $data Additional status data.
-			 * @return array|null The modified status data.
-			 */
-			$status = apply_filters(
-				'mastodon_api_status',
-				null,
-				$post_id,
-				array(
-					'in_reply_to_id' => $comment->comment_post_ID,
-					'comment'        => $comment,
-				)
-			);
-
-			return $status;
-		}
-
 		$post = get_post( $post_id );
 		if ( intval( $post->post_author ) === get_current_user_id() ) {
 			wp_trash_post( $post_id );
@@ -1995,29 +1969,6 @@ class Mastodon_API {
 
 		if ( get_post_status( $post_id ) !== 'publish' && ! current_user_can( 'edit_post', $post_id ) ) {
 			return new WP_REST_Response( array( 'error' => 'Record not found' ), 404 );
-		}
-
-		$comment_id = self::get_remapped_comment_id( $post_id );
-		if ( $comment_id ) {
-			$comment = get_comment( $comment_id );
-			/**
-			 * Modify the status data.
-			 *
-			 * @param array|null $account The status data.
-			 * @param int $post_id The object ID to get the status from.
-			 * @param array $data Additional status data.
-			 * @return array|null The modified status data.
-			 */
-			$status = apply_filters(
-				'mastodon_api_status',
-				null,
-				$post_id,
-				array(
-					'in_reply_to_id' => $comment->comment_post_ID,
-					'comment'        => $comment,
-				)
-			);
-			return $status;
 		}
 
 		$post_id = self::maybe_get_remapped_reblog_id( $post_id );
@@ -2386,13 +2337,6 @@ class Mastodon_API {
 		return $remapped_comment_id;
 	}
 
-	public static function get_remapped_comment_id( $remapped_comment_id ) {
-		$comment_id = get_post_meta( $remapped_comment_id, 'mastodon_comment_id', true );
-		if ( $comment_id ) {
-			return $comment_id;
-		}
-		return false;
-	}
 
 	public static function remap_user_id( $user_id ) {
 		$term = get_term_by( 'name', $user_id, \Enable_Mastodon_Apps\Mastodon_API::REMAP_TAXONOMY );
