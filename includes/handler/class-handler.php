@@ -16,14 +16,14 @@ use Enable_Mastodon_Apps\Mastodon_App;
  * This is the generic handler to provide needed helper functions.
  */
 class Handler {
-	protected function get_posts_query_args( $args = array(), $request ) {
+	protected function get_posts_query_args( $args, $request ) {
 		$limit = $request->get_param( 'limit' );
 		if ( $limit < 1 ) {
 			$limit = 20;
 		}
 
 		$args['posts_per_page']   = $limit;
-		$args['post_type']        = array( 'post' );
+		$args['post_type']        = array( 'post', Mastodon_API::CPT );
 		$args['suppress_filters'] = false;
 		$args['post_status']      = array( 'publish', 'private' );
 
@@ -93,7 +93,7 @@ class Handler {
 				remove_filter( 'posts_where', $max_filter_handler );
 			}
 		}
-		$k = 0;
+
 		$statuses = array();
 		foreach ( $posts as $post ) {
 			/**
@@ -120,38 +120,9 @@ class Handler {
 				continue;
 			}
 
-			$statuses[ $post->post_date . '.' . ++$k ] = $status;
+			$statuses[ $status->id ] = $status;
 		}
-		if ( ! isset( $args['pinned'] ) || ! $args['pinned'] ) {
-			// Comments cannot be pinned for now.
-			$comments = get_comments(
-				array(
-					'meta_key'   => 'protocol',
-					'meta_value' => 'activitypub',
-				)
-			);
 
-			foreach ( $comments as $comment ) {
-				$post_id = Mastodon_API::remap_comment_id( $comment->comment_ID );
-
-				/**
-				 * Documented in this file already.
-				 */
-				$status = apply_filters(
-					'mastodon_api_status',
-					null,
-					$post_id,
-					array(
-						'comment'        => $comment,
-						'in_reply_to_id' => $comment->comment_post_ID,
-					)
-				);
-
-				if ( $status && ! is_wp_error( $status ) ) {
-					$statuses[ $comment->comment_date . '.' . ++$k ] = $status;
-				}
-			}
-		}
 		krsort( $statuses );
 
 		$response = new \WP_REST_Response( array_values( $statuses ) );

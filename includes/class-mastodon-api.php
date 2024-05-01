@@ -206,6 +206,7 @@ class Mastodon_API {
 				'api/v1/trends/statuses',
 				'api/v1/push/subscription',
 				'api/v1/streaming',
+				'api/v1/search',
 				'api/v2/media',
 			)
 		);
@@ -878,7 +879,7 @@ class Mastodon_API {
 			'api/v1/statuses/(?P<post_id>[0-9]+)/context',
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
-				'callback'            => array( $this, 'api_get_post_context' ),
+				'callback'            => array( $this, 'api_get_status_context' ),
 				'permission_callback' => $this->required_scope( 'read:statuses', true ),
 			)
 		);
@@ -1604,8 +1605,8 @@ class Mastodon_API {
 			return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Insufficient permissions', array( 'status' => 401 ) );
 		}
 
-		$status = $request->get_param( 'status' );
-		if ( empty( $status ) ) {
+		$status_text = $request->get_param( 'status' );
+		if ( empty( $status_text ) ) {
 			return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Validation failed: Text can\'t be blank', array( 'status' => 422 ) );
 		}
 
@@ -1616,67 +1617,16 @@ class Mastodon_API {
 		 * @param WP_REST_Request $request The REST request object.
 		 * @return string The potentially modified status text.
 		 */
-		$status = apply_filters( 'mastodon_api_submit_status_text', $status, $request );
+		$status_text = apply_filters( 'mastodon_api_submit_status_text', $status_text, $request );
 
 		$visibility = $request->get_param( 'visibility' );
 		if ( empty( $visibility ) ) {
 			$visibility = 'public';
 		}
-		$post_data = array();
 
-		$parent_post    = false;
-		$parent_post_id = self::maybe_get_remapped_reblog_id( $request->get_param( 'in_reply_to_id' ) );
-		if ( ! empty( $parent_post_id ) ) {
-			$parent_post = get_post( $parent_post_id );
-			if ( $parent_post ) {
-				$user = wp_get_current_user();
-
-				$commentdata = array(
-					'comment_post_ID'      => $parent_post_id,
-					'comment_author'       => $user->user_nicename,
-					'user_id'              => $user->ID,
-					'comment_author_email' => $user->user_email,
-					'comment_author_url'   => $user->user_url,
-					'comment_content'      => $status,
-					'comment_type'         => 'comment',
-					'comment_parent'       => 0,
-				);
-
-				\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
-
-				$id = \wp_new_comment( $commentdata, true );
-				if ( is_wp_error( $id ) ) {
-					return $id;
-				}
-
-				\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
-				$comment = get_comment( $id );
-				/**
-				 * Modify the status data.
-				 *
-				 * @param array|null $account The status data.
-				 * @param int $post_id The object ID to get the status from.
-				 * @param array $data Additional status data.
-				 * @return array|null The modified status data.
-				 */
-				$status = apply_filters(
-					'mastodon_api_status',
-					null,
-					$comment->comment_post_ID,
-					array(
-						'in_reply_to_id' => $comment->comment_post_ID,
-						'comment'        => $comment,
-					)
-				);
-
-				return $status;
-			}
-		}
-
-		$post_data['post_content'] = $status;
-		$post_data['post_status']  = 'public' === $visibility ? 'publish' : 'private';
-		$post_data['post_type']    = 'post';
-		$post_data['post_title']   = '';
+		$in_reply_to_id = self::maybe_get_remapped_reblog_id( $request->get_param( 'in_reply_to_id' ) );
+		$media_ids = $request->get_param( 'media_ids' );
+		$scheduled_at = $request->get_param( 'scheduled_at' );
 
 		$app = Mastodon_App::get_current_app();
 		$app_post_formats = array();
@@ -1687,84 +1637,10 @@ class Mastodon_API {
 			$app_post_formats = array( 'status' );
 		}
 		$post_format = apply_filters( 'mastodon_api_new_post_format', $app_post_formats[0] );
-		if ( 'standard' === $post_format ) {
-			// Use the first line of a post as the post title if we're using a standard post format.
-			list( $post_title, $post_content ) = explode( PHP_EOL, $post_data['post_content'], 2 );
-			$post_data['post_title']   = $post_title;
-			$post_data['post_content'] = trim( $post_content );
-		}
 
-		if ( $parent_post_id ) {
-			$post_data['post_parent'] = $parent_post_id;
-		}
+		$status = apply_filters( 'mastodon_api_submit_status', null, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at, $request );
 
-		$scheduled_at = $request->get_param( 'scheduled_at' );
-		if ( $scheduled_at ) {
-			$post_data['post_status'] = 'future';
-			$post_data['post_date'] = $scheduled_at;
-		}
-
-		$media_ids = $request->get_param( 'media_ids' );
-		if ( ! empty( $media_ids ) ) {
-			foreach ( $media_ids as $media_id ) {
-				$media = get_post( $media_id );
-				if ( ! $media ) {
-					return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Media not found', array( 'status' => 400 ) );
-				}
-				if ( 'attachment' !== $media->post_type ) {
-					return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Media not found', array( 'status' => 400 ) );
-				}
-				$attachment = \wp_get_attachment_metadata( $media_id );
-				$post_data['post_content'] .= PHP_EOL;
-				$post_data['post_content'] .= '<!-- wp:image -->';
-				$post_data['post_content'] .= '<p><img src="' . esc_url( wp_get_attachment_url( $media_id ) ) . '" width="' . esc_attr( $attachment['width'] ) . '"  height="' . esc_attr( $attachment['height'] ) . '" class="size-full" /></p>';
-				$post_data['post_content'] .= '<!-- /wp:image -->';
-			}
-		}
-
-		$post_id = wp_insert_post( $post_data );
-		if ( is_wp_error( $post_id ) ) {
-			return $post_id;
-		}
-
-		if ( 'standard' !== $post_format ) {
-			set_post_format( $post_id, $post_format );
-		}
-
-		if ( ! empty( $media_ids ) ) {
-			foreach ( $media_ids as $media_id ) {
-				wp_update_post(
-					array(
-						'ID'          => $media_id,
-						'post_parent' => $post_id,
-					)
-				);
-			}
-		}
-
-		if ( $scheduled_at ) {
-			return array(
-				'id'           => $post_id,
-				'scheduled_at' => $scheduled_at,
-				'params'       => array(
-					'text'         => $status,
-					'visibility'   => $visibility,
-					'scheduled_at' => $scheduled_at,
-				),
-			);
-		}
-
-		/**
-		 * Modify the status data.
-		 *
-		 * @param array|null $account The status data.
-		 * @param int $post_id The object ID to get the status from.
-		 * @param array $data Additional status data.
-		 * @return array|null The modified status data.
-		 */
-		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
-
-		return $status;
+		return $this->validate_entity( $status, Entity\Status::class );
 	}
 
 	/**
@@ -1923,7 +1799,7 @@ class Mastodon_API {
 	 * @return object
 	 */
 	public function api_search( object $request ) {
-		return apply_filters( 'mastodon_api_search', null, $request );
+		return apply_filters( 'mastodon_api_search', array(), $request );
 	}
 
 	public function api_accounts_lookup( object $request ) {
@@ -1941,89 +1817,21 @@ class Mastodon_API {
 		return array();
 	}
 
-	public function api_get_post_context( $request ) {
-		$post_id = $request->get_param( 'post_id' );
-		if ( ! $post_id ) {
+	public function api_get_status_context( $request ) {
+		$context_post_id = $request->get_param( 'post_id' );
+		if ( ! $context_post_id ) {
 			return false;
 		}
 
-		$post_id = self::maybe_get_remapped_reblog_id( $post_id );
+		$context_post_id = self::maybe_get_remapped_reblog_id( $context_post_id );
+		$url = get_permalink( $context_post_id );
 
 		$context = array(
 			'ancestors'   => array(),
 			'descendants' => array(),
 		);
 
-		$compare_id = $post_id;
-		$comment_id = self::get_remapped_comment_id( $post_id );
-		if ( $comment_id ) {
-			$comment = get_comment( $comment_id );
-			$post_id = $comment->comment_post_ID;
-
-			/**
-			 * Modify the status data.
-			 *
-			 * @param array|null $account The status data.
-			 * @param int $post_id The object ID to get the status from.
-			 * @param array $data Additional status data.
-			 * @return array|null The modified status data.
-			 */
-			$status = apply_filters(
-				'mastodon_api_status',
-				null,
-				$post_id,
-				array()
-			);
-			if ( $status ) {
-				$context['ancestors'][ $status->id ] = $status;
-			}
-		}
-		foreach ( array_merge(
-			get_comments( array( 'post_id' => $post_id ) ),
-			get_comments( array( 'parent__in' => $comment_id ) )
-		) as $comment ) {
-			if (
-				intval( $comment->comment_ID ) === intval( $comment_id )
-				|| intval( $comment->comment_ID ) === intval( $post_id )
-				|| isset( $context['ancestors'][ $comment->comment_ID ] )
-				|| isset( $context['descendants'][ $comment->comment_ID ] )
-			) {
-				continue;
-			}
-
-			/**
-			 * Modify the status data.
-			 *
-			 * @param array|null $account The status data.
-			 * @param int $post_id The object ID to get the status from.
-			 * @param array $data Additional status data.
-			 * @return array|null The modified status data.
-			 */
-			$status = apply_filters(
-				'mastodon_api_status',
-				null,
-				$post_id,
-				array(
-					'in_reply_to_id' => $comment->comment_post_ID,
-					'comment'        => $comment,
-				)
-			);
-			if ( $status ) {
-				if ( intval( $status->id ) < intval( $compare_id ) ) {
-					$context['ancestors'][ $status->id ] = $status;
-				} else {
-					$context['descendants'][ $status->id ] = $status;
-				}
-			}
-		}
-		ksort( $context['ancestors'] );
-
-		ksort( $context['descendants'] );
-
-		$context['ancestors'] = array_values( $context['ancestors'] );
-		$context['descendants'] = array_values( $context['descendants'] );
-
-		return $context;
+		return apply_filters( 'mastodon_api_status_context', $context, $context_post_id, $url );
 	}
 
 	public function api_favourite_post( $request ) {
@@ -2135,34 +1943,6 @@ class Mastodon_API {
 			return false;
 		}
 
-		$comment_id = self::get_remapped_comment_id( $post_id );
-		if ( $comment_id ) {
-			$comment = get_comment( $comment_id );
-			if ( intval( $comment->user_id ) === get_current_user_id() ) {
-				wp_trash_comment( $comment_id );
-			}
-
-			/**
-			 * Modify the status data.
-			 *
-			 * @param array|null $account The status data.
-			 * @param int $post_id The object ID to get the status from.
-			 * @param array $data Additional status data.
-			 * @return array|null The modified status data.
-			 */
-			$status = apply_filters(
-				'mastodon_api_status',
-				null,
-				$post_id,
-				array(
-					'in_reply_to_id' => $comment->comment_post_ID,
-					'comment'        => $comment,
-				)
-			);
-
-			return $status;
-		}
-
 		$post = get_post( $post_id );
 		if ( intval( $post->post_author ) === get_current_user_id() ) {
 			wp_trash_post( $post_id );
@@ -2189,29 +1969,6 @@ class Mastodon_API {
 
 		if ( get_post_status( $post_id ) !== 'publish' && ! current_user_can( 'edit_post', $post_id ) ) {
 			return new WP_REST_Response( array( 'error' => 'Record not found' ), 404 );
-		}
-
-		$comment_id = self::get_remapped_comment_id( $post_id );
-		if ( $comment_id ) {
-			$comment = get_comment( $comment_id );
-			/**
-			 * Modify the status data.
-			 *
-			 * @param array|null $account The status data.
-			 * @param int $post_id The object ID to get the status from.
-			 * @param array $data Additional status data.
-			 * @return array|null The modified status data.
-			 */
-			$status = apply_filters(
-				'mastodon_api_status',
-				null,
-				$post_id,
-				array(
-					'in_reply_to_id' => $comment->comment_post_ID,
-					'comment'        => $comment,
-				)
-			);
-			return $status;
 		}
 
 		$post_id = self::maybe_get_remapped_reblog_id( $post_id );
@@ -2523,13 +2280,16 @@ class Mastodon_API {
 	public static function remap_reblog_id( $post_id ) {
 		$remapped_post_id = get_post_meta( $post_id, 'mastodon_reblog_id', true );
 		if ( ! $remapped_post_id ) {
+			$post = get_post( $post_id );
 			$remapped_post_id = wp_insert_post(
 				array(
-					'post_type'   => self::CPT,
-					'post_author' => 0,
-					'post_status' => 'publish',
-					'post_title'  => 'Reblog of ' . $post_id,
-					'meta_input'  => array(
+					'post_type'     => self::CPT,
+					'post_author'   => 0,
+					'post_status'   => 'publish',
+					'post_title'    => 'Reblog of ' . $post_id,
+					'post_date'     => $post->post_date,
+					'post_date_gmt' => $post->post_date_gmt,
+					'meta_input'    => array(
 						'mastodon_reblog_id' => $post_id,
 					),
 				)
@@ -2551,13 +2311,22 @@ class Mastodon_API {
 	public static function remap_comment_id( $comment_id ) {
 		$remapped_comment_id = get_comment_meta( $comment_id, 'mastodon_comment_id', true );
 		if ( ! $remapped_comment_id ) {
+			$comment = get_comment( $comment_id );
+			if ( $comment->comment_parent ) {
+				$post_parent = self::remap_comment_id( $comment->comment_parent );
+			} else {
+				$post_parent = self::remap_reblog_id( $comment->comment_post_ID );
+			}
 			$remapped_comment_id = wp_insert_post(
 				array(
-					'post_type'   => self::CPT,
-					'post_author' => 0,
-					'post_status' => 'publish',
-					'post_title'  => 'Comment ' . $comment_id,
-					'meta_input'  => array(
+					'post_type'     => self::CPT,
+					'post_author'   => 0,
+					'post_status'   => 'publish',
+					'post_title'    => 'Comment ' . $comment_id,
+					'post_date'     => $comment->comment_date,
+					'post_date_gmt' => $comment->comment_date_gmt,
+					'post_parent'   => $post_parent,
+					'meta_input'    => array(
 						'mastodon_comment_id' => $comment_id,
 					),
 				)
@@ -2568,13 +2337,6 @@ class Mastodon_API {
 		return $remapped_comment_id;
 	}
 
-	public static function get_remapped_comment_id( $remapped_comment_id ) {
-		$comment_id = get_post_meta( $remapped_comment_id, 'mastodon_comment_id', true );
-		if ( $comment_id ) {
-			return $comment_id;
-		}
-		return false;
-	}
 
 	public static function remap_user_id( $user_id ) {
 		$term = get_term_by( 'name', $user_id, \Enable_Mastodon_Apps\Mastodon_API::REMAP_TAXONOMY );

@@ -9,6 +9,7 @@
 
 namespace Enable_Mastodon_Apps\Handler;
 
+use Enable_Mastodon_Apps\Entity\Entity;
 use Enable_Mastodon_Apps\Handler\Handler;
 use Enable_Mastodon_Apps\Mastodon_API;
 use Enable_Mastodon_Apps\Entity\Status as Status_Entity;
@@ -31,6 +32,9 @@ class Status extends Handler {
 		add_filter( 'mastodon_api_status', array( $this, 'api_status_account_ensure_numeric_id' ), 100 );
 		add_filter( 'mastodon_api_account_statuses_args', array( $this, 'mastodon_api_account_statuses_args' ), 10, 2 );
 		add_filter( 'mastodon_api_statuses', array( $this, 'api_statuses' ), 10, 4 );
+		add_filter( 'mastodon_api_submit_status', array( $this, 'api_submit_comment' ), 10, 7 );
+		add_filter( 'mastodon_api_submit_status', array( $this, 'api_submit_post' ), 10, 7 );
+		add_filter( 'mastodon_api_status_context', array( $this, 'api_status_context' ), 10, 3 );
 	}
 
 	/**
@@ -199,5 +203,210 @@ class Status extends Handler {
 			$status->reblog->account->id = \Enable_Mastodon_Apps\Mastodon_API::remap_user_id( $status->reblog->account->id );
 		}
 		return $status;
+	}
+
+	public function api_submit_post( $status, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at ) {
+		if ( $status instanceof \WP_Error || $status instanceof Status_Entity ) {
+			return $status;
+		}
+		$post_data = array();
+
+		$post_data['post_content'] = $status_text;
+		$post_data['post_status']  = 'public' === $visibility ? 'publish' : 'private';
+		$post_data['post_type']    = 'post';
+		$post_data['post_title']   = '';
+
+		if ( 'standard' === $post_format ) {
+			// Use the first line of a post as the post title if we're using a standard post format.
+			list( $post_title, $post_content ) = explode( PHP_EOL, $post_data['post_content'], 2 );
+			$post_data['post_title']   = $post_title;
+			$post_data['post_content'] = trim( $post_content );
+		}
+
+		if ( $in_reply_to_id ) {
+			$post_data['post_parent'] = $in_reply_to_id;
+		}
+
+		if ( $scheduled_at ) {
+			$post_data['post_status'] = 'future';
+			$post_data['post_date'] = $scheduled_at;
+		}
+
+		if ( ! empty( $media_ids ) ) {
+			foreach ( $media_ids as $media_id ) {
+				$media = get_post( $media_id );
+				if ( ! $media ) {
+					return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Media not found', array( 'status' => 400 ) );
+				}
+				if ( 'attachment' !== $media->post_type ) {
+					return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Media not found', array( 'status' => 400 ) );
+				}
+				$attachment = \wp_get_attachment_metadata( $media_id );
+				$post_data['post_content'] .= PHP_EOL;
+				$post_data['post_content'] .= '<!-- wp:image -->';
+				$post_data['post_content'] .= '<p><img src="' . esc_url( wp_get_attachment_url( $media_id ) ) . '" width="' . esc_attr( $attachment['width'] ) . '"  height="' . esc_attr( $attachment['height'] ) . '" class="size-full" /></p>';
+				$post_data['post_content'] .= '<!-- /wp:image -->';
+			}
+		}
+
+		$post_id = wp_insert_post( $post_data );
+		if ( is_wp_error( $post_id ) ) {
+			return $post_id;
+		}
+
+		if ( 'standard' !== $post_format ) {
+			set_post_format( $post_id, $post_format );
+		}
+
+		if ( ! empty( $media_ids ) ) {
+			foreach ( $media_ids as $media_id ) {
+				wp_update_post(
+					array(
+						'ID'          => $media_id,
+						'post_parent' => $post_id,
+					)
+				);
+			}
+		}
+
+		if ( $scheduled_at ) {
+			return array(
+				'id'           => $post_id,
+				'scheduled_at' => $scheduled_at,
+				'params'       => array(
+					'text'         => $status,
+					'visibility'   => $visibility,
+					'scheduled_at' => $scheduled_at,
+				),
+			);
+		}
+
+		/**
+		 * Modify the status data.
+		 *
+		 * @param array|null $account The status data.
+		 * @param int $post_id The object ID to get the status from.
+		 * @param array $data Additional status data.
+		 * @return array|null The modified status data.
+		 */
+		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
+
+		return $status;
+	}
+
+	public function api_submit_comment( $status, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at ) {
+		if ( $status instanceof \WP_Error || $status instanceof Status_Entity || ! $in_reply_to_id ) {
+			return $status;
+		}
+		$comment_data = array();
+
+		$comment_data['comment_content'] = $status_text;
+		$comment_data['comment_post_ID'] = $in_reply_to_id;
+		$comment_data['comment_parent']  = 0;
+		$comment_data['comment_author'] = get_current_user_id();
+		$comment_data['comment_approved'] = 1;
+
+		if ( $in_reply_to_id ) {
+			$comment_data['comment_parent'] = $in_reply_to_id;
+		}
+
+		if ( ! empty( $media_ids ) ) {
+			foreach ( $media_ids as $media_id ) {
+				$media = get_post( $media_id );
+				if ( ! $media ) {
+					return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Media not found', array( 'status' => 400 ) );
+				}
+				if ( 'attachment' !== $media->post_type ) {
+					return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Media not found', array( 'status' => 400 ) );
+				}
+				$attachment = \wp_get_attachment_metadata( $media_id );
+				$comment_data['comment_content'] .= PHP_EOL;
+				$comment_data['comment_content'] .= '<!-- wp:image -->';
+				$comment_data['comment_content'] .= '<p><img src="' . esc_url( wp_get_attachment_url( $media_id ) ) . '" width="' . esc_attr( $attachment['width'] ) . '"  height="' . esc_attr( $attachment['height'] ) . '" class="size-full" /></p>';
+				$comment_data['comment_content'] .= '<!-- /wp:image -->';
+			}
+		}
+
+		$comment_id = wp_insert_comment( $comment_data );
+
+		/**
+		 * Modify the status data.
+		 *
+		 * @param array|null $account The status data.
+		 * @param int $post_id The object ID to get the status from.
+		 * @param array $data Additional status data.
+		 * @return array|null The modified status data.
+		 */
+		$status = apply_filters(
+			'mastodon_api_status',
+			null,
+			$in_reply_to_id,
+			array(
+				'comment' => get_comment( $comment_id ),
+			)
+		);
+
+		return $status;
+	}
+
+	public function api_status_context( $context, $context_post_id ) {
+		foreach ( get_post_ancestors( $context_post_id ) as $post_id ) {
+			$args = array();
+
+			/**
+			 * Modify the status data.
+			 *
+			 * @param array|null $account The status data.
+			 * @param int $post_id The object ID to get the status from.
+			 * @param array $data Additional status data.
+			 * @return array|null The modified status data.
+			 */
+			$status = apply_filters(
+				'mastodon_api_status',
+				null,
+				$post_id,
+				$args
+			);
+			if ( $status ) {
+				$context['ancestors'][ $status->id ] = $status;
+			}
+		}
+
+		$children = get_children(
+			array(
+				'post_parent' => $context_post_id,
+				'post_type'   => 'any',
+			)
+		);
+		foreach ( $children as $post ) {
+			$post = get_post( $post->post_parent );
+			$post_id = $post->ID;
+			$args = array();
+			/**
+			 * Modify the status data.
+			 *
+			 * @param array|null $account The status data.
+			 * @param int $post_id The object ID to get the status from.
+			 * @param array $data Additional status data.
+			 * @return array|null The modified status data.
+			 */
+			$status = apply_filters(
+				'mastodon_api_status',
+				null,
+				$post_id,
+				$args
+			);
+			if ( $status ) {
+				$context['descendants'][ $status->id ] = $status;
+			}
+		}
+
+		ksort( $context['ancestors'] );
+
+		ksort( $context['descendants'] );
+
+		$context['ancestors'] = array_values( $context['ancestors'] );
+		$context['descendants'] = array_values( $context['descendants'] );
+		return $context;
 	}
 }
