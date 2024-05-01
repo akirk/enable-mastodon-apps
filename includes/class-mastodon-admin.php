@@ -251,12 +251,6 @@ class Mastodon_Admin {
 			delete_option( 'mastodon_api_auto_app_reregister' );
 		}
 
-		if ( isset( $_POST['mastodon_api_reply_as_comment'] ) ) {
-			update_option( 'mastodon_api_reply_as_comment', true );
-		} else {
-			delete_option( 'mastodon_api_reply_as_comment' );
-		}
-
 		if ( isset( $_POST['mastodon_api_debug_mode'] ) ) {
 			update_option( 'mastodon_api_debug_mode', time() + 5 * MINUTE_IN_SECONDS );
 		} else {
@@ -325,7 +319,6 @@ class Mastodon_Admin {
 
 		$plugins = get_plugins();
 		$activitypub_installed = isset( $plugins['activitypub/activitypub.php'] );
-		$friends_installed = isset( $plugins['friends/friends.php'] );
 
 		function output_request_log( $request, $rest_nonce ) {
 			$date = \DateTimeImmutable::createFromFormat( 'U.u', $request['timestamp'] );
@@ -418,16 +411,6 @@ class Mastodon_Admin {
 			</details>
 		<?php endif; ?>
 
-		<?php if ( $friends_installed ) : ?>
-			<details><summary><?php esc_html_e( 'The Friends plugin is already installed.', 'enable-mastodon-apps' ); ?></summary>
-		<?php endif; ?>
-		<p><span><?php esc_html_e( 'The Friends plugin allows you to follow other blogs or, if the ActivityPub plugin is also installed, Mastodon accounts.', 'enable-mastodon-apps' ); ?></span> <span><?php esc_html_e( 'You can then see the posts of people you follow inside your Mastodon compatible app.', 'enable-mastodon-apps' ); ?></span></p>
-
-		<p><a href="<?php echo \esc_url_raw( \admin_url( 'plugin-install.php?tab=plugin-information&plugin=friends&TB_iframe=true' ) ); ?>" class="thickbox open-plugin-details-modal button install-now" target="_blank"><?php \esc_html_e( 'Install the Friends Plugin', 'enable-mastodon-apps' ); ?></a></p>
-		<?php if ( $friends_installed ) : ?>
-			</details>
-		<?php endif; ?>
-
 		</p>
 		<style type="text/css">
 			details.tt {
@@ -466,18 +449,6 @@ class Mastodon_Admin {
 								</label>
 							</fieldset>
 							<p class="description"><?php esc_html_e( 'When you (accidentally) delete an app, this allows to use the app when it tries to authorize again.', 'enable-mastodon-apps' ); ?><br/><?php esc_html_e( 'This setting will turn itself off again as soon as an app has done so.', 'enable-mastodon-apps' ); ?></p>
-						</td>
-					</tr>
-					<tr>
-						<th scope="row"><?php esc_html_e( 'Replies', 'enable-mastodon-apps' ); ?></th>
-						<td>
-							<fieldset>
-								<label for="mastodon_api_reply_as_comment">
-									<input name="mastodon_api_reply_as_comment" type="checkbox" id="mastodon_api_reply_as_comment" value="1" <?php checked( get_option( 'mastodon_api_reply_as_comment' ) ); ?> />
-									<span><?php esc_html_e( 'Post replies to posts as comments.', 'enable-mastodon-apps' ); ?></span>
-								</label>
-							</fieldset>
-							<p class="description"><?php esc_html_e( 'Since the ActivityPub plugin handles incoming replies this way, you might want to do this for your own replies as well.', 'enable-mastodon-apps' ); ?></p>
 						</td>
 					</tr>
 					<tr>
@@ -538,7 +509,7 @@ class Mastodon_Admin {
 						$date = \DateTimeImmutable::createFromFormat( 'U.u', $request['timestamp'] );
 						if ( $date > $debug_start_time ) {
 							$request['app'] = $app;
-							$all_last_requests[ $request['timestamp'] * 10000 ] = $request;
+							$all_last_requests[ intval( $request['timestamp'] * 10000 ) ] = $request;
 						}
 					}
 				}

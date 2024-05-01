@@ -39,34 +39,6 @@ class AccountsEndpoint_Test extends Mastodon_API_TestCase {
 		);
 	}
 
-	public function friends_get_activitypub_metadata( $meta, $url ) {
-		if ( $url !== $this->external_account && 'https://alex.kirk.at/author/alex/' !== $url ) {
-			return $meta;
-		}
-
-		return array(
-			'id'                        => 'https://alex.kirk.at/author/alex/',
-			'type'                      => 'Person',
-			'name'                      => 'Alex Kirk',
-			'summary'                   => '',
-			'preferredUsername'         => 'alex',
-			'url'                       => 'https://alex.kirk.at/author/alex/',
-			'icon'                      => array(
-				'type' => 'Image',
-				'url'  => 'https://secure.gravatar.com/avatar/cffe76c1914531ab0cd1a8c7aa9c9c09?s=120&d=mm&r=g',
-			),
-			'published'                 => '2022-04-27T02:42:42Z',
-			'inbox'                     => 'https://alex.kirk.at/wp-json/activitypub/1.0/users/2/inbox',
-			'outbox'                    => 'https://alex.kirk.at/wp-json/activitypub/1.0/users/2/outbox',
-			'followers'                 => 'https://alex.kirk.at/wp-json/activitypub/1.0/users/2/followers',
-			'following'                 => 'https://alex.kirk.at/wp-json/activitypub/1.0/users/2/following',
-			'manuallyApprovesFollowers' => false,
-			'publicKey'                 => array(
-				'id'    => 'https://alex.kirk.at/author/alex/#main-key',
-				'owner' => 'https://alex.kirk.at/author/alex/',
-			),
-		);
-	}
 	public function test_register_routes() {
 		global $wp_rest_server;
 		$routes = $wp_rest_server->get_routes();
@@ -111,7 +83,6 @@ class AccountsEndpoint_Test extends Mastodon_API_TestCase {
 
 		wp_cache_flush();
 		add_filter( 'mastodon_api_webfinger', array( $this, 'mastodon_api_webfinger' ), 10, 2 );
-		add_filter( 'friends_get_activitypub_metadata', array( $this, 'friends_get_activitypub_metadata' ), 10, 2 );
 
 		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/accounts/' . $this->external_account );
 		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;

@@ -9,7 +9,8 @@
 		"wp-coding-standards/wpcs": "*",
 		"yoast/phpunit-polyfills": "*",
 		"php-parallel-lint/php-parallel-lint": "^1.3",
-		"phpunit/phpunit": "*"
+		"phpunit/phpunit": "*",
+		"akirk/extract-wp-hooks": "*"
 	},
 	"config": {
 		"allow-plugins": {
@@ -34,6 +35,11 @@
 			"@php ./vendor/bin/phpcbf"
 		],
 		"test": [
+			"@php ./vendor/phpunit/phpunit/phpunit --no-coverage"
+		],
+		"docker-test": [
+			"composer install",
+			"bin/install-wp-tests.sh ema-test root ema-test test-db latest true",
 			"@php ./vendor/phpunit/phpunit/phpunit --no-coverage"
 		]
 	},

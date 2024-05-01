@@ -61,5 +61,6 @@ add_action(
 	function () {
 		new Enable_Mastodon_Apps\Mastodon_API();
 		new Enable_Mastodon_Apps\Integration\Pixelfed();
+		new Enable_Mastodon_Apps\Comment_CPT();
 	}
 );

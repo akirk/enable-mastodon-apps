@@ -1,9 +1,9 @@
 # Enable Mastodon Apps
 
-- Contributors: akirk, pfefferle
+- Contributors: akirk, pfefferle, drivingralle, kittmedia, obenland
 - Tags: mastodon, activitypub, friends, fediverse
 - Requires at least: 5.0
-- Tested up to: 6.4
+- Tested up to: 6.5
 - Requires PHP: 7.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
 - Stable tag: 0.6.6
@@ -31,6 +31,8 @@ The plugin has been tested with quite a number of Mastodon clients, among them a
 - [Mona](https://mastodon.social/@MonaApp) (macOS)
 - [IceCubes](https://github.com/Dimillian/IceCubesApp) (macOS)
 - [Mammoth](https://getmammoth.app/) (macOS and iOS)
+- [Phanpy](https://phanpy.social) (Web)
+- [Mona](https://mastodon.social/@MonaApp) (macOS and iOS)
 
 Many more, see the [Third-party apps section on joinmastodon.org/apps](https://joinmastodon.org/apps). Each app might have its quirks, [please report an issue when you have troubles[(https://github.com/akirk/enable-mastodon-apps/issues). There is also a chance that the API has not been implemented yet (see below.)
 

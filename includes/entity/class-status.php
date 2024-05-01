@@ -19,27 +19,28 @@ namespace Enable_Mastodon_Apps\Entity;
 class Status extends Entity {
 	protected $_types = array(
 		'id'                     => 'string',
-		'created_at'             => 'string',
+		'created_at'             => 'DateTime',
 		'spoiler_text'           => 'string',
 		'visibility'             => 'string',
-		'language'               => 'string',
 		'uri'                    => 'string',
-		'url'                    => 'string',
 		'content'                => 'string',
-		'text'                   => 'string',
 
-		'in_reply_to_id'         => 'string?',
-		'in_reply_to_account_id' => 'string?',
+		'url'                    => 'string??',
+		'language'               => 'string??',
+		'in_reply_to_id'         => 'string??',
+		'in_reply_to_account_id' => 'string??',
+		'text'                   => 'string??',
+		'edited_at'              => 'DateTime??',
 
 		'sensitive'              => 'bool',
-		'favourited'             => 'bool',
-		'reblogged'              => 'bool',
-		'muted'                  => 'bool',
-		'bookmarked'             => 'bool',
-		'pinned'                 => 'bool',
-		'filtered'               => 'bool',
+		'favourited'             => 'bool?',
+		'reblogged'              => 'bool?',
+		'muted'                  => 'bool?',
+		'bookmarked'             => 'bool?',
+		'pinned'                 => 'bool?',
 
-		'media_attachments'      => 'array',
+		'filtered'               => 'array?',
+		'media_attachments'      => 'array[Media_Attachment]',
 		'mentions'               => 'array',
 		'tags'                   => 'array',
 		'emojis'                 => 'array',
@@ -48,12 +49,13 @@ class Status extends Entity {
 		'reblogs_count'          => 'int',
 		'favourites_count'       => 'int',
 
-		'card'                   => 'object?',
-		'poll'                   => 'object?',
+		'card'                   => 'Preview_Card??',
+
+		'poll'                   => 'Poll??',
 
 		'account'                => 'Account',
 
-		'reblog'                 => 'Status?',
+		'reblog'                 => 'Status??',
 
 		'application'            => 'Application?',
 	);
@@ -70,28 +72,35 @@ class Status extends Entity {
 	 *
 	 * @var string
 	 */
-	public string $created_at;
+	public $created_at;
+
+	/**
+	 * When the status was edited.
+	 *
+	 * @var null|string
+	 */
+	public $edited_at = null;
 
 	/**
 	 * Text to be shown as a warning or subject before the actual content.
 	 *
 	 * @var string
 	 */
-	public string $spoiler_text;
+	public string $spoiler_text = '';
 
 	/**
 	 * The visibility of the status.
 	 *
 	 * @var string
 	 */
-	public string $visibility;
+	public string $visibility = 'public';
 
 	/**
 	 * ISO 639 language code for this status.
 	 *
-	 * @var string
+	 * @var null|string
 	 */
-	public string $language;
+	public ?string $language = null;
 
 	/**
 	 * The URI to this status.
@@ -103,9 +112,9 @@ class Status extends Entity {
 	/**
 	 * The URL to this status.
 	 *
-	 * @var string
+	 * @var null|string
 	 */
-	public string $url;
+	public ?string $url = null;
 
 	/**
 	 * The HTML-encoded content of this status.
@@ -117,9 +126,9 @@ class Status extends Entity {
 	/**
 	 * The plain-text content of this status.
 	 *
-	 * @var string
+	 * @var null|string
 	 */
-	public string $text;
+	public ?string $text = null;
 
 	/**
 	 * The ID of a status this status is a reply to.
@@ -178,11 +187,12 @@ class Status extends Entity {
 	public bool $pinned = false;
 
 	/**
-	 * Whether this status has been filtered.
+	 * The filter and keywords that matched this status.
+	 * TODO: implement as list of FilterResult objects
 	 *
-	 * @var bool
+	 * @var array
 	 */
-	public bool $filtered = false;
+	public array $filtered = array();
 
 	/**
 	 * List of media attachments of this status.
@@ -220,21 +230,21 @@ class Status extends Entity {
 	 *
 	 * @var int
 	 */
-	public int $replies_count;
+	public int $replies_count = 0;
 
 	/**
 	 * The amount of reblogs of this status.
 	 *
 	 * @var int
 	 */
-	public int $reblogs_count;
+	public int $reblogs_count = 0;
 
 	/**
 	 * The amount of favorites for this status.
 	 *
 	 * @var int
 	 */
-	public int $favourites_count;
+	public int $favourites_count = 0;
 
 	/**
 	 * The account this status belongs to.
@@ -270,4 +280,31 @@ class Status extends Entity {
 	 * @var null|Poll
 	 */
 	public ?Poll $poll = null;
+
+	public function __get( $k ) {
+		if ( 'content' === $k ) {
+			return $this->normalize_whitespace( $this->content );
+		}
+
+		return parent::__get( $k );
+	}
+
+	/**
+	 * Strip empty whitespace
+	 *
+	 * @param      string $post_content  The post content.
+	 *
+	 * @return     string  The normalized content.
+	 */
+	protected function normalize_whitespace( $post_content ) {
+		$post_content = \strip_shortcodes( $post_content );
+		$post_content = \do_blocks( $post_content );
+		$post_content = \wptexturize( $post_content );
+		$post_content = \convert_smilies( $post_content );
+		$post_content = \wp_filter_content_tags( $post_content, 'template' );
+		$post_content = \str_replace( ']]>', ']]&gt;', $post_content );
+		$post_content = \preg_replace( '/[\n\r\t]/', '', $post_content );
+
+		return trim( $post_content );
+	}
 }
