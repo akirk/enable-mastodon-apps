@@ -56,19 +56,57 @@ class Mastodon_OAuth {
 			);
 		}
 
+		add_action( 'wp_loaded', array( $this, 'rewrite_rules' ) );
+		add_action( 'query_vars', array( $this, 'query_vars' ) );
 		add_action( 'template_redirect', array( $this, 'handle_oauth' ) );
 
 		add_filter( 'determine_current_user', array( $this, 'authenticate' ), 10 );
 		add_action( 'login_form_enable-mastodon-apps-authenticate', array( $this, 'authenticate_handler' ) );
 	}
 
+	public function rewrite_rules() {
+		$existing_rules = get_option( 'rewrite_rules' );
+		$needs_flush = false;
+
+		$generic =
+			array(
+				'oauth/authorize' => 'authorize',
+				'oauth/token'     => 'token',
+				'oauth/revoke'    => 'revoke',
+			);
+
+		foreach ( $generic as $path => $rule ) {
+			if ( empty( $existing_rules[ '^' . $path ] ) ) {
+				// Add a specific rewrite rule so that we can also catch requests without our prefix.
+				$needs_flush = true;
+			}
+			add_rewrite_rule( '^' . $path, 'index.php?mastodon-oauth=' . $rule, 'top' );
+		}
+
+		if ( $needs_flush ) {
+			global $wp_rewrite;
+			$wp_rewrite->flush_rules();
+		}
+	}
+
+	public function query_vars( $query_vars ) {
+		$query_vars[] = 'mastodon-oauth';
+		return $query_vars;
+	}
+
+
 	public function handle_oauth( $return_value = false ) {
 		global $wp_query;
 		if ( 'POST' === $_SERVER['REQUEST_METHOD'] && empty( $_POST ) && ! empty( $_REQUEST ) ) {
 			$_POST = $_REQUEST;
 		}
-		switch ( strtok( $_SERVER['REQUEST_URI'], '?' ) ) {
-			case '/oauth/authorize':
+		if ( ! isset( $wp_query->query['mastodon-oauth'] ) ) {
+			exit;
+			return null;
+		}
+
+		switch ( $wp_query->query['mastodon-oauth'] ) {
+			case 'authorize':
 				if ( get_option( 'mastodon_api_disable_logins' ) ) {
 					return null;
 				}
@@ -76,7 +114,7 @@ class Mastodon_OAuth {
 				$handler = new OAuth2\Authorize_Handler( $this->server );
 				break;
 
-			case '/oauth/token':
+			case 'token':
 				header( 'Access-Control-Allow-Methods: POST' );
 				header( 'Access-Control-Allow-Headers: content-type' );
 				header( 'Access-Control-Allow-Credentials: true' );
@@ -89,7 +127,7 @@ class Mastodon_OAuth {
 				$handler = new OAuth2\Token_Handler( $this->server );
 				break;
 
-			case '/oauth/revoke':
+			case 'revoke':
 				$wp_query->is_404 = false;
 				$handler = new OAuth2\Revokation_Handler( $this->server );
 				break;
