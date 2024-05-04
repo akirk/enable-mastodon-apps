@@ -101,7 +101,6 @@ class Mastodon_OAuth {
 			$_POST = $_REQUEST;
 		}
 		if ( ! isset( $wp_query->query['mastodon-oauth'] ) ) {
-			exit;
 			return null;
 		}
 
