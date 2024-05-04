@@ -80,7 +80,7 @@ class Mastodon_OAuth {
 				// Add a specific rewrite rule so that we can also catch requests without our prefix.
 				$needs_flush = true;
 			}
-			add_rewrite_rule( '^' . $path, 'index.php?mastodon-oauth=' . $rule, 'top' );
+			add_rewrite_rule( '^' . $path, 'index.php?name=' . $path . '&mastodon-oauth=' . $rule, 'top' );
 		}
 
 		if ( $needs_flush ) {
@@ -94,17 +94,24 @@ class Mastodon_OAuth {
 		return $query_vars;
 	}
 
-
 	public function handle_oauth( $return_value = false ) {
 		global $wp_query;
 		if ( 'POST' === $_SERVER['REQUEST_METHOD'] && empty( $_POST ) && ! empty( $_REQUEST ) ) {
 			$_POST = $_REQUEST;
 		}
-		if ( ! isset( $wp_query->query['mastodon-oauth'] ) ) {
-			return null;
+		$endpoint = null;
+
+		if ( isset( $wp_query->query['mastodon-oauth'] ) ) {
+			$endpoint = $wp_query->query['mastodon-oauth'];
+		} else {
+			$request_uri = trim( strtok( $_SERVER['REQUEST_URI'], '?' ), '/' );
+
+			if ( in_array( $request_uri, array( 'oauth/authorize', 'oauth/token', 'oauth/revoke' ) ) ) {
+				$endpoint = explode( '/', $request_uri )[1];
+			}
 		}
 
-		switch ( $wp_query->query['mastodon-oauth'] ) {
+		switch ( $endpoint ) {
 			case 'authorize':
 				if ( get_option( 'mastodon_api_disable_logins' ) ) {
 					return null;
