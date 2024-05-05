@@ -1971,8 +1971,11 @@ class Mastodon_API {
 			return new WP_REST_Response( array( 'error' => 'Record not found' ), 404 );
 		}
 
-		$post_id = self::maybe_get_remapped_reblog_id( $post_id );
 		$post = get_post( $post_id );
+
+		if ( self::CPT === get_post_type( $post_id ) ) {
+			$post_id = self::maybe_get_remapped_reblog_id( $post_id );
+		}
 
 		if ( ! $post ) {
 			return new WP_REST_Response( array( 'error' => 'Record not found' ), 404 );
@@ -1987,6 +1990,10 @@ class Mastodon_API {
 		 * @return array|null The modified status data.
 		 */
 		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
+
+		if ( $status->id !== $request->get_param( 'post_id' ) && isset( $status->reblog ) && $status->reblog->id === $request->get_param( 'post_id' ) ) {
+			$status = $status->reblog;
+		}
 
 		return $this->validate_entity( $status, Entity\Status::class );
 	}
