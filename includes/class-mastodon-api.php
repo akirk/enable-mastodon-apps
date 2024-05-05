@@ -1567,7 +1567,6 @@ class Mastodon_API {
 		}
 
 		if ( ! $entity->is_valid() ) {
-			var_dump( $entity );
 			return new \WP_Error( 'integrity-error', 'Integrity Error', array( 'status' => 500 ) );
 		}
 
