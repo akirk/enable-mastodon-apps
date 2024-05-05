@@ -1536,17 +1536,22 @@ class Mastodon_API {
 		return $this->api_account( $request );
 	}
 
-	private function get_user_id_from_request( $request ) {
-		$user_id = $request->get_param( 'user_id' );
+	private function mapback_user_id( $user_id ) {
+		$user_id = apply_filters( 'mastodon_api_canonical_user_id', $user_id );
 
 		if ( $user_id > 1e10 ) {
 			$remote_user_id = get_term_by( 'id', intval( $user_id ) - 1e10, self::REMAP_TAXONOMY );
 			if ( $remote_user_id ) {
-				return $remote_user_id->name;
+				return apply_filters( 'mastodon_api_canonical_user_id', $remote_user_id->name );
+
 			}
 		}
 
 		return $user_id;
+	}
+
+	private function get_user_id_from_request( $request ) {
+		return $this->mapback_user_id( $request->get_param( 'user_id' ) );
 	}
 
 	/**
@@ -1970,12 +1975,11 @@ class Mastodon_API {
 		if ( get_post_status( $post_id ) !== 'publish' && ! current_user_can( 'edit_post', $post_id ) ) {
 			return new WP_REST_Response( array( 'error' => 'Record not found' ), 404 );
 		}
-
-		$post = get_post( $post_id );
-
 		if ( self::CPT === get_post_type( $post_id ) ) {
 			$post_id = self::maybe_get_remapped_reblog_id( $post_id );
 		}
+
+		$post = get_post( $post_id );
 
 		if ( ! $post ) {
 			return new WP_REST_Response( array( 'error' => 'Record not found' ), 404 );
@@ -2059,7 +2063,7 @@ class Mastodon_API {
 		 * @param string          $user_id The user ID.
 		 * @param WP_REST_Request $request The request object.
 		 */
-		do_action( 'mastodon_api_account_follow', $user_id, $request );
+		$user_id = apply_filters( 'mastodon_api_account_follow', $user_id, $request );
 
 		return rest_ensure_response( $this->get_relationship( $user_id, $request ) );
 	}
@@ -2142,6 +2146,8 @@ class Mastodon_API {
 	 * @return Entity\Relationship|\WP_Error The modified account relationships or WP_Error if the user is invalid.
 	 */
 	private function get_relationship( string $user_id, WP_REST_Request $request ) {
+		$user_id = $this->mapback_user_id( $user_id );
+
 		/**
 		 * Modify the account relationship.
 		 *
@@ -2346,6 +2352,7 @@ class Mastodon_API {
 
 
 	public static function remap_user_id( $user_id ) {
+		$user_id = apply_filters( 'mastodon_api_canonical_user_id', $user_id );
 		$term = get_term_by( 'name', $user_id, \Enable_Mastodon_Apps\Mastodon_API::REMAP_TAXONOMY );
 		$remote_user_id = 0;
 		if ( $term ) {

@@ -172,7 +172,7 @@ class Comment_CPT {
 		return $args;
 	}
 
-	public function api_account( $account, $user_id, $request, $post ) {
+	public function api_account( $account, $user_id, $request = null, $post = null ) {
 		if ( ! $post instanceof \WP_Post ) {
 			return $account;
 		}

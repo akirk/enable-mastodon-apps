@@ -31,6 +31,7 @@ class Relationship extends Handler {
 	 */
 	public function register_hooks() {
 		add_filter( 'mastodon_api_relationship', array( $this, 'api_relationship' ), 10, 3 );
+		add_filter( 'mastodon_entity_relationship', array( $this, 'entity_relationship_ensure_numeric_id' ), 100, 2 );
 	}
 
 	/**
@@ -46,13 +47,6 @@ class Relationship extends Handler {
 		$relationship     = new Relationship_Entity();
 		$relationship->id = $user_id;
 
-		if ( $user_id > 1e10 ) {
-			$remote_user_id = get_term_by( 'id', $user_id - 1e10, Mastodon_API::REMAP_TAXONOMY );
-			if ( $remote_user_id ) {
-				$user_id = $remote_user_id->name;
-			}
-		}
-
 		/**
 		 * Modify account relationship.
 		 *
@@ -62,5 +56,12 @@ class Relationship extends Handler {
 		 * @return Relationship_Entity The modified account relationship.
 		 */
 		return apply_filters( 'mastodon_entity_relationship', $relationship, $user_id, $request );
+	}
+
+	public function entity_relationship_ensure_numeric_id( $relationship, $user_id ) {
+		if ( ! is_numeric( $relationship->id ) ) {
+			$relationship->id = \Enable_Mastodon_Apps\Mastodon_API::remap_user_id( $relationship->id );
+		}
+		return $relationship;
 	}
 }
