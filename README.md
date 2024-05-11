@@ -34,7 +34,7 @@ The plugin has been tested with quite a number of Mastodon clients, among them a
 - [Phanpy](https://phanpy.social) (Web)
 - [Mona](https://mastodon.social/@MonaApp) (macOS and iOS)
 
-Many more, see the [Third-party apps section on joinmastodon.org/apps](https://joinmastodon.org/apps). Each app might have its quirks, [please report an issue when you have troubles[(https://github.com/akirk/enable-mastodon-apps/issues). There is also a chance that the API has not been implemented yet (see below.)
+Many more, see the [Third-party apps section on joinmastodon.org/apps](https://joinmastodon.org/apps). Each app might have its quirks, [please report an issue when you have troubles](https://github.com/akirk/enable-mastodon-apps/issues). There is also a chance that the API has not been implemented yet (see below.)
 
 ## Mastodon API Implementation
 
