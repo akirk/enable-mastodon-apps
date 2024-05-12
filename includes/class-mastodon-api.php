@@ -119,6 +119,11 @@ class Mastodon_API {
 			return $result;
 		}
 
+		if ( ! isset( $result['code'] ) && isset( $result['error'] ) && is_string( $result['error'] ) ) {
+			$result['code'] = sanitize_title_with_dashes( $result['error'] );
+			$result['message'] = $result['error'];
+		}
+
 		return array(
 			'error'             => empty( $result['code'] ) ? __( 'unknown_error', 'enable-mastodon-apps' ) : $result['code'],
 			'error_description' => empty( $result['message'] ) ? __( 'Unknown error', 'enable-mastodon-apps' ) : $result['message'],
