@@ -21,7 +21,7 @@ class Media_Attachment extends Entity {
 		'remote_url'  => 'string??',
 		'meta'        => 'array',
 		'description' => 'string??',
-		'blurhash'    => 'string',
+		'blurhash'    => 'string??',
 	);
 
 	/**
@@ -59,7 +59,7 @@ class Media_Attachment extends Entity {
 	 *
 	 * @var string|null
 	 */
-	public $remote_url = null;
+	public ?string $remote_url = null;
 
 	/**
 	 * The media attachment meta.
@@ -75,12 +75,12 @@ class Media_Attachment extends Entity {
 	 *
 	 * @var string|null
 	 */
-	public $description = null;
+	public ?string $description = null;
 
 	/**
 	 * The media attachment blurhash.
 	 *
 	 * @var string
 	 */
-	public string $blurhash = '';
+	public ?string $blurhash = null;
 }

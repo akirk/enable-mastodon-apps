@@ -33,7 +33,13 @@ class Media_Attachment extends Handler {
 	 * @return Media_Attachment_Entity The media attachment object.
 	 */
 	public function api_media_attachment( $data, int $attachment_id ): Media_Attachment_Entity {
+		if ( ! $attachment_id ) {
+			return $data;
+		}
 		$thumb = \wp_get_attachment_image_src( $attachment_id );
+		if ( ! $thumb ) {
+			return $data;
+		}
 		$meta  = \wp_get_attachment_metadata( $attachment_id );
 		$url   = \wp_get_attachment_url( $attachment_id );
 
@@ -42,7 +48,6 @@ class Media_Attachment extends Handler {
 		$media_attachment->type        = strtok( wp_check_filetype( $meta['file'] )['type'], '/' );
 		$media_attachment->url         = $url;
 		$media_attachment->preview_url = $thumb[0];
-		$media_attachment->text_url    = $url;
 		$media_attachment->description = get_the_excerpt( $attachment_id );
 		$media_attachment->meta        = array(
 			'original' => array(
