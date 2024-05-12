@@ -700,7 +700,7 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_verify_credentials' ),
-				'permission_callback' => $this->required_scope( 'follow:accounts' ),
+				'permission_callback' => $this->required_scope( 'read:accounts' ),
 			)
 		);
 
