@@ -71,7 +71,7 @@ class Mastodon_API {
 		add_action( 'query_vars', array( $this, 'query_vars' ) );
 		add_action( 'rest_api_init', array( $this, 'add_rest_routes' ) );
 		add_filter( 'rest_pre_serve_request', array( $this, 'allow_cors' ), 10, 0 );
-		add_filter( 'rest_post_dispatch', array( $this, 'send_http_links' ), 10, 1 );
+		add_filter( 'rest_post_dispatch', array( $this, 'send_http_links' ), 10, 3 );
 		add_filter( 'rest_pre_echo_response', array( $this, 'reformat_error_response' ), 10, 3 );
 		add_filter( 'template_include', array( $this, 'log_404s' ) );
 		add_filter( 'rest_json_encode_options', array( $this, 'rest_json_encode_options' ), 10, 2 );
@@ -90,8 +90,15 @@ class Mastodon_API {
 		}
 	}
 
-	public function send_http_links( \WP_REST_Response $response ) {
+	public function send_http_links( \WP_REST_Response $response, \WP_REST_Server $server, \WP_REST_Request $request ) {
+		if ( 0 !== strpos( $request->get_route(), '/' . self::PREFIX ) ) {
+			return $response;
+		}
+
 		foreach ( $response->get_links() as $rel => $link ) {
+			if ( ! in_array( $rel, array( 'prev', 'next' ) ) ) {
+				continue;
+			}
 			$response->link_header( $rel, $link[0]['href'] );
 			$response->remove_link( $rel );
 		}
@@ -104,13 +111,13 @@ class Mastodon_API {
 	 *
 	 * @see https://docs.joinmastodon.org/entities/Error/
 	 *
-	 * @param array           $result  The API result.
-	 * @param WP_REST_Server  $server  The REST server instance.
-	 * @param WP_REST_Request $request The REST request instance.
+	 * @param mixed            $result  The API result.
+	 * @param \WP_REST_Server  $server  The REST server instance.
+	 * @param \WP_REST_Request $request The REST request instance.
 	 *
 	 * @return array The reformatted result.
 	 */
-	public function reformat_error_response( $result, $server, $request ) {
+	public function reformat_error_response( $result, \WP_REST_Server $server, \WP_REST_Request $request ) {
 		if ( 0 !== strpos( $request->get_route(), '/' . self::PREFIX ) ) {
 			return $result;
 		}
@@ -244,7 +251,7 @@ class Mastodon_API {
 		);
 
 		foreach ( $generic as $rule ) {
-			if ( empty( $existing_rules[ $rule ] ) ) {
+			if ( empty( $existing_rules[ '^' . $rule ] ) ) {
 				// Add a specific rewrite rule so that we can also catch requests without our prefix.
 				$needs_flush = true;
 			}
@@ -252,7 +259,7 @@ class Mastodon_API {
 		}
 
 		foreach ( $parametrized as $rule => $rewrite ) {
-			if ( empty( $existing_rules[ $rule ] ) ) {
+			if ( empty( $existing_rules[ '^' . $rule ] ) ) {
 				// Add a specific rewrite rule so that we can also catch requests without our prefix.
 				$needs_flush = true;
 			}
@@ -264,6 +271,7 @@ class Mastodon_API {
 			$wp_rewrite->flush_rules();
 		}
 	}
+
 	public function add_rest_routes() {
 		register_rest_route(
 			self::PREFIX,
