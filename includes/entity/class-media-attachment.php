@@ -84,25 +84,60 @@ class Media_Attachment extends Entity {
 	 */
 	public ?string $blurhash = null;
 
+	private function check_meta( $meta, $prepend = '' ) {
+		if ( ! isset( $meta['width'] ) || $meta['width'] <= 0 ) {
+			return new \WP_Error( 'invalid-meta-width', $prepend . 'Meta width must be a positive integer.' );
+		}
+		if ( ! isset( $meta['height'] ) || $meta['height'] <= 0 ) {
+			return new \WP_Error( 'invalid-meta-height', $prepend . 'Meta height must be a positive integer.' );
+		}
+		if ( ! isset( $meta['size'] ) || ! is_string( $meta['size'] ) ) {
+			return new \WP_Error( 'invalid-meta-size', $prepend . 'Meta size must be a string.' );
+		}
+		if ( ! isset( $meta['aspect'] ) || ! is_numeric( $meta['aspect'] ) ) {
+			return new \WP_Error( 'invalid-meta-aspect', $prepend . 'Meta aspect must be a number.' );
+		}
+
+		return $meta;
+	}
+
 	public function validate( $key ) {
 		if ( 'meta' === $key ) {
+			if ( empty( $this->meta ) ) {
+				return new \WP_Error( 'invalid-meta', 'Meta must not be empty.' );
+			}
 			if ( ! is_array( $this->meta ) ) {
 				return new \WP_Error( 'invalid-meta', 'Meta must be an array.' );
 			}
-			if ( ! isset( $this->meta['width'] ) || $this->meta['width'] <= 0 ) {
-				return new \WP_Error( 'invalid-meta-width', 'Meta width must be a positive integer.' );
-			}
-			if ( ! isset( $this->meta['height'] ) || $this->meta['height'] <= 0 ) {
-				return new \WP_Error( 'invalid-meta-height', 'Meta height must be a positive integer.' );
-			}
-			if ( ! isset( $this->meta['size'] ) || ! is_string( $this->meta['size'] ) ) {
-				return new \WP_Error( 'invalid-meta-size', 'Meta size must be a string.' );
-			}
-			if ( ! isset( $this->meta['aspect'] ) || ! is_numeric( $this->meta['aspect'] ) ) {
-				return new \WP_Error( 'invalid-meta-aspect', 'Meta aspect must be a number.' );
+			if ( 'image' === $this->type ) {
+				if ( isset( $this->meta['small'] ) ) {
+					$meta = $this->check_meta( $this->meta['small'], 'small: ' );
+					if ( is_wp_error( $meta ) ) {
+						return $meta;
+					}
+				}
+				if ( isset( $this->meta['original'] ) ) {
+					$meta = $this->check_meta( $this->meta['original'], 'original: ' );
+					if ( is_wp_error( $meta ) ) {
+						return $meta;
+					}
+				}
+				if ( isset( $this->meta['width'] ) ) {
+					$meta = $this->check_meta( $this->meta );
+					if ( is_wp_error( $meta ) ) {
+						return $meta;
+					}
+				}
 			}
 		}
 
+		if ( 'preview_url' === $key ) {
+			if ( 'video' === $this->type ) {
+				if ( ! $this->preview_url || ! is_string( $this->preview_url ) ) {
+					return new \WP_Error( 'invalid-preview-url', 'Preview URL must be a string.' );
+				}
+			}
+		}
 		return parent::validate( $key );
 	}
 }
