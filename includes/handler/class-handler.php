@@ -115,6 +115,12 @@ class Handler {
 				continue;
 			}
 
+			if ( isset( $args['exclude_replies'] ) && $args['exclude_replies'] ) {
+				if ( $status->in_reply_to_id ) {
+					continue;
+				}
+			}
+
 			if ( ! $status->is_valid() ) {
 				error_log( wp_json_encode( compact( 'status', 'post' ) ) );
 				continue;

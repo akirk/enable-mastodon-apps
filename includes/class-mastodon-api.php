@@ -2246,7 +2246,8 @@ class Mastodon_API {
 		$user_id = $this->get_user_id_from_request( $request );
 
 		$args = array(
-			'author' => $user_id,
+			'author'          => $user_id,
+			'exclude_replies' => $request->get_param( 'exclude_replies' ),
 		);
 		$args = apply_filters( 'mastodon_api_account_statuses_args', $args, $request );
 
@@ -2290,7 +2291,6 @@ class Mastodon_API {
 		 * ```
 		 */
 		$account = \apply_filters( 'mastodon_api_account', null, $user_id, $request, null );
-
 		return $this->validate_entity( $account, Entity\Account::class );
 	}
 
