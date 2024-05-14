@@ -83,4 +83,26 @@ class Media_Attachment extends Entity {
 	 * @var string
 	 */
 	public ?string $blurhash = null;
+
+	public function validate( $key ) {
+		if ( 'meta' === $key ) {
+			if ( ! is_array( $this->meta ) ) {
+				return new \WP_Error( 'invalid-meta', 'Meta must be an array.' );
+			}
+			if ( ! isset( $this->meta['width'] ) || $this->meta['width'] <= 0 ) {
+				return new \WP_Error( 'invalid-meta-width', 'Meta width must be a positive integer.' );
+			}
+			if ( ! isset( $this->meta['height'] ) || $this->meta['height'] <= 0 ) {
+				return new \WP_Error( 'invalid-meta-height', 'Meta height must be a positive integer.' );
+			}
+			if ( ! isset( $this->meta['size'] ) || ! is_string( $this->meta['size'] ) ) {
+				return new \WP_Error( 'invalid-meta-size', 'Meta size must be a string.' );
+			}
+			if ( ! isset( $this->meta['aspect'] ) || ! is_numeric( $this->meta['aspect'] ) ) {
+				return new \WP_Error( 'invalid-meta-aspect', 'Meta aspect must be a number.' );
+			}
+		}
+
+		return parent::validate( $key );
+	}
 }
