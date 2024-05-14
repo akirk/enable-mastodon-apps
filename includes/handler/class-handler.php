@@ -56,7 +56,7 @@ class Handler {
 		}
 
 		$args = apply_filters( 'mastodon_api_get_posts_query_args', $args, $request );
-		if ( isset( $args['author'] ) && is_string( $args['author'] ) ) {
+		if ( isset( $args['author'] ) && $args['author'] <= 0 ) {
 			// Author could not be found by a plugin.
 			return array();
 		}
