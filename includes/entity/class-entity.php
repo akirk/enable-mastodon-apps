@@ -63,6 +63,13 @@ abstract class Entity implements \JsonSerializable {
 					);
 					continue;
 				}
+				$valid = $this->validate( $var );
+				if ( is_wp_error( $valid ) ) {
+					return array(
+						'error' => $var . ': ' . $valid->get_error_message(),
+					);
+					continue;
+				}
 
 				settype( $this->$var, $object );
 				$array[ $var ] = $this->__get( $var );
@@ -101,6 +108,10 @@ abstract class Entity implements \JsonSerializable {
 
 			if ( preg_match( '/array\[([^\]]+)\]/', $object, $matches ) ) {
 				$object = $matches[1];
+				if ( substr( $object, -1 ) === '?' ) {
+					$object = rtrim( $object, '?' );
+					$skippable = true;
+				}
 				if ( ! class_exists( '\\Enable_Mastodon_Apps\\Entity\\' . $object ) ) {
 					return array(
 						'error' => 'Invalid object type: ' . $object,
@@ -121,6 +132,10 @@ abstract class Entity implements \JsonSerializable {
 					if ( $value instanceof Entity ) {
 						$array[ $var ][ $key ] = $value->jsonSerialize();
 						if ( isset( $array[ $var ][ $key ]['error'] ) ) {
+							if ( $skippable ) {
+								unset( $array[ $var ][ $key ] );
+								continue;
+							}
 							return $array[ $var ][ $key ];
 						}
 						continue;
@@ -158,5 +173,13 @@ abstract class Entity implements \JsonSerializable {
 
 	public function __get( $name ) {
 		return $this->$name;
+	}
+
+	public function validate( $key ) {
+		if ( isset( $this->$key ) ) {
+			return true;
+		}
+		// We don't make this decision here.
+		return true;
 	}
 }

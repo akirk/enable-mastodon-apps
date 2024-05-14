@@ -40,7 +40,7 @@ class Status extends Entity {
 		'pinned'                 => 'bool?',
 
 		'filtered'               => 'array?',
-		'media_attachments'      => 'array[Media_Attachment]',
+		'media_attachments'      => 'array[Media_Attachment?]',
 		'mentions'               => 'array',
 		'tags'                   => 'array',
 		'emojis'                 => 'array',
