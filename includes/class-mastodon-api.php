@@ -77,6 +77,7 @@ class Mastodon_API {
 		add_filter( 'rest_json_encode_options', array( $this, 'rest_json_encode_options' ), 10, 2 );
 		add_action( 'default_option_mastodon_api_default_post_formats', array( $this, 'default_option_mastodon_api_default_post_formats' ) );
 		add_filter( 'rest_request_before_callbacks', array( $this, 'rest_request_before_callbacks' ) );
+		add_filter( 'mastodon_api_mapback_user_id', array( $this, 'mapback_user_id' ) );
 	}
 
 	public function allow_cors() {
@@ -1549,7 +1550,7 @@ class Mastodon_API {
 		return $this->api_account( $request );
 	}
 
-	private function mapback_user_id( $user_id ) {
+	public function mapback_user_id( $user_id ) {
 		$user_id = apply_filters( 'mastodon_api_canonical_user_id', $user_id );
 
 		if ( $user_id > 1e10 ) {
@@ -1564,7 +1565,13 @@ class Mastodon_API {
 	}
 
 	private function get_user_id_from_request( $request ) {
-		return $this->mapback_user_id( $request->get_param( 'user_id' ) );
+		/**
+		 * Map back a public id to the previous user id.
+		 *
+		 * @param int $user_id The public user ID.
+		 * @return int The potentially modified user ID.
+		 */
+		return apply_filters( 'mastodon_api_mapback_user_id', $request->get_param( 'user_id' ) );
 	}
 
 	/**
@@ -2299,6 +2306,11 @@ class Mastodon_API {
 		 * ```
 		 */
 		$account = \apply_filters( 'mastodon_api_account', null, $user_id, $request, null );
+		if ( is_null( $account ) ) {
+			return new \WP_Error( 'mastodon_api_account', 'Record not found', array( 'status' => 404 ) );
+
+		}
+
 		return $this->validate_entity( $account, Entity\Account::class );
 	}
 

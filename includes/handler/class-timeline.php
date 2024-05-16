@@ -41,10 +41,6 @@ class Timeline extends Handler {
 	 */
 	public function api_timelines( $statuses, $request ) {
 		$args = $this->get_posts_query_args( array(), $request );
-		if ( empty( $args ) ) {
-			return array();
-		}
-
 		/**
 		 * Filter the query arguments for the timeline.
 		 *
@@ -54,6 +50,10 @@ class Timeline extends Handler {
 		 * @return array The modified query arguments.
 		 */
 		$args = apply_filters( 'mastodon_api_timelines_args', $args, $request );
+
+		if ( empty( $args ) ) {
+			return array();
+		}
 
 		return $this->get_posts( $args, $request->get_param( 'min_id' ), $request->get_param( 'max_id' ) );
 	}
