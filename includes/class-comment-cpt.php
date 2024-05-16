@@ -75,6 +75,12 @@ class Comment_CPT {
 	}
 
 	public static function create_comment_post( $comment_id, $comment ) {
+		if ( ! $comment && $comment_id ) {
+			$comment = get_comment( $comment_id );
+		}
+		if ( ! $comment ) {
+			return;
+		}
 		$parent_post_id = $comment->comment_post_ID;
 		$post    = get_post( $parent_post_id );
 		if ( ! $post ) {
