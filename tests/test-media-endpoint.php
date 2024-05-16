@@ -45,17 +45,13 @@ class MediaEndpoint_Test extends Mastodon_API_TestCase {
 	}
 
 	public function test_media_post_empty() {
-		global $wp_rest_server;
-		$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v2/media' );
-		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
-		$response = $wp_rest_server->dispatch( $request );
+		$request = $this->api_request( 'POST', '/api/v2/media' );
+		$response = $this->dispatch_authenticated( $request );
 		$this->assertEquals( 422, $response->get_status() );
 	}
 
 	public function test_post_media() {
-		global $wp_rest_server;
-		$request                       = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v2/media' );
-		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
+		$request = $this->api_request( 'POST', '/api/v2/media' );
 		$request->set_file_params(
 			array(
 				'file' => array(
@@ -67,16 +63,14 @@ class MediaEndpoint_Test extends Mastodon_API_TestCase {
 				),
 			)
 		);
-		$response = $wp_rest_server->dispatch( $request );
+		$response = $this->dispatch_authenticated( $request );
 
 		$this->assertEquals( 200, $response->get_status() );
 		$this->assertInstanceOf( Entity\Media_Attachment::class, $response->get_data() );
 	}
 
 	public function test_get_media() {
-		global $wp_rest_server;
-		$request                       = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v2/media' );
-		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
+		$request = $this->api_request( 'POST', '/api/v2/media' );
 		$request->set_file_params(
 			array(
 				'file' => array(
@@ -88,10 +82,10 @@ class MediaEndpoint_Test extends Mastodon_API_TestCase {
 				),
 			)
 		);
-		$response = $wp_rest_server->dispatch( $request );
+		$response = $this->dispatch_authenticated( $request );
 
-		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/media/' . $response->get_data()->id );
-		$response = $wp_rest_server->dispatch( $request );
+		$request = $this->api_request( 'GET', '/api/v1/media/' . $response->get_data()->id );
+		$response = $this->dispatch_authenticated( $request );
 
 		$this->assertEquals( 200, $response->get_status() );
 		$this->assertInstanceOf( Entity\Media_Attachment::class, $response->get_data() );

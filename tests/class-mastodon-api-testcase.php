@@ -125,7 +125,7 @@ class Mastodon_API_TestCase extends \WP_UnitTestCase {
 		$this->token = wp_generate_password( 128, false );
 		$userdata = get_userdata( $this->administrator );
 		$oauth->get_token_storage()->setAccessToken( $this->token, $this->app->get_client_id(), $userdata->ID, time() + HOUR_IN_SECONDS, $this->app->get_scopes() );
-		unset( $_SERVER['HTTP_AUTHORIZATION'] );
+
 		add_filter(
 			'default_option_mastodon_api_default_post_formats',
 			function ( $post_formats ) {
@@ -139,5 +139,24 @@ class Mastodon_API_TestCase extends \WP_UnitTestCase {
 
 	public function block_http_requests() {
 		return new \WP_Error( 'http_request_failed', 'HTTP requests have been blocked.' );
+	}
+
+	public function api_request( $method, $endpoint ) {
+		$request = new \WP_REST_Request( $method, '/' . Mastodon_API::PREFIX . $endpoint );
+		return $request;
+	}
+
+	public function dispatch( \WP_REST_Request $request ) {
+		global $wp_rest_server;
+		if ( isset( $_SERVER['HTTP_AUTHORIZATION'] ) ) {
+			unset( $_SERVER['HTTP_AUTHORIZATION'] );
+		}
+		return $wp_rest_server->dispatch( $request );
+	}
+
+	public function dispatch_authenticated( \WP_REST_Request $request ) {
+		global $wp_rest_server;
+		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
+		return $wp_rest_server->dispatch( $request );
 	}
 }

@@ -46,14 +46,11 @@ class AccountsEndpoint_Test extends Mastodon_API_TestCase {
 	}
 
 	public function test_accounts_verify_credentials() {
-		global $wp_rest_server;
-		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/accounts/verify_credentials' );
-		$response = $wp_rest_server->dispatch( $request );
+		$request = $this->api_request( 'GET', '/api/v1/accounts/verify_credentials' );
+		$response = $this->dispatch( $request );
 		$this->assertEquals( 401, $response->get_status() );
 
-		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/accounts/verify_credentials' );
-		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
-		$response = $wp_rest_server->dispatch( $request );
+		$response = $this->dispatch_authenticated( $request );
 		$data = $response->get_data();
 
 		$this->assertEquals( 200, $response->get_status() );
@@ -70,23 +67,18 @@ class AccountsEndpoint_Test extends Mastodon_API_TestCase {
 
 	public function xtest_accounts_external() {
 		wp_cache_flush();
-		global $wp_rest_server;
-		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/accounts/' . $this->external_account );
-		$response = $wp_rest_server->dispatch( $request );
+		$request = $this->api_request( 'GET', '/api/v1/accounts/' . $this->external_account );
+		$response = $this->dispatch( $request );
 		$this->assertEquals( 401, $response->get_status() );
 
-		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/accounts/' . $this->external_account );
-		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
-		$response = $wp_rest_server->dispatch( $request );
+		$response = $this->dispatch_authenticated( $request );
 		$data = $response->get_data();
 		$this->assertEquals( 404, $response->get_status() );
 
 		wp_cache_flush();
 		add_filter( 'mastodon_api_webfinger', array( $this, 'mastodon_api_webfinger' ), 10, 2 );
 
-		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/accounts/' . $this->external_account );
-		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
-		$response = $wp_rest_server->dispatch( $request );
+		$response = $this->dispatch_authenticated( $request );
 		$data = $response->get_data();
 
 		$this->assertEquals( 200, $response->get_status() );

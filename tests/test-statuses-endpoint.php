@@ -25,9 +25,8 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 	}
 
 	public function test_statuses_id() {
-		global $wp_rest_server;
-		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/statuses/' . $this->friend_post );
-		$response = $wp_rest_server->dispatch( $request );
+		$request = $this->api_request( 'GET', '/api/v1/statuses/' . $this->friend_post );
+		$response = $this->dispatch( $request );
 		$this->assertEquals( 200, $response->get_status() );
 
 		$data = $response->get_data();
@@ -52,32 +51,26 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 	}
 
 	public function test_statuses_private_id() {
-		global $wp_rest_server;
-
-		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/statuses/' . $this->private_post );
-		$response = $wp_rest_server->dispatch( $request );
+		$request = $this->api_request( 'GET', '/api/v1/statuses/' . $this->private_post );
+		$response = $this->dispatch( $request );
 		$this->assertEquals( 401, $response->get_status() );
 
-		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
-		$response = $wp_rest_server->dispatch( $request );
+		$request = $this->api_request( 'GET', '/api/v1/statuses/' . $this->private_post );
+		$response = $this->dispatch_authenticated( $request );
 		$this->assertEquals( 200, $response->get_status() );
 	}
 
 	public function test_statuses_delete() {
-		global $wp_rest_server;
-		$request = new \WP_REST_Request( 'DELETE', '/' . Mastodon_API::PREFIX . '/api/v1/statuses/' . $this->post );
-		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
-		$response = $wp_rest_server->dispatch( $request );
+		$request = $this->api_request( 'DELETE', '/api/v1/statuses/' . $this->post );
+		$response = $this->dispatch_authenticated( $request );
 		$this->assertEquals( 200, $response->get_status() );
 
 		$this->assertEquals( 'trash', get_post_status( $this->post ) );
 	}
 
 	public function test_status_post_empty() {
-		global $wp_rest_server;
-		$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/statuses' );
-		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
-		$response = $wp_rest_server->dispatch( $request );
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$response = $this->dispatch_authenticated( $request );
 		$this->assertEquals( 422, $response->get_status() );
 	}
 
@@ -89,11 +82,9 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 			}
 		);
 
-		global $wp_rest_server;
-		$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/statuses' );
-		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
 		$request->set_param( 'status', 'test' );
-		$response = $wp_rest_server->dispatch( $request );
+		$response = $this->dispatch_authenticated( $request );
 		$this->assertEquals( 200, $response->get_status() );
 
 		$data = $response->get_data();
@@ -111,11 +102,9 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 			}
 		);
 
-		global $wp_rest_server;
-		$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/statuses' );
-		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
 		$request->set_param( 'status', 'headline' . PHP_EOL . 'post_content' );
-		$response = $wp_rest_server->dispatch( $request );
+		$response = $this->dispatch_authenticated( $request );
 		$this->assertEquals( 200, $response->get_status() );
 
 		$data = $response->get_data();
@@ -131,11 +120,9 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 
 	public function test_status_post_multiline_standard() {
 		$this->app->set_post_formats( 'standard' );
-		global $wp_rest_server;
-		$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/statuses' );
-		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
 		$request->set_param( 'status', 'headline' . PHP_EOL . 'post_content' );
-		$response = $wp_rest_server->dispatch( $request );
+		$response = $this->dispatch_authenticated( $request );
 		$this->assertEquals( 200, $response->get_status() );
 
 		$data = $response->get_data();
@@ -150,12 +137,10 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 
 	public function test_status_post_multiline_standard_html() {
 		$this->app->set_post_formats( 'standard' );
-		global $wp_rest_server;
-		$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/statuses' );
-		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
 		$request->set_param( 'status', '<p>headline</p>' . PHP_EOL . '<p>post_content</p>' );
 
-		$response = $wp_rest_server->dispatch( $request );
+		$response = $this->dispatch_authenticated( $request );
 		$this->assertEquals( 200, $response->get_status() );
 
 		$data = $response->get_data();

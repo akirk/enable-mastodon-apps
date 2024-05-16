@@ -20,16 +20,15 @@ class AppsEndpoint_Test extends Mastodon_API_TestCase {
 	}
 
 	public function test_apps_success() {
-		global $wp_rest_server;
 		$name = 'test123';
 		$redirect_uri = 'https://test';
 		$website = 'https://mastodon.local';
-		$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/apps' );
+		$request = $this->api_request( 'POST', '/api/v1/apps' );
 		$request->set_param( 'client_name', $name );
 		$request->set_param( 'redirect_uris', $redirect_uri );
 		$request->set_param( 'website', $website );
 		$request->set_param( 'scopes', 'read write follow push' );
-		$response = $wp_rest_server->dispatch( $request );
+		$response = $this->dispatch( $request );
 		$this->assertEquals( 200, $response->get_status() );
 
 		$data = $response->get_data();
@@ -52,13 +51,12 @@ class AppsEndpoint_Test extends Mastodon_API_TestCase {
 	}
 
 	public function test_apps_failures() {
-		global $wp_rest_server;
 		update_option( 'mastodon_api_disable_logins', 1 );
 
-		$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/apps' );
+		$request = $this->api_request( 'POST', '/api/v1/apps' );
 		$request->set_param( 'client_name', 'test123' );
 		$request->set_param( 'redirect_uris', 'https://example.org' );
-		$response = $wp_rest_server->dispatch( $request );
+		$response = $this->dispatch( $request );
 		$this->assertEquals( 403, $response->get_status() );
 		$data = $response->get_data();
 
@@ -72,11 +70,11 @@ class AppsEndpoint_Test extends Mastodon_API_TestCase {
 			'',
 			'te',
 		) as $invalid_client_name ) {
-			$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/apps' );
+			$request = $this->api_request( 'POST', '/api/v1/apps' );
 			$request->set_param( 'client_name', 'test123' );
 			$request->set_param( 'client_name', $invalid_client_name );
 			$request->set_param( 'redirect_uris', 'https://example.org' );
-			$response = $wp_rest_server->dispatch( $request );
+			$response = $this->dispatch( $request );
 			$this->assertEquals( 422, $response->get_status() );
 
 			$data = $response->get_data();
@@ -89,10 +87,10 @@ class AppsEndpoint_Test extends Mastodon_API_TestCase {
 		foreach ( array(
 			'test123',
 		) as $valid_client_name ) {
-			$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/apps' );
+			$request = $this->api_request( 'POST', '/api/v1/apps' );
 			$request->set_param( 'client_name', 'test123' );
 			$request->set_param( 'client_name', $valid_client_name );
-			$response = $wp_rest_server->dispatch( $request );
+			$response = $this->dispatch( $request );
 			$this->assertEquals( 422, $response->get_status() );
 
 			$data = $response->get_data();
@@ -105,10 +103,10 @@ class AppsEndpoint_Test extends Mastodon_API_TestCase {
 		foreach ( array(
 			'hello',
 		) as $invalid_redirect_uris ) {
-			$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/apps' );
+			$request = $this->api_request( 'POST', '/api/v1/apps' );
 			$request->set_param( 'client_name', 'test123' );
 			$request->set_param( 'redirect_uris', $invalid_redirect_uris );
-			$response = $wp_rest_server->dispatch( $request );
+			$response = $this->dispatch( $request );
 			$this->assertEquals( 422, $response->get_status() );
 
 			$data = $response->get_data();
@@ -122,11 +120,11 @@ class AppsEndpoint_Test extends Mastodon_API_TestCase {
 			'',
 			'hello',
 		) as $invalid_scopes ) {
-			$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/apps' );
+			$request = $this->api_request( 'POST', '/api/v1/apps' );
 			$request->set_param( 'client_name', 'test123' );
 			$request->set_param( 'redirect_uris', 'https://test' );
 			$request->set_param( 'scopes', $invalid_scopes );
-			$response = $wp_rest_server->dispatch( $request );
+			$response = $this->dispatch( $request );
 			$this->assertEquals( 422, $response->get_status() );
 
 			$data = $response->get_data();
@@ -146,11 +144,11 @@ class AppsEndpoint_Test extends Mastodon_API_TestCase {
 			'write follow',
 			'write follow push',
 		) as $i => $valid_scope ) {
-			$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/apps' );
+			$request = $this->api_request( 'POST', '/api/v1/apps' );
 			$request->set_param( 'client_name', 'test123' . $i );
 			$request->set_param( 'redirect_uris', 'https://test' );
 			$request->set_param( 'scopes', $valid_scope );
-			$response = $wp_rest_server->dispatch( $request );
+			$response = $this->dispatch( $request );
 			$this->assertEquals( 200, $response->get_status() );
 		}
 	}
@@ -167,11 +165,11 @@ class AppsEndpoint_Test extends Mastodon_API_TestCase {
 		$client_name = 'newapp1';
 
 		// Create a new app.
-		$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/apps' );
+		$request = $this->api_request( 'POST', '/api/v1/apps' );
 		$request->set_param( 'client_name', $client_name );
 		$request->set_param( 'redirect_uris', 'https://test' );
 		$request->set_param( 'scopes', 'read write follow push' );
-		$response = $wp_rest_server->dispatch( $request );
+		$response = $this->dispatch( $request );
 		$this->assertEquals( 200, $response->get_status() );
 		$data = $response->get_data();
 

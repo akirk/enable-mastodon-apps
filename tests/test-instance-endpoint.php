@@ -20,9 +20,8 @@ class InstanceEndpoint_Test extends Mastodon_API_TestCase {
 	}
 
 	public function test_apps_instance() {
-		global $wp_rest_server;
-		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/instance' );
-		$response = $wp_rest_server->dispatch( $request );
+		$request = $this->api_request( 'GET', '/api/v1/instance' );
+		$response = $this->dispatch( $request );
 		$this->assertEquals( 200, $response->get_status() );
 
 		$data = $response->get_data();
@@ -53,9 +52,8 @@ class InstanceEndpoint_Test extends Mastodon_API_TestCase {
 	}
 
 	public function test_extended_description() {
-		global $wp_rest_server;
-		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/instance/extended_description' );
-		$response = $wp_rest_server->dispatch( $request );
+		$request = $this->api_request( 'GET', '/api/v1/instance/extended_description' );
+		$response = $this->dispatch( $request );
 		$this->assertEquals( 200, $response->get_status() );
 
 		$this->assertEmpty( $response->get_data()->updated_at );
@@ -63,7 +61,7 @@ class InstanceEndpoint_Test extends Mastodon_API_TestCase {
 		$description = 'Updated blog description!';
 		update_option( 'blogdescription', $description );
 
-		$response = $wp_rest_server->dispatch( $request );
+		$response = $this->dispatch( $request );
 		$this->assertSame( 200, $response->get_status() );
 
 		$this->assertSame( $description, $response->get_data()->content );
