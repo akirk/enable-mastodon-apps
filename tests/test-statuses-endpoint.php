@@ -68,13 +68,13 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertEquals( 'trash', get_post_status( $this->post ) );
 	}
 
-	public function test_status_post_empty() {
+	public function test_submit_status_empty() {
 		$request = $this->api_request( 'POST', '/api/v1/statuses' );
 		$response = $this->dispatch_authenticated( $request );
 		$this->assertEquals( 422, $response->get_status() );
 	}
 
-	public function test_status_post_basic_status() {
+	public function test_submit_status_basic_status() {
 		add_filter(
 			'mastodon_api_new_post_format',
 			function ( $format ) {
@@ -94,7 +94,7 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertEquals( $p->post_content, 'test' );
 	}
 
-	public function test_status_post_multiline_status() {
+	public function test_submit_status_multiline_status() {
 		add_filter(
 			'mastodon_api_new_post_format',
 			function ( $format ) {
@@ -118,7 +118,7 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertEquals( $p->post_content, 'headline' . PHP_EOL . 'post_content' );
 	}
 
-	public function test_status_post_multiline_standard() {
+	public function test_submit_status_multiline_standard() {
 		$this->app->set_post_formats( 'standard' );
 		$request = $this->api_request( 'POST', '/api/v1/statuses' );
 		$request->set_param( 'status', 'headline' . PHP_EOL . 'post_content' );
@@ -135,7 +135,7 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertEquals( $p->post_content, 'post_content' );
 	}
 
-	public function test_status_post_multiline_standard_html() {
+	public function test_submit_status_multiline_standard_html() {
 		$this->app->set_post_formats( 'standard' );
 		$request = $this->api_request( 'POST', '/api/v1/statuses' );
 		$request->set_param( 'status', '<p>headline</p>' . PHP_EOL . '<p>post_content</p>' );
@@ -151,5 +151,34 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 
 		$this->assertEquals( $p->post_title, '<p>headline</p>' );
 		$this->assertEquals( $p->post_content, '<p>post_content</p>' );
+	}
+
+	public function test_submit_status_reply() {
+		$query = new \WP_Comment_Query();
+		$count = $query->query(
+			array(
+				'count' => true,
+			)
+		);
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'reply' );
+		$request->set_param( 'in_reply_to_id', $this->post );
+		var_dump( $this->post );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertIsString( $data->id );
+		$this->assertIsNumeric( $data->id );
+
+		$new_count = $query->query(
+			array(
+				'count' => true,
+			)
+		);
+		echo json_encode( $data, JSON_PRETTY_PRINT );
+
+		$this->assertTrue( $new_count > $count );
 	}
 }

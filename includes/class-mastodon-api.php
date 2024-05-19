@@ -2370,10 +2370,21 @@ class Mastodon_API {
 		return $remapped_post_id;
 	}
 
+	public static function maybe_get_remapped_comment_id( $remapped_post_id ) {
+		$post_id = get_post_meta( $remapped_post_id, 'mastodon_comment_id', true );
+		if ( $post_id ) {
+			return $post_id;
+		}
+		return $remapped_post_id;
+	}
+
 	public static function remap_comment_id( $comment_id ) {
 		$remapped_comment_id = get_comment_meta( $comment_id, 'mastodon_comment_id', true );
 		if ( ! $remapped_comment_id ) {
 			$comment = get_comment( $comment_id );
+			if ( ! $comment ) {
+				return $comment_id;
+			}
 			if ( $comment->comment_parent ) {
 				$post_parent = self::remap_comment_id( $comment->comment_parent );
 			} else {
