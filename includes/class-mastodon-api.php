@@ -1832,7 +1832,22 @@ class Mastodon_API {
 			return new \WP_Error( 'mastodon_api_accounts_lookup', 'Validation failed: acct can\'t be blank', array( 'status' => 422 ) );
 		}
 
+		if ( is_numeric( $acct ) ) {
+			$acct = $this->mapback_user_id( $acct );
+		}
+
+		if ( is_string( $acct ) ) {
+			$user = get_user_by( 'login', $acct );
+			if ( $user && ! is_wp_error( $user ) ) {
+				$acct = $user->ID;
+			}
+		}
+
 		$account = \apply_filters( 'mastodon_api_account', null, $acct, $request, null );
+
+		if ( ! $account ) {
+			return new \WP_Error( 'mastodon_api_accounts_lookup', 'Record not found', array( 'status' => 404 ) );
+		}
 
 		return $this->validate_entity( $account, Entity\Account::class );
 	}
