@@ -11,6 +11,7 @@ namespace Enable_Mastodon_Apps\Handler;
 
 use Enable_Mastodon_Apps\Handler\Handler;
 use Enable_Mastodon_Apps\Entity\Media_Attachment as Media_Attachment_Entity;
+use Enable_Mastodon_Apps\Entity\Status as Status_Entity;
 
 /**
  * This is the class that implements the default handler for all Media endpoints.
@@ -76,6 +77,9 @@ class Media_Attachment extends Handler {
 	 * @return Enable_Mastodon_Apps\Entity\Status The status object with image attachments added.
 	 */
 	public function add_generic_image_attachments( $status ) {
+		if ( ! $status instanceof Status_Entity ) {
+			return $status;
+		}
 		if ( false === strpos( $status->content, '<!-- wp:image' ) ) {
 			return $status;
 		}
@@ -135,6 +139,9 @@ class Media_Attachment extends Handler {
 	 * @return Enable_Mastodon_Apps\Entity\Status The status object with video attachments added.
 	 */
 	public function add_generic_video_attachments( $status ) {
+		if ( ! $status instanceof Status_Entity ) {
+			return $status;
+		}
 		if ( false === strpos( $status->content, '<video' ) ) {
 			return $status;
 		}
