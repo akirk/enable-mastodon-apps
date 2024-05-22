@@ -39,6 +39,8 @@ class Mastodon_API {
 	 */
 	private $app;
 
+	private static $last_error = false;
+
 	const PREFIX = 'enable-mastodon-apps';
 	const APP_TAXONOMY = 'mastodon-app';
 	const REMAP_TAXONOMY = 'mastodon-api-remap';
@@ -2270,6 +2272,14 @@ class Mastodon_API {
 			return $lang . '_' . strtoupper( $lang );
 		}
 		return $lang;
+	}
+
+	public static function set_last_error( $message ) {
+		self::$last_error = $message;
+	}
+
+	public static function get_last_error() {
+		return self::$last_error;
 	}
 
 	public function api_account_statuses( $request ) {
