@@ -6,6 +6,7 @@
  */
 
 namespace Enable_Mastodon_Apps\Entity;
+use Enable_Mastodon_Apps\Mastodon_API;
 
 /**
  * Class Entity
@@ -77,7 +78,7 @@ abstract class Entity implements \JsonSerializable {
 			}
 
 			if ( 'DateTime' === $object ) {
-				if ( $this->$var instanceof \DateTime ) {
+				if ( $this->__get( $var ) instanceof \DateTime ) {
 					$array[ $var ] = preg_replace( '/\+00:00$/', 'Z', $this->__get( $var )->format( 'Y-m-d\TH:i:s.000P' ) );
 					continue;
 				}
@@ -86,13 +87,19 @@ abstract class Entity implements \JsonSerializable {
 					continue;
 				}
 
+				if ( $this->__get( $var ) ) {
+					return array(
+						'error' => 'Expected DateTime for ' . $var,
+					);
+				}
+
 				return array(
-					'error' => 'Required object is missing: ' . $var,
+					'error' => 'Required DateTime is missing: ' . $var,
 				);
 			}
 
 			if ( 'Date' === $object ) {
-				if ( $this->$var instanceof \DateTime ) {
+				if ( $this->__get( $var ) instanceof \DateTime ) {
 					$array[ $var ] = $this->__get( $var )->format( 'Y-m-d' );
 					continue;
 				}
@@ -101,8 +108,14 @@ abstract class Entity implements \JsonSerializable {
 					continue;
 				}
 
+				if ( $this->__get( $var ) ) {
+					return array(
+						'error' => 'Expected DateTime: ' . $var,
+					);
+				}
+
 				return array(
-					'error' => 'Required object is missing: ' . $var,
+					'error' => 'Required DateTime is missing: ' . $var,
 				);
 			}
 
@@ -123,7 +136,7 @@ abstract class Entity implements \JsonSerializable {
 					}
 
 					return array(
-						'error' => 'Required object is missing: ' . $var,
+						'error' => 'Required2 object is missing: ' . $var,
 					);
 				}
 
@@ -136,7 +149,9 @@ abstract class Entity implements \JsonSerializable {
 								unset( $array[ $var ][ $key ] );
 								continue;
 							}
-							return $array[ $var ][ $key ];
+							return array(
+								'error' => $key . ': ' . $array[ $var ][ $key ]['error'],
+							);
 						}
 						continue;
 					}
@@ -168,7 +183,12 @@ abstract class Entity implements \JsonSerializable {
 
 	public function is_valid() {
 		$array = $this->jsonSerialize();
-		return empty( $array['error'] );
+		if ( empty( $array['error'] ) ) {
+			return true;
+		}
+
+		Mastodon_API::set_last_error( get_called_class() . ': ' . $array['error'] );
+		return false;
 	}
 
 	public function __get( $name ) {
