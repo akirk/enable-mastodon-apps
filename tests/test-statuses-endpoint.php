@@ -164,7 +164,6 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$request = $this->api_request( 'POST', '/api/v1/statuses' );
 		$request->set_param( 'status', 'reply' );
 		$request->set_param( 'in_reply_to_id', $this->post );
-		var_dump( $this->post );
 		$response = $this->dispatch_authenticated( $request );
 		$this->assertEquals( 200, $response->get_status() );
 
