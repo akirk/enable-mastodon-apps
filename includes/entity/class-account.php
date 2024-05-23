@@ -238,4 +238,11 @@ class Account extends Entity {
 		'note'      => '',
 		'fields'    => array(),
 	);
+
+	public function __get( $k ) {
+		if ( 'created_at' === $k && ! isset( $this->$k ) ) {
+			return new \DateTime( 'now' );
+		}
+		return parent::__get( $k );
+	}
 }

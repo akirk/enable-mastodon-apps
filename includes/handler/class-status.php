@@ -29,11 +29,13 @@ class Status extends Handler {
 
 	public function register_hooks() {
 		add_filter( 'mastodon_api_status', array( $this, 'api_status' ), 10, 3 );
-		add_filter( 'mastodon_api_status', array( $this, 'api_status_account_ensure_numeric_id' ), 100 );
+		add_filter( 'mastodon_api_status', array( $this, 'api_status_ensure_numeric_id' ), 100 );
+		add_filter( 'mastodon_api_comment_parent_post_id', array( Mastodon_API::class, 'maybe_get_remapped_comment_id' ), 30 );
 		add_filter( 'mastodon_api_account_statuses_args', array( $this, 'mastodon_api_account_statuses_args' ), 10, 2 );
 		add_filter( 'mastodon_api_statuses', array( $this, 'api_statuses' ), 10, 4 );
+		add_filter( 'mastodon_api_statuses', array( $this, 'api_statuses_ensure_numeric_id' ), 100 );
 		add_filter( 'mastodon_api_submit_status', array( $this, 'api_submit_comment' ), 10, 7 );
-		add_filter( 'mastodon_api_submit_status', array( $this, 'api_submit_post' ), 10, 7 );
+		add_filter( 'mastodon_api_submit_status', array( $this, 'api_submit_post' ), 15, 7 );
 		add_filter( 'mastodon_api_status_context', array( $this, 'api_status_context' ), 10, 3 );
 	}
 
@@ -187,6 +189,7 @@ class Status extends Handler {
 			}
 			return $statuses;
 		}
+
 		return $this->get_posts( $args, $min_id, $max_id );
 	}
 
@@ -194,14 +197,51 @@ class Status extends Handler {
 		return $this->get_posts_query_args( $args, $request );
 	}
 
+	public function api_statuses_ensure_numeric_id( $statuses ) {
+		$response = null;
+		if ( $statuses instanceof \WP_REST_Response ) {
+			$response = $statuses;
+			$statuses = $response->data;
+		}
+		if ( ! is_array( $statuses ) ) {
+			return $statuses;
+		}
 
-	public function api_status_account_ensure_numeric_id( $status ) {
+		foreach ( $statuses as $k => $status ) {
+			$statuses[ $k ] = $this->api_status_ensure_numeric_id( $status );
+		}
+
+		if ( $response ) {
+			$response->data = $statuses;
+			return $response;
+		}
+
+		return $statuses;
+	}
+
+	public function api_status_ensure_numeric_id( $status ) {
+		if ( ! $status instanceof Status_Entity ) {
+			return $status;
+		}
+
+		if ( isset( $status->id ) && ! is_numeric( $status->id ) ) {
+			$status->id = \Enable_Mastodon_Apps\Mastodon_API::remap_url( $status->id );
+		}
+
 		if ( isset( $status->account->id ) && ! is_numeric( $status->account->id ) ) {
 			$status->account->id = \Enable_Mastodon_Apps\Mastodon_API::remap_user_id( $status->account->id );
 		}
+
 		if ( isset( $status->reblog->account->id ) && ! is_numeric( $status->reblog->account->id ) ) {
 			$status->reblog->account->id = \Enable_Mastodon_Apps\Mastodon_API::remap_user_id( $status->reblog->account->id );
 		}
+
+		foreach ( $status->media_attachments as $media_attachment ) {
+			if ( isset( $media_attachment->id ) && ! is_numeric( $media_attachment->id ) ) {
+				$media_attachment->id = \Enable_Mastodon_Apps\Mastodon_API::remap_url( $media_attachment->id );
+			}
+		}
+
 		return $status;
 	}
 
@@ -300,14 +340,28 @@ class Status extends Handler {
 		}
 		$comment_data = array();
 
+		/**
+		 * Get the post id that is being responded to.
+		 *
+		 * @param int $in_reply_to_id The post ID that is being responded to.
+		 * @param string $status_text The status text.
+		 * @return int The post ID that is being responded to.
+		 */
+		$parent_post_id = apply_filters( 'mastodon_api_comment_parent_post_id', $in_reply_to_id, $status_text );
+
 		$comment_data['comment_content'] = $status_text;
-		$comment_data['comment_post_ID'] = $in_reply_to_id;
+		$comment_data['comment_post_ID'] = $parent_post_id;
 		$comment_data['comment_parent']  = 0;
 		$comment_data['comment_author'] = get_current_user_id();
+		$comment_data['user_id'] = get_current_user_id();
 		$comment_data['comment_approved'] = 1;
 
-		if ( $in_reply_to_id ) {
-			$comment_data['comment_parent'] = $in_reply_to_id;
+		$parent_comment_id = Mastodon_API::maybe_get_remapped_comment_id( $in_reply_to_id );
+		if ( intval( $parent_comment_id ) !== intval( $in_reply_to_id ) ) {
+			$parent_comment = get_comment( $parent_comment_id );
+			if ( $parent_comment ) {
+				$comment_data['comment_parent'] = $parent_comment_id;
+			}
 		}
 
 		if ( ! empty( $media_ids ) ) {

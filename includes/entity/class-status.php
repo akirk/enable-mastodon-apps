@@ -286,6 +286,10 @@ class Status extends Entity {
 			return $this->normalize_whitespace( $this->content );
 		}
 
+		if ( 'created_at' === $k && ! isset( $this->$k ) ) {
+			return new \DateTime( 'now' );
+		}
+
 		return parent::__get( $k );
 	}
 
