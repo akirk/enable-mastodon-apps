@@ -136,7 +136,7 @@ abstract class Entity implements \JsonSerializable {
 					}
 
 					return array(
-						'error' => 'Required2 object is missing: ' . $var,
+						'error' => 'Required object is missing: ' . $var,
 					);
 				}
 
