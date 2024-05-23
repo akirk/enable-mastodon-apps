@@ -80,6 +80,7 @@ class Mastodon_API {
 		add_action( 'default_option_mastodon_api_default_post_formats', array( $this, 'default_option_mastodon_api_default_post_formats' ) );
 		add_filter( 'rest_request_before_callbacks', array( $this, 'rest_request_before_callbacks' ) );
 		add_filter( 'mastodon_api_mapback_user_id', array( $this, 'mapback_user_id' ) );
+		add_filter( 'mastodon_api_in_reply_to_id', array( self::class, 'maybe_get_remapped_reblog_id' ), 15 );
 	}
 
 	public function allow_cors() {
@@ -1553,6 +1554,15 @@ class Mastodon_API {
 	}
 
 	public function mapback_user_id( $user_id ) {
+		/**
+		 * Map a user id to a canonical user id.
+		 *
+		 * This allows to ensure that the user id stays the same no matter of the relationship to this user.
+		 * For example, if external user information is fetched about a user and we later follow that user, the user id should stay the same.
+		 *
+		 * @param int $user_id The user ID.
+		 * @return int The potentially modified user ID.
+		 */
 		$user_id = apply_filters( 'mastodon_api_canonical_user_id', $user_id );
 
 		if ( $user_id > 1e10 ) {
@@ -1650,7 +1660,17 @@ class Mastodon_API {
 			$visibility = 'public';
 		}
 
-		$in_reply_to_id = self::maybe_get_remapped_reblog_id( $request->get_param( 'in_reply_to_id' ) );
+		/**
+		 * Allow modifying the in_reply_to_id before it gets used
+		 *
+		 * For example, this could be a remapped blog id, or a remapped URL.
+		 *
+		 * @param string $in_reply_to_id The user submitted in_reply_to_id.
+		 * @param WP_REST_Request $request The REST request object.
+		 * @return string The potentially modified in_reply_to_id.
+		 */
+		$in_reply_to_id = apply_filters( 'mastodon_api_in_reply_to_id', $request->get_param( 'in_reply_to_id' ), $request );
+
 		$media_ids = $request->get_param( 'media_ids' );
 		$scheduled_at = $request->get_param( 'scheduled_at' );
 
@@ -2343,6 +2363,9 @@ class Mastodon_API {
 		$remapped_post_id = get_post_meta( $post_id, 'mastodon_reblog_id', true );
 		if ( ! $remapped_post_id ) {
 			$post = get_post( $post_id );
+			if ( ! $post ) {
+				return $post_id;
+			}
 			$remapped_post_id = wp_insert_post(
 				array(
 					'post_type'     => self::CPT,
@@ -2428,7 +2451,7 @@ class Mastodon_API {
 		return 1e10 + $remote_user_id;
 	}
 
-	public static function remap_url( $url, $meta = array() ) {
+	public static function remap_url( $url ) {
 		$term = get_term_by( 'name', $url, \Enable_Mastodon_Apps\Mastodon_API::REMAP_TAXONOMY );
 		$remapped_id = 0;
 		if ( $term ) {
@@ -2437,30 +2460,20 @@ class Mastodon_API {
 			$term = wp_insert_term( $url, \Enable_Mastodon_Apps\Mastodon_API::REMAP_TAXONOMY );
 			if ( ! is_wp_error( $term ) ) {
 				$remapped_id = $term['term_id'];
-				if ( $meta ) {
-					update_term_meta( $remapped_id, 'meta', wp_json_encode( $meta ) );
-				}
 			}
 		}
 
 		return 2e10 + $remapped_id;
 	}
 
-	public static function get_remapped_url( $id ) {
+	public static function maybe_get_remapped_url( $id ) {
 		if ( $id > 2e10 ) {
 			$term = get_term_by( 'id', intval( $id ) - 2e10, self::REMAP_TAXONOMY );
 			if ( $term ) {
 				return $term->name;
 			}
 		}
-		return null;
-	}
-
-	public static function get_remapped_url_meta( $id ) {
-		if ( $id > 2e10 ) {
-			return json_decode( get_term_meta( intval( $id ) - 2e10, 'meta', true ), true );
-		}
-		return null;
+		return $id;
 	}
 
 	private function software_string() {

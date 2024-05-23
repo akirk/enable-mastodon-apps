@@ -176,7 +176,6 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 				'count' => true,
 			)
 		);
-		echo json_encode( $data, JSON_PRETTY_PRINT );
 
 		$this->assertTrue( $new_count > $count );
 	}
