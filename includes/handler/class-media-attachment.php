@@ -156,7 +156,7 @@ class Media_Attachment extends Handler {
 
 		foreach ( $matches as $match ) {
 			$status->content = str_replace( $match[0], '', $status->content );
-			if ( ! preg_match( '/<img\b([^>]+)>/', $match[2], $img ) ) {
+			if ( ! preg_match( '/<img\b([^>]+)>/', $match[0], $img ) ) {
 				continue;
 			}
 			$block = array();

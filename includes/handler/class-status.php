@@ -285,13 +285,12 @@ class Status extends Handler {
 				$attachment = \wp_get_attachment_metadata( $media_id );
 				if ( \wp_attachment_is( 'image', $media_id ) ) {
 					$post_data['post_content'] .= PHP_EOL;
-					$post_data['post_content'] .= '<!-- wp:image ' . json_encode(
-						array(
-							'id'       => $media_id,
-							'sizeSlug' => 'large',
-						)
-					) . ' -->' . PHP_EOL;
-					$post_data['post_content'] .= '<figure class="wp-block-image"><img src="' . esc_url( wp_get_attachment_url( $media_id ) ) . '" width="' . esc_attr( $attachment['width'] ) . '" height="' . esc_attr( $attachment['height'] ) . '" class="wp-image-' . esc_attr( $media_id ) . '"/></figure>' . PHP_EOL;
+					$meta_json = array(
+						'id'       => $media_id,
+						'sizeSlug' => 'large',
+					);
+					$post_data['post_content'] .= '<!-- wp:image ' . json_encode( $meta_json ) . ' -->' . PHP_EOL;
+					$post_data['post_content'] .= '<figure class="wp-block-image"><img src="' . esc_url( wp_get_attachment_url( $media_id ) ) . '" width="' . esc_attr( $attachment['width'] ) . '" height="' . esc_attr( $attachment['height'] ) . '" alt="' . esc_attr( $meta[''] ) . '" class="wp-image-' . esc_attr( $media_id ) . '"/></figure>' . PHP_EOL;
 					$post_data['post_content'] .= '<!-- /wp:image -->' . PHP_EOL;
 				} elseif ( \wp_attachment_is( 'video', $media_id ) ) {
 					$post_data['post_content'] .= PHP_EOL;

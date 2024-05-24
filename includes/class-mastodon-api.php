@@ -65,6 +65,7 @@ class Mastodon_API {
 		new Handler\Relationship();
 		new Handler\Search();
 		new Handler\Status();
+		new Handler\Status_Source();
 		new Handler\Timeline();
 	}
 
@@ -235,6 +236,7 @@ class Mastodon_API {
 				'api/v1/accounts/([^/]+)/unfollow'       => 'api/v1/accounts/$matches[1]/unfollow',
 				'api/v1/accounts/([^/]+)/statuses'       => 'api/v1/accounts/$matches[1]/statuses',
 				'api/v1/statuses/([0-9]+)/context'       => 'api/v1/statuses/$matches[1]/context',
+				'api/v1/statuses/([0-9]+)/source'        => 'api/v1/statuses/$matches[1]/source',
 				'api/v1/statuses/([0-9]+)/favourited_by' => 'api/v1/statuses/$matches[1]/favourited_by',
 				'api/v1/statuses/([0-9]+)/favourite'     => 'api/v1/statuses/$matches[1]/favourite',
 				'api/v1/statuses/([0-9]+)/unfavourite'   => 'api/v1/statuses/$matches[1]/unfavourite',
@@ -888,6 +890,16 @@ class Mastodon_API {
 						'description' => 'ISO 8601 Datetime at which to schedule a status. Providing this parameter will cause `ScheduledStatus` to be returned instead of `Status`. Must be at least 5 minutes in the future.',
 					),
 				),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/statuses/(?P<post_id>[0-9]+)/source',
+			array(
+				'methods'             => array( 'GET', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_get_status_source' ),
+				'permission_callback' => $this->required_scope( 'read:statuses', true ),
 			)
 		);
 
@@ -1876,6 +1888,18 @@ class Mastodon_API {
 
 	public function api_push_subscription( $request ) {
 		return array();
+	}
+
+	public function api_get_status_source( $request ) {
+		$source_id = $request->get_param( 'post_id' );
+		if ( ! $source_id ) {
+			return false;
+		}
+
+		$source_id = self::maybe_get_remapped_reblog_id( $source_id );
+		$source_id = self::maybe_get_remapped_comment_id( $source_id );
+
+		return apply_filters( 'mastodon_api_status_source', null, $source_id );
 	}
 
 	public function api_get_status_context( $request ) {
