@@ -36,6 +36,8 @@ class Status extends Handler {
 		add_filter( 'mastodon_api_statuses', array( $this, 'api_statuses_ensure_numeric_id' ), 100 );
 		add_filter( 'mastodon_api_submit_status', array( $this, 'api_submit_comment' ), 10, 7 );
 		add_filter( 'mastodon_api_submit_status', array( $this, 'api_submit_post' ), 15, 7 );
+		add_filter( 'mastodon_api_edit_status', array( $this, 'api_edit_comment' ), 10, 8 );
+		add_filter( 'mastodon_api_edit_status', array( $this, 'api_edit_post' ), 15, 8 );
 		add_filter( 'mastodon_api_status_context', array( $this, 'api_status_context' ), 10, 3 );
 	}
 
@@ -246,11 +248,12 @@ class Status extends Handler {
 		return $status;
 	}
 
-	public function api_submit_post( $status, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at ) {
-		if ( $status instanceof \WP_Error || $status instanceof Status_Entity ) {
-			return $status;
-		}
+	public function prepare_post_data( $post_id, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at ) {
 		$post_data = array();
+
+		if ( $post_id ) {
+			$post_data['ID'] = $post_id;
+		}
 
 		$post_data['post_content'] = $status_text;
 		$post_data['post_status']  = 'public' === $visibility ? 'publish' : 'private';
@@ -301,7 +304,74 @@ class Status extends Handler {
 			}
 		}
 
+		return $post_data;
+	}
+
+	public function api_submit_post( $status, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at ) {
+		if ( $status instanceof \WP_Error || $status instanceof Status_Entity ) {
+			return $status;
+		}
+
+		$post_data = $this->prepare_post_data( null, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at );
+
 		$post_id = wp_insert_post( $post_data );
+		if ( is_wp_error( $post_id ) ) {
+			return $post_id;
+		}
+
+		if ( 'standard' !== $post_format ) {
+			set_post_format( $post_id, $post_format );
+		}
+
+		if ( ! empty( $media_ids ) ) {
+			foreach ( $media_ids as $media_id ) {
+				wp_update_post(
+					array(
+						'ID'          => $media_id,
+						'post_parent' => $post_id,
+					)
+				);
+			}
+		}
+
+		if ( $scheduled_at ) {
+			return array(
+				'id'           => $post_id,
+				'scheduled_at' => $scheduled_at,
+				'params'       => array(
+					'text'         => $status,
+					'visibility'   => $visibility,
+					'scheduled_at' => $scheduled_at,
+				),
+			);
+		}
+
+		/**
+		 * Modify the status data.
+		 *
+		 * @param array|null $account The status data.
+		 * @param int $post_id The object ID to get the status from.
+		 * @param array $data Additional status data.
+		 * @return array|null The modified status data.
+		 */
+		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
+
+		return $status;
+	}
+
+	public function api_edit_post( $status, $post_id, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at ) {
+		if ( $status instanceof \WP_Error || $status instanceof Status_Entity ) {
+			return $status;
+		}
+
+		$post = get_post( $post_id );
+		if ( ! $post ) {
+			return $status;
+		}
+
+		$post_data = $this->prepare_post_data( $post_id, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at );
+
+		$post_id = wp_update_post( $post_data );
 		if ( is_wp_error( $post_id ) ) {
 			return $post_id;
 		}
@@ -394,6 +464,81 @@ class Status extends Handler {
 		}
 
 		$comment_id = wp_insert_comment( $comment_data );
+
+		/**
+		 * Modify the status data.
+		 *
+		 * @param array|null $account The status data.
+		 * @param int $post_id The object ID to get the status from.
+		 * @param array $data Additional status data.
+		 * @return array|null The modified status data.
+		 */
+		$status = apply_filters(
+			'mastodon_api_status',
+			null,
+			$in_reply_to_id,
+			array(
+				'comment' => get_comment( $comment_id ),
+			)
+		);
+
+		return $status;
+	}
+
+	public function api_edit_comment( $status, $comment_id, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at ) {
+		if ( $status instanceof \WP_Error || $status instanceof Status_Entity || ! $in_reply_to_id ) {
+			return $status;
+		}
+		$comment = get_comment( $comment_id );
+		if ( ! $comment ) {
+			return $status;
+		}
+
+		$comment_data = array();
+
+		/**
+		 * Get the post id that is being responded to.
+		 *
+		 * @param int $in_reply_to_id The post ID that is being responded to.
+		 * @param string $status_text The status text.
+		 * @return int The post ID that is being responded to.
+		 */
+		$parent_post_id = apply_filters( 'mastodon_api_comment_parent_post_id', $in_reply_to_id, $status_text );
+
+		$comment_data['comment_ID'] = $comment_id;
+		$comment_data['comment_content'] = $status_text;
+		$comment_data['comment_post_ID'] = $parent_post_id;
+		$comment_data['comment_parent']  = 0;
+		$comment_data['comment_author'] = get_current_user_id();
+		$comment_data['user_id'] = get_current_user_id();
+		$comment_data['comment_approved'] = 1;
+
+		$parent_comment_id = Mastodon_API::maybe_get_remapped_comment_id( $in_reply_to_id );
+		if ( intval( $parent_comment_id ) !== intval( $in_reply_to_id ) ) {
+			$parent_comment = get_comment( $parent_comment_id );
+			if ( $parent_comment ) {
+				$comment_data['comment_parent'] = $parent_comment_id;
+			}
+		}
+
+		if ( ! empty( $media_ids ) ) {
+			foreach ( $media_ids as $media_id ) {
+				$media = get_post( $media_id );
+				if ( ! $media ) {
+					return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Media not found', array( 'status' => 400 ) );
+				}
+				if ( 'attachment' !== $media->post_type ) {
+					return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Media not found', array( 'status' => 400 ) );
+				}
+				$attachment = \wp_get_attachment_metadata( $media_id );
+				$comment_data['comment_content'] .= PHP_EOL;
+				$comment_data['comment_content'] .= '<!-- wp:image -->';
+				$comment_data['comment_content'] .= '<p><img src="' . esc_url( wp_get_attachment_url( $media_id ) ) . '" width="' . esc_attr( $attachment['width'] ) . '"  height="' . esc_attr( $attachment['height'] ) . '" class="size-full" /></p>';
+				$comment_data['comment_content'] .= '<!-- /wp:image -->';
+			}
+		}
+
+		$comment_id = wp_update_comment( $comment_data );
 
 		/**
 		 * Modify the status data.
