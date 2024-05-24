@@ -156,6 +156,7 @@ abstract class Entity implements \JsonSerializable {
 						continue;
 					}
 				}
+				$array[ $var ] = array_values( $array[ $var ] );
 				continue;
 			}
 
@@ -195,6 +196,13 @@ abstract class Entity implements \JsonSerializable {
 		return $this->$name;
 	}
 
+	/**
+	 * Validate the variable.
+	 *
+	 * @param string $key The variable to validate.
+	 *
+	 * @return bool|\WP_Error
+	 */
 	public function validate( $key ) {
 		if ( isset( $this->$key ) ) {
 			return true;
