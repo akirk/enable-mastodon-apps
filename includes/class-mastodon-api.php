@@ -65,6 +65,7 @@ class Mastodon_API {
 		new Handler\Relationship();
 		new Handler\Search();
 		new Handler\Status();
+		new Handler\Status_Source();
 		new Handler\Timeline();
 	}
 
@@ -235,6 +236,7 @@ class Mastodon_API {
 				'api/v1/accounts/([^/]+)/unfollow'       => 'api/v1/accounts/$matches[1]/unfollow',
 				'api/v1/accounts/([^/]+)/statuses'       => 'api/v1/accounts/$matches[1]/statuses',
 				'api/v1/statuses/([0-9]+)/context'       => 'api/v1/statuses/$matches[1]/context',
+				'api/v1/statuses/([0-9]+)/source'        => 'api/v1/statuses/$matches[1]/source',
 				'api/v1/statuses/([0-9]+)/favourited_by' => 'api/v1/statuses/$matches[1]/favourited_by',
 				'api/v1/statuses/([0-9]+)/favourite'     => 'api/v1/statuses/$matches[1]/favourite',
 				'api/v1/statuses/([0-9]+)/unfavourite'   => 'api/v1/statuses/$matches[1]/unfavourite',
@@ -893,6 +895,16 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
+			'api/v1/statuses/(?P<post_id>[0-9]+)/source',
+			array(
+				'methods'             => array( 'GET', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_get_status_source' ),
+				'permission_callback' => $this->required_scope( 'read:statuses', true ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
 			'api/v1/statuses/(?P<post_id>[0-9]+)/context',
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
@@ -972,6 +984,16 @@ class Mastodon_API {
 			array(
 				'methods'             => array( 'DELETE', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_delete_post' ),
+				'permission_callback' => $this->required_scope( 'write:statuses' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/statuses/(?P<post_id>[0-9]+)',
+			array(
+				'methods'             => array( 'PUT', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_edit_post' ),
 				'permission_callback' => $this->required_scope( 'write:statuses' ),
 			)
 		);
@@ -1878,6 +1900,18 @@ class Mastodon_API {
 		return array();
 	}
 
+	public function api_get_status_source( $request ) {
+		$source_id = $request->get_param( 'post_id' );
+		if ( ! $source_id ) {
+			return false;
+		}
+
+		$source_id = self::maybe_get_remapped_reblog_id( $source_id );
+		$source_id = self::maybe_get_remapped_comment_id( $source_id );
+
+		return apply_filters( 'mastodon_api_status_source', null, $source_id );
+	}
+
 	public function api_get_status_context( $request ) {
 		$context_post_id = $request->get_param( 'post_id' );
 		if ( ! $context_post_id ) {
@@ -1996,6 +2030,60 @@ class Mastodon_API {
 		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
 
 		return $status;
+	}
+
+	public function api_edit_post( $request ) {
+		$post_id = $request->get_param( 'post_id' );
+		if ( ! $post_id ) {
+			return false;
+		}
+
+		$status_text = $request->get_param( 'status' );
+		if ( empty( $status_text ) ) {
+			return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Validation failed: Text can\'t be blank', array( 'status' => 422 ) );
+		}
+
+		/**
+		 * Allow modifying the status text before it gets posted.
+		 *
+		 * @param string $status The user submitted status text.
+		 * @param WP_REST_Request $request The REST request object.
+		 * @return string The potentially modified status text.
+		 */
+		$status_text = apply_filters( 'mastodon_api_submit_status_text', $status_text, $request );
+
+		$visibility = $request->get_param( 'visibility' );
+		if ( empty( $visibility ) ) {
+			$visibility = 'public';
+		}
+
+		/**
+		 * Allow modifying the in_reply_to_id before it gets used
+		 *
+		 * For example, this could be a remapped blog id, or a remapped URL.
+		 *
+		 * @param string $in_reply_to_id The user submitted in_reply_to_id.
+		 * @param WP_REST_Request $request The REST request object.
+		 * @return string The potentially modified in_reply_to_id.
+		 */
+		$in_reply_to_id = apply_filters( 'mastodon_api_in_reply_to_id', $request->get_param( 'in_reply_to_id' ), $request );
+
+		$media_ids = $request->get_param( 'media_ids' );
+		$scheduled_at = $request->get_param( 'scheduled_at' );
+
+		$app = Mastodon_App::get_current_app();
+		$app_post_formats = array();
+		if ( $app ) {
+			$app_post_formats = $app->get_post_formats();
+		}
+		if ( empty( $app_post_formats ) ) {
+			$app_post_formats = array( 'status' );
+		}
+		$post_format = apply_filters( 'mastodon_api_new_post_format', $app_post_formats[0] );
+
+		$status = apply_filters( 'mastodon_api_edit_status', null, $post_id, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at, $request );
+
+		return $this->validate_entity( $status, Entity\Status::class );
 	}
 
 	public function api_delete_post( $request ) {
