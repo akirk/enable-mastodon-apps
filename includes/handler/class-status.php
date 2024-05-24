@@ -83,36 +83,34 @@ class Status extends Handler {
 				case 'core/video':
 				case 'videopress/video':
 					if ( ! empty( $block['attrs']['id'] ) ) {
-						$media_ids[] = $block['attrs']['id'];
+						$media_ids[ $block['attrs']['id'] ] = $block['innerHTML'];
 					}
 					break;
 				case 'jetpack/slideshow':
 				case 'jetpack/tiled-gallery':
 					if ( ! empty( $block['attrs']['ids'] ) ) {
-						$media_ids = array_merge( $media_ids, $block['attrs']['ids'] );
+						foreach ( $block['attrs']['ids'] as $id ) {
+							$media_ids[ $id ] = $block['innerHTML'];
+						}
 					}
 					break;
 				case 'jetpack/image-compare':
 					if ( ! empty( $block['attrs']['beforeImageId'] ) ) {
-						$media_ids[] = $block['attrs']['beforeImageId'];
+						$media_ids[ $block['attrs']['beforeImageId'] ] = $block['innerHTML'];
 					}
 					if ( ! empty( $block['attrs']['afterImageId'] ) ) {
-						$media_ids[] = $block['attrs']['afterImageId'];
+						$media_ids[ $block['attrs']['afterImageId'] ] = $block['innerHTML'];
 					}
 					break;
 			}
 
-			// Depupe.
-			$media_ids = \array_unique( $media_ids );
-
-			// Stop doing unneeded work.
 			if ( count( $media_ids ) >= $max_media ) {
 				break;
 			}
 		}
 
 		// Still need to slice it because one gallery could knock us over the limit.
-		return array_slice( $media_ids, 0, $max_media );
+		return array_slice( $media_ids, 0, $max_media, true );
 	}
 
 	/**
@@ -159,15 +157,18 @@ class Status extends Handler {
 			$status->created_at = new \DateTime( $post->post_date );
 			$status->visibility = 'public';
 			$status->uri = get_permalink( $post->ID );
-			$status->content = $post->post_content;
+			$status->content = $post->post_title . PHP_EOL . $post->post_content;
 			$status->account = $account;
 			$media_attachments = $this->get_block_attachments( $post );
-			foreach ( $media_attachments as $media_id ) {
+			foreach ( $media_attachments as $media_id => $html ) {
 				$media_attachment = apply_filters( 'mastodon_api_media_attachment', null, $media_id );
 				if ( $media_attachment ) {
+					// We don't want to show the media in the content as they are attachments.
+					$status->content = str_replace( $html, '', $status->content );
 					$status->media_attachments[] = $media_attachment;
 				}
 			}
+			$status->content = trim( wp_kses_post( $status->content ) );
 		}
 
 		return $status;
