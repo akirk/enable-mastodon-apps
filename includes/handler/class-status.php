@@ -135,7 +135,7 @@ class Status extends Handler {
 			}
 			$status = new Status_Entity();
 			$status->id = strval( Mastodon_API::remap_comment_id( $comment->comment_ID ) );
-			$status->created_at = new \DateTime( $comment->comment_date );
+			$status->created_at = new \DateTime( $comment->comment_date_gmt, new \DateTimeZone( 'UTC' ) );
 			$status->visibility = 'public';
 			$status->uri = get_comment_link( $comment );
 			$status->content = $comment->comment_content;
@@ -154,7 +154,7 @@ class Status extends Handler {
 			}
 			$status = new Status_Entity();
 			$status->id = strval( $post->ID );
-			$status->created_at = new \DateTime( $post->post_date );
+			$status->created_at = new \DateTime( $post->post_date_gmt, new \DateTimeZone( 'UTC' ) );
 			$status->visibility = 'public';
 			$status->uri = get_permalink( $post->ID );
 			$status->content = $post->post_title . PHP_EOL . $post->post_content;
