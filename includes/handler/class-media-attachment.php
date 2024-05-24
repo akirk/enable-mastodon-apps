@@ -88,13 +88,20 @@ class Media_Attachment extends Handler {
 		if ( ! $attachment_id || ! \wp_attachment_is( 'video', $attachment_id ) ) {
 			return $data;
 		}
-		$thumb = \wp_get_attachment_image_src( $attachment_id );
-		if ( ! $thumb ) {
-			$thumb = array(
-				home_url( '/wp-includes/images/media/video.png' ),
-				48,
-				64,
-			);
+		$thumb = array(
+			home_url( '/wp-includes/images/media/video.png' ),
+			48,
+			64,
+		);
+		if ( \has_post_thumbnail( $attachment_id ) ) {
+			$thumbnail_id = get_post_thumbnail_id( $attachment_id );
+			$thumb = \wp_get_attachment_image_src( $thumbnail_id );
+			$thumb_meta = \wp_get_attachment_metadata( $thumbnail_id );
+			if ( isset( $thumb_meta['sizes']['medium-large'] ) ) {
+				$thumb = \wp_get_attachment_image_src( $thumbnail_id, 'medium-large' );
+			} elseif ( isset( $meta['sizes']['medium'] ) ) {
+				$thumb = \wp_get_attachment_image_src( $thumbnail_id, 'medium' );
+			}
 		}
 		$meta = \wp_get_attachment_metadata( $attachment_id );
 		if ( isset( $meta['sizes']['medium-large'] ) ) {
