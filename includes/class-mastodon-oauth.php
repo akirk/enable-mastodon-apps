@@ -170,7 +170,6 @@ class Mastodon_OAuth {
 	public function get_token() {
 		$request = Request::createFromGlobals();
 		if ( ! $this->server->verifyResourceRequest( $request ) ) {
-			$this->server->getResponse()->send();
 			return null;
 		}
 		return $this->server->getAccessTokenData( $request );
