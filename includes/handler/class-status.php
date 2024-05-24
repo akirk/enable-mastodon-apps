@@ -591,6 +591,9 @@ class Status extends Handler {
 		);
 		foreach ( $children as $post ) {
 			$post = get_post( $post->post_parent );
+			if ( $context_post_id === $context_post_id ) {
+				continue;
+			}
 			$post_id = $post->ID;
 			$args = array();
 			/**

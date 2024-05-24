@@ -307,7 +307,7 @@ class Status extends Entity {
 		$post_content = \convert_smilies( $post_content );
 		$post_content = \wp_filter_content_tags( $post_content, 'template' );
 		$post_content = \str_replace( ']]>', ']]&gt;', $post_content );
-		$post_content = \preg_replace( '/[\n\r\t]/', '', $post_content );
+		$post_content = \preg_replace( '/[\n\r\t]+/', PHP_EOL, $post_content );
 
 		return trim( $post_content );
 	}
