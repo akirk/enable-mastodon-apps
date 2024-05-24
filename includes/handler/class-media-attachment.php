@@ -22,33 +22,98 @@ class Media_Attachment extends Handler {
 	}
 
 	public function register_hooks() {
-		add_filter( 'mastodon_api_media_attachment', array( $this, 'api_media_attachment' ), 10, 2 );
+		add_filter( 'mastodon_api_media_attachment', array( $this, 'image_attachment' ), 10, 2 );
+		add_filter( 'mastodon_api_media_attachment', array( $this, 'video_attachment' ), 10, 2 );
 		add_filter( 'mastodon_api_status', array( $this, 'add_generic_image_attachments' ), 20 );
 		add_filter( 'mastodon_api_status', array( $this, 'add_generic_video_attachments' ), 20 );
 	}
 
 	/**
-	 * Media attachment handler.
+	 * Image attachment handler.
 	 *
 	 * @param null $data          The media attachment data.
 	 * @param int  $attachment_id The media attachment id.
 	 *
 	 * @return ?Media_Attachment_Entity The media attachment object.
 	 */
-	public function api_media_attachment( $data, int $attachment_id ): ?Media_Attachment_Entity {
-		if ( ! $attachment_id ) {
+	public function image_attachment( $data, int $attachment_id ): ?Media_Attachment_Entity {
+		if ( ! $attachment_id || ! \wp_attachment_is_image( $attachment_id ) ) {
 			return $data;
 		}
 		$thumb = \wp_get_attachment_image_src( $attachment_id );
 		if ( ! $thumb ) {
 			return $data;
 		}
-		$meta  = \wp_get_attachment_metadata( $attachment_id );
-		$url   = \wp_get_attachment_url( $attachment_id );
+		$meta = \wp_get_attachment_metadata( $attachment_id );
+		if ( isset( $meta['sizes']['medium_large'] ) ) {
+			$thumb = \wp_get_attachment_image_src( $attachment_id, 'medium_large' );
+		} elseif ( isset( $meta['sizes']['medium'] ) ) {
+			$thumb = \wp_get_attachment_image_src( $attachment_id, 'medium' );
+		}
+		$url = \wp_get_attachment_url( $attachment_id );
 
 		$media_attachment              = new Media_Attachment_Entity();
 		$media_attachment->id          = strval( $attachment_id );
-		$media_attachment->type        = strtok( wp_check_filetype( $meta['file'] )['type'], '/' );
+		$media_attachment->type        = 'image';
+		$media_attachment->url         = $url;
+		$media_attachment->preview_url = $thumb[0];
+		$media_attachment->description = get_the_excerpt( $attachment_id );
+		$media_attachment->meta        = array(
+			'original' => array(
+				'width'  => $meta['width'],
+				'height' => $meta['height'],
+				'size'   => $meta['width'] . 'x' . $meta['height'],
+				'aspect' => $meta['width'] / $meta['height'],
+			),
+			'small'    => array(
+				'width'  => $thumb[1],
+				'height' => $thumb[2],
+				'size'   => $thumb[1] . 'x' . $thumb[2],
+				'aspect' => $thumb[1] / $thumb[2],
+			),
+		);
+
+		return $media_attachment;
+	}
+
+	/**
+	 * Video attachment handler.
+	 *
+	 * @param null $data          The media attachment data.
+	 * @param int  $attachment_id The media attachment id.
+	 *
+	 * @return ?Media_Attachment_Entity The media attachment object.
+	 */
+	public function video_attachment( $data, int $attachment_id ): ?Media_Attachment_Entity {
+		if ( ! $attachment_id || ! \wp_attachment_is( 'video', $attachment_id ) ) {
+			return $data;
+		}
+		$thumb = array(
+			home_url( '/wp-includes/images/media/video.png' ),
+			48,
+			64,
+		);
+		if ( \has_post_thumbnail( $attachment_id ) ) {
+			$thumbnail_id = get_post_thumbnail_id( $attachment_id );
+			$thumb = \wp_get_attachment_image_src( $thumbnail_id );
+			$thumb_meta = \wp_get_attachment_metadata( $thumbnail_id );
+			if ( isset( $thumb_meta['sizes']['medium-large'] ) ) {
+				$thumb = \wp_get_attachment_image_src( $thumbnail_id, 'medium-large' );
+			} elseif ( isset( $meta['sizes']['medium'] ) ) {
+				$thumb = \wp_get_attachment_image_src( $thumbnail_id, 'medium' );
+			}
+		}
+		$meta = \wp_get_attachment_metadata( $attachment_id );
+		if ( isset( $meta['sizes']['medium-large'] ) ) {
+			$thumb = \wp_get_attachment_image_src( $attachment_id, 'medium-large' );
+		} elseif ( isset( $meta['sizes']['medium'] ) ) {
+			$thumb = \wp_get_attachment_image_src( $attachment_id, 'medium' );
+		}
+		$url = \wp_get_attachment_url( $attachment_id );
+
+		$media_attachment              = new Media_Attachment_Entity();
+		$media_attachment->id          = strval( $attachment_id );
+		$media_attachment->type        = 'video';
 		$media_attachment->url         = $url;
 		$media_attachment->preview_url = $thumb[0];
 		$media_attachment->description = get_the_excerpt( $attachment_id );
@@ -80,10 +145,11 @@ class Media_Attachment extends Handler {
 		if ( ! $status instanceof Status_Entity ) {
 			return $status;
 		}
-		if ( false === strpos( $status->content, '<!-- wp:image' ) ) {
+		if ( false === strpos( $status->content, '<img' ) ) {
 			return $status;
 		}
-		preg_match_all( '/<!-- wp:image(\s\{[^}]+\})? -->(.*?)<!-- \/wp:image -->/s', $status->content, $matches, PREG_SET_ORDER );
+
+		preg_match_all( '/<img\b([^>]+)>/', $status->content, $matches, PREG_SET_ORDER );
 		if ( empty( $matches ) ) {
 			return $status;
 		}

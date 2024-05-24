@@ -83,36 +83,34 @@ class Status extends Handler {
 				case 'core/video':
 				case 'videopress/video':
 					if ( ! empty( $block['attrs']['id'] ) ) {
-						$media_ids[] = $block['attrs']['id'];
+						$media_ids[ $block['attrs']['id'] ] = $block['innerHTML'];
 					}
 					break;
 				case 'jetpack/slideshow':
 				case 'jetpack/tiled-gallery':
 					if ( ! empty( $block['attrs']['ids'] ) ) {
-						$media_ids = array_merge( $media_ids, $block['attrs']['ids'] );
+						foreach ( $block['attrs']['ids'] as $id ) {
+							$media_ids[ $id ] = $block['innerHTML'];
+						}
 					}
 					break;
 				case 'jetpack/image-compare':
 					if ( ! empty( $block['attrs']['beforeImageId'] ) ) {
-						$media_ids[] = $block['attrs']['beforeImageId'];
+						$media_ids[ $block['attrs']['beforeImageId'] ] = $block['innerHTML'];
 					}
 					if ( ! empty( $block['attrs']['afterImageId'] ) ) {
-						$media_ids[] = $block['attrs']['afterImageId'];
+						$media_ids[ $block['attrs']['afterImageId'] ] = $block['innerHTML'];
 					}
 					break;
 			}
 
-			// Depupe.
-			$media_ids = \array_unique( $media_ids );
-
-			// Stop doing unneeded work.
 			if ( count( $media_ids ) >= $max_media ) {
 				break;
 			}
 		}
 
 		// Still need to slice it because one gallery could knock us over the limit.
-		return array_slice( $media_ids, 0, $max_media );
+		return array_slice( $media_ids, 0, $max_media, true );
 	}
 
 	/**
@@ -137,7 +135,7 @@ class Status extends Handler {
 			}
 			$status = new Status_Entity();
 			$status->id = strval( Mastodon_API::remap_comment_id( $comment->comment_ID ) );
-			$status->created_at = new \DateTime( $comment->comment_date );
+			$status->created_at = new \DateTime( $comment->comment_date_gmt, new \DateTimeZone( 'UTC' ) );
 			$status->visibility = 'public';
 			$status->uri = get_comment_link( $comment );
 			$status->content = $comment->comment_content;
@@ -156,18 +154,21 @@ class Status extends Handler {
 			}
 			$status = new Status_Entity();
 			$status->id = strval( $post->ID );
-			$status->created_at = new \DateTime( $post->post_date );
+			$status->created_at = new \DateTime( $post->post_date_gmt, new \DateTimeZone( 'UTC' ) );
 			$status->visibility = 'public';
 			$status->uri = get_permalink( $post->ID );
-			$status->content = $post->post_content;
+			$status->content = $post->post_title . PHP_EOL . $post->post_content;
 			$status->account = $account;
 			$media_attachments = $this->get_block_attachments( $post );
-			foreach ( $media_attachments as $media_id ) {
+			foreach ( $media_attachments as $media_id => $html ) {
 				$media_attachment = apply_filters( 'mastodon_api_media_attachment', null, $media_id );
 				if ( $media_attachment ) {
+					// We don't want to show the media in the content as they are attachments.
+					$status->content = str_replace( $html, '', $status->content );
 					$status->media_attachments[] = $media_attachment;
 				}
 			}
+			$status->content = trim( wp_kses_post( $status->content ) );
 		}
 
 		return $status;
@@ -282,10 +283,22 @@ class Status extends Handler {
 					return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Media not found', array( 'status' => 400 ) );
 				}
 				$attachment = \wp_get_attachment_metadata( $media_id );
-				$post_data['post_content'] .= PHP_EOL;
-				$post_data['post_content'] .= '<!-- wp:image -->';
-				$post_data['post_content'] .= '<p><img src="' . esc_url( wp_get_attachment_url( $media_id ) ) . '" width="' . esc_attr( $attachment['width'] ) . '"  height="' . esc_attr( $attachment['height'] ) . '" class="size-full" /></p>';
-				$post_data['post_content'] .= '<!-- /wp:image -->';
+				if ( \wp_attachment_is( 'image', $media_id ) ) {
+					$post_data['post_content'] .= PHP_EOL;
+					$post_data['post_content'] .= '<!-- wp:image ' . json_encode(
+						array(
+							'id'       => $media_id,
+							'sizeSlug' => 'large',
+						)
+					) . ' -->' . PHP_EOL;
+					$post_data['post_content'] .= '<figure class="wp-block-image"><img src="' . esc_url( wp_get_attachment_url( $media_id ) ) . '" width="' . esc_attr( $attachment['width'] ) . '" height="' . esc_attr( $attachment['height'] ) . '" class="wp-image-' . esc_attr( $media_id ) . '"/></figure>' . PHP_EOL;
+					$post_data['post_content'] .= '<!-- /wp:image -->' . PHP_EOL;
+				} elseif ( \wp_attachment_is( 'video', $media_id ) ) {
+					$post_data['post_content'] .= PHP_EOL;
+					$post_data['post_content'] .= '<!-- wp:video ' . json_encode( array( 'id' => $media_id ) ) . '  -->' . PHP_EOL;
+					$post_data['post_content'] .= '<figure class="wp-block-video"><video controls src="' . esc_url( wp_get_attachment_url( $media_id ) ) . '" width="' . esc_attr( $attachment['width'] ) . '" height="' . esc_attr( $attachment['height'] ) . '" /></figure>' . PHP_EOL;
+					$post_data['post_content'] .= '<!-- /wp:video -->' . PHP_EOL;
+				}
 			}
 		}
 
