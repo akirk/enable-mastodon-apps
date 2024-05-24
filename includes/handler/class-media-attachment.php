@@ -33,9 +33,9 @@ class Media_Attachment extends Handler {
 	 * @param null $data          The media attachment data.
 	 * @param int  $attachment_id The media attachment id.
 	 *
-	 * @return Media_Attachment_Entity The media attachment object.
+	 * @return ?Media_Attachment_Entity The media attachment object.
 	 */
-	public function api_media_attachment( $data, int $attachment_id ): Media_Attachment_Entity {
+	public function api_media_attachment( $data, int $attachment_id ): ?Media_Attachment_Entity {
 		if ( ! $attachment_id ) {
 			return $data;
 		}
