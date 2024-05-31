@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Mastodon API Tester</title>
+	<style>
+		body {
+			font-family: sans-serif;
+		}
+
+		a:any-link {
+			color: #098658;
+		}
+
+		p.note {
+			font-size: .9em;
+		}
+
+		p.note,
+		span.note a:any-link {
+			color: #999;
+		}
+
+		div.api-endpoint {
+			cursor: pointer;
+			color: blue;
+			text-decoration: underline;
+		}
+
+		#api-endpoints>div {
+			font-weight: bold;
+			margin-bottom: 10px;
+		}
+
+		summary {
+			cursor: pointer;
+			font-size: .9em;
+		}
+
+		#detailsblock,
+		#api-endpoints {
+			display: none;
+		}
+
+		details div {
+			border-left: 3px solid #aaa;
+			padding: 1em;
+			margin-bottom: 1em;
+			line-height: 2.2em;
+		}
+
+		label {
+			display: inline-block;
+			width: 11em;
+			line-height: 1.5em;
+		}
+
+		#save-request-log {
+			display: none;
+			font-size: .7em;
+			font-weight: normal;
+		}
+
+		#request-log {
+			margin-top: 20px;
+			padding: 10px;
+			border: 1px solid #ccc;
+			background-color: #f9f9f9;
+			border-radius: 4px;
+		}
+
+		#authorize {
+			margin: 1em 0;
+			padding: .5em 1em;
+			font-size: 1.1em;
+			background-color: #098658;
+			color: white;
+			border-radius: 5px;
+		}
+
+		#authorization-status::before {
+			content: 'Authorization Status: ';
+		}
+
+		#authorization-status {
+			border: 1px solid #aaa;
+			border-radius: 3px;
+			padding: 1em;
+			margin: 1em 0;
+			display: none;
+		}
+
+		img.hover {
+			display: none;
+			position: absolute;
+		}
+
+		a:hover img.hover {
+			display: block;
+		}
+
+		tt.timestamp,
+		tt.response-headers,
+		tt.meta {
+			color: #999;
+		}
+
+		tt#access-token-meta {
+			margin-left: 1em;
+			line-height: 1;
+		}
+
+		tt {
+			white-space: pre;
+			display: block;
+			margin-bottom: 1em;
+		}
+
+		tt:last-child {
+			margin-bottom: 0;
+		}
+
+		input {
+			font-size: .9em;
+			padding: .3em;
+			border-radius: 2px;
+			border: 1px solid #aaa;
+		}
+
+		.header-key {
+			font-weight: bold;
+		}
+
+		.header-value {}
+
+		.path {
+			color: #098658;
+		}
+
+		.number {
+			color: #098658;
+		}
+
+		.string {
+			color: #a31515;
+		}
+
+		.boolean {
+			color: #0c9fc7;
+		}
+
+		.null {
+			color: #bf6630;
+		}
+
+		.key {
+			color: #000000;
+			font-weight: bold;
+		}
+
+		.string-image {
+			position: relative;
+		}
+
+		.remove-iframe {
+			float: right;
+		}
+	</style>
+</head>
+
+<body>
+	<a href="https://akirk.github.io/mastodon-api-tester/" target="_blank" class="remove-iframe">Open in new tab</a>
+	<h1>Mastodon API Tester</h1>
+	<p class="note">Test your <a href="https://wordpress.org/plugins/enable-mastodon-apps/">Enable Mastodon Apps
+			WordPress plugin</a> (or any other Mastodon instance). You can also try the <a
+			href="https://akirk.github.io/mastodon-api-tester/">standalone
+			version</a>, or the <a href="https://github.com/akirk/mastodon-api-tester">Github project</a>.</p>
+
+	<div id="authorization-status"></div>
+	<button id="authorize">Start the Authorizion Flow</button>
+
+	<details id="client-data">
+		<summary>Edit Settings</summary>
+		<div>
+			<label for="base-url">Mastodon Server URL</label>
+			<input type="url" size="40" id="base-url" value="" placeholder="Enter the URL of your Mastodon API instance"
+				required /><br />
+
+			<label for="client-name">Test Client Name</label>
+			<input type="text" size="40" id="client-name" value="Mastodon API Tester" required /><br />
+
+			<label for="client-scopes">Client Scopes</label>
+			<input type="text" size="40" id="client-scopes" value="read write follow" required /><br />
+
+			<label for="token-scopes">Token Scopes</label>
+			<input type="text" size="40" id="token-scopes" value="read write follow" required /><br />
+			<br />
+			<input type="reset" id="delete-local" value="Clear all data">
+		</div>
+	</details>
+
+	<details id="detailsblock">
+		<summary>Authorization Data</summary>
+		<div id="authorizaton-data">
+			<label for="redirect-uri">Redirect URI</label>
+			<input type="text" size="40" id="redirect-uri">
+			<br />
+
+			<label for="client-id">Client ID</label>
+			<input type="text" size="40" id="client-id">
+			<br />
+
+			<label for="client-secret">Client Secret</label>
+			<input type="text" size="40" id="client-secret">
+			<button id="get-access-token">Get New Access Token</button>
+			<br />
+
+			<label for="access-token">Access Token</label>
+			<input type="text" size="40" id="access-token">
+			<tt id="access-token-meta"></tt>
+			<br />
+
+			<input type="reset" id="reset"> <input type="reset" id="delete-local" value="Clear all data">
+		</div>
+	</details>
+
+	<div id="api-endpoints">
+		<h2>Endpoints</h2>
+		<p>Clicking these will send a request to the API and display the response in the box below.</p>
+		<div class="api-endpoint">/api/v1/accounts/verify_credentials</div>
+		<div class="api-endpoint">/api/v1/accounts/relationships</div>
+		<div class="api-endpoint">/api/v1/timelines/home</div>
+		<div class="api-endpoint">/api/v1/accounts/1/statuses</div>
+		<h2>Endpoints with parameters</h2>
+		<div>
+			<details>
+				<summary>/api/v1/accounts/search</summary>
+				<label for="search-text">Search: </label> <input type="text" id="search-text" name="q" />
+				<button class="api-endpoint" data-endpoint="/api/v1/accounts/search">Search</button>
+			</details>
+		</div>
+		<div>
+			<details>
+				<summary>/api/v2/search</summary>
+				<label for="search-query">Search: </label> <input type="text" id="search-query" name="q" />
+				<button class="api-endpoint" data-endpoint="/api/v2/search">Search</button>
+			</details>
+		</div>
+	</div>
+	<h2>Request Log <a href="data:" id="save-request-log">Save</a></h2>
+	<div id="request-log"></div>
+
+	<script>
+		function logRequest(data) {
+			const div = document.createElement('div');
+			const timestamp = document.createElement('tt');
+			timestamp.className = 'timestamp';
+			timestamp.textContent = '-- Request at ' + new Date().toISOString();
+			div.appendChild(timestamp);
+			const request = document.createElement('tt');
+			request.className = 'request';
+			div.appendChild(request);
+			const meta = document.createElement('tt');
+			meta.className = 'meta';
+			div.appendChild(meta);
+			const responseHeaders = document.createElement('tt');
+			responseHeaders.className = 'response-headers';
+			div.appendChild(responseHeaders);
+			const responseEl = document.createElement('tt');
+			responseEl.className = 'response';
+			div.appendChild(responseEl);
+			let html = '<span class="method">' + htmlescape(data.method || 'GET') + '</span> <span class="path">' + htmlescape(data.endpoint) + '</span><br/>';
+			html += '<span class="header-key">Server</span>: <span class="header-value">' + htmlescape(data.baseURL) + '</span><br/>';
+			if (data.accessToken) {
+				html += '<span class="header-key">Authorization</span>: <span class="header-value">Bearer ' + htmlescape(data.accessToken) + '</span><br/>'
+			};
+			html += '<span class="header-key">Content-Type</span>: <span class="header-value">application/json</span><br/>';
+			html += '<span class="header-key">Accept</span>: <span class="header-value">application/json</span>';
+			if (data.body) {
+				html += '<br/><tt>' + jsonSyntaxHighlight(data.body)
+			};
+			request.innerHTML = html;
+			const requestLog = document.getElementById('request-log');
+			if (requestLog.childNodes.length) {
+				requestLog.insertBefore(div, requestLog.childNodes[0]);
+			} else {
+				requestLog.appendChild(div);
+			}
+
+			const errorReceived = function (data) {
+				clearInterval(intervalId);
+				const currentTime = new Date().getTime();
+				const seconds = ((currentTime - startTime) / 1000).toFixed(1);
+				meta.textContent = `!! Response received after ${seconds} seconds`;
+
+				responseEl.textContent = data;
+				updateSaveLink();
+				return data;
+			}
+
+			const responseReceived = function (data) {
+				clearInterval(intervalId);
+				const currentTime = new Date().getTime();
+				const seconds = ((currentTime - startTime) / 1000).toFixed(1);
+				meta.textContent = `-- Response received after ${seconds} seconds`;
+
+				responseEl.innerHTML = jsonSyntaxHighlight(data);
+				updateSaveLink();
+				return data;
+			}
+
+			const startTime = new Date().getTime();
+
+			const intervalId = setInterval(() => {
+				const currentTime = new Date().getTime();
+				const seconds = ((currentTime - startTime) / 1000).toFixed(1);
+				meta.textContent = `-- Waiting for response (${seconds} seconds)`;
+			}, 100);
+
+			const receivedHeaders = function (response) {
+				if (typeof response === 'string') {
+					throw new Error(response);
+				}
+				let headers = 'HTTP Status: ' + response.status + "\n";
+				for (const [name, value] of response.headers) {
+					headers += '<span class="header-key">' + htmlescape(name) + '</span>: ';
+					headers += '<span class="header-value">' + htmlescape(value) + '</span><br/>';
+				}
+				responseHeaders.innerHTML = headers;
+				try {
+					return response.json();
+				} catch (error) {
+					// Handle the error when the response is not valid JSON
+					console.error('Error parsing JSON:', error);
+					// Return a rejected promise or handle the error in any other way
+					return Promise.reject(error);
+				}
+			}
+
+			const updateSaveLink = function () {
+				const a = document.getElementById('save-request-log');
+				const currentDate = new Date();
+				a.setAttribute('download', 'mastodon-api-tester-log_' + currentDate.getFullYear() + '-' + (currentDate.getMonth() + 1) + '-' + currentDate.getDate() + '_' + currentDate.getHours() + '-' + currentDate.getMinutes() + '-' + currentDate.getSeconds() + '.txt');
+				a.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(requestLog.innerText);
+				a.style.display = 'inline';
+			};
+
+			return { receivedHeaders, responseReceived, errorReceived };
+		}
+		function createApp(url, client_name) {
+			const baseURL = url.replace(/\/+$/, '');
+			const method = 'POST';
+			const body = {
+				client_name,
+				redirect_uris: window.location.href,
+				scopes: document.getElementById('client-scopes').value,
+			};
+			localStorage.setItem('baseURL', baseURL);
+			localStorage.setItem('redirectURI', window.location.href);
+			localStorage.setItem('clientScopes', document.getElementById('client-scopes').value);
+			localStorage.setItem('tokenScopes', document.getElementById('token-scopes').value);
+			document.getElementById('redirect-uri').value = window.location.href;
+			const endpoint = '/api/v1/apps';
+			const log = logRequest({ baseURL, endpoint, method, body })
+			fetch(`${baseURL}${endpoint}`, {
+				method,
+				headers: {
+					'Content-Type': 'application/json',
+					'Accept': 'application/json'
+				},
+				body: JSON.stringify(body)
+			})
+				.catch(log.errorReceived)
+				.then(log.receivedHeaders)
+				.then(log.responseReceived)
+				.then(data => {
+					if (!data) {
+						return;
+					}
+					if (data.error) {
+						alert('Unable to create the app: ' + data.error_description);
+						return;
+					}
+					localStorage.setItem('clientID', data.client_id);
+					document.getElementById('client-id').value = data.client_id;
+					localStorage.setItem('clientSecret', data.client_secret);
+					document.getElementById('client-secret').value = data.client_secret;
+					localStorage.setItem('initialRequestLog', document.getElementById('request-log').innerHTML);
+					setTimeout(function () { authorizeUser(baseURL, data.client_id); }, 1500);
+				})
+				.catch(log.errorReceived);
+		}
+
+		function isAuthorized() {
+			// document.getElementById('detailsblock').insertBefore(document.getElementById('client-data'), document.getElementById('authorizaton-data'));
+			document.getElementById('api-endpoints').style.display = 'block';
+			document.getElementById('authorization-status').style.display = 'block';
+			document.getElementById('detailsblock').style.display = 'block';
+			document.getElementById('authorization-status').textContent = 'Authorized.';
+			document.getElementById('authorize').textContent = 'Re-Authorize';
+		}
+
+		function authorizeUser(baseURL, clientID) {
+			const redirectURI = encodeURIComponent(localStorage.getItem('redirectURI'));
+			const tokenScopes = encodeURIComponent(localStorage.getItem('tokenScopes'));
+			const authURL = `${baseURL}/oauth/authorize?client_id=${clientID}&redirect_uri=${redirectURI}&response_type=code&scope=${tokenScopes}`;
+			window.location.href = authURL;
+		}
+
+		function getAccessToken(baseURL, clientID, clientSecret, code) {
+			const method = 'POST';
+			const endpoint = '/oauth/token';
+			const body = {
+				client_id: clientID,
+				client_secret: clientSecret,
+				redirect_uri: localStorage.getItem('redirectURI'),
+				code: code,
+				grant_type: 'authorization_code'
+			};
+			const log = logRequest({ method, baseURL, endpoint, body });
+			fetch(`${baseURL}${endpoint}`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Accept': 'application/json'
+				},
+				body: JSON.stringify(body)
+			})
+				.then(log.receivedHeaders)
+				.then(log.responseReceived)
+				.then(data => {
+					const urlParams = new URLSearchParams(window.location.search);
+					urlParams.delete('code');
+					history.replaceState(null, null, window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : ''));
+
+					if (!data.access_token) {
+						console.error('Error getting access token:', data);
+						return;
+					}
+					let currentTime = new Date();
+					currentTime.setSeconds(currentTime.getSeconds() + data.expires_in);
+					data.expires_at = currentTime.toLocaleString();
+					currentTime = new Date(data.created_at * 1000);
+					data.created_at = currentTime.toLocaleString();
+
+					localStorage.setItem('accessTokenMeta', JSON.stringify(data, null, "\n"));
+					localStorage.setItem('accessToken', data.access_token);
+					document.getElementById('access-token').value = data.access_token;
+					document.getElementById('access-token-meta').innerHTML = jsonSyntaxHighlight(localStorage.getItem('accessTokenMeta'));
+					isAuthorized();
+
+				})
+				.catch(log.errorReceived);
+		}
+
+		document.getElementById('base-url').addEventListener('keypress', function (event) {
+			if (event.keyCode === 13) {
+				document.getElementById('authorize').click();
+			}
+		});
+		document.getElementById('client-name').addEventListener('keypress', function (event) {
+			if (event.keyCode === 13) {
+				document.getElementById('authorize').click();
+			}
+		});
+		document.getElementById('authorize').addEventListener('click', function () {
+			const baseURL = document.getElementById('base-url');
+			if (! /^https?:\/\//.test(baseURL.value)) {
+				baseURL.value = 'https://' + baseURL.value;
+			}
+			if (!baseURL.checkValidity()) {
+				document.getElementById('client-data').setAttribute('open', 'open');
+				baseURL.reportValidity();
+				return;
+			}
+			const clientName = document.getElementById('client-name');
+			if (!clientName.checkValidity()) {
+				clientName.reportValidity();
+				return;
+			}
+			const clientID = document.getElementById('client-id').value;
+			if (!clientID) {
+				return createApp(baseURL.value, clientName.value);
+			}
+
+			return authorizeUser(baseURL.value, clientID);
+		});
+
+		document.getElementById('get-access-token').addEventListener('click', function () {
+			const baseURL = document.getElementById('base-url').value;
+			const clientID = document.getElementById('client-id').value;
+			authorizeUser(baseURL, clientID);
+		});
+
+		document.getElementById('delete-local').addEventListener('click', function () {
+			localStorage.clear();
+			location.reload();
+		});
+
+
+		document.getElementById('reset').addEventListener('click', function () {
+			document.getElementById('client-data').style.display = 'block';
+			document.getElementById('client-id').value = '';
+			document.getElementById('client-secret').value = '';
+			document.getElementById('access-token').value = '';
+			document.getElementById('access-token-meta').textContent = '';
+		});
+
+		document.addEventListener('DOMContentLoaded', function () {
+			const removeIframe = document.querySelector('.remove-iframe');
+			if (removeIframe) {
+				if (top === self) {
+					removeIframe.style.display = 'none';
+				} else {
+					removeIframe.style.display = 'block';
+					removeIframe.href = window.location.href;
+				}
+			}
+			const urlParams = new URLSearchParams(window.location.search);
+			if (urlParams.get('error')) {
+				document.getElementById('authorization-status').style.display = 'block';
+				document.getElementById('authorization-status').textContent = urlParams.get('error_description') + ' (error: ' + urlParams.get('error') + ')';
+
+				urlParams.delete('error_description');
+				urlParams.delete('error');
+				history.replaceState(null, null, window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : ''));
+			}
+
+			const requestLog = document.getElementById('request-log');
+			const initialRequestLog = localStorage.getItem('initialRequestLog');
+			requestLog.innerHTML = initialRequestLog;
+			localStorage.removeItem('initialRequestLog');
+
+			const timestamp = document.createElement('tt');
+			timestamp.className = 'timestamp';
+			timestamp.textContent = '-- Page loaded at ' + new Date().toISOString();
+			if (requestLog.childNodes.length) {
+				requestLog.insertBefore(timestamp, requestLog.childNodes[0]);
+			} else {
+				requestLog.appendChild(timestamp);
+			}
+
+			const baseURL = localStorage.getItem('baseURL') || urlParams.get('url') || '';
+			const redirectURI = localStorage.getItem('redirectURI');
+			const clientID = localStorage.getItem('clientID');
+			const clientSecret = localStorage.getItem('clientSecret');
+			const clientScopes = localStorage.getItem('clientScopes') || 'read write follow';
+			const tokenScopes = localStorage.getItem('tokenScopes') || 'read write follow';
+			const accessToken = localStorage.getItem('accessToken');
+			document.getElementById('base-url').value = baseURL;
+			document.getElementById('redirect-uri').value = redirectURI;
+			document.getElementById('client-id').value = clientID;
+			document.getElementById('client-secret').value = clientSecret;
+			document.getElementById('client-scopes').value = clientScopes;
+			document.getElementById('token-scopes').value = tokenScopes;
+			document.getElementById('access-token').value = accessToken;
+			document.getElementById('access-token-meta').innerHTML = jsonSyntaxHighlight(localStorage.getItem('accessTokenMeta'));
+			if (baseURL && clientID && clientSecret) {
+				if (urlParams.get('code')) {
+					return getAccessToken(baseURL, clientID, clientSecret, urlParams.get('code'));
+				}
+			}
+
+			if (accessToken) {
+				isAuthorized();
+				return;
+			}
+
+		});
+		function htmlescape(text) {
+			return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+		}
+
+
+		document.addEventListener("mouseover", (event) => {
+			if (event.target.classList.contains('display-image')) {
+				const link = event.target;
+
+				const img = document.createElement("img");
+				img.className = 'hover'
+				img.src = link.href;
+
+				link.appendChild(img);
+			}
+		});
+
+		function jsonSyntaxHighlight(json) {
+			if (typeof json !== 'string') {
+				json = JSON.stringify(json, undefined, 2);
+			}
+
+			let displayImage = '';
+			return htmlescape(json).replace(
+				/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(\.\d+)?([eE][+-]?\d+)?)/g,
+				function (match) {
+					let cls = 'number';
+					if (/^"/.test(match)) {
+						if (/:$/.test(match)) {
+							cls = 'key';
+							displayImage = /^"(avatar|header)(_static)?":$/.test(match) ? ' display-image' : '';
+						} else {
+							cls = 'string';
+							if (/^"(https?:\/\/[^"]+)"$/.test(match)) {
+								return `<a href="${match.slice(1, -1)}" class="url${displayImage}" target="_blank">${match}</a>`;
+							}
+						}
+					} else if (/true|false/.test(match)) {
+						cls = 'boolean';
+					} else if (/null/.test(match)) {
+						cls = 'null';
+					}
+					return '<span class="' + cls + '">' + match + '</span>';
+				}
+			);
+		}
+
+		document.addEventListener('click', function (event) {
+			if (event.target.classList.contains('api-endpoint')) {
+				const baseURL = document.getElementById('base-url').value.replace(/\/+$/, '');
+				let endpoint = event.target.dataset.endpoint || event.target.textContent;
+				const method = event.target.dataset.method || 'GET';
+				const accessToken = localStorage.getItem('accessToken');
+				const data = {
+					method,
+					headers: {
+						'Authorization': `Bearer ${accessToken}`,
+						'Content-Type': 'application/json',
+						'Accept': 'application/json'
+					}
+				};
+				if (event.target.tagName === 'BUTTON') {
+					if ('POST' === method) {
+						data.body = {}
+					}
+					const inputs = event.target.closest('details').querySelectorAll('input,select');
+					const params = new URLSearchParams();
+					for (let i = 0; i < inputs.length; i++) {
+						if (inputs[i].name) {
+							if ('POST' === method) {
+								body[inputs[i].name] = inputs[i].value;
+							} else {
+								params.set(inputs[i].name, inputs[i].value);
+							}
+						}
+					}
+					if ('POST' === method) {
+						data.body = JSON.stringify(body);
+					} else {
+						endpoint += '?' + params.toString();
+					}
+				}
+
+				const log = logRequest({ method, endpoint, baseURL, accessToken });
+				fetch(`${baseURL}${endpoint}`, data)
+					.then(log.receivedHeaders)
+					.then(log.responseReceived)
+					.catch(log.errorReceived);
+			}
+		});
+	</script>
+</body>
+
+</html>
