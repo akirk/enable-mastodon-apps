@@ -89,7 +89,7 @@ class Mastodon_App {
 	public function get_post_formats() {
 		$query_args = $this->get_query_args();
 		if ( ! isset( $query_args['post_formats'] ) || ! is_array( $query_args['post_formats'] ) ) {
-			return get_option( 'mastodon_api_default_post_formats', array( 'status' ) );
+			return get_option( 'mastodon_api_default_post_formats', array() );
 		}
 
 		return $query_args['post_formats'];
@@ -576,7 +576,7 @@ class Mastodon_App {
 			'website'
 		);
 
-		$post_formats = get_option( 'mastodon_api_default_post_formats', array( 'status' ) );
+		$post_formats = get_option( 'mastodon_api_default_post_formats', array() );
 		$post_formats = apply_filters( 'mastodon_api_new_app_post_formats', $post_formats, $app_metadata );
 
 		$term_id = $term['term_id'];

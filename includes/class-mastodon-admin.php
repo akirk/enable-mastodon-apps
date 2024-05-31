@@ -54,6 +54,82 @@ class Mastodon_Admin {
 			return;
 		}
 
+		$tab = $_GET['tab'] ?? 'welcome';
+		switch ( $tab ) {
+			case 'settings':
+				$this->process_admin_settings_page();
+				break;
+			case 'debug':
+				$this->process_admin_debug_page();
+				break;
+			case 'registered-apps':
+				$this->process_admin_registered_apps_page();
+				break;
+		}
+	}
+
+	public function admin_page() {
+		$tab = $_GET['tab'] ?? 'welcome';
+		switch ( $tab ) {
+			case 'welcome':
+				$this->admin_welcome_page();
+				break;
+			case 'settings':
+				$this->admin_settings_page();
+				break;
+			case 'tester':
+				$this->admin_tester_page();
+				break;
+			case 'debug':
+				$this->admin_debug_page();
+				break;
+			case 'registered-apps':
+				$this->admin_registered_apps_page();
+				break;
+		}
+	}
+
+	public function admin_welcome_page() {
+		load_template(
+			__DIR__ . '/../templates/welcome.php',
+			true,
+			array(
+				'instance_url' => preg_replace( '#^https?://([a-z0-9.-:]+)/?$#i', '$1', home_url() ),
+			)
+		);
+	}
+
+	public function process_admin_settings_page() {
+		if ( isset( $_POST['mastodon_api_enable_logins'] ) ) {
+			delete_option( 'mastodon_api_disable_logins' );
+		} else {
+			update_option( 'mastodon_api_disable_logins', true );
+		}
+	}
+	public function admin_settings_page() {
+		load_template( __DIR__ . '/../templates/settings.php', true, array() );
+	}
+
+	public function process_admin_debug_page() {
+		if ( isset( $_POST['mastodon_api_debug_mode'] ) ) {
+			update_option( 'mastodon_api_debug_mode', time() + 5 * MINUTE_IN_SECONDS );
+		} else {
+			delete_option( 'mastodon_api_debug_mode' );
+		}
+		if ( isset( $_POST['mastodon_api_auto_app_reregister'] ) ) {
+			update_option( 'mastodon_api_auto_app_reregister', true );
+		} else {
+			delete_option( 'mastodon_api_auto_app_reregister' );
+		}}
+	public function admin_debug_page() {
+		load_template( __DIR__ . '/../templates/debug.php', true, array() );
+	}
+
+	public function admin_tester_page() {
+		load_template( __DIR__ . '/../templates/tester.php', true, array() );
+	}
+
+	public function process_admin_registered_apps_page() {
 		if ( isset( $_POST['delete-code'] ) ) {
 			$deleted = $this->oauth->get_code_storage()->expireAuthorizationCode( $_POST['delete-code'] );
 			add_settings_error(
@@ -250,43 +326,6 @@ class Mastodon_Admin {
 			);
 			return;
 		}
-
-		if ( isset( $_POST['mastodon_api_enable_logins'] ) ) {
-			delete_option( 'mastodon_api_disable_logins' );
-		} else {
-			update_option( 'mastodon_api_disable_logins', true );
-		}
-
-		if ( isset( $_POST['mastodon_api_auto_app_reregister'] ) ) {
-			update_option( 'mastodon_api_auto_app_reregister', true );
-		} else {
-			delete_option( 'mastodon_api_auto_app_reregister' );
-		}
-
-		if ( isset( $_POST['mastodon_api_debug_mode'] ) ) {
-			update_option( 'mastodon_api_debug_mode', time() + 5 * MINUTE_IN_SECONDS );
-		} else {
-			delete_option( 'mastodon_api_debug_mode' );
-		}
-
-		if ( isset( $_POST['mastodon_api_default_post_formats'] ) && is_array( $_POST['mastodon_api_default_post_formats'] ) ) {
-			$default_post_formats = array_filter(
-				$_POST['mastodon_api_default_post_formats'],
-				function ( $post_format ) {
-					if ( ! in_array( $post_format, get_post_format_slugs(), true ) ) {
-						return false;
-					}
-					return true;
-				}
-			);
-
-			if ( ! empty( $default_post_formats ) ) {
-				update_option( 'mastodon_api_default_post_formats', $default_post_formats );
-			} else {
-				delete_option( 'mastodon_api_default_post_formats' );
-			}
-		}
-
 		if ( isset( $_POST['app_post_formats'] ) && is_array( $_POST['app_post_formats'] ) ) {
 			foreach ( $_POST['app_post_formats'] as $client_id => $post_formats ) {
 				$post_formats = array_filter(
@@ -305,51 +344,7 @@ class Mastodon_Admin {
 		}
 	}
 
-	public function admin_page() {
-		$tab = $_GET['tab'] ?? 'welcome';
-		switch ( $tab ) {
-			case 'welcome':
-				$this->admin_welcome_page();
-				break;
-			case 'settings':
-				$this->admin_settings_page();
-				break;
-			case 'tester':
-				$this->admin_tester_page();
-				break;
-			case 'debug':
-				$this->admin_debug_page();
-				break;
-			case 'registered-apps':
-				$this->admin_registered_apps_page();
-				break;
-		}
-	}
-
-	public function admin_welcome_page() {
-		load_template(
-			__DIR__ . '/../templates/welcome.php',
-			true,
-			array(
-				'instance_url' => preg_replace( '#^https?://([a-z0-9.-:]+)/?$#i', '$1', home_url() ),
-			)
-		);
-	}
-
-	public function admin_settings_page() {
-		load_template( __DIR__ . '/../templates/settings.php', true, array() );
-	}
-
-	public function admin_debug_page() {
-		load_template( __DIR__ . '/../templates/debug.php', true, array() );
-	}
-
-	public function admin_tester_page() {
-		load_template( __DIR__ . '/../templates/tester.php', true, array() );
-	}
-
 	public function admin_registered_apps_page() {
-
 		load_template(
 			__DIR__ . '/../templates/registered-apps.php',
 			true,
