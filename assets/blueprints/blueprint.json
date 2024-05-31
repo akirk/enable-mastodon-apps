@@ -1,0 +1,26 @@
+{
+  "landingPage": "/wp-admin/admin.php?page=enable-mastodon-apps",
+  "steps": [
+    {
+      "step": "login",
+      "username": "admin",
+      "password": "password"
+    },
+    {
+      "step": "setSiteOptions",
+      "options": {
+        "permalink_structure": "/%year%/%monthnum%/%day%/%postname%/"
+      }
+    },
+    {
+      "step": "installPlugin",
+      "pluginZipFile": {
+        "resource": "wordpress.org/plugins",
+        "slug": "enable-mastodon-apps"
+      },
+      "options": {
+        "activate": true
+      }
+    }
+  ]
+}
