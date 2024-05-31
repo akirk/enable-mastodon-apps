@@ -305,20 +305,6 @@ class Mastodon_Admin {
 		}
 	}
 
-	private function post_format_select( $name, $selected = array() ) {
-		?>
-		<select name="<?php echo esc_attr( $name ); ?>[]" id="<?php echo esc_attr( $name ); ?>" size="10" multiple>
-		<?php
-		foreach ( get_post_format_slugs() as $format ) {
-			?>
-				<option value="<?php echo esc_attr( $format ); ?>" <?php selected( in_array( $format, $selected, true ) ); ?>><?php echo esc_html( $format ); ?></option>
-				<?php
-		}
-		?>
-		</select>
-		<?php
-	}
-
 	public function admin_page() {
 		$tab = $_GET['tab'] ?? 'welcome';
 		switch ( $tab ) {
@@ -327,6 +313,9 @@ class Mastodon_Admin {
 				break;
 			case 'settings':
 				$this->admin_settings_page();
+				break;
+			case 'tester':
+				$this->admin_tester_page();
 				break;
 			case 'debug':
 				$this->admin_debug_page();
@@ -338,14 +327,11 @@ class Mastodon_Admin {
 	}
 
 	public function admin_welcome_page() {
-		$plugins = get_plugins();
-		$activitypub_installed = isset( $plugins['activitypub/activitypub.php'] );
-
 		load_template(
 			__DIR__ . '/../templates/welcome.php',
 			true,
 			array(
-				'activitypub_installed' => $activitypub_installed,
+				'instance_url' => preg_replace( '#^https?://([a-z0-9.-:]+)/?$#i', '$1', home_url() ),
 			)
 		);
 	}
@@ -358,16 +344,19 @@ class Mastodon_Admin {
 		load_template( __DIR__ . '/../templates/debug.php', true, array() );
 	}
 
+	public function admin_tester_page() {
+		load_template( __DIR__ . '/../templates/tester.php', true, array() );
+	}
+
 	public function admin_registered_apps_page() {
 
 		load_template(
 			__DIR__ . '/../templates/registered-apps.php',
 			true,
 			array(
-				'codes'      => OAuth2\Authorization_Code_Storage::getAll(),
-				'tokens'     => OAuth2\Access_Token_Storage::getAll(),
-				'apps'       => Mastodon_App::get_all(),
-				'rest_nonce' => wp_create_nonce( 'wp_rest' ),
+				'codes'  => OAuth2\Authorization_Code_Storage::getAll(),
+				'tokens' => OAuth2\Access_Token_Storage::getAll(),
+				'apps'   => Mastodon_App::get_all(),
 			)
 		);
 	}

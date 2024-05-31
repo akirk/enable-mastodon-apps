@@ -201,6 +201,28 @@ summary {
 	cursor: pointer;
 }
 
-.settings_page_enable-mastodon-apps td:last-child {
+.settings_page_enable-mastodon-apps table.widefat td:last-child {
 	white-space: nowrap;
+}
+
+.enable-mastodon-apps-settings.enable-mastodon-apps-registered-apps-page {
+	max-width: 80%;
+}
+
+.enable-mastodon-apps-settings h2 {
+	font-size: 1.5em;
+	text-align: center;
+}
+
+.enable-mastodon-apps-settings div.box h2 {
+	text-align: left;
+}
+
+.enable-mastodon-apps-settings .mastodon-api-tester {
+	font-size: 1.2em;
+}
+
+.enable-mastodon-apps-tester-page iframe {
+	max-width: 760px;
+	margin: 0 auto;
 }

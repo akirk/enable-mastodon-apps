@@ -163,10 +163,15 @@
 		.string-image {
 			position: relative;
 		}
+
+		.remove-iframe {
+			float: right;
+		}
 	</style>
 </head>
 
 <body>
+	<a href="https://akirk.github.io/mastodon-api-tester/" target="_blank" class="remove-iframe">Open in new tab</a>
 	<h1>Mastodon API Tester</h1>
 	<p class="note">Test your <a href="https://wordpress.org/plugins/enable-mastodon-apps/">Enable Mastodon Apps
 			WordPress plugin</a> (or any other Mastodon instance). You can also try the <a
@@ -374,6 +379,10 @@
 					if (!data) {
 						return;
 					}
+					if (data.error) {
+						alert('Unable to create the app: ' + data.error_description);
+						return;
+					}
 					localStorage.setItem('clientID', data.client_id);
 					document.getElementById('client-id').value = data.client_id;
 					localStorage.setItem('clientSecret', data.client_secret);
@@ -500,6 +509,15 @@
 		});
 
 		document.addEventListener('DOMContentLoaded', function () {
+			const removeIframe = document.querySelector('.remove-iframe');
+			if (removeIframe) {
+				if (top === self) {
+					removeIframe.style.display = 'none';
+				} else {
+					removeIframe.style.display = 'block';
+					removeIframe.href = window.location.href;
+				}
+			}
 			const urlParams = new URLSearchParams(window.location.search);
 			if (urlParams.get('error')) {
 				document.getElementById('authorization-status').style.display = 'block';

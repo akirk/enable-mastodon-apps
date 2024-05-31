@@ -6,15 +6,16 @@
 		'active' => 'debug',
 	)
 );
-
+$rest_nonce = wp_create_nonce( 'wp_rest' );
 ?>
 
-<div class="activitypub-settings activitypub-settings-page hide-if-no-js">
+<div class="enable-mastodon-apps-settings enable-mastodon-apps-debug-page">
 <form method="post">
 	<?php wp_nonce_field( 'enable-mastodon-apps' ); ?>
 	<table class="form-table">
 		<tbody>
 			<tr>
+				<th scope="row"><?php esc_html_e( 'Login Fix', 'enable-mastodon-apps' ); ?></th>
 				<td>
 					<fieldset>
 						<label for="mastodon_api_auto_app_reregister">
@@ -59,9 +60,12 @@
 
 	<?php
 	if ( get_option( 'mastodon_api_debug_mode' ) > time() ) {
+		?>
+		<h2><?php esc_html_e( 'Recently Logged Requests', 'enable-mastodon-apps' ); ?></h2>
+		<?php
 		$debug_start_time = \DateTimeImmutable::createFromFormat( 'U', time() - HOUR_IN_SECONDS );
 		$all_last_requests = array();
-		foreach ( Mastodon_App::get_all() as $app ) {
+		foreach ( \Enable_Mastodon_Apps\Mastodon_App::get_all() as $app ) {
 			$last_requests = $app->get_last_requests();
 			foreach ( $last_requests as $request ) {
 				$date = \DateTimeImmutable::createFromFormat( 'U.u', $request['timestamp'] );
@@ -74,16 +78,19 @@
 		if ( $all_last_requests ) {
 			ksort( $all_last_requests );
 			?>
-			<h2><?php esc_html_e( 'Recently Logged Requests', 'enable-mastodon-apps' ); ?></h2>
 			<tt>
 			<?php
-
 			foreach ( $all_last_requests as $request ) {
 				output_request_log( $request, $rest_nonce );
 			}
 			?>
-		</tt>
+			</tt>
 			<?php
+		} else {
+			?>
+			<p><?php esc_html_e( 'No requests logged in the last hour.', 'enable-mastodon-apps' ); ?></p>
+			<?php
+
 		}
 	}
 	?>

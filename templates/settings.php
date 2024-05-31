@@ -8,13 +8,13 @@
 );
 ?>
 
-<div class="enable-mastodon-apps-settings enable-mastodon-apps-settings-page hide-if-no-js">
+<div class="enable-mastodon-apps-settings enable-mastodon-apps-settings-page">
 	<form method="post">
 		<?php wp_nonce_field( 'enable-mastodon-apps' ); ?>
 		<table class="form-table">
 			<tbody>
 				<tr>
-					<th scope="row" rowspan="2"><?php esc_html_e( 'Enable Logins', 'enable-mastodon-apps' ); ?></th>
+					<th scope="row"><?php esc_html_e( 'Enable Logins', 'enable-mastodon-apps' ); ?></th>
 					<td>
 						<fieldset>
 							<label for="mastodon_api_enable_logins">
