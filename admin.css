@@ -209,6 +209,11 @@ summary {
 	max-width: 80%;
 }
 
+.enable-mastodon-apps-settings.enable-mastodon-apps-registered-apps-page span.count {
+	float: right;
+	margin-right: .5em;
+}
+
 .enable-mastodon-apps-settings h2 {
 	font-size: 1.5em;
 	text-align: center;

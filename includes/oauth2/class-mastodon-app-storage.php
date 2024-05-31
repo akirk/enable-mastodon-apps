@@ -101,7 +101,7 @@ class Mastodon_App_Storage implements ClientCredentialsInterface {
 				'scopes'        => $_REQUEST['scope'],
 			);
 
-			$post_formats = get_option( 'mastodon_api_default_post_formats', array( 'status' ) );
+			$post_formats = get_option( 'mastodon_api_default_post_formats', array() );
 			$post_formats = apply_filters( 'mastodon_api_new_app_post_formats', $post_formats, $app_metadata );
 
 			$term_id = $term['term_id'];

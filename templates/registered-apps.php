@@ -28,7 +28,7 @@ function post_format_select( $name, $selected = array() ) {
 	<form method="post">
 		<?php wp_nonce_field( 'enable-mastodon-apps' ); ?>
 			<h2><?php esc_html_e( 'Apps', 'enable-mastodon-apps' ); ?></h2>
-
+				<span class="count">
 					<?php
 					echo esc_html(
 						sprintf(
@@ -38,6 +38,7 @@ function post_format_select( $name, $selected = array() ) {
 						)
 					);
 					?>
+				</span>
 				<table class="widefat">
 					<thead>
 						<th><?php esc_html_e( 'Name', 'enable-mastodon-apps' ); ?></th>
@@ -55,7 +56,7 @@ function post_format_select( $name, $selected = array() ) {
 							$alternate = ! $alternate;
 							?>
 							<tr id='app-<?php echo esc_attr( $app->get_client_id() ); ?>' class="<?php echo $alternate ? 'alternate' : ''; ?>">
-								<td>
+								<td title='<?php echo esc_attr( $app->get_client_id() ); ?>'>
 									<?php
 									if ( $app->get_website() ) {
 										?>
@@ -118,6 +119,7 @@ function post_format_select( $name, $selected = array() ) {
 				</table>
 		<h2><?php esc_html_e( 'Authorization Codes', 'enable-mastodon-apps' ); ?></h2>
 
+			<span class="count">
 			<?php
 				echo esc_html(
 					sprintf(
@@ -127,6 +129,7 @@ function post_format_select( $name, $selected = array() ) {
 					)
 				);
 				?>
+			</span>
 			<table class="widefat striped">
 				<thead>
 					<th><?php esc_html_e( 'App', 'enable-mastodon-apps' ); ?></th>
@@ -139,8 +142,8 @@ function post_format_select( $name, $selected = array() ) {
 					<?php
 					foreach ( $args['codes'] as $code => $data ) {
 						?>
-						<tr id="code-<?php echo esc_attr( $code ); ?>" title="<?php echo esc_attr( $code ); ?>">
-							<td>
+						<tr id="code-<?php echo esc_attr( $code ); ?>">
+							<td title="<?php echo esc_attr( $code ); ?>">
 								<?php
 								if ( isset( $args['apps'][ $data['client_id'] ] ) ) {
 									echo esc_html( $args['apps'][ $data['client_id'] ]->get_client_name() );
@@ -161,6 +164,7 @@ function post_format_select( $name, $selected = array() ) {
 			</table>
 
 		<h2><?php esc_html_e( 'Access Tokens', 'enable-mastodon-apps' ); ?></h2>
+			<span class="count">
 				<?php
 				echo esc_html(
 					sprintf(
@@ -170,6 +174,7 @@ function post_format_select( $name, $selected = array() ) {
 					)
 				);
 				?>
+			</span>
 			<table class="widefat striped">
 				<thead>
 					<th><?php esc_html_e( 'App', 'enable-mastodon-apps' ); ?></th>
@@ -196,8 +201,8 @@ function post_format_select( $name, $selected = array() ) {
 							}
 						}
 						?>
-						<tr id="token-<?php echo esc_attr( $token ); ?>" title="<?php echo esc_attr( $token ); ?>">
-							<td>
+						<tr id="token-<?php echo esc_attr( $token ); ?>">
+							<td title="<?php echo esc_attr( $token ); ?>">
 								<?php
 								if ( isset( $args['apps'][ $data['client_id'] ] ) ) {
 									?>

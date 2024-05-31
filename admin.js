@@ -21,6 +21,11 @@ jQuery( function( $ ) {
 	$(document).on( 'click', '.enable-mastodon-apps-settings .copyable', function( event, response ) {
 		this.select();
 	} );
+
+	$(document).on( 'click', '.enable-mastodon-apps-registered-apps-page thead', function( event, response ) {
+		$( this ).parent().find( 'tbody' ).toggle();
+	} );
+
 	const iframe = $( '.enable-mastodon-apps-settings iframe');
 	if ( iframe.length ) {
 		setInterval( function() {

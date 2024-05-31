@@ -345,13 +345,52 @@ class Mastodon_Admin {
 	}
 
 	public function admin_registered_apps_page() {
+		$codes = OAuth2\Authorization_Code_Storage::getAll();
+
+		uasort(
+			$codes,
+			function ( $a, $b ) {
+				return $b['expires'] <=> $a['expires'];
+			}
+		);
+
+		$tokens = OAuth2\Access_Token_Storage::getAll();
+
+		uasort(
+			$tokens,
+			function ( $a, $b ) {
+				if ( $a['last_used'] === $b['last_used'] && $a['last_used'] ) {
+					return $a['expires'] <=> $b['expires'];
+				}
+
+				return $b['last_used'] <=> $a['last_used'];
+			}
+		);
+
+		$apps = Mastodon_App::get_all();
+
+		uasort(
+			$apps,
+			function ( $a, $b ) {
+				$a_date = $a->get_last_used();
+				if ( ! $a_date ) {
+					$a_date = $a->get_creation_date();
+				}
+				$b_date = $b->get_last_used();
+				if ( ! $b_date ) {
+					$b_date = $b->get_creation_date();
+				}
+				return $b_date <=> $a_date;
+			}
+		);
+
 		load_template(
 			__DIR__ . '/../templates/registered-apps.php',
 			true,
 			array(
-				'codes'  => OAuth2\Authorization_Code_Storage::getAll(),
-				'tokens' => OAuth2\Access_Token_Storage::getAll(),
-				'apps'   => Mastodon_App::get_all(),
+				'codes'  => $codes,
+				'tokens' => $tokens,
+				'apps'   => $apps,
 			)
 		);
 	}
