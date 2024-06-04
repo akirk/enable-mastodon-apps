@@ -34,7 +34,7 @@ jQuery( function( $ ) {
 	}
 
 	$(document).on( 'change', '.enable-mastodon-apps-settings .appformats', function( event, response ) {
-		$( this ).parent().find( '.save-app' ).show();
+		$( this ).closest('tr').find( '[name=save-app]' ).show();
 	} );
 
 	$(document).on( 'click', '.enable-mastodon-apps-settings button[name=delete-app]', function( event, response ) {
