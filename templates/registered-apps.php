@@ -174,9 +174,14 @@ function post_format_select( $name, $selected = array() ) {
 								if ( isset( $args['apps'][ $data['client_id'] ] ) ) {
 									echo esc_html( $args['apps'][ $data['client_id'] ]->get_client_name() );
 								} else {
-									echo esc_html( 'Unknown: ' . $data['client_id'] );
-									echo ' <span class="pill pill-unknown" title="' . esc_html__( 'Associated with an app that no longer exists.', 'enable-mastodon-apps' ) . '">' . esc_html__( 'Outdated', 'enable-mastodon-apps' ) . '</span>';
-
+									echo esc_html(
+										sprintf(
+										// Translators: %s is the app ID.
+											__( 'Unknown App: %s', 'enable-mastodon-apps' ),
+											$data['client_id']
+										)
+									);
+									echo ' <span class="pill pill-outdated" title="' . esc_html__( 'Associated with an app that no longer exists.', 'enable-mastodon-apps' ) . '">' . esc_html__( 'Outdated', 'enable-mastodon-apps' ) . '</span>';
 								}
 
 								?>
@@ -245,6 +250,7 @@ function post_format_select( $name, $selected = array() ) {
 											$data['client_id']
 										)
 									);
+									echo ' <span class="pill pill-outdated" title="' . esc_html__( 'Associated with an app that no longer exists.', 'enable-mastodon-apps' ) . '">' . esc_html__( 'Outdated', 'enable-mastodon-apps' ) . '</span>';
 								}
 								?>
 							</td>
