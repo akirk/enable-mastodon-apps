@@ -33,4 +33,22 @@ jQuery( function( $ ) {
 		}, 1000 );
 	}
 
+	$(document).on( 'change', '.enable-mastodon-apps-settings .appformats', function( event, response ) {
+		$( this ).parent().find( '.save-app' ).show();
+	} );
+
+	$(document).on( 'click', '.enable-mastodon-apps-settings button[name=delete-app]', function( event, response ) {
+		if ( ! confirm( this.dataset.confirm ) ) {
+			event.preventDefault();
+			return false;
+		}
+	} );
+
+	$(document).on( 'click', '.enable-mastodon-apps-settings button[name=clear-app-logs]', function( event, response ) {
+		if ( ! confirm( this.dataset.confirm ) ) {
+			event.preventDefault();
+			return false;
+		}
+	} );
+
 } );

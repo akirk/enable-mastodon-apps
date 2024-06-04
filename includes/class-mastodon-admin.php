@@ -12,6 +12,7 @@ namespace Enable_Mastodon_Apps;
  */
 class Mastodon_Admin {
 	private $oauth;
+	private $enable_debug;
 
 	public function __construct( Mastodon_OAuth $oauth ) {
 		$this->oauth = $oauth;
@@ -69,6 +70,7 @@ class Mastodon_Admin {
 	}
 
 	public function admin_page() {
+		$this->enable_debug = get_option( 'mastodon_api_enable_debug' );
 		$tab = $_GET['tab'] ?? 'welcome';
 		switch ( $tab ) {
 			case 'welcome':
@@ -95,6 +97,7 @@ class Mastodon_Admin {
 			true,
 			array(
 				'instance_url' => preg_replace( '#^https?://([a-z0-9.-:]+)/?$#i', '$1', home_url() ),
+				'enable_debug' => $this->enable_debug,
 			)
 		);
 	}
@@ -105,9 +108,22 @@ class Mastodon_Admin {
 		} else {
 			update_option( 'mastodon_api_disable_logins', true );
 		}
+
+		if ( isset( $_POST['mastodon_api_enable_debug'] ) ) {
+			update_option( 'mastodon_api_enable_debug', true );
+		} else {
+			delete_option( 'mastodon_api_enable_debug' );
+		}
 	}
+
 	public function admin_settings_page() {
-		load_template( __DIR__ . '/../templates/settings.php', true, array() );
+		load_template(
+			__DIR__ . '/../templates/settings.php',
+			true,
+			array(
+				'enable_debug' => $this->enable_debug,
+			)
+		);
 	}
 
 	public function process_admin_debug_page() {
@@ -120,7 +136,9 @@ class Mastodon_Admin {
 			update_option( 'mastodon_api_auto_app_reregister', true );
 		} else {
 			delete_option( 'mastodon_api_auto_app_reregister' );
-		}}
+		}
+	}
+
 	public function admin_debug_page() {
 		load_template( __DIR__ . '/../templates/debug.php', true, array() );
 	}
@@ -139,7 +157,8 @@ class Mastodon_Admin {
 				// translators: %d: number of deleted codes.
 					_n( 'Deleted %d authorization code.', 'Deleted %d authorization codes.', $deleted ? 1 : 0, 'enable-mastodon-apps' ),
 					$deleted ? 1 : 0
-				)
+				),
+				'success'
 			);
 			return;
 		}
@@ -153,7 +172,8 @@ class Mastodon_Admin {
 				// translators: %d: number of deleted tokens.
 					_n( 'Deleted %d access token.', 'Deleted %d access tokens.', $deleted ? 1 : 0, 'enable-mastodon-apps' ),
 					$deleted ? 1 : 0
-				)
+				),
+				'success'
 			);
 			return;
 		}
@@ -167,7 +187,8 @@ class Mastodon_Admin {
 				// translators: %d: number of deleted apps.
 					_n( 'Deleted %d app.', 'Deleted %d apps.', $deleted ? 1 : 0, 'enable-mastodon-apps' ),
 					$deleted ? 1 : 0
-				)
+				),
+				'success'
 			);
 			return;
 		}
@@ -178,13 +199,15 @@ class Mastodon_Admin {
 				add_settings_error(
 					'enable-mastodon-apps',
 					'clear-app-logs',
-					__( 'App logs were cleared.', 'enable-mastodon-apps' )
+					__( 'App logs were cleared.', 'enable-mastodon-apps' ),
+					'success'
 				);
 			} else {
 				add_settings_error(
 					'enable-mastodon-apps',
 					'clear-app-logs',
-					__( 'App logs could not be cleared.', 'enable-mastodon-apps' )
+					__( 'App logs could not be cleared.', 'enable-mastodon-apps' ),
+					'error'
 				);
 			}
 			return;
@@ -205,20 +228,32 @@ class Mastodon_Admin {
 					// translators: %d: number of deleted apps.
 						_n( '%d app logs were cleared.', '%d app logs were cleared.', $total_deleted, 'enable-mastodon-apps' ),
 						$total_deleted
-					)
+					),
+					'success'
 				);
 			} else {
 				add_settings_error(
 					'enable-mastodon-apps',
 					'clear-app-logs',
-					__( 'App logs could not be cleared.', 'enable-mastodon-apps' )
+					__( 'App logs could not be cleared.', 'enable-mastodon-apps' ),
+					'error'
 				);
 			}
 			return;
 		}
 
 		if ( isset( $_POST['delete-outdated'] ) ) {
+			$apps = Mastodon_App::get_all();
 			$deleted = OAuth2\Access_Token_Storage::cleanupOldTokens();
+			if ( ! $deleted ) {
+				$deleted = 0;
+			}
+			foreach ( OAuth2\Access_Token_Storage::getAll() as $token => $data ) {
+				if ( ! isset( $apps[ $data['client_id'] ] ) ) {
+					$deleted += 1;
+					$this->oauth->get_token_storage()->unsetAccessToken( $token );
+				}
+			}
 			if ( $deleted ) {
 				add_settings_error(
 					'enable-mastodon-apps',
@@ -227,11 +262,22 @@ class Mastodon_Admin {
 					// translators: %d: number of deleted tokens.
 						_n( 'Deleted %d access token.', 'Deleted %d access tokens.', $deleted, 'enable-mastodon-apps' ),
 						$deleted
-					)
+					),
+					'success'
 				);
 			}
 
 			$deleted = OAuth2\Authorization_Code_Storage::cleanupOldCodes();
+			if ( ! $deleted ) {
+				$deleted = 0;
+			}
+			foreach ( OAuth2\Authorization_Code_Storage::getAll() as $code => $data ) {
+				if ( ! isset( $apps[ $data['client_id'] ] ) ) {
+					$deleted += 1;
+					$this->oauth->get_code_storage()->expireAuthorizationCode( $code );
+				}
+			}
+
 			if ( $deleted ) {
 				add_settings_error(
 					'enable-mastodon-apps',
@@ -240,7 +286,8 @@ class Mastodon_Admin {
 					// translators: %d: number of deleted codes.
 						_n( 'Deleted %d authorization code.', 'Deleted %d authorization codes.', $deleted, 'enable-mastodon-apps' ),
 						$deleted
-					)
+					),
+					'success'
 				);
 			}
 
@@ -253,7 +300,8 @@ class Mastodon_Admin {
 					// translators: %d: number of deleted apps.
 						_n( 'Deleted %d app.', 'Deleted %d apps.', $deleted, 'enable-mastodon-apps' ),
 						$deleted
-					)
+					),
+					'success'
 				);
 			}
 			return;
@@ -275,7 +323,8 @@ class Mastodon_Admin {
 				// translators: %d: number of deleted apps.
 					_n( 'Deleted %d app.', 'Deleted %d apps.', $deleted, 'enable-mastodon-apps' ),
 					$deleted
-				)
+				),
+				'success'
 			);
 
 			$deleted = 0;
@@ -294,7 +343,8 @@ class Mastodon_Admin {
 				// translators: %d: number of deleted tokens.
 					_n( 'Deleted %d token.', 'Deleted %d tokens.', $deleted, 'enable-mastodon-apps' ),
 					$deleted
-				)
+				),
+				'success'
 			);
 			return;
 		}
@@ -322,7 +372,8 @@ class Mastodon_Admin {
 				// translators: %d: number of deleted apps.
 					_n( 'Deleted %d app.', 'Deleted %d apps.', $deleted, 'enable-mastodon-apps' ),
 					$deleted
-				)
+				),
+				'success'
 			);
 			return;
 		}
@@ -388,9 +439,10 @@ class Mastodon_Admin {
 			__DIR__ . '/../templates/registered-apps.php',
 			true,
 			array(
-				'codes'  => $codes,
-				'tokens' => $tokens,
-				'apps'   => $apps,
+				'enable_debug' => $this->enable_debug,
+				'codes'        => $codes,
+				'tokens'       => $tokens,
+				'apps'         => $apps,
 			)
 		);
 	}

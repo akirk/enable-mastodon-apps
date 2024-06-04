@@ -95,6 +95,7 @@ function td_timestamp( $timestamp, $strikethrough_past = false ) {
 			<?php \esc_html_e( 'Registered Apps', 'enable-mastodon-apps' ); ?>
 		</a>
 
+		<?php if ( $args['enable_debug'] ) : ?>
 		<a href="<?php echo \esc_url_raw( admin_url( 'options-general.php?page=enable-mastodon-apps&tab=tester' ) ); ?>" class="enable-mastodon-apps-settings-tab <?php echo \esc_attr( 'tester' === ( $args['active'] ?? '' ) ? 'active' : '' ); ?>">
 			<?php \esc_html_e( 'Tester', 'enable-mastodon-apps' ); ?>
 		</a>
@@ -102,6 +103,7 @@ function td_timestamp( $timestamp, $strikethrough_past = false ) {
 		<a href="<?php echo \esc_url_raw( admin_url( 'options-general.php?page=enable-mastodon-apps&tab=debug' ) ); ?>" class="enable-mastodon-apps-settings-tab <?php echo \esc_attr( 'debug' === ( $args['active'] ?? '' ) ? 'active' : '' ); ?>">
 			<?php \esc_html_e( 'Debug', 'enable-mastodon-apps' ); ?>
 		</a>
+		<?php endif; ?>
 
 	</nav>
 </div>
