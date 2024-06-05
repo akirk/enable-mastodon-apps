@@ -35,18 +35,6 @@ fi
 echo -ne "\033[32m✔\033[0m "
 echo "svn up to date"
 
-git diff-files --quiet
-if [ $? -eq 1 ]; then
-	echo -ne "\033[31m✘\033[0m "
-	echo "Unstaged changes in git"
-	echo
-	echo ❯ git status
-	git status
-	return
-fi
-echo -ne "\033[32m✔\033[0m "
-echo "No unstaged changes in git"
-
 git tag | egrep -q ^$ENABLE_MASTODON_APPS_VERSION\$
 if [ $? -eq 0 ]; then
 	echo -ne "\033[31m✘\033[0m "
@@ -109,6 +97,18 @@ echo -ne "\033[32m✔\033[0m "
 echo "No unknown files in svn"
 echo
 
+git diff-files --quiet
+if [ $? -eq 1 ]; then
+	echo -ne "\033[31m✘\033[0m "
+	echo "Unstaged changes in git"
+	echo
+	echo ❯ git status
+	git status
+	return
+fi
+echo -ne "\033[32m✔\033[0m "
+echo "No unstaged changes in git"
+
 echo -ne "\033[32m✔\033[0m "
 echo "All looks good, ready to tag and commit!"
 echo -n ❯ git push
@@ -123,4 +123,6 @@ git push origin $ENABLE_MASTODON_APPS_VERSION
 echo -n '❯ svn ci -m "enable-mastodon-apps '$ENABLE_MASTODON_APPS_VERSION'" && svn cp https://plugins.svn.wordpress.org/enable-mastodon-apps/trunk https://plugins.svn.wordpress.org/enable-mastodon-apps/tags/'$ENABLE_MASTODON_APPS_VERSION' -m "Release '$ENABLE_MASTODON_APPS_VERSION'"'
 read
 svn ci -m "enable-mastodon-apps $ENABLE_MASTODON_APPS_VERSION" && svn cp https://plugins.svn.wordpress.org/enable-mastodon-apps/trunk https://plugins.svn.wordpress.org/enable-mastodon-apps/tags/$ENABLE_MASTODON_APPS_VERSION -m "Release $ENABLE_MASTODON_APPS_VERSION"
-echo Now create a new release on GitHub: https://github.com/akirk/enable-mastodon-apps/releases/new\?tag=$ENABLE_MASTODON_APPS_VERSION
+echo -n '❯ gh release create $ENABLE_MASTODON_APPS_VERSION --generate-notes'
+read
+gh release create $ENABLE_MASTODON_APPS_VERSION --generate-notes
