@@ -6,7 +6,7 @@
 - Tested up to: 6.5
 - Requires PHP: 7.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 0.6.6
+- Stable tag: 0.9.0
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
