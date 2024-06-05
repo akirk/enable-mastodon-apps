@@ -192,6 +192,27 @@ summary {
 	margin-bottom: 0;
 }
 
+.settings_page_enable-mastodon-apps .pill {
+	font-weight: 500;
+	font-size: .7em;
+	margin-right: 0.3em;
+	width: 6em;
+	text-align: center;
+	padding: 0.2em 0.5em;
+	border-radius: 1em;
+	text-transform: capitalize;
+}
+
+.settings_page_enable-mastodon-apps .pill-outdated {
+	color: #fff;
+	background-color: #c05621;
+}
+
+
+.settings_page_enable-mastodon-apps .disable-debug .debug-hide {
+	display: none;
+}
+
 .settings_page_enable-mastodon-apps details.tt {
 	font-family: monospace;
 	word-wrap: break-word;
@@ -199,6 +220,26 @@ summary {
 
 .settings_page_enable-mastodon-apps summary {
 	cursor: pointer;
+}
+
+.settings_page_enable-mastodon-apps button.button-destructive {
+	border-color: #b32d2e;
+	color: #b32d2e;
+}
+
+.settings_page_enable-mastodon-apps button.button-destructive:hover {
+
+	border-color: #a00;
+	background-color: #b32d2e;
+	box-shadow: none;
+	color: #fff;
+}
+
+.settings_page_enable-mastodon-apps button.button-destructive:focus {
+	border-color: #000;
+	background-color: #b32d2e;
+	box-shadow: none;
+	color: #fff;
 }
 
 .settings_page_enable-mastodon-apps table.widefat td:last-child {
@@ -212,6 +253,10 @@ summary {
 .enable-mastodon-apps-settings.enable-mastodon-apps-registered-apps-page span.count {
 	float: right;
 	margin-right: .5em;
+}
+
+.enable-mastodon-apps-settings.enable-mastodon-apps-registered-apps-page .save-app {
+	display: none;
 }
 
 .enable-mastodon-apps-settings h2 {

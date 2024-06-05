@@ -3,7 +3,8 @@
 	__DIR__ . '/admin-header.php',
 	true,
 	array(
-		'active' => 'welcome',
+		'active'       => 'welcome',
+		'enable_debug' => $args['enable_debug'],
 	)
 );
 ?>

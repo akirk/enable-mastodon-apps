@@ -3,7 +3,8 @@
 	__DIR__ . '/admin-header.php',
 	true,
 	array(
-		'active' => 'tester',
+		'active'       => 'tester',
+		'enable_debug' => true,
 	)
 );
 

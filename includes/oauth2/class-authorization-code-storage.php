@@ -253,10 +253,14 @@ class Authorization_Code_Storage implements AuthorizationCodeInterface {
 			)
 		);
 
+		if ( ! $terms ) {
+			return;
+		}
 		foreach ( $terms->terms as $term_id ) {
 			wp_delete_term( $term_id, self::TAXONOMY );
 		}
 	}
+
 
 	/**
 	 * Delete all auth codes when the plugin is uninstalled.
@@ -269,7 +273,9 @@ class Authorization_Code_Storage implements AuthorizationCodeInterface {
 				'fields'     => 'ids',
 			)
 		);
-
+		if ( ! $terms ) {
+			return;
+		}
 		foreach ( $terms->terms as $term_id ) {
 			wp_delete_term( $term_id, self::TAXONOMY );
 		}

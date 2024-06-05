@@ -270,6 +270,10 @@ class Access_Token_Storage implements AccessTokenInterface {
 			)
 		);
 
+		if ( ! $terms ) {
+			return;
+		}
+
 		foreach ( $terms->terms as $term_id ) {
 			wp_delete_term( $term_id, self::TAXONOMY );
 		}
@@ -286,6 +290,10 @@ class Access_Token_Storage implements AccessTokenInterface {
 				'fields'     => 'ids',
 			)
 		);
+
+		if ( ! $terms ) {
+			return;
+		}
 
 		foreach ( $terms->terms as $term_id ) {
 			wp_delete_term( $term_id, self::TAXONOMY );

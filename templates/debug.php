@@ -3,7 +3,8 @@
 	__DIR__ . '/admin-header.php',
 	true,
 	array(
-		'active' => 'debug',
+		'active'       => 'debug',
+		'enable_debug' => true,
 	)
 );
 $rest_nonce = wp_create_nonce( 'wp_rest' );
