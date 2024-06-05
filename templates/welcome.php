@@ -14,8 +14,53 @@
 		<h2><?php esc_html_e( 'Welcome', 'enable-mastodon-apps' ); ?></h2>
 		<p>
 			<?php esc_html_e( 'This plugin enables you to access your WordPress with Mastodon clients.', 'enable-mastodon-apps' ); ?>
-			<h4>Your Instance URL</h4>
-			<input type="text" class="regular-text copyable" id="enable-mastodon-apps-instance" value="<?php echo esc_attr( $args['instance_url'] ); ?>" readonly="readonly">
+			<?php
+				echo wp_kses(
+					sprintf(
+						// translators: %s: URL to Mastodon app directory.
+						__( 'Check the <a href=%s>Mastodon app directory</a> to find one that you like.', 'enable-mastodon-apps' ),
+						'"https://joinmastodon.org/apps" target="_blank"'
+					),
+					array(
+						'a' => array(
+							'href'   => array(),
+							'target' => array(),
+						),
+					)
+				);
+				?>
+			<?php esc_html_e( 'Make sure you scroll down to the "Browse third-party apps" section for more choice.', 'enable-mastodon-apps' ); ?>
+		</p>
+		<p>
+			<?php esc_html_e( 'When you first start a Mastodon app, it will ask you for your instance URL:', 'enable-mastodon-apps' ); ?>
+		</p>
+		<input type="text" class="regular-text copyable" id="enable-mastodon-apps-instance" value="<?php echo esc_attr( $args['instance_url'] ); ?>" readonly="readonly">
+		<p>
+			<?php esc_html_e( 'The Mastodon app will then redirect you to the login page of your own WordPress site.', 'enable-mastodon-apps' ); ?>
+			<?php esc_html_e( 'Double-check the URL of the login form so that you don\'t enter your details on another site.', 'enable-mastodon-apps' ); ?>
+			<?php esc_html_e( 'You\'ll need to log in there and then authorize the app.', 'enable-mastodon-apps' ); ?>
+		</p>
+		<p>
+			<?php esc_html_e( 'Depending on the plugins you use (see below), you\'ll then see posts in the timeline and can start interacting with them.', 'enable-mastodon-apps' ); ?>
+		</p>
+		<p>
+			<?php esc_html_e( 'Since the task of this plugin to achieve Mastodon API compatibility is complex, it is possible that you encounter issues.', 'enable-mastodon-apps' ); ?>
+			<?php
+				echo wp_kses(
+					sprintf(
+						// translators: %1$s: URL to Github issues, %2$s: URL to WordPress.org plugin support forum.
+						__( 'Please reach out in a <a href=%1$s>Github issue</a> or the <a href=%2$s>WordPress.org plugin support forum</a>.', 'enable-mastodon-apps' ),
+						'"https://github.com/akirk/enable-mastodon-apps/issues" target="_blank"',
+						'"https://wordpress.org/support/plugin/enable-mastodon-apps" target="_blank"'
+					),
+					array(
+						'a' => array(
+							'href' => array(),
+						),
+					)
+				);
+				?>
+		</p>
 	</div>
 	<div class="box plugin-recommendations">
 		<h2><?php esc_html_e( 'Recommended Plugins', 'enable-mastodon-apps' ); ?></h2>

@@ -15,7 +15,7 @@
 
 defined( 'ABSPATH' ) || exit;
 define( 'ENABLE_MASTODON_APPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
-define( 'ENABLE_MASTODON_APPS_VERSION', '0.6.6' );
+define( 'ENABLE_MASTODON_APPS_VERSION', '0.9.0' );
 
 require __DIR__ . '/vendor/bshaffer/oauth2-server-php/src/OAuth2/Autoloader.php';
 OAuth2\Autoloader::register();
