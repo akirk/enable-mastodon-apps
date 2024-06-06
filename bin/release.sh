@@ -123,6 +123,6 @@ git push origin $ENABLE_MASTODON_APPS_VERSION
 echo -n '❯ svn ci -m "enable-mastodon-apps '$ENABLE_MASTODON_APPS_VERSION'" && svn cp https://plugins.svn.wordpress.org/enable-mastodon-apps/trunk https://plugins.svn.wordpress.org/enable-mastodon-apps/tags/'$ENABLE_MASTODON_APPS_VERSION' -m "Release '$ENABLE_MASTODON_APPS_VERSION'"'
 read
 svn ci -m "enable-mastodon-apps $ENABLE_MASTODON_APPS_VERSION" && svn cp https://plugins.svn.wordpress.org/enable-mastodon-apps/trunk https://plugins.svn.wordpress.org/enable-mastodon-apps/tags/$ENABLE_MASTODON_APPS_VERSION -m "Release $ENABLE_MASTODON_APPS_VERSION"
-echo -n '❯ gh release create $ENABLE_MASTODON_APPS_VERSION --generate-notes'
+echo -n '❯ gh release create '$ENABLE_MASTODON_APPS_VERSION' --generate-notes'
 read
 gh release create $ENABLE_MASTODON_APPS_VERSION --generate-notes
