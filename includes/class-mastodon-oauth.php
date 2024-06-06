@@ -169,10 +169,11 @@ class Mastodon_OAuth {
 
 	public function get_token() {
 		$request = Request::createFromGlobals();
-		if ( ! $this->server->verifyResourceRequest( $request ) ) {
+		$response = new Response();
+		if ( ! $this->server->verifyResourceRequest( $request, $response ) ) {
 			return null;
 		}
-		return $this->server->getAccessTokenData( $request );
+		return $this->server->getAccessTokenData( $request, $response );
 	}
 
 	public function authenticate( $user_id ) {
