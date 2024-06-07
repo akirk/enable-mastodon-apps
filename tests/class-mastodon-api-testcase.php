@@ -101,7 +101,7 @@ class Mastodon_API_TestCase extends \WP_UnitTestCase {
 				'post_mime_type' => 'image/png',
 				'guid'           => 'https://example.org/image.png',
 			),
-			'https://example.org/image.png',
+			'ima ge.png',
 			$this->friend_post
 		);
 		wp_update_attachment_metadata(

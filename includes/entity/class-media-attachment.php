@@ -140,4 +140,11 @@ class Media_Attachment extends Entity {
 		}
 		return parent::validate( $key );
 	}
+
+	public function __get( $key ) {
+		if ( 'url' === $key || 'preview_url' === $key || 'remote_url' === $key ) {
+			return str_replace( ' ', '%20', $this->$key );
+		}
+		return parent::__get( $key );
+	}
 }
