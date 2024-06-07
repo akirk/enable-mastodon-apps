@@ -1,6 +1,6 @@
 <?php
 /**
- * Class Test_Notifications_Endpoint
+ * Class NotificationsEndpoint_Test
  *
  * @package Enable_Mastodon_Apps
  */

@@ -1,6 +1,6 @@
 <?php
 /**
- * Class Test_Apps_Endpoint
+ * Class InstanceEndpoint_Test
  *
  * @package Enable_Mastodon_Apps
  */
@@ -8,7 +8,7 @@
 namespace Enable_Mastodon_Apps;
 
 /**
- * A testcase for the apps endpoint.
+ * Testcase for the instance endpoint.
  *
  * @package
  */
