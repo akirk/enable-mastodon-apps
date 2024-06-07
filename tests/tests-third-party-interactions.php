@@ -13,24 +13,31 @@ namespace Enable_Mastodon_Apps;
  * @package
  */
 class ThirdPartyInteraction_Test extends Mastodon_API_TestCase {
-
+	public function set_up() {
+		add_action(
+			'rest_api_init',
+			function () {
+				register_rest_route(
+					'fluentcrm/v2',
+					'/tags',
+					array(
+						'methods'             => 'GET',
+						'callback'            => function () {
+							return 'FluentCRM';
+						},
+						'permission_callback' => '__return_true',
+					)
+				);
+			}
+		);
+		parent::set_up();
+	}
 	/**
 	 * Test that we are not negatively interacting with FluentCRM.
 	 *
 	 * See https://github.com/akirk/enable-mastodon-apps/issues/145
 	 */
 	public function test_fluentcrm() {
-		register_rest_route(
-			'fluentcrm/v2',
-			'tags',
-			array(
-				'methods'  => 'GET',
-				'callback' => function () {
-					return new \WP_REST_Response( 'FluentCRM', 200 );
-				},
-			)
-		);
-
 		$request  = $this->api_request( 'GET', '/fluentcrm/v2/tags' );
 		$response = $this->dispatch( $request );
 		$this->assertEquals( 200, $response->get_status() );
