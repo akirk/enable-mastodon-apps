@@ -19,13 +19,14 @@ class ThirdPartyInteraction_Test extends Mastodon_API_TestCase {
 			function () {
 				register_rest_route(
 					'fluentcrm/v2',
-					'/tags',
+					'tags',
 					array(
 						'methods'             => 'GET',
 						'callback'            => function () {
+							wp_get_current_user();
 							return 'FluentCRM';
 						},
-						'permission_callback' => '__return_true',
+						'permission_callback' => 'is_user_logged_in',
 					)
 				);
 			}
@@ -38,9 +39,10 @@ class ThirdPartyInteraction_Test extends Mastodon_API_TestCase {
 	 * See https://github.com/akirk/enable-mastodon-apps/issues/145
 	 */
 	public function test_fluentcrm() {
-		$request  = $this->api_request( 'GET', '/fluentcrm/v2/tags' );
-		$response = $this->dispatch( $request );
-		$this->assertEquals( 200, $response->get_status() );
-		$this->assertEquals( 'FluentCRM', $response->get_data() );
+		$request = new \WP_REST_Request( 'GET', '/fluentcrm/v2/tags' );
+		$_SERVER['HTTP_AUTHORIZATION'] = 'Basic ' . base64_encode( 'user:password' );
+		global $wp_rest_server;
+		$response = $wp_rest_server->dispatch( $request );
+		$this->assertEquals( 401, $response->get_status() );
 	}
 }
