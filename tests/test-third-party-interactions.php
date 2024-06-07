@@ -39,10 +39,15 @@ class ThirdPartyInteraction_Test extends Mastodon_API_TestCase {
 	 * See https://github.com/akirk/enable-mastodon-apps/issues/145
 	 */
 	public function test_fluentcrm() {
+		global $current_user;
+		$current_user = null;
 		$request = new \WP_REST_Request( 'GET', '/fluentcrm/v2/tags' );
-		$_SERVER['HTTP_AUTHORIZATION'] = 'Basic ' . base64_encode( 'user:password' );
+		$_SERVER['HTTP_AUTHORIZATION'] = 'Basic ' . base64_encode( 'a:b' );
 		global $wp_rest_server;
+		ob_start();
 		$response = $wp_rest_server->dispatch( $request );
+		$out = ob_get_clean();
 		$this->assertEquals( 401, $response->get_status() );
+		$this->assertEmpty( $out );
 	}
 }
