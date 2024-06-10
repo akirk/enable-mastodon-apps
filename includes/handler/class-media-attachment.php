@@ -180,7 +180,7 @@ class Media_Attachment extends Handler {
 					'width'  => intval( $block['width'] ),
 					'height' => intval( $block['height'] ),
 					'size'   => $block['width'] . 'x' . $block['height'],
-					'aspect' => $block['width'] / $block['height'],
+					'aspect' => (int) $block['width'] / (int) $block['height'],
 				);
 			} else {
 				$attachment->meta = array(
@@ -245,7 +245,7 @@ class Media_Attachment extends Handler {
 					'width'  => intval( $block['width'] ),
 					'height' => intval( $block['height'] ),
 					'size'   => $block['width'] . 'x' . $block['height'],
-					'aspect' => $block['width'] / $block['height'],
+					'aspect' => (int) $block['width'] / (int) $block['height'],
 				);
 			} else {
 				$attachment->meta = array(
