@@ -37,9 +37,6 @@ class Instance extends Handler {
 		add_filter( 'mastodon_api_instance_v2', array( $this, 'api_instance' ) );
 		add_filter( 'mastodon_api_instance_extended_description', array( $this, 'api_instance_extended_description' ) );
 		add_action( 'update_option_blogdescription', array( $this, 'save_created_at' ) );
-
-		// Enable the link manager so peers can be added/updated.
-		add_filter( 'pre_option_link_manager_enabled', '__return_true' );
 	}
 
 	/**
