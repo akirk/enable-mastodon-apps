@@ -78,7 +78,7 @@ class Comment_CPT {
 		if ( ! $comment && $comment_id ) {
 			$comment = get_comment( $comment_id );
 		}
-		if ( ! $comment ) {
+		if ( ! $comment || ! isset( $comment->comment_approved ) || '0' === strval( $comment->comment_approved ) ) {
 			return;
 		}
 		$parent_post_id = $comment->comment_post_ID;
@@ -146,15 +146,15 @@ class Comment_CPT {
 	public function update_comment_post_status( $new_status, $old_status, $comment ) {
 		$post_id = self::comment_id_to_post_id( $comment->comment_ID );
 		if ( ! $post_id ) {
+			if ( 'approved' === $new_status ) {
+				$post_id = self::create_comment_post( $comment->comment_ID, $comment );
+			}
 			return;
 		}
-
-		$post_data = array(
-			'ID'          => $post_id,
-			'post_status' => 'publish' === $new_status ? 'publish' : 'private',
-		);
-
-		wp_update_post( $post_data );
+		if ( 'trash' === $new_status ) {
+			delete_comment_post( $comment->comment_ID );
+			return;
+		}
 	}
 
 	public function update_comment_post( $comment_id, $comment ) {
