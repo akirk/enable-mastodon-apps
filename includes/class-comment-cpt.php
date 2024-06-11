@@ -78,7 +78,7 @@ class Comment_CPT {
 		if ( ! $comment && $comment_id ) {
 			$comment = get_comment( $comment_id );
 		}
-		if ( ! $comment || ! isset( $comment->comment_approved ) || '0' === strval( $comment->comment_approved ) ) {
+		if ( ! $comment || ! isset( $comment->comment_approved ) || '1' !== strval( $comment->comment_approved ) ) {
 			return;
 		}
 		$parent_post_id = $comment->comment_post_ID;
@@ -177,17 +177,17 @@ class Comment_CPT {
 		}
 	}
 
-	public function update_comment_post( $comment_id, $comment ) {
+	public function update_comment_post( $comment_id, $data ) {
 		$post_id = self::comment_id_to_post_id( $comment_id );
 		if ( ! $post_id ) {
 			return;
 		}
-
 		$post_data = array(
 			'ID'            => $post_id,
-			'post_content'  => $comment->comment_content,
-			'post_date'     => $comment->comment_date,
-			'post_date_gmt' => $comment->comment_date_gmt,
+			'post_content'  => $data['comment_content'],
+			'post_date'     => $data['comment_date'],
+			'post_date_gmt' => $data['comment_date_gmt'],
+			'post_status'   => $data['comment_approved'] ? 'publish' : 'trash',
 		);
 
 		wp_update_post( $post_data );
