@@ -64,3 +64,7 @@ add_action(
 		new Enable_Mastodon_Apps\Comment_CPT();
 	}
 );
+
+if ( is_admin() && version_compare( ENABLE_MASTODON_APPS_VERSION, get_option( 'ema_plugin_version', '>' ) ) {
+	add_action( 'admin_init', array( __NAMESPACE__ . '\Mastodon_Admin', 'upgrade_plugin' ) );
+}
