@@ -172,7 +172,7 @@ class Comment_CPT {
 			'trash' === $new_status ||
 			'spam' === $new_status
 		) {
-			delete_comment_post( $comment->comment_ID );
+			$this->delete_comment_post( $comment->comment_ID );
 			return;
 		}
 	}
