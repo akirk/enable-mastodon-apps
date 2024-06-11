@@ -146,12 +146,32 @@ class Comment_CPT {
 	public function update_comment_post_status( $new_status, $old_status, $comment ) {
 		$post_id = self::comment_id_to_post_id( $comment->comment_ID );
 		if ( ! $post_id ) {
-			if ( 'approved' === $new_status ) {
-				$post_id = self::create_comment_post( $comment->comment_ID, $comment );
+			if (
+				'approved' === $new_status &&
+				'approved' !== $old_status
+			) {
+				self::create_comment_post( $comment->comment_ID, $comment );
 			}
 			return;
 		}
-		if ( 'trash' === $new_status ) {
+
+		if ( 'approved' === $new_status ) {
+			wp_update_post(
+				array(
+					'ID'            => $post_id,
+					'post_content'  => $comment->comment_content,
+					'post_date'     => $comment->comment_date,
+					'post_date_gmt' => $comment->comment_date_gmt,
+					'post_status'   => 'publish',
+				)
+			);
+			return;
+		}
+
+		if (
+			'trash' === $new_status ||
+			'spam' === $new_status
+		) {
 			delete_comment_post( $comment->comment_ID );
 			return;
 		}
