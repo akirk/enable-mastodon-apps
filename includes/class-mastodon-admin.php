@@ -447,9 +447,14 @@ class Mastodon_Admin {
 		);
 	}
 
-	public function upgrade_plugin() {
+	public static function upgrade_plugin( $override_old_version = false ) {
 		$old_version = get_option( 'ema_plugin_version' );
-		update_option( 'ema_plugin_version', ENABLE_MASTODON_APPS_VERSION );
+		if ( preg_match( '/^(\d+\.\d+\.\d+)$/', $override_old_version ) ) {
+			// Used in tests.
+			$old_version = $override_old_version;
+		} else {
+			update_option( 'ema_plugin_version', ENABLE_MASTODON_APPS_VERSION );
+		}
 
 		if ( version_compare( $old_version, '0.9.1', '<' ) ) {
 			$comment_posts = get_posts(
