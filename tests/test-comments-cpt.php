@@ -143,10 +143,16 @@ class CommentsCPT_Tests extends \WP_UnitTestCase {
 			)
 		);
 
+		$post_count = wp_count_posts();
+		$this->assertEquals( 1, $post_count->publish );
 		$old_count = wp_count_posts( Comment_CPT::CPT );
 		$this->assertEquals( 2, $old_count->publish );
 
 		Mastodon_Admin::upgrade_plugin( '0.9.0' );
+
+		wp_cache_delete( _count_posts_cache_key(), 'counts' );
+		$post_count = wp_count_posts();
+		$this->assertEquals( 1, $post_count->publish );
 
 		wp_cache_delete( _count_posts_cache_key( Comment_CPT::CPT ), 'counts' );
 		$new_count = wp_count_posts( Comment_CPT::CPT );

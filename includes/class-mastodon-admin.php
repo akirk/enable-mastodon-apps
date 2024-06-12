@@ -471,7 +471,9 @@ class Mastodon_Admin {
 				}
 				$comment = get_comment( $comment_id );
 				if ( ! $comment || 1 !== intval( $comment->comment_approved ) ) {
-					wp_delete_post( $comment_post->ID, true );
+					if ( Comment_CPT::CPT === get_post_type( $comment_post->ID ) ) {
+						wp_delete_post( $comment_post->ID, true );
+					}
 				}
 			}
 		}

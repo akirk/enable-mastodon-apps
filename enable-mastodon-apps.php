@@ -3,7 +3,7 @@
  * Plugin name: Enable Mastodon Apps
  * Plugin author: Alex Kirk
  * Plugin URI: https://github.com/akirk/enable-mastodon-apps
- * Version: 0.9.2
+ * Version: 0.9.3
  *
  * Description: Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
  *
@@ -13,9 +13,12 @@
  * @package Enable_Mastodon_Apps
  */
 
+namespace Enable_Mastodon_Apps;
+use OAuth2;
+
 defined( 'ABSPATH' ) || exit;
 define( 'ENABLE_MASTODON_APPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
-define( 'ENABLE_MASTODON_APPS_VERSION', '0.9.2' );
+define( 'ENABLE_MASTODON_APPS_VERSION', '0.9.3' );
 
 require __DIR__ . '/vendor/bshaffer/oauth2-server-php/src/OAuth2/Autoloader.php';
 OAuth2\Autoloader::register();
@@ -59,8 +62,12 @@ OAuth2\Autoloader::register();
 add_action(
 	'init',
 	function () {
-		new Enable_Mastodon_Apps\Mastodon_API();
-		new Enable_Mastodon_Apps\Integration\Pixelfed();
-		new Enable_Mastodon_Apps\Comment_CPT();
+		new Mastodon_API();
+		new Integration\Pixelfed();
+		new Comment_CPT();
 	}
 );
+
+if ( is_admin() && version_compare( get_option( 'ema_plugin_version', ENABLE_MASTODON_APPS_VERSION ), '<' ) ) {
+	add_action( 'admin_init', array( __NAMESPACE__ . '\Mastodon_Admin', 'upgrade_plugin' ) );
+}
