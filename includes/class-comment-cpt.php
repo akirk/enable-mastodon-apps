@@ -4,6 +4,14 @@
  *
  * This contains the automatic mapping of comments to a custom post type.
  *
+ * The reason this exists in this plugin is that the ActivityPub plugin (rightfully) stores
+ * incoming replies to posts as WordPress comments. Also the Friends plugin follows suite, so
+ * a reply to a post is stored as a comment on the post, and then the ActivityPub plugin will
+ * send it out via ActivityPub. In Mastodon, there is no distinction between a post and a
+ * comment, so they all live in the same "id pool". Thus, clients expect them to appear in the
+ * same stream and interspersed with each other. This plugin syncs comments to a custom post
+ * type so that they can be queried and displayed in the same way as posts.
+ *
  * @package Enable_Mastodon_Apps
  */
 
