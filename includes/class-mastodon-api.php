@@ -1176,8 +1176,8 @@ class Mastodon_API {
 					'type'       => array(
 						'type'        => 'string',
 						'description' => 'The type of search to perform.',
-						'enum'        => array( 'accounts', 'hashtags', 'statuses' ),
-						'default'     => 'statuses',
+						'enum'        => array( 'accounts', 'hashtags', 'statuses', '' ),
+						'default'     => '',
 					),
 					'resolve'    => array(
 						'type'        => 'boolean',
