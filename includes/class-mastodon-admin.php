@@ -446,4 +446,34 @@ class Mastodon_Admin {
 			)
 		);
 	}
+
+	public static function upgrade_plugin( $override_old_version = false ) {
+		$old_version = get_option( 'ema_plugin_version' );
+		if ( preg_match( '/^(\d+\.\d+\.\d+)$/', $override_old_version ) ) {
+			// Used in tests.
+			$old_version = $override_old_version;
+		} else {
+			update_option( 'ema_plugin_version', ENABLE_MASTODON_APPS_VERSION );
+		}
+
+		if ( version_compare( $old_version, '0.9.1', '<' ) ) {
+			$comment_posts = get_posts(
+				array(
+					'post_type'      => Comment_CPT::CPT,
+					'posts_per_page' => -1,
+					'post_status'    => 'any',
+				)
+			);
+			foreach ( $comment_posts as $comment_post ) {
+				$comment_id = get_post_meta( $comment_post->ID, Comment_CPT::META_KEY, true );
+				if ( ! $comment_id ) {
+					continue;
+				}
+				$comment = get_comment( $comment_id );
+				if ( ! $comment || 1 !== intval( $comment->comment_approved ) ) {
+					wp_delete_post( $comment_post->ID, true );
+				}
+			}
+		}
+	}
 }

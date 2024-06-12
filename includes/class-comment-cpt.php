@@ -4,6 +4,14 @@
  *
  * This contains the automatic mapping of comments to a custom post type.
  *
+ * The reason this exists in this plugin is that the ActivityPub plugin (rightfully) stores
+ * incoming replies to posts as WordPress comments. Also the Friends plugin follows suite, so
+ * a reply to a post is stored as a comment on the post, and then the ActivityPub plugin will
+ * send it out via ActivityPub. In Mastodon, there is no distinction between a post and a
+ * comment, so they all live in the same "id pool". Thus, clients expect them to appear in the
+ * same stream and interspersed with each other. This plugin syncs comments to a custom post
+ * type so that they can be queried and displayed in the same way as posts.
+ *
  * @package Enable_Mastodon_Apps
  */
 
@@ -78,7 +86,7 @@ class Comment_CPT {
 		if ( ! $comment && $comment_id ) {
 			$comment = get_comment( $comment_id );
 		}
-		if ( ! $comment ) {
+		if ( ! $comment || ! isset( $comment->comment_approved ) || '1' !== strval( $comment->comment_approved ) ) {
 			return;
 		}
 		$parent_post_id = $comment->comment_post_ID;
@@ -146,28 +154,48 @@ class Comment_CPT {
 	public function update_comment_post_status( $new_status, $old_status, $comment ) {
 		$post_id = self::comment_id_to_post_id( $comment->comment_ID );
 		if ( ! $post_id ) {
+			if (
+				'approved' === $new_status &&
+				'approved' !== $old_status
+			) {
+				self::create_comment_post( $comment->comment_ID, $comment );
+			}
 			return;
 		}
 
-		$post_data = array(
-			'ID'          => $post_id,
-			'post_status' => 'publish' === $new_status ? 'publish' : 'private',
-		);
+		if ( 'approved' === $new_status ) {
+			wp_update_post(
+				array(
+					'ID'            => $post_id,
+					'post_content'  => $comment->comment_content,
+					'post_date'     => $comment->comment_date,
+					'post_date_gmt' => $comment->comment_date_gmt,
+					'post_status'   => 'publish',
+				)
+			);
+			return;
+		}
 
-		wp_update_post( $post_data );
+		if (
+			'trash' === $new_status ||
+			'spam' === $new_status
+		) {
+			$this->delete_comment_post( $comment->comment_ID );
+			return;
+		}
 	}
 
-	public function update_comment_post( $comment_id, $comment ) {
+	public function update_comment_post( $comment_id, $data ) {
 		$post_id = self::comment_id_to_post_id( $comment_id );
 		if ( ! $post_id ) {
 			return;
 		}
-
 		$post_data = array(
 			'ID'            => $post_id,
-			'post_content'  => $comment->comment_content,
-			'post_date'     => $comment->comment_date,
-			'post_date_gmt' => $comment->comment_date_gmt,
+			'post_content'  => $data['comment_content'],
+			'post_date'     => $data['comment_date'],
+			'post_date_gmt' => $data['comment_date_gmt'],
+			'post_status'   => $data['comment_approved'] ? 'publish' : 'trash',
 		);
 
 		wp_update_post( $post_data );
