@@ -6,7 +6,7 @@
 - Tested up to: 6.5
 - Requires PHP: 7.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 0.9.2
+- Stable tag: 0.9.3
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -96,6 +96,9 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 2. The Mastodon Apps settings page.
 
 ## Changelog
+
+### 0.9.3
+- Bring back the upgrade code.
 
 ### 0.9.2
 - Quick fix to disable the upgrade script to avoid errors.

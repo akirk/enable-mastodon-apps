@@ -1,3 +1,6 @@
+### 0.9.3
+- Bring back the upgrade code.
+
 ### 0.9.2
 - Quick fix to disable the upgrade script to avoid errors.
 
