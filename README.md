@@ -6,7 +6,7 @@
 - Tested up to: 6.5
 - Requires PHP: 7.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 0.9.0
+- Stable tag: 0.9.1
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -97,6 +97,14 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 
 ## Changelog
 
+### 0.9.1
+- Allow an empty search type, to search in all categories ([#150]) props @pfefferle
+- Don't reactivate the Link Manager ([#148])
+- Avoid errors when dividing strings ([#147]) props @mattwiebe
+- Don't include spam comments in the feed ([#149])
+- Ensure no spaces in URLs ([#144])
+- Fix some typos on the Welcome Screen ([#143])
+
 ### 0.9.0
 - Complete Rewrite, started at the Cloudfest Hackathon! Props @pfefferle, @drivingralle, @kittmedia, @obenland
 - Thus: all ActivityPub related tasks are handled by the ActivityPub plugin, all following-related tasks by the Friends plugin. Please make sure you have the latest version of those plugins if you want to use such features
@@ -116,6 +124,12 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 - Address an incompatibility with the IndieAuth plugin ([#65])
 
 
+[#150]: https://github.com/akirk/enable-mastodon-apps/pull/150
+[#148]: https://github.com/akirk/enable-mastodon-apps/pull/148
+[#147]: https://github.com/akirk/enable-mastodon-apps/pull/147
+[#149]: https://github.com/akirk/enable-mastodon-apps/pull/149
+[#144]: https://github.com/akirk/enable-mastodon-apps/pull/144
+[#143]: https://github.com/akirk/enable-mastodon-apps/pull/143
 [#140]: https://github.com/akirk/enable-mastodon-apps/pull/140
 [#138]: https://github.com/akirk/enable-mastodon-apps/pull/138
 [#137]: https://github.com/akirk/enable-mastodon-apps/pull/137

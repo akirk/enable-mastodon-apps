@@ -1,3 +1,10 @@
+### 0.9.1
+- Allow an empty search type, to search in all categories ([#150]) props @pfefferle
+- Don't reactivate the Link Manager ([#148])
+- Avoid errors when dividing strings ([#147]) props @mattwiebe
+- Don't include spam comments in the feed ([#149])
+- Ensure no spaces in URLs ([#144])
+- Fix some typos on the Welcome Screen ([#143])
 
 ### 0.9.0
 - Complete Rewrite, started at the Cloudfest Hackathon! Props @pfefferle, @drivingralle, @kittmedia, @obenland
@@ -91,6 +98,12 @@
 - Post replies as comments ([#3])
 - Fix a fatal when saving the default post format
 
+[#150]: https://github.com/akirk/enable-mastodon-apps/pull/150
+[#148]: https://github.com/akirk/enable-mastodon-apps/pull/148
+[#147]: https://github.com/akirk/enable-mastodon-apps/pull/147
+[#149]: https://github.com/akirk/enable-mastodon-apps/pull/149
+[#144]: https://github.com/akirk/enable-mastodon-apps/pull/144
+[#143]: https://github.com/akirk/enable-mastodon-apps/pull/143
 [#140]: https://github.com/akirk/enable-mastodon-apps/pull/140
 [#138]: https://github.com/akirk/enable-mastodon-apps/pull/138
 [#137]: https://github.com/akirk/enable-mastodon-apps/pull/137
