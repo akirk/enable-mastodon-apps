@@ -13,6 +13,9 @@
  * @package Enable_Mastodon_Apps
  */
 
+namespace Enable_Mastodon_Apps;
+use OAuth2;
+
 defined( 'ABSPATH' ) || exit;
 define( 'ENABLE_MASTODON_APPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'ENABLE_MASTODON_APPS_VERSION', '0.9.2' );
@@ -59,8 +62,11 @@ OAuth2\Autoloader::register();
 add_action(
 	'init',
 	function () {
-		new Enable_Mastodon_Apps\Mastodon_API();
-		new Enable_Mastodon_Apps\Integration\Pixelfed();
-		new Enable_Mastodon_Apps\Comment_CPT();
+		new Mastodon_API();
+		new Integration\Pixelfed();
+		new Comment_CPT();
 	}
 );
+if ( is_admin() && version_compare( get_option( 'ema_plugin_version', ENABLE_MASTODON_APPS_VERSION ), '<' ) ) {
+	add_action( 'admin_init', array( __NAMESPACE__ . '\Mastodon_Admin', 'upgrade_plugin' ) );
+}
