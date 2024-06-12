@@ -465,7 +465,7 @@ class Mastodon_Admin {
 					continue;
 				}
 				$comment = get_comment( $comment_id );
-				if ( ! $comment || 'approved' !== $comment->comment_approved ) {
+				if ( ! $comment || 1 !== intval( $comment->comment_approved ) ) {
 					wp_delete_post( $comment_post->ID, true );
 				}
 			}
