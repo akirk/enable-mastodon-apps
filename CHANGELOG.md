@@ -1,3 +1,6 @@
+### 0.9.2
+- Quick fix to disable the upgrade script to avoid errors.
+
 ### 0.9.1
 - Allow an empty search type, to search in all categories ([#150]) props @pfefferle
 - Don't reactivate the Link Manager ([#148])
