@@ -46,7 +46,8 @@
 			<?php esc_html_e( 'Depending on the plugins you use (see below), you\'ll then see posts in the timeline and can start interacting with them.', 'enable-mastodon-apps' ); ?>
 		</p>
 		<p>
-			<?php esc_html_e( 'Since the task of this plugin to achieve Mastodon API compatibility is complex, it is possible that you encounter issues.', 'enable-mastodon-apps' ); ?>
+			<span><?php esc_html_e( 'Since the task of this plugin to achieve Mastodon API compatibility is complex, it is possible that you encounter issues.', 'enable-mastodon-apps' ); ?></span>
+			<span>
 			<?php
 				echo wp_kses(
 					sprintf(
@@ -62,6 +63,7 @@
 					)
 				);
 				?>
+				</span>
 		</p>
 	</div>
 	<div class="box plugin-recommendations">
