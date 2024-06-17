@@ -13,20 +13,6 @@ use Enable_Mastodon_Apps\Mastodon_App;
 
 $rest_nonce = wp_create_nonce( 'wp_rest' );
 
-function post_format_select( $name, $selected = array() ) {
-	?>
-		<select name="<?php echo esc_attr( $name ); ?>[]" id="<?php echo esc_attr( $name ); ?>" size="10" multiple class="appformats">
-		<?php
-		foreach ( get_post_format_slugs() as $format ) {
-			?>
-				<option value="<?php echo esc_attr( $format ); ?>" <?php selected( in_array( $format, $selected, true ) ); ?>><?php echo esc_html( $format ); ?></option>
-				<?php
-		}
-		?>
-		</select>
-	<?php
-}
-
 ?>
 <div class="enable-mastodon-apps-settings enable-mastodon-apps-registered-apps-page <?php echo $args['enable_debug'] ? 'enable-debug' : 'disable-debug'; ?>">
 	<form method="post">
@@ -69,14 +55,8 @@ function post_format_select( $name, $selected = array() ) {
 					?>
 					<tr id='app-<?php echo esc_attr( $app->get_client_id() ); ?>' class="<?php echo $alternate ? 'alternate' : ''; ?>">
 						<td title='<?php echo esc_attr( $app->get_client_id() ); ?>'>
+							<a href="<?php echo esc_url( $app->get_admin_page() ); ?>"><?php echo esc_html( $app->get_client_name() ); ?></a>
 							<?php
-							if ( $app->get_website() ) {
-								?>
-								<a href="<?php echo esc_url( $app->get_website() ); ?>"><?php echo esc_html( $app->get_client_name() ); ?></a>
-								<?php
-							} else {
-								echo esc_html( $app->get_client_name() );
-							}
 
 							if ( $app->is_outdated() && Mastodon_App::DEBUG_CLIENT_ID !== $app->get_client_id() ) {
 								echo ' <span class="pill pill-outdated" title="' . esc_html__( 'No tokens or authorization codes associated with this app.', 'enable-mastodon-apps' ) . '">' . esc_html__( 'Outdated', 'enable-mastodon-apps' ) . '</span>';

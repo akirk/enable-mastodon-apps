@@ -277,3 +277,18 @@ summary {
 	max-width: 760px;
 	margin: 0 auto;
 }
+
+.settings_page_enable-mastodon-apps button.as-link {
+	background: none;
+	border: none;
+	color: #2271b1;
+	cursor: pointer;
+	font-size: inherit;
+	padding: 0;
+	text-decoration: underline;
+}
+.settings_page_enable-mastodon-apps button.as-link:focus {
+	color: #043959;
+	box-shadow: 0 0 0 2px #2271b1;
+	outline: 2px solid transparent;
+}
