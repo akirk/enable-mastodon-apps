@@ -288,4 +288,60 @@ class AppsEndpoint_Test extends Mastodon_API_TestCase {
 		$_SERVER['REQUEST_METHOD'] = $old_request_method;
 		$_SERVER['REQUEST_URI'] = $old_request_uri;
 	}
+
+	public function test_redirect_uri_with_parameters() {
+		global $wp_rest_server;
+		$old_get = $_GET;
+		$old_post = $_POST;
+		$old_request = $_REQUEST;
+		$old_request_method = $_SERVER['REQUEST_METHOD'];
+		$old_request_uri = $_SERVER['REQUEST_URI'];
+
+		$client_name = 'newapp1';
+		$app = Mastodon_App::save(
+			$client_name,
+			array( 'https://example.com/' ),
+			'read',
+			'https://example.com/'
+		);
+
+		// Ensure that we no longer are able to authorize.
+		$_REQUEST = array(
+			'client_id'     => $app->get_client_id(),
+			'redirect_uri'  => 'https://example.com/?param=1',
+			'response_type' => 'code',
+			'scope'         => 'read',
+		);
+		$_GET = $_REQUEST;
+		$_POST = array();
+		$_SERVER['REQUEST_METHOD'] = 'GET';
+		$_SERVER['REQUEST_URI'] = add_query_arg( $_REQUEST, '/oauth/authorize' );
+		$oauth = new Mastodon_OAuth();
+		$response = $oauth->handle_oauth( 'response' );
+		$this->assertEquals( 302, $response->getStatusCode() );
+
+		// And pretend the user clicked authorize.
+		$handler = $oauth->handle_oauth( 'handler' );
+		$request  = \OAuth2\Request::createFromGlobals();
+		$response = $handler->test_authorize( $request, $this->administrator );
+		$this->assertEquals( 302, $response->getStatusCode() );
+
+		// Now use the code to get an access token.
+		$location = $response->getHttpHeader( 'Location' );
+		$_REQUEST = array(
+			'client_id'     => $app->get_client_id(),
+			'client_secret' => $app->get_client_secret(),
+			'grant_type'    => 'authorization_code',
+			'code'          => wp_parse_args( wp_parse_url( $location, PHP_URL_QUERY ) )['code'],
+			'redirect_uri'  => 'https://example.com/?param=1',
+		);
+		$_POST = $_REQUEST;
+		$_GET = array();
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_SERVER['REQUEST_URI'] = '/oauth/token';
+
+		$response = $oauth->handle_oauth( 'response' );
+		$this->assertEquals( 200, $response->getStatusCode() );
+		$this->assertNotEmpty( $response->getParameter( 'access_token' ) );
+	}
 }
