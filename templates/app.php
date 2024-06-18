@@ -82,7 +82,7 @@ $confirm = esc_html(
 				<tr>
 					<th scope="row"><?php esc_html_e( 'Scopes', 'enable-mastodon-apps' ); ?></th>
 					<td>
-						<?php echo wp_kses( str_replace( ' ', '<br>', $app->get_scopes() ), array( 'br' => array() ) ); ?>
+						<?php echo esc_html( $app->get_scopes() ); ?>
 					</td>
 				</tr>
 				<tr>
