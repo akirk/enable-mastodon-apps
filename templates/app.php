@@ -69,14 +69,32 @@ $confirm = esc_html(
 				<tr>
 					<th scope="row"><?php esc_html_e( 'Website', 'enable-mastodon-apps' ); ?></th>
 					<td>
-						<a href="<?php echo esc_url( $app->get_website() ); ?>" target="_blank"><?php echo esc_html( $app->get_website() ); ?></a>
+						<?php if ( $app->get_website() ) : ?>
+							<a href="<?php echo esc_url( $app->get_website() ); ?>" target="_blank"><?php echo esc_html( $app->get_website() ); ?></a>
+						<?php else : ?>
+							<em><?php esc_html_e( 'No website provided by the app.', 'enable-mastodon-apps' ); ?></em>
+						<?php endif; ?>
 					</td>
 				</tr>
 				<tr class="debug-hide">
 					<th scope="row"><?php esc_html_e( 'Redirect URI', 'enable-mastodon-apps' ); ?></th>
 					<td>
 						<?php echo wp_kses( implode( '<br>', $app->get_redirect_uris() ), array( 'br' => array() ) ); ?>
-						<p class="description"><?php esc_html_e( 'The URI to redirect to after the user authorizes the app.', 'enable-mastodon-apps' ); ?></p>
+						<p class="description">
+							<span><?php esc_html_e( 'The URI to redirect to after the user authorizes the app.', 'enable-mastodon-apps' ); ?></span>
+							<span>
+								<?php
+								echo wp_kses(
+									sprintf(
+										// translators: %s is a link to the OAuth standard.
+										__( 'This is part of the <a href="%s">OAuth standard</a> and only useful in debugging scenarios.', 'enable-mastodon-apps' ),
+										'https://docs.joinmastodon.org/spec/oauth/'
+									),
+									array( 'a' => array( 'href' => array() ) )
+								);
+								?>
+							</span>
+						</p>
 					</td>
 				</tr>
 				<tr>
