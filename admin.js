@@ -37,18 +37,10 @@ jQuery( function( $ ) {
 		$( this ).closest('tr').find( '[name=save-app]' ).show();
 	} );
 
-	$(document).on( 'click', '.enable-mastodon-apps-settings button[name=delete-app]', function( event, response ) {
+	$(document).on( 'click', '.enable-mastodon-apps-settings button[data-confirm]', function( event, response ) {
 		if ( ! confirm( this.dataset.confirm ) ) {
 			event.preventDefault();
 			return false;
 		}
 	} );
-
-	$(document).on( 'click', '.enable-mastodon-apps-settings button[name=clear-app-logs]', function( event, response ) {
-		if ( ! confirm( this.dataset.confirm ) ) {
-			event.preventDefault();
-			return false;
-		}
-	} );
-
 } );

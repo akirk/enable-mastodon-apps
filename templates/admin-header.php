@@ -77,19 +77,6 @@ function td_timestamp( $timestamp, $strikethrough_past = false ) {
 	<?php
 }
 
-function post_format_select( $name, $selected = array() ) {
-	?>
-		<select name="<?php echo esc_attr( $name ); ?>[]" id="<?php echo esc_attr( $name ); ?>" size="10" multiple class="appformats">
-		<?php
-		foreach ( get_post_format_slugs() as $format ) {
-			?>
-				<option value="<?php echo esc_attr( $format ); ?>" <?php selected( in_array( $format, $selected, true ) ); ?>><?php echo esc_html( $format ); ?></option>
-				<?php
-		}
-		?>
-		</select>
-	<?php
-}
 ?>
 <div class="enable-mastodon-apps-settings-header">
 	<div class="enable-mastodon-apps-settings-title-section">
@@ -122,3 +109,9 @@ function post_format_select( $name, $selected = array() ) {
 	</nav>
 </div>
 <hr class="wp-header-end">
+<?php
+if ( isset( $_GET['success'] ) ) {
+	?>
+	<div class="notice notice-success is-dismissible"><p><?php echo esc_html( wp_unslash( $_GET['success'] ) ); ?></p></div>
+	<?php
+}

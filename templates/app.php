@@ -14,7 +14,13 @@ use Enable_Mastodon_Apps\Mastodon_App;
 $rest_nonce = wp_create_nonce( 'wp_rest' );
 $_post_types = \get_post_types( array( 'show_ui' => true ), 'objects' );
 $app = $args['app'];
-
+$confirm = esc_html(
+	sprintf(
+	// translators: %s is the app name.
+		__( 'Are you sure you want to delete %s?', 'enable-mastodon-apps' ),
+		$app->get_client_name()
+	)
+);
 ?>
 <div class="enable-mastodon-apps-settings enable-mastodon-apps-registered-apps-page <?php echo $args['enable_debug'] ? 'enable-debug' : 'disable-debug'; ?>">
 	<form method="post">
@@ -60,6 +66,12 @@ $app = $args['app'];
 
 		<table class="form-table">
 			<tbody>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'Website', 'enable-mastodon-apps' ); ?></th>
+					<td>
+						<a href="<?php echo esc_url( $app->get_website() ); ?>" target="_blank"><?php echo esc_html( $app->get_website() ); ?></a>
+					</td>
+				</tr>
 				<tr class="debug-hide">
 					<th scope="row"><?php esc_html_e( 'Redirect URI', 'enable-mastodon-apps' ); ?></th>
 					<td>
@@ -81,14 +93,18 @@ $app = $args['app'];
 					<th scope="row"><?php esc_html_e( 'Last Used', 'enable-mastodon-apps' ); ?></th>
 					<?php td_timestamp( $app->get_last_used() ); ?>
 				</tr>
-				<tr>
-					<th scope="row" class="post-formats"><?php esc_html_e( 'Post Formats', 'enable-mastodon-apps' ); ?></th>
+				<tr class="post-formats">
+					<th scope="row"><?php esc_html_e( 'Post Formats', 'enable-mastodon-apps' ); ?></th>
 					<td>
-						<?php post_format_select( 'post_formats', $app->get_post_formats() ); ?>
+						<fieldset>
+						<?php foreach ( get_post_format_strings() as $format => $label ) : ?>
+							<label><input type="checkbox" name="post_formats[]" value="<?php echo esc_attr( $format ); ?>"<?php checked( in_array( $format, $app->get_post_formats(), true ) ); ?> /> <?php echo esc_html( $label ); ?></label>
+						<?php endforeach; ?>
+						</fieldset>
 						<p class="description">
 							<span><?php esc_html_e( 'The post formats that will be used for this app.', 'enable-mastodon-apps' ); ?></span>
 							<span><?php esc_html_e( 'You can select multiple using the Ctrl or Cmd key.', 'enable-mastodon-apps' ); ?></span>
-							<button id="select_all_post_formats" class="as-link"><?php esc_html_e( 'Select all', 'enable-mastodon-apps' ); ?></button>
+							<button id="toggle_all_post_formats" class="as-link"><?php esc_html_e( 'Toggle all', 'enable-mastodon-apps' ); ?></button>
 						</p>
 					</td>
 				</tr>
@@ -107,16 +123,14 @@ $app = $args['app'];
 						</p>
 					</td>
 				</tr>
-				<tr>
+				<tr class="view-post-types">
 					<th scope="row" class="view-post-type"><?php esc_html_e( 'Show these post types', 'enable-mastodon-apps' ); ?></th>
 					<td>
-						<select name="view_post_types[]" multiple>
-						<?php
-						foreach ( $_post_types as $post_type ) :
-							?>
-								<option value="<?php echo esc_attr( $post_type->name ); ?>" <?php selected( in_array( $post_type->name, $app->get_view_post_types(), true ) ); ?>><?php echo esc_html( $post_type->label ); ?></option>
-							<?php endforeach; ?>
-						</select>
+						<fieldset>
+						<?php foreach ( $_post_types as $post_type ) : ?>
+							<label><input type="checkbox" name="view_post_types[]" value="<?php echo esc_attr( $post_type->name ); ?>"<?php checked( in_array( $post_type->name, $app->get_view_post_types(), true ) ); ?> /> <?php echo esc_html( $post_type->label ); ?></label>
+						<?php endforeach; ?>
+						</fieldset>
 						<p class="description">
 							<span><?php esc_html_e( 'These post types will be displayed in the app.', 'enable-mastodon-apps' ); ?></span>
 						</p>
@@ -125,10 +139,24 @@ $app = $args['app'];
 			</tbody>
 		</table>
 
-		<button><?php esc_html_e( 'Save', 'enable-mastodon-apps' ); ?></button>
+		<button class="button button-primary"><?php esc_html_e( 'Save', 'enable-mastodon-apps' ); ?></button>
+		<button name="delete-app" data-confirm="<?php echo esc_attr( $confirm ); ?>" value="<?php echo esc_attr( $app->get_client_id() ); ?>" class="button button-destructive">
+			<?php
+			echo esc_html(
+				sprintf(
+					// translators: %s is an app name.
+					_x( 'Delete %s', 'app', 'enable-mastodon-apps' ),
+					$app->get_client_name()
+				)
+			);
+			?>
+			</button>
 		<script>
-			document.getElementById( 'select_all_post_formats' ).onclick = function ( event ) {
-				Array.from( document.getElementById( 'app_post_formats' ).options ).forEach( item => item.selected = true )
+			document.getElementById( 'toggle_all_post_formats' ).onclick = function ( event ) {
+				document.querySelectorAll( '.post-formats input[type="checkbox"]' ).forEach( function ( element ) {
+					element.checked = ! element.checked;
+				} );
+
 				event.preventDefault();
 				return false;
 			}
@@ -177,7 +205,7 @@ $app = $args['app'];
 						<?php td_timestamp( $data['last_used'] ); ?>
 						<?php td_timestamp( $data['expires'], true ); ?>
 						<td><?php echo esc_html( $data['scope'] ); ?></td>
-						<td><button name="delete-token" value="<?php echo esc_attr( $token ); ?>" class="button button-destructive"><?php esc_html_e( 'Delete' ); /* phpcs:ignore WordPress.WP.I18n.MissingArgDomain */ ?></button></td>
+						<td><button name="delete-token" value="<?php echo esc_attr( $token ); ?>" data-confirm="<?php esc_attr_e( 'Do you really want to delete this access token?', 'enable-mastodon-apps' ); ?>" class="button button-destructive"><?php esc_html_e( 'Delete' ); /* phpcs:ignore WordPress.WP.I18n.MissingArgDomain */ ?></button></td>
 					</tr>
 					<?php
 				}

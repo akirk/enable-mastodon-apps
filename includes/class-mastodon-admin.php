@@ -463,6 +463,29 @@ class Mastodon_Admin {
 
 	public function process_admin_app_page( Mastodon_App $app ) {
 
+		if ( isset( $_POST['delete-app'] ) && $_POST['delete-app'] === $app->get_client_id() ) {
+			$name = $app->get_client_name();
+			$deleted = $app->delete();
+			if ( $deleted ) {
+				$message = sprintf(
+					// translators: %s: name of the app.
+					__( 'Deleted app "%s".', 'enable-mastodon-apps' ),
+					$name
+				);
+				wp_safe_redirect( add_query_arg( 'success', $message, admin_url( 'options-general.php?page=enable-mastodon-apps&tab=registered-apps' ) ) );
+				exit;
+			} else {
+				add_settings_error(
+					'enable-mastodon-apps',
+					'deleted-apps',
+					__( 'Could not delete app.', 'enable-mastodon-apps' ),
+					'error'
+				);
+				return;
+
+			}
+		}
+
 		if ( isset( $_POST['delete-token'] ) ) {
 			$deleted = $this->oauth->get_token_storage()->unsetAccessToken( $_POST['delete-token'] );
 			add_settings_error(
@@ -498,6 +521,7 @@ class Mastodon_Admin {
 			return;
 		}
 
+		$post_formats = array();
 		if ( isset( $_POST['post_formats'] ) && is_array( $_POST['post_formats'] ) ) {
 			$post_formats = array_filter(
 				$_POST['post_formats'],
@@ -509,8 +533,8 @@ class Mastodon_Admin {
 				}
 			);
 
-			$app->set_post_formats( $post_formats );
 		}
+		$app->set_post_formats( $post_formats );
 
 		$post_types = array_flip(
 			array_map(

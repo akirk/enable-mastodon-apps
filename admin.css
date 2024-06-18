@@ -225,6 +225,7 @@ summary {
 .settings_page_enable-mastodon-apps button.button-destructive {
 	border-color: #b32d2e;
 	color: #b32d2e;
+	float: right;
 }
 
 .settings_page_enable-mastodon-apps button.button-destructive:hover {
@@ -291,4 +292,13 @@ summary {
 	color: #043959;
 	box-shadow: 0 0 0 2px #2271b1;
 	outline: 2px solid transparent;
+}
+.settings_page_enable-mastodon-apps tr.post-formats fieldset,
+.settings_page_enable-mastodon-apps tr.view-post-types fieldset {
+	display: flex;
+	flex-wrap: wrap;
+}
+.settings_page_enable-mastodon-apps tr.post-formats label,
+.settings_page_enable-mastodon-apps tr.view-post-types label {
+	width: 20em;
 }
