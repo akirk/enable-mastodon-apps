@@ -112,7 +112,6 @@ $confirm = esc_html(
 						</fieldset>
 						<p class="description">
 							<span><?php esc_html_e( 'The post formats that will be used for this app.', 'enable-mastodon-apps' ); ?></span>
-							<span><?php esc_html_e( 'You can select multiple using the Ctrl or Cmd key.', 'enable-mastodon-apps' ); ?></span>
 							<button id="toggle_all_post_formats" class="as-link"><?php esc_html_e( 'Toggle all', 'enable-mastodon-apps' ); ?></button>
 						</p>
 					</td>
