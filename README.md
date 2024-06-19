@@ -6,7 +6,7 @@
 - Tested up to: 6.5
 - Requires PHP: 7.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 0.9.3
+- Stable tag: 0.9.4
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -97,6 +97,10 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 
 ## Changelog
 
+### 0.9.4
+- Added a dedicated page per app in the settings. There you can set which post types should be shown in the app. Also which post type should be created for new posts. ([#154])
+- Fixed authenticating Jetpack so that you can connect WordPress.com to this plugin ([#152])
+
 ### 0.9.3
 - Bring back the upgrade code.
 
@@ -130,6 +134,8 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 - Address an incompatibility with the IndieAuth plugin ([#65])
 
 
+[#154]: https://github.com/akirk/enable-mastodon-apps/pull/154
+[#152]: https://github.com/akirk/enable-mastodon-apps/pull/152
 [#150]: https://github.com/akirk/enable-mastodon-apps/pull/150
 [#148]: https://github.com/akirk/enable-mastodon-apps/pull/148
 [#147]: https://github.com/akirk/enable-mastodon-apps/pull/147

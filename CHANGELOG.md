@@ -1,3 +1,7 @@
+### 0.9.4
+- Added a dedicated page per app in the settings. There you can set which post types should be shown in the app. Also which post type should be created for new posts. ([#154])
+- Fixed authenticating Jetpack so that you can connect WordPress.com to this plugin ([#152])
+
 ### 0.9.3
 - Bring back the upgrade code.
 
@@ -104,6 +108,8 @@
 - Post replies as comments ([#3])
 - Fix a fatal when saving the default post format
 
+[#154]: https://github.com/akirk/enable-mastodon-apps/pull/154
+[#152]: https://github.com/akirk/enable-mastodon-apps/pull/152
 [#150]: https://github.com/akirk/enable-mastodon-apps/pull/150
 [#148]: https://github.com/akirk/enable-mastodon-apps/pull/148
 [#147]: https://github.com/akirk/enable-mastodon-apps/pull/147
