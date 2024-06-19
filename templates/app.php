@@ -39,27 +39,18 @@ $confirm = esc_html(
 						$app->get_client_name()
 					)
 				);
-				?>
-				<div id='applog-<?php echo esc_attr( $app->get_client_id() ); ?>' class="<?php echo $alternate ? 'alternate' : ''; ?>">
-						<details class="tt"><summary>
-						<?php
-						echo esc_html(
-							sprintf(
-								// translators: %ds is the number of requests.
-								_n( '%d logged request', '%d logged requests', count( $last_requests ), 'enable-mastodon-apps' ),
-								count( $last_requests )
-							)
-						);
-						?>
-						</summary>
-								<?php
-								foreach ( $last_requests as $request ) {
-									output_request_log( $request, $rest_nonce );
-								}
-								?>
-						</details>
-				</div>
-				<?php
+
+				echo esc_html(
+					sprintf(
+						// translators: %ds is the number of requests.
+						_n( '%d logged request', '%d logged requests', count( $last_requests ), 'enable-mastodon-apps' ),
+						count( $last_requests )
+					)
+				);
+
+				foreach ( $last_requests as $request ) {
+					output_request_log( $request, $rest_nonce );
+				}
 			}
 		}
 		?>
