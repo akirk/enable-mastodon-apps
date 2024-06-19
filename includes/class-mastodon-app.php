@@ -54,10 +54,6 @@ class Mastodon_App {
 		return get_term_meta( $this->term->term_id, 'client_secret', true );
 	}
 
-	public function set_client_secret( $client_secret ) {
-		return update_term_meta( $this->term->term_id, 'client_secret', $client_secret );
-	}
-
 	public function get_redirect_uris() {
 		return get_term_meta( $this->term->term_id, 'redirect_uris', true );
 	}
@@ -94,6 +90,42 @@ class Mastodon_App {
 
 		return $query_args['post_formats'];
 	}
+
+	public function get_admin_page() {
+		return admin_url( 'admin.php?page=enable-mastodon-apps&app=' . urlencode( $this->term->slug ) );
+	}
+
+	public function get_create_post_type() {
+		$create_post_type = get_term_meta( $this->term->term_id, 'create_post_type', true );
+		if ( ! $create_post_type ) {
+			$create_post_type = 'post';
+		}
+		return apply_filters( 'mastodon_api_create_post_type', $create_post_type );
+	}
+
+	public function get_view_post_types() {
+		$view_post_types = get_term_meta( $this->term->term_id, 'view_post_types', true );
+		if ( ! $view_post_types ) {
+			$view_post_types = 'post';
+		}
+		if ( ! is_array( $view_post_types ) ) {
+			$view_post_types = array( $view_post_types );
+		}
+		return apply_filters( 'mastodon_api_view_post_types', $view_post_types );
+	}
+
+	public function set_client_secret( $client_secret ) {
+		return update_term_meta( $this->term->term_id, 'client_secret', $client_secret );
+	}
+
+	public function set_create_post_type( $create_post_type ) {
+		return update_term_meta( $this->term->term_id, 'create_post_type', $create_post_type );
+	}
+
+	public function set_view_post_types( $view_post_types ) {
+		return update_term_meta( $this->term->term_id, 'view_post_types', $view_post_types );
+	}
+
 
 	public function set_post_formats( $post_formats ) {
 		$query_args = $this->get_query_args();

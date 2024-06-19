@@ -56,6 +56,13 @@ class Mastodon_Admin {
 		}
 
 		$tab = $_GET['tab'] ?? 'welcome';
+		if ( isset( $_POST['app'] ) ) {
+			$app = Mastodon_App::get_by_client_id( $_POST['app'] );
+			if ( $app ) {
+				return $this->process_admin_app_page( $app );
+			}
+			$tab = 'registered-apps';
+		}
 		switch ( $tab ) {
 			case 'settings':
 				$this->process_admin_settings_page();
@@ -72,6 +79,13 @@ class Mastodon_Admin {
 	public function admin_page() {
 		$this->enable_debug = get_option( 'mastodon_api_enable_debug' );
 		$tab = $_GET['tab'] ?? 'welcome';
+		if ( isset( $_GET['app'] ) ) {
+			$app = Mastodon_App::get_by_client_id( $_GET['app'] );
+			if ( $app ) {
+				return $this->admin_app_page( $app );
+			}
+			$tab = 'registered-apps';
+		}
 		switch ( $tab ) {
 			case 'welcome':
 				$this->admin_welcome_page();
@@ -443,6 +457,129 @@ class Mastodon_Admin {
 				'codes'        => $codes,
 				'tokens'       => $tokens,
 				'apps'         => $apps,
+			)
+		);
+	}
+
+	public function process_admin_app_page( Mastodon_App $app ) {
+
+		if ( isset( $_POST['delete-app'] ) && $_POST['delete-app'] === $app->get_client_id() ) {
+			$name = $app->get_client_name();
+			$deleted = $app->delete();
+			if ( $deleted ) {
+				$message = sprintf(
+					// translators: %s: name of the app.
+					__( 'Deleted app "%s".', 'enable-mastodon-apps' ),
+					$name
+				);
+				wp_safe_redirect( add_query_arg( 'success', $message, admin_url( 'options-general.php?page=enable-mastodon-apps&tab=registered-apps' ) ) );
+				exit;
+			} else {
+				add_settings_error(
+					'enable-mastodon-apps',
+					'deleted-apps',
+					__( 'Could not delete app.', 'enable-mastodon-apps' ),
+					'error'
+				);
+				return;
+
+			}
+		}
+
+		if ( isset( $_POST['delete-token'] ) ) {
+			$deleted = $this->oauth->get_token_storage()->unsetAccessToken( $_POST['delete-token'] );
+			add_settings_error(
+				'enable-mastodon-apps',
+				'deleted-tokens',
+				sprintf(
+				// translators: %d: number of deleted tokens.
+					_n( 'Deleted %d access token.', 'Deleted %d access tokens.', $deleted ? 1 : 0, 'enable-mastodon-apps' ),
+					$deleted ? 1 : 0
+				),
+				'success'
+			);
+			return;
+		}
+
+		if ( isset( $_POST['clear-app-logs'] ) ) {
+			$deleted = $app->delete_last_requests();
+			if ( $deleted ) {
+				add_settings_error(
+					'enable-mastodon-apps',
+					'clear-app-logs',
+					__( 'App logs were cleared.', 'enable-mastodon-apps' ),
+					'success'
+				);
+			} else {
+				add_settings_error(
+					'enable-mastodon-apps',
+					'clear-app-logs',
+					__( 'App logs could not be cleared.', 'enable-mastodon-apps' ),
+					'error'
+				);
+			}
+			return;
+		}
+
+		$post_formats = array();
+		if ( isset( $_POST['post_formats'] ) && is_array( $_POST['post_formats'] ) ) {
+			$post_formats = array_filter(
+				$_POST['post_formats'],
+				function ( $post_format ) {
+					if ( ! in_array( $post_format, get_post_format_slugs(), true ) ) {
+						return false;
+					}
+					return true;
+				}
+			);
+
+		}
+		$app->set_post_formats( $post_formats );
+
+		$post_types = array_flip(
+			array_map(
+				function ( $post_type ) {
+					return $post_type->name;
+				},
+				get_post_types( array(), 'objects' )
+			)
+		);
+
+		if ( isset( $_POST['create_post_type'] ) && $_POST['create_post_type'] ) {
+			if ( isset( $post_types[ $_POST['create_post_type'] ] ) ) {
+				$app->set_create_post_type( $_POST['create_post_type'] );
+			}
+		}
+
+		if ( isset( $_POST['view_post_types'] ) && is_array( $_POST['view_post_types'] ) ) {
+			$view_post_types = array();
+			foreach ( $_POST['view_post_types'] as $post_type ) {
+				if ( isset( $post_types[ $post_type ] ) ) {
+					$view_post_types[ $post_type ] = true;
+				}
+			}
+			if ( empty( $view_post_types ) ) {
+				$view_post_types = array( 'post' );
+			}
+			$app->set_view_post_types( array_keys( $view_post_types ) );
+		}
+	}
+
+	public function admin_app_page( Mastodon_App $app ) {
+		$tokens = array_filter(
+			OAuth2\Access_Token_Storage::getAll(),
+			function ( $token ) use ( $app ) {
+				return $token['client_id'] === $app->get_client_id();
+			}
+		);
+
+		load_template(
+			__DIR__ . '/../templates/app.php',
+			true,
+			array(
+				'enable_debug' => $this->enable_debug,
+				'app'          => $app,
+				'tokens'       => $tokens,
 			)
 		);
 	}

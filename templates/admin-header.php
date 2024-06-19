@@ -76,6 +76,7 @@ function td_timestamp( $timestamp, $strikethrough_past = false ) {
 	</td>
 	<?php
 }
+
 ?>
 <div class="enable-mastodon-apps-settings-header">
 	<div class="enable-mastodon-apps-settings-title-section">
@@ -108,3 +109,9 @@ function td_timestamp( $timestamp, $strikethrough_past = false ) {
 	</nav>
 </div>
 <hr class="wp-header-end">
+<?php
+if ( isset( $_GET['success'] ) ) {
+	?>
+	<div class="notice notice-success is-dismissible"><p><?php echo esc_html( wp_unslash( $_GET['success'] ) ); ?></p></div>
+	<?php
+}

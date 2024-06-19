@@ -21,9 +21,13 @@ class Handler {
 		if ( $limit < 1 ) {
 			$limit = 20;
 		}
-
+		$app = Mastodon_App::get_current_app();
+		$post_types = array( 'post' );
+		if ( $app ) {
+			$post_types = $app->get_view_post_types();
+		}
 		$args['posts_per_page']   = $limit;
-		$args['post_type']        = array( 'post', Mastodon_API::CPT );
+		$args['post_type']        = array_merge( $post_types, array( Mastodon_API::CPT ) );
 		$args['suppress_filters'] = false;
 		$args['post_status']      = array( 'publish', 'private' );
 
