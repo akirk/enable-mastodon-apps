@@ -204,7 +204,7 @@ class Mastodon_App {
 	}
 
 	public static function set_current_app( $client_id, $request ) {
-		self::$current_app = Mastodon_App::get_by_client_id( $client_id );
+		self::$current_app = self::get_by_client_id( $client_id );
 		self::$current_app->was_used( $request );
 		return self::$current_app;
 	}
