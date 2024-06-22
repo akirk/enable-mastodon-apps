@@ -14,6 +14,7 @@
  */
 
 namespace Enable_Mastodon_Apps;
+
 use OAuth2;
 
 defined( 'ABSPATH' ) || exit;

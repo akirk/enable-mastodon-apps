@@ -6,6 +6,7 @@
  */
 
 namespace Enable_Mastodon_Apps;
+
 use WP_REST_Request;
 /**
  * A testcase for the ids.

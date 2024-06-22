@@ -2524,12 +2524,12 @@ class Mastodon_API {
 
 	public static function remap_user_id( $user_id ) {
 		$user_id = apply_filters( 'mastodon_api_canonical_user_id', $user_id );
-		$term = get_term_by( 'name', $user_id, \Enable_Mastodon_Apps\Mastodon_API::REMAP_TAXONOMY );
+		$term = get_term_by( 'name', $user_id, self::REMAP_TAXONOMY );
 		$remote_user_id = 0;
 		if ( $term ) {
 			$remote_user_id = $term->term_id;
 		} else {
-			$term = wp_insert_term( $user_id, \Enable_Mastodon_Apps\Mastodon_API::REMAP_TAXONOMY );
+			$term = wp_insert_term( $user_id, self::REMAP_TAXONOMY );
 			if ( is_wp_error( $term ) ) {
 				return $remote_user_id;
 			}
@@ -2540,12 +2540,12 @@ class Mastodon_API {
 	}
 
 	public static function remap_url( $url ) {
-		$term = get_term_by( 'name', $url, \Enable_Mastodon_Apps\Mastodon_API::REMAP_TAXONOMY );
+		$term = get_term_by( 'name', $url, self::REMAP_TAXONOMY );
 		$remapped_id = 0;
 		if ( $term ) {
 			$remapped_id = $term->term_id;
 		} else {
-			$term = wp_insert_term( $url, \Enable_Mastodon_Apps\Mastodon_API::REMAP_TAXONOMY );
+			$term = wp_insert_term( $url, self::REMAP_TAXONOMY );
 			if ( ! is_wp_error( $term ) ) {
 				$remapped_id = $term['term_id'];
 			}
@@ -2578,7 +2578,7 @@ class Mastodon_API {
 		global $wp_version;
 		$software = array(
 			'name'    => $this->software_string(),
-			'version' => Mastodon_API::VERSION,
+			'version' => self::VERSION,
 		);
 		$software = apply_filters( 'mastodon_api_nodeinfo_software', $software );
 		$ret = array(
