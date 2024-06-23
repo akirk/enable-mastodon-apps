@@ -173,12 +173,12 @@ $rest_nonce = wp_create_nonce( 'wp_rest' );
 					foreach ( $tokens as $token => $data ) {
 						$user = 'app-level';
 						if ( $data['user_id'] ) {
-							$userdata = get_user_by( 'ID', $data['user_id'] );
-							if ( $userdata ) {
-								if ( is_wp_error( $userdata ) ) {
-									$user = $userdata->get_error_message();
+							$_userdata = get_user_by( 'ID', $data['user_id'] );
+							if ( $_userdata ) {
+								if ( is_wp_error( $_userdata ) ) {
+									$user = $_userdata->get_error_message();
 								} else {
-									$user = $userdata->user_login;
+									$user = $_userdata->user_login;
 								}
 							} else {
 								$user = 'error';

@@ -47,7 +47,7 @@ class Mastodon_OAuth {
 		$this->server->addStorage( new Oauth2\Access_Token_Storage(), 'access_token' );
 		$this->server->setScopeUtil( new Oauth2\Scope_Util() );
 
-		if ( '/oauth/token' === strtok( $_SERVER['REQUEST_URI'], '?' ) ) {
+		if ( '/oauth/token' === strtok( remove_query_arg(), '?' ) ) {
 			// Avoid interference with private site plugins.
 			add_filter(
 				'pre_option_blog_public',
@@ -97,15 +97,15 @@ class Mastodon_OAuth {
 
 	public function handle_oauth( $return_value = false ) {
 		global $wp_query;
-		if ( 'POST' === $_SERVER['REQUEST_METHOD'] && empty( $_POST ) && ! empty( $_REQUEST ) ) {
-			$_POST = $_REQUEST;
+		if ( isset( $_SERVER['REQUEST_METHOD'] ) && 'POST' === $_SERVER['REQUEST_METHOD'] && empty( $_POST ) && ! empty( $_REQUEST ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+			$_POST = $_REQUEST; // phpcs:ignore WordPress.Security.NonceVerification
 		}
 		$endpoint = null;
 
 		if ( isset( $wp_query->query['mastodon-oauth'] ) ) {
 			$endpoint = $wp_query->query['mastodon-oauth'];
 		} else {
-			$request_uri = trim( strtok( $_SERVER['REQUEST_URI'], '?' ), '/' );
+			$request_uri = trim( strtok( remove_query_arg(), '?' ), '/' );
 
 			if ( in_array( $request_uri, array( 'oauth/authorize', 'oauth/token', 'oauth/revoke' ) ) ) {
 				$endpoint = explode( '/', $request_uri )[1];
@@ -146,9 +146,9 @@ class Mastodon_OAuth {
 
 		if ( get_option( 'mastodon_api_debug_mode' ) > time() ) {
 			$app = Mastodon_App::get_debug_app();
-			$request = new \WP_REST_Request( $_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI'] );
-			$request->set_query_params( $_GET );
-			$request->set_body_params( $_POST );
+			$request = new \WP_REST_Request( $_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI'] ); // phpcs:ignore WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput
+			$request->set_query_params( $_GET ); // phpcs:ignore WordPress.Security.NonceVerification
+			$request->set_body_params( $_POST ); // phpcs:ignore WordPress.Security.NonceVerification
 			$request->set_headers( getallheaders() );
 			$app->was_used( $request );
 		}
