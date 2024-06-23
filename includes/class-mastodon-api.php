@@ -1369,7 +1369,208 @@ class Mastodon_API {
 			)
 		);
 
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/accounts/update_credentials',
+			array(
+				'methods'             => array( 'PATCH', 'POST', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_update_credentials' ),
+				'permission_callback' => $this->required_scope( 'write:accounts' ),
+				'args'                => array(
+					'display_name' => array(
+						'type'        => 'string',
+						'description' => 'The name to display in the user’s profile.',
+					),
+					'note'         => array(
+						'type'        => 'string',
+						'description' => 'A new biography for the user.',
+					),
+					'avatar'       => array(
+						'type'        => 'binary',
+						'description' => 'A base64 encoded image to display as the user’s avatar.',
+					),
+					'header'       => array(
+						'type'        => 'binary',
+						'description' => 'A base64 encoded image to display as the user’s header image.',
+					),
+					'source'       => array(
+						'type'        => 'string',
+						'description' => 'The application name of the client that created the credentials being updated.',
+					),
+				),
+			)
+		);
+
 		do_action( 'mastodon_api_register_rest_routes', $this );
+	}
+
+	private function get_body_from_php_input() {
+		// A helpful shim in case this is PHP <=5.6 when php://input could only be accessed once
+		static $input;
+		if ( ! isset( $input ) ) {
+			$input = file_get_contents( 'php://input' );
+		}
+
+		return $input;
+	}
+
+	/**
+	* Get file upload from PATCH request.
+	*
+	* @param string $key The form field name of the file input.
+	* @return array|false Array of file data similar to a key in $_FILES, or false if no file found.
+	*/
+ private function get_patch_upload( $key ) {
+	 if ( 'PATCH' !== $_SERVER['REQUEST_METHOD'] ) {
+		 return false;
+	 }
+
+	 $raw_data = $this->get_body_from_php_input();
+	 if ( empty( $raw_data ) ) {
+		 return false;
+	 }
+
+	 $content_type = isset( $_SERVER['CONTENT_TYPE'] ) ? $_SERVER['CONTENT_TYPE'] : '';
+	 if ( ! preg_match( '/boundary=(.*)$/', $content_type, $matches ) ) {
+		 return false;
+	 }
+	 $boundary = $matches[1];
+
+	 $parts = array_slice( explode( '--' . $boundary, $raw_data ), 1, -1 );
+	 foreach ( $parts as $part ) {
+		 if ( false === strpos( $part, 'name="' . $key . '"' ) ) {
+			 continue;
+		 }
+
+		 list( $header_raw, $file_content ) = explode( "\r\n\r\n", $part, 2 );
+		 $headers = array();
+		 foreach ( explode( "\r\n", $header_raw ) as $line ) {
+			 if ( false !== strpos( $line, ': ' ) ) {
+				 list( $name, $value ) = explode( ': ', $line );
+				 $headers[ $name ] = $value;
+			 }
+		 }
+
+		 if ( ! preg_match( '/filename="([^"]+)"/', $headers['Content-Disposition'], $matches ) ) {
+			return false;
+		 }
+		 $file_name = $matches[1];
+
+		 // require the file needed fo wp_tempnam
+		 require_once ABSPATH . 'wp-admin/includes/file.php';
+		 $tmp_name = wp_tempnam( 'patch_upload_' . $key );
+		 file_put_contents( $tmp_name, $file_content );
+
+		 return array(
+			'name'     => $file_name,
+			'type'     => isset( $headers['Content-Type'] ) ? $headers['Content-Type'] : 'application/octet-stream',
+			'size'     => strlen( $file_content ),
+			'tmp_name' => $tmp_name,
+			'error'    => UPLOAD_ERR_OK,
+		 );
+		}
+
+	 return false;
+ 	}
+
+	/**
+	 * Get data from a PATCH request.
+	 *
+	 * This function handles different content types:
+	 * - application/x-www-form-urlencoded
+	 * - application/json
+	 * - multipart/form-data
+	 *
+	 * @return array The merged array of request data.
+	 */
+	private function get_patch_data() {
+		if ( 'PATCH' !== $_SERVER['REQUEST_METHOD'] ) {
+			return $_REQUEST;
+		}
+
+		$content_type = isset( $_SERVER['CONTENT_TYPE'] ) ? $_SERVER['CONTENT_TYPE'] : '';
+		$input        = $this->get_body_from_php_input();
+		$data         = array();
+
+		if ( strpos( $content_type, 'application/x-www-form-urlencoded' ) !== false ) {
+			parse_str( $input, $data );
+		} elseif ( strpos( $content_type, 'application/json' ) !== false ) {
+			$json_data = json_decode( $input, true );
+			if ( is_array( $json_data ) ) {
+				$data = $json_data;
+			}
+		} elseif ( strpos( $content_type, 'multipart/form-data' ) !== false ) {
+			$boundary = substr( $input, 0, strpos( $input, "\r\n" ) );
+			if ( empty( $boundary ) ) {
+				// get boundary from $content_type
+				$boundary = substr( $content_type, strpos( $content_type, 'boundary=' ) + 9 );
+				// remove double quotes
+				$boundary = str_replace( '\"', '', $boundary );
+			}
+			if ( empty( $boundary ) ) {
+				return $_REQUEST;
+			}
+			$parts    = array_slice( explode( $boundary, $input ), 1, -1 );
+
+			foreach ( $parts as $part ) {
+				if ( strpos( $part, 'filename=' ) !== false ) {
+					// This is a file upload, handle separately
+					continue;
+				}
+
+				if ( preg_match( '/name="([^"]+)"/', $part, $matches ) ) {
+					$name          = $matches[1];
+					$value         = substr( $part, strpos( $part, "\r\n\r\n" ) + 4, -2 );
+					$data[ $name ] = $value;
+				}
+			}
+		}
+
+		return array_merge( $_REQUEST, $data );
+	}
+
+	public function api_update_credentials( $request ) {
+		$token = $this->oauth->get_token();
+		$user = get_userdata( $token['user_id'] );
+		if ( ! $user ) {
+			return new \WP_Error( 'user-not-found', 'User not found', array( 'status' => 404 ) );
+		}
+
+		// handle avatar
+		$avatar = $this->get_patch_upload( 'avatar' );
+		if ( $avatar ) {
+			$avatar = $this->handle_upload( $avatar );
+		}
+		if ( is_wp_error( $avatar ) ) {
+			return $avatar;
+		}
+
+		// same for header
+		$header = $this->get_patch_upload( 'header' );
+		if ( $header ) {
+			$header = $this->handle_upload( $header );
+		}
+		if ( is_wp_error( $header ) ) {
+			return $header;
+		}
+
+		// now populate the params - get_patch_data is unsanitized but the get_param request methods run that
+		$request->set_body_params( $this->get_patch_data() );
+		$request->sanitize_params();
+
+		$data = array(
+			'avatar'            => $avatar,
+			'header'            => $header,
+			'display_name'      => $request->get_param( 'display_name' ),
+			'note'              => $request->get_param( 'note' ),
+			'fields_attributes' => $request->get_param( 'fields_attributes' ),
+		);
+		$data = array_filter( $data );
+
+		do_action( 'mastodon_api_update_credentials', $user, $data );
+
+		// return HTTP 200 response
+		return rest_ensure_response( [] );
 	}
 
 	public function query_vars( $query_vars ) {
@@ -1741,34 +1942,11 @@ class Mastodon_API {
 	 */
 	public function api_post_media( WP_REST_Request $request ) {
 		$media = $request->get_file_params();
-		if ( empty( $media ) ) {
+		if ( empty( $media ) || empty( $media['file'] ) ) {
 			return new \WP_Error( 'mastodon_api_post_media', 'Media is empty', array( 'status' => 422 ) );
 		}
 
-		require_once ABSPATH . 'wp-admin/includes/media.php';
-		require_once ABSPATH . 'wp-admin/includes/file.php';
-		require_once ABSPATH . 'wp-admin/includes/image.php';
-
-		if ( ! isset( $media['file']['name'] ) || false === strpos( $media['file']['name'], '.' ) ) {
-			switch ( $media['file']['type'] ) {
-				case 'image/png':
-					$media['file']['name'] = 'image.png';
-					break;
-				case 'image/jpeg':
-					$media['file']['name'] = 'image.jpg';
-					break;
-				case 'image/gif':
-					$media['file']['name'] = 'image.gif';
-					break;
-			}
-		}
-		$attachment_id = \media_handle_sideload( $media['file'] );
-		if ( is_wp_error( $attachment_id ) ) {
-			return new \WP_Error( 'mastodon_api_post_media', $attachment_id->get_error_message(), array( 'status' => 422 ) );
-		}
-
-		wp_update_attachment_metadata( $attachment_id, wp_generate_attachment_metadata( $attachment_id, get_attached_file( $attachment_id ) ) );
-
+		$attachment_id = $this->handle_upload( $media['file'] );
 		$request->set_param( 'post_id', $attachment_id );
 
 		$description = $request->get_param( 'description' );
@@ -1782,6 +1960,39 @@ class Mastodon_API {
 		}
 
 		return rest_ensure_response( $this->api_get_media( $request ) );
+	}
+
+	/**
+	 * Handle the upload of a media file.
+	 *
+	 * @param array $media The media file data.
+	 * @return int|\WP_Error The attachment ID or a WP_Error object on failure.
+	 */
+	private function handle_upload( $media ) {
+		require_once ABSPATH . 'wp-admin/includes/media.php';
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+		require_once ABSPATH . 'wp-admin/includes/image.php';
+
+		if ( ! isset( $media['name'] ) || false === strpos( $media['name'], '.' ) ) {
+			switch ( $media['type'] ) {
+				case 'image/png':
+					$media['name'] = 'image.png';
+					break;
+				case 'image/jpeg':
+					$media['name'] = 'image.jpg';
+					break;
+				case 'image/gif':
+					$media['name'] = 'image.gif';
+					break;
+			}
+		}
+		$attachment_id = \media_handle_sideload( $media );
+		if ( is_wp_error( $attachment_id ) ) {
+			return new \WP_Error( 'mastodon_api_post_media', $attachment_id->get_error_message(), array( 'status' => 422 ) );
+		}
+
+		wp_update_attachment_metadata( $attachment_id, wp_generate_attachment_metadata( $attachment_id, get_attached_file( $attachment_id ) ) );
+		return $attachment_id;
 	}
 
 	/**
