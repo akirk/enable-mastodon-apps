@@ -90,7 +90,7 @@ class Mastodon_API {
 		header( 'Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS' );
 		header( 'Access-Control-Allow-Headers: content-type, authorization' );
 		header( 'Access-Control-Allow-Credentials: true' );
-		if ( 'OPTIONS' === $_SERVER['REQUEST_METHOD'] ) {
+		if ( isset( $_SERVER['REQUEST_METHOD'] ) && 'OPTIONS' === $_SERVER['REQUEST_METHOD'] ) {
 			header( 'Access-Control-Allow-Origin: *', true, 204 );
 			exit;
 		}
@@ -1424,7 +1424,7 @@ class Mastodon_API {
 				$app->was_used(
 					$request,
 					array(
-						'user_agent' => $_SERVER['HTTP_USER_AGENT'],
+						'user_agent' => isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '-',
 					)
 				);
 			}
@@ -1442,12 +1442,12 @@ class Mastodon_API {
 		if ( get_option( 'mastodon_api_debug_mode' ) <= time() ) {
 			return $template;
 		}
-		if ( 0 !== strpos( $_SERVER['REQUEST_URI'], '/api/v' ) ) {
+		if ( 0 !== strpos( remove_query_arg(), '/api/v' ) ) {
 			return $template;
 		}
-		$request = new WP_REST_Request( $_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI'] );
-		$request->set_query_params( $_GET );
-		$request->set_body_params( $_POST );
+		$request = new \WP_REST_Request( $_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI'] ); // phpcs:ignore WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput
+		$request->set_query_params( $_GET ); // phpcs:ignore WordPress.Security.NonceVerification
+		$request->set_body_params( $_POST ); // phpcs:ignore WordPress.Security.NonceVerification
 		$request->set_headers( getallheaders() );
 		if ( ! empty( $_SERVER['HTTP_AUTHORIZATION'] ) ) {
 			$this->oauth->get_token();
@@ -1459,7 +1459,7 @@ class Mastodon_API {
 		$app->was_used(
 			$request,
 			array(
-				'user_agent' => $_SERVER['HTTP_USER_AGENT'],
+				'user_agent' => isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '-',
 				'status'     => 404,
 			)
 		);
@@ -1551,7 +1551,7 @@ class Mastodon_API {
 	 *
 	 * @return     array   The potentially modified default value.
 	 */
-	public function default_option_mastodon_api_default_post_formats( $post_formats ) {
+	public function default_option_mastodon_api_default_post_formats( $post_formats ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
 		return array(
 			'standard',
 		);
@@ -1897,7 +1897,7 @@ class Mastodon_API {
 		return $this->validate_entity( $account, Entity\Account::class );
 	}
 
-	public function api_push_subscription( $request ) {
+	public function api_push_subscription( $request ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
 		return array();
 	}
 
@@ -2368,7 +2368,7 @@ class Mastodon_API {
 		return apply_filters( 'mastodon_api_notifications_get', array(), $request );
 	}
 
-	public function api_preferences( $request ) {
+	public function api_preferences( $request ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
 		$preferences = array(
 			'posting:default:language'   => self::get_mastodon_language( get_user_locale() ),
 			'posting:default:visibility' => apply_filters( 'mastodon_api_account_visibility', 'public', wp_get_current_user() ),
@@ -2744,7 +2744,7 @@ class Mastodon_API {
 	 * @param WP_REST_Request $request The full request object.
 	 * @return WP_REST_Response
 	 */
-	public function api_instance_peers( WP_REST_Request $request ): WP_REST_Response {
+	public function api_instance_peers( WP_REST_Request $request ): WP_REST_Response {// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
 		$peers = get_bookmarks();
 		$peers = wp_list_pluck( $peers, 'link_url' );
 
@@ -2774,7 +2774,7 @@ class Mastodon_API {
 	 * @param WP_REST_Request $request The full request object.
 	 * @return WP_REST_Response
 	 */
-	public function api_instance_rules( WP_REST_Request $request ): WP_REST_Response {
+	public function api_instance_rules( WP_REST_Request $request ): WP_REST_Response { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
 		/**
 		 * Modify the instance rules returned for `/api/instance/rules` requests.
 		 *
@@ -2801,7 +2801,7 @@ class Mastodon_API {
 	 * @param WP_REST_Request $request The full request object.
 	 * @return WP_REST_Response
 	 */
-	public function api_instance_domain_blocks( WP_REST_Request $request ): WP_REST_Response {
+	public function api_instance_domain_blocks( WP_REST_Request $request ): WP_REST_Response { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
 		/**
 		 * Modify the instance domain_blocks returned for `/api/instance/domain_blocks` requests.
 		 *
@@ -2828,7 +2828,7 @@ class Mastodon_API {
 	 * @param WP_REST_Request $request The full request object.
 	 * @return WP_REST_Response
 	 */
-	public function api_instance_extended_description( WP_REST_Request $request ): WP_REST_Response {
+	public function api_instance_extended_description( WP_REST_Request $request ): WP_REST_Response { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
 		/**
 		 * Modify the instance extended_description returned for `/api/instance/extended_description` requests.
 		 *
@@ -2853,7 +2853,7 @@ class Mastodon_API {
 	 * @param WP_REST_Request $request The full request object.
 	 * @return WP_REST_Response
 	 */
-	public function api_instance_translation_languages( WP_REST_Request $request ): WP_REST_Response {
+	public function api_instance_translation_languages( WP_REST_Request $request ): WP_REST_Response {// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
 		/**
 		 * Modify the translation languages returned for `/api/instance/translation_languages` requests.
 		 *
