@@ -121,9 +121,9 @@ $confirm = esc_html(
 					<td>
 						<select name="create_post_type">
 						<?php
-						foreach ( $_post_types as $post_type ) :
+						foreach ( $_post_types as $_post_type ) :
 							?>
-								<option value="<?php echo esc_attr( $post_type->name ); ?>" <?php selected( $post_type->name, $app->get_create_post_type() ); ?>><?php echo esc_html( $post_type->labels->singular_name ); ?></option>
+								<option value="<?php echo esc_attr( $_post_type->name ); ?>" <?php selected( $_post_type->name, $app->get_create_post_type() ); ?>><?php echo esc_html( $_post_type->labels->singular_name ); ?></option>
 							<?php endforeach; ?>
 						</select>
 						<p class="description">
@@ -135,8 +135,8 @@ $confirm = esc_html(
 					<th scope="row" class="view-post-type"><?php esc_html_e( 'Show these post types', 'enable-mastodon-apps' ); ?></th>
 					<td>
 						<fieldset>
-						<?php foreach ( $_post_types as $post_type ) : ?>
-							<label><input type="checkbox" name="view_post_types[]" value="<?php echo esc_attr( $post_type->name ); ?>"<?php checked( in_array( $post_type->name, $app->get_view_post_types(), true ) ); ?> /> <?php echo esc_html( $post_type->label ); ?></label>
+						<?php foreach ( $_post_types as $_post_type ) : ?>
+							<label><input type="checkbox" name="view_post_types[]" value="<?php echo esc_attr( $_post_type->name ); ?>"<?php checked( in_array( $_post_type->name, $app->get_view_post_types(), true ) ); ?> /> <?php echo esc_html( $_post_type->label ); ?></label>
 						<?php endforeach; ?>
 						</fieldset>
 						<p class="description">
@@ -196,12 +196,12 @@ $confirm = esc_html(
 				foreach ( $args['tokens'] as $token => $data ) {
 					$user = 'app-level';
 					if ( $data['user_id'] ) {
-						$userdata = get_user_by( 'ID', $data['user_id'] );
-						if ( $userdata ) {
-							if ( is_wp_error( $userdata ) ) {
-								$user = $userdata->get_error_message();
+						$_userdata = get_user_by( 'ID', $data['user_id'] );
+						if ( $_userdata ) {
+							if ( is_wp_error( $_userdata ) ) {
+								$user = $_userdata->get_error_message();
 							} else {
-								$user = $userdata->user_login;
+								$user = $_userdata->user_login;
 							}
 						} else {
 							$user = 'error';
