@@ -29,7 +29,7 @@ function output_request_log( $request, $rest_nonce ) {
 		echo '</summary>';
 		echo '<pre style="padding-left: 1em; border-left: 3px solid #999; margin: 0">';
 		foreach ( $meta as $key => $value ) {
-			echo esc_html( $key ), ' ', esc_html( var_export( $value, true ) ), '<br/>';
+			echo esc_html( $key ), ' ', esc_html( var_export( $value, true ) ), '<br/>'; // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_var_export
 		}
 		echo '</pre>';
 		echo '</details>';
@@ -110,8 +110,8 @@ function td_timestamp( $timestamp, $strikethrough_past = false ) {
 </div>
 <hr class="wp-header-end">
 <?php
-if ( isset( $_GET['success'] ) ) {
+if ( isset( $_GET['_wpnonce'] ) && wp_verify_nonce( sanitize_key( $_GET['_wpnonce'] ), 'success' ) && isset( $_GET['success'] ) ) {
 	?>
-	<div class="notice notice-success is-dismissible"><p><?php echo esc_html( wp_unslash( $_GET['success'] ) ); ?></p></div>
+	<div class="notice notice-success is-dismissible"><p><?php echo esc_html( sanitize_text_field( wp_unslash( $_GET['success'] ) ) ); ?></p></div>
 	<?php
 }
