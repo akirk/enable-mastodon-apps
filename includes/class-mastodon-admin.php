@@ -472,7 +472,7 @@ class Mastodon_Admin {
 					__( 'Deleted app "%s".', 'enable-mastodon-apps' ),
 					$name
 				);
-				wp_safe_redirect( add_query_arg( 'success', $message, admin_url( 'options-general.php?page=enable-mastodon-apps&tab=registered-apps' ) ) );
+				wp_safe_redirect( add_query_arg( '_wpnonce', wp_create_nonce( 'success' ), add_query_arg( 'success', $message, admin_url( 'options-general.php?page=enable-mastodon-apps&tab=registered-apps' ) ) ) );
 				exit;
 			} else {
 				add_settings_error(
