@@ -1373,7 +1373,7 @@ class Mastodon_API {
 			self::PREFIX,
 			'api/v1/accounts/update_credentials',
 			array(
-				'methods'             => array( 'PATCH', 'POST', 'OPTIONS' ),
+				'methods'             => array( 'PATCH', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_update_credentials' ),
 				'permission_callback' => $this->required_scope( 'write:accounts' ),
 				'args'                => array(
@@ -1404,8 +1404,12 @@ class Mastodon_API {
 		do_action( 'mastodon_api_register_rest_routes', $this );
 	}
 
-	private function get_body_from_php_input() {
-		// A helpful shim in case this is PHP <=5.6 when php://input could only be accessed once
+	/**
+	 * Get the body from php://input.
+	 * We don't use $request->get_body() because its data is mangled.
+	 */
+	private static function get_body_from_php_input() {
+		// A helpful shim in case this is PHP <=5.6 when php://input could only be accessed once.
 		static $input;
 		if ( ! isset( $input ) ) {
 			$input = file_get_contents( 'php://input' );
@@ -1415,63 +1419,67 @@ class Mastodon_API {
 	}
 
 	/**
-	* Get file upload from PATCH request.
-	*
-	* @param string $key The form field name of the file input.
-	* @return array|false Array of file data similar to a key in $_FILES, or false if no file found.
-	*/
- private function get_patch_upload( $key ) {
-	 if ( 'PATCH' !== $_SERVER['REQUEST_METHOD'] ) {
-		 return false;
-	 }
-
-	 $raw_data = $this->get_body_from_php_input();
-	 if ( empty( $raw_data ) ) {
-		 return false;
-	 }
-
-	 $content_type = isset( $_SERVER['CONTENT_TYPE'] ) ? $_SERVER['CONTENT_TYPE'] : '';
-	 if ( ! preg_match( '/boundary=(.*)$/', $content_type, $matches ) ) {
-		 return false;
-	 }
-	 $boundary = $matches[1];
-
-	 $parts = array_slice( explode( '--' . $boundary, $raw_data ), 1, -1 );
-	 foreach ( $parts as $part ) {
-		 if ( false === strpos( $part, 'name="' . $key . '"' ) ) {
-			 continue;
-		 }
-
-		 list( $header_raw, $file_content ) = explode( "\r\n\r\n", $part, 2 );
-		 $headers = array();
-		 foreach ( explode( "\r\n", $header_raw ) as $line ) {
-			 if ( false !== strpos( $line, ': ' ) ) {
-				 list( $name, $value ) = explode( ': ', $line );
-				 $headers[ $name ] = $value;
-			 }
-		 }
-
-		 if ( ! preg_match( '/filename="([^"]+)"/', $headers['Content-Disposition'], $matches ) ) {
+	 * Get file upload from PATCH request.
+	 *
+	 * @param string          $key The form field name of the file input.
+	 * @param WP_REST_Request $request The request object.
+	 * @return array|false Array of file data similar to a key in $_FILES, or false if no file found.
+	 */
+	private function get_patch_upload( $key, $request ) {
+		if ( 'PATCH' !== $request->get_method() ) {
 			return false;
-		 }
-		 $file_name = $matches[1];
-
-		 // require the file needed fo wp_tempnam
-		 require_once ABSPATH . 'wp-admin/includes/file.php';
-		 $tmp_name = wp_tempnam( 'patch_upload_' . $key );
-		 file_put_contents( $tmp_name, $file_content );
-
-		 return array(
-			'name'     => $file_name,
-			'type'     => isset( $headers['Content-Type'] ) ? $headers['Content-Type'] : 'application/octet-stream',
-			'size'     => strlen( $file_content ),
-			'tmp_name' => $tmp_name,
-			'error'    => UPLOAD_ERR_OK,
-		 );
 		}
 
-	 return false;
- 	}
+		$raw_data = self::get_body_from_php_input();
+		if ( empty( $raw_data ) ) {
+			return false;
+		}
+
+		$content_type = $request->get_content_type();
+		if ( ! $content_type || empty( $content_type['parameters'] ) ) {
+			return false;
+		}
+		if ( ! preg_match( '/boundary="?([^";]+)"?/', $content_type['parameters'], $matches ) ) {
+			return false;
+		}
+		$boundary = $matches[1];
+
+		$parts = array_slice( explode( '--' . $boundary, $raw_data ), 1, -1 );
+		foreach ( $parts as $part ) {
+			if ( false === strpos( $part, 'name="' . $key . '"' ) ) {
+				continue;
+			}
+
+			list( $header_raw, $file_content ) = explode( "\r\n\r\n", $part, 2 );
+			$headers = array();
+			foreach ( explode( "\r\n", $header_raw ) as $line ) {
+				if ( false !== strpos( $line, ': ' ) ) {
+					list( $name, $value ) = explode( ': ', $line );
+					$headers[ $name ] = $value;
+				}
+			}
+
+			if ( ! preg_match( '/filename="([^"]+)"/', $headers['Content-Disposition'], $matches ) ) {
+				return false;
+			}
+			$file_name = $matches[1];
+
+			// require the file needed fo wp_tempnam.
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+			$tmp_name = wp_tempnam( 'patch_upload_' . $key );
+			file_put_contents( $tmp_name, $file_content );
+
+			return array(
+				'name'     => $file_name,
+				'type'     => isset( $headers['Content-Type'] ) ? $headers['Content-Type'] : 'application/octet-stream',
+				'size'     => strlen( $file_content ),
+				'tmp_name' => $tmp_name,
+				'error'    => UPLOAD_ERR_OK,
+			);
+		}
+
+		return false;
+	}
 
 	/**
 	 * Get data from a PATCH request.
@@ -1481,52 +1489,55 @@ class Mastodon_API {
 	 * - application/json
 	 * - multipart/form-data
 	 *
+	 * @param WP_REST_Request $request The request object.
 	 * @return array The merged array of request data.
 	 */
-	private function get_patch_data() {
-		if ( 'PATCH' !== $_SERVER['REQUEST_METHOD'] ) {
-			return $_REQUEST;
+	private function get_patch_data( $request ) {
+		$data = array();
+		if ( 'PATCH' !== $request->get_method() ) {
+			return $data;
 		}
 
-		$content_type = isset( $_SERVER['CONTENT_TYPE'] ) ? $_SERVER['CONTENT_TYPE'] : '';
-		$input        = $this->get_body_from_php_input();
-		$data         = array();
-
-		if ( strpos( $content_type, 'application/x-www-form-urlencoded' ) !== false ) {
-			parse_str( $input, $data );
-		} elseif ( strpos( $content_type, 'application/json' ) !== false ) {
-			$json_data = json_decode( $input, true );
-			if ( is_array( $json_data ) ) {
-				$data = $json_data;
-			}
-		} elseif ( strpos( $content_type, 'multipart/form-data' ) !== false ) {
-			$boundary = substr( $input, 0, strpos( $input, "\r\n" ) );
-			if ( empty( $boundary ) ) {
-				// get boundary from $content_type
-				$boundary = substr( $content_type, strpos( $content_type, 'boundary=' ) + 9 );
-				// remove double quotes
-				$boundary = str_replace( '\"', '', $boundary );
-			}
-			if ( empty( $boundary ) ) {
-				return $_REQUEST;
-			}
-			$parts    = array_slice( explode( $boundary, $input ), 1, -1 );
-
-			foreach ( $parts as $part ) {
-				if ( strpos( $part, 'filename=' ) !== false ) {
-					// This is a file upload, handle separately
-					continue;
-				}
-
-				if ( preg_match( '/name="([^"]+)"/', $part, $matches ) ) {
-					$name          = $matches[1];
-					$value         = substr( $part, strpos( $part, "\r\n\r\n" ) + 4, -2 );
-					$data[ $name ] = $value;
-				}
-			}
+		$content_type = $request->get_content_type();
+		if ( ! $content_type ) {
+			return $data;
 		}
 
-		return array_merge( $_REQUEST, $data );
+		$input = self::get_body_from_php_input();
+
+		switch ( $content_type['value'] ) {
+			case 'application/x-www-form-urlencoded':
+				parse_str( $input, $data );
+				break;
+			case 'application/json':
+				$json_data = json_decode( $input, true );
+				if ( is_array( $json_data ) ) {
+					$data = $json_data;
+				}
+				break;
+			case 'multipart/form-data':
+				$boundary = preg_match( '/boundary="?([^";]+)"?/', $content_type['parameters'], $matches ) ? $matches[1] : null;
+				if ( empty( $boundary ) ) {
+					return $data;
+				}
+				$parts = array_slice( explode( $boundary, $input ), 1, -1 );
+
+				foreach ( $parts as $part ) {
+					if ( strpos( $part, 'filename=' ) !== false ) {
+						// This is a file upload, handle separately.
+						continue;
+					}
+
+					if ( preg_match( '/name="([^"]+)"/', $part, $matches ) ) {
+						$name          = $matches[1];
+						$value         = substr( $part, strpos( $part, "\r\n\r\n" ) + 4, -2 );
+						$data[ $name ] = $value;
+					}
+				}
+				break;
+		}
+
+		return $data;
 	}
 
 	public function api_update_credentials( $request ) {
@@ -1536,8 +1547,8 @@ class Mastodon_API {
 			return new \WP_Error( 'user-not-found', 'User not found', array( 'status' => 404 ) );
 		}
 
-		// handle avatar
-		$avatar = $this->get_patch_upload( 'avatar' );
+		// handle avatar.
+		$avatar = $this->get_patch_upload( 'avatar', $request );
 		if ( $avatar ) {
 			$avatar = $this->handle_upload( $avatar );
 		}
@@ -1545,8 +1556,8 @@ class Mastodon_API {
 			return $avatar;
 		}
 
-		// same for header
-		$header = $this->get_patch_upload( 'header' );
+		// same for header.
+		$header = $this->get_patch_upload( 'header', $request );
 		if ( $header ) {
 			$header = $this->handle_upload( $header );
 		}
@@ -1554,8 +1565,8 @@ class Mastodon_API {
 			return $header;
 		}
 
-		// now populate the params - get_patch_data is unsanitized but the get_param request methods run that
-		$request->set_body_params( $this->get_patch_data() );
+		// now populate the params - get_patch_data is unsanitized but the get_param request methods run that.
+		$request->set_body_params( $this->get_patch_data( $request ) );
 		$request->sanitize_params();
 
 		$data = array(
@@ -1569,8 +1580,8 @@ class Mastodon_API {
 
 		do_action( 'mastodon_api_update_credentials', $user, $data );
 
-		// return HTTP 200 response
-		return rest_ensure_response( [] );
+		// return HTTP 200 response.
+		return new \WP_REST_Response( null, 200 );
 	}
 
 	public function query_vars( $query_vars ) {
