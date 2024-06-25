@@ -1542,10 +1542,12 @@ class Mastodon_API {
 
 	public function api_update_credentials( $request ) {
 		$token = $this->oauth->get_token();
-		$user = get_userdata( $token['user_id'] );
+		$user = get_user_by( 'id', $token['user_id'] );
 		if ( ! $user ) {
 			return new \WP_Error( 'user-not-found', 'User not found', array( 'status' => 404 ) );
 		}
+
+		$user_id = $this->get_user_id_from_request( $request );
 
 		// handle avatar.
 		$avatar = $this->get_patch_upload( 'avatar', $request );
@@ -1578,10 +1580,12 @@ class Mastodon_API {
 		);
 		$data = array_filter( $data );
 
-		do_action( 'mastodon_api_update_credentials', $user, $data );
+		do_action( 'mastodon_api_update_credentials', $user_id, $data );
 
-		// return HTTP 200 response.
-		return new \WP_REST_Response( null, 200 );
+		// if we set this earlier it gets cleared out by `$request->sanitize_params()`.
+		$request->set_param( 'user_id', (int) $user->ID );
+		// Return the account.
+		return $this->api_account( $request );
 	}
 
 	public function query_vars( $query_vars ) {
