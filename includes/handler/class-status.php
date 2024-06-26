@@ -131,8 +131,7 @@ class Status extends Handler {
 
 		if ( isset( $data['comment'] ) && $data['comment'] instanceof \WP_Comment ) {
 			$comment = $data['comment'];
-			$user_id = apply_filters( 'mastodon_api_mapback_user_id', (int) $comment->user_id );
-			$account = apply_filters( 'mastodon_api_account', null, $user_id, null, $comment );
+			$account = apply_filters( 'mastodon_api_account', null, $comment->user_id, null, $comment );
 			if ( ! ( $account instanceof \Enable_Mastodon_Apps\Entity\Account ) ) {
 				return $status;
 			}
@@ -149,9 +148,8 @@ class Status extends Handler {
 				$status->in_reply_to_id = strval( $comment->comment_post_ID );
 			}
 		} elseif ( $post instanceof \WP_Post ) {
-			$user_id = apply_filters( 'mastodon_api_mapback_user_id', (int) $post->post_author );
 			// Documented in class-mastodon-api.php.
-			$account = apply_filters( 'mastodon_api_account', null, $user_id, null, $post );
+			$account = apply_filters( 'mastodon_api_account', null, $post->post_author, null, $post );
 
 			if ( ! ( $account instanceof \Enable_Mastodon_Apps\Entity\Account ) ) {
 				return $status;
