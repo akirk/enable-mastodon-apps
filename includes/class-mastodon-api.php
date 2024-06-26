@@ -1378,24 +1378,22 @@ class Mastodon_API {
 				'permission_callback' => $this->required_scope( 'write:accounts' ),
 				'args'                => array(
 					'display_name' => array(
-						'type'        => 'string',
-						'description' => 'The name to display in the user’s profile.',
+						'type'              => 'string',
+						'description'       => 'The name to display in the user’s profile.',
+						'sanitize_callback' => 'sanitize_text_field',
+						'required'           => false,
 					),
 					'note'         => array(
-						'type'        => 'string',
-						'description' => 'A new biography for the user.',
+						'type'              => 'string',
+						'description'       => 'A new biography for the user.',
+						'sanitize_callback' => 'sanitize_text_field',
+						'required'           => false,
 					),
-					'avatar'       => array(
-						'type'        => 'binary',
-						'description' => 'A base64 encoded image to display as the user’s avatar.',
-					),
-					'header'       => array(
-						'type'        => 'binary',
-						'description' => 'A base64 encoded image to display as the user’s header image.',
-					),
-					'source'       => array(
-						'type'        => 'string',
-						'description' => 'The application name of the client that created the credentials being updated.',
+					'fields_attributes' => array(
+						'type'              => 'object',
+						'description'       => 'A list of custom fields to update.',
+
+						'required'          => false,
 					),
 				),
 			)
@@ -1565,13 +1563,13 @@ class Mastodon_API {
 			return $header;
 		}
 
-		// now populate the params - get_patch_data is unsanitized but the get_param request methods run that.
+		// now populate the params - get_patch_data is unsanitized so we re-run request param sanitization.
 		$request->set_body_params( $this->get_patch_data( $request ) );
 		$request->sanitize_params();
 
 		$data = array(
-			'avatar'            => $avatar,
-			'header'            => $header,
+			'avatar'            => $avatar, // Attachment ID.
+			'header'            => $header, // Attachment ID.
 			'display_name'      => $request->get_param( 'display_name' ),
 			'note'              => $request->get_param( 'note' ),
 			'fields_attributes' => $request->get_param( 'fields_attributes' ),
@@ -1579,10 +1577,33 @@ class Mastodon_API {
 		$data = array_filter( $data );
 		$user_id = (int) $user->ID;
 
-		do_action( 'mastodon_api_update_credentials', $user_id, $data );
+		/**
+		 * An action for clients to hook into for setting user profile data.
+		 *
+		 * @param array $data   User attributes requested to update. Only keys requested for update will be present.
+		 *                      Keys: avatar(attachment_id)|header(attachment_id)|display_name(string)|note(string)|fields_attributes(hash)
+		 *                      If your plugin acts on data and you don't want this plugin to runs it own update,
+		 *                      remove the keys from the array.
+		 * @param int $user_id  The user_id to act on.
+		 */
+		$data = apply_filters( 'mastodon_api_update_credentials', $data, $user_id );
+
+		// Update the user with any available data for fields we support (just display_name and note currently).
+		if ( isset( $data['display_name'] ) ) {
+			wp_update_user(
+				array(
+					'ID'           => $user_id,
+					'display_name' => $data['display_name'],
+				)
+			);
+		}
+		if ( isset( $data['note'] ) ) {
+			update_user_meta( $user_id, 'description', $data['note'] );
+		}
 
 		// if we set this earlier it gets cleared out by `$request->sanitize_params()`.
 		$request->set_param( 'user_id', $user_id );
+
 		// Return the account.
 		return $this->api_account( $request );
 	}
