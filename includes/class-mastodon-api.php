@@ -1547,8 +1547,6 @@ class Mastodon_API {
 			return new \WP_Error( 'user-not-found', 'User not found', array( 'status' => 404 ) );
 		}
 
-		$user_id = $this->get_user_id_from_request( $request );
-
 		// handle avatar.
 		$avatar = $this->get_patch_upload( 'avatar', $request );
 		if ( $avatar ) {
@@ -1579,11 +1577,12 @@ class Mastodon_API {
 			'fields_attributes' => $request->get_param( 'fields_attributes' ),
 		);
 		$data = array_filter( $data );
+		$user_id = (int) $user->ID;
 
 		do_action( 'mastodon_api_update_credentials', $user_id, $data );
 
 		// if we set this earlier it gets cleared out by `$request->sanitize_params()`.
-		$request->set_param( 'user_id', (int) $user->ID );
+		$request->set_param( 'user_id', $user_id );
 		// Return the account.
 		return $this->api_account( $request );
 	}
