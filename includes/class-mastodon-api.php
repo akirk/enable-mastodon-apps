@@ -1377,23 +1377,23 @@ class Mastodon_API {
 				'callback'            => array( $this, 'api_update_credentials' ),
 				'permission_callback' => $this->required_scope( 'write:accounts' ),
 				'args'                => array(
-					'display_name' => array(
+					'display_name'      => array(
 						'type'              => 'string',
 						'description'       => 'The name to display in the user’s profile.',
 						'sanitize_callback' => 'sanitize_text_field',
-						'required'           => false,
+						'required'          => false,
 					),
-					'note'         => array(
+					'note'              => array(
 						'type'              => 'string',
 						'description'       => 'A new biography for the user.',
 						'sanitize_callback' => 'sanitize_text_field',
-						'required'           => false,
+						'required'          => false,
 					),
 					'fields_attributes' => array(
-						'type'              => 'object',
-						'description'       => 'A list of custom fields to update.',
+						'type'        => 'object',
+						'description' => 'A list of custom fields to update.',
 
-						'required'          => false,
+						'required'    => false,
 					),
 				),
 			)
