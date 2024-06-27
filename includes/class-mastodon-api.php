@@ -196,6 +196,7 @@ class Mastodon_API {
 			array(
 				'api/v1/accounts/relationships',
 				'api/v1/accounts/verify_credentials',
+				'api/v1/accounts/update_credentials',
 				'api/v1/accounts/familiar_followers',
 				'api/v1/accounts/search',
 				'api/v1/accounts/lookup',
