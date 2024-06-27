@@ -6,6 +6,7 @@
  */
 
 namespace Enable_Mastodon_Apps\Entity;
+
 use Enable_Mastodon_Apps\Mastodon_API;
 
 /**
