@@ -89,7 +89,7 @@ class Mastodon_API {
 		header( 'Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS' );
 		header( 'Access-Control-Allow-Headers: content-type, authorization' );
 		header( 'Access-Control-Allow-Credentials: true' );
-		if ( 'OPTIONS' === $_SERVER['REQUEST_METHOD'] ) {
+		if ( 'OPTIONS' === $_SERVER['REQUEST_METHOD'] ) { // phpcs:ignore
 			header( 'Access-Control-Allow-Origin: *', true, 204 );
 			exit;
 		}
@@ -1423,7 +1423,7 @@ class Mastodon_API {
 				$app->was_used(
 					$request,
 					array(
-						'user_agent' => $_SERVER['HTTP_USER_AGENT'],
+						'user_agent' => $_SERVER['HTTP_USER_AGENT'], // phpcs:ignore
 					)
 				);
 			}
@@ -1441,12 +1441,14 @@ class Mastodon_API {
 		if ( get_option( 'mastodon_api_debug_mode' ) <= time() ) {
 			return $template;
 		}
+		// phpcs:disable
 		if ( 0 !== strpos( $_SERVER['REQUEST_URI'], '/api/v' ) ) {
 			return $template;
 		}
 		$request = new WP_REST_Request( $_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI'] );
 		$request->set_query_params( $_GET );
 		$request->set_body_params( $_POST );
+		// phpcs:enable
 		$request->set_headers( getallheaders() );
 		if ( ! empty( $_SERVER['HTTP_AUTHORIZATION'] ) ) {
 			$this->oauth->get_token();
@@ -1458,7 +1460,7 @@ class Mastodon_API {
 		$app->was_used(
 			$request,
 			array(
-				'user_agent' => $_SERVER['HTTP_USER_AGENT'],
+				'user_agent' => $_SERVER['HTTP_USER_AGENT'], // phpcs:ignore
 				'status'     => 404,
 			)
 		);

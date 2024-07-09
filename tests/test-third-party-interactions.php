@@ -40,7 +40,7 @@ class ThirdPartyInteraction_Test extends Mastodon_API_TestCase {
 	 */
 	public function test_fluentcrm() {
 		global $current_user;
-		$current_user = null;
+		$current_user = null; // phpcs:ignore
 		$request = new \WP_REST_Request( 'GET', '/fluentcrm/v2/tags' );
 		$_SERVER['HTTP_AUTHORIZATION'] = 'Basic ' . base64_encode( 'a:b' );
 		global $wp_rest_server;

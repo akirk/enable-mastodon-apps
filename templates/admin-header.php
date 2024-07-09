@@ -111,7 +111,9 @@ function td_timestamp( $timestamp, $strikethrough_past = false ) {
 <hr class="wp-header-end">
 <?php
 if ( isset( $_GET['success'] ) ) {
+	// phpcs:ignore
+	$success = santize_text_field( wp_unslash( $_GET['success'] ) );
 	?>
-	<div class="notice notice-success is-dismissible"><p><?php echo esc_html( wp_unslash( $_GET['success'] ) ); ?></p></div>
+	<div class="notice notice-success is-dismissible"><p><?php echo esc_html( $success ); ?></p></div>
 	<?php
 }

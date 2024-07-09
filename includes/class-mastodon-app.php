@@ -185,8 +185,8 @@ class Mastodon_App {
 				array_merge(
 					array(
 						'timestamp'    => microtime( true ),
-						'path'         => $_SERVER['REQUEST_URI'],
-						'method'       => $_SERVER['REQUEST_METHOD'],
+						'path'         => $_SERVER['REQUEST_URI'], // phpcs:ignore
+						'method'       => $_SERVER['REQUEST_METHOD'], // phpcs:ignore
 						'params'       => $request->get_params(),
 						'json'         => $request->get_json_params(),
 						'files'        => $request->get_file_params(),
@@ -571,7 +571,7 @@ class Mastodon_App {
 		foreach ( self::get_all() as $app ) {
 			if ( $app->is_outdated() ) {
 				if ( $app->delete() ) {
-					$count += 1;
+					++$count;
 				}
 			}
 		}

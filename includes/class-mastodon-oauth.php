@@ -47,7 +47,7 @@ class Mastodon_OAuth {
 		$this->server->addStorage( new Oauth2\Access_Token_Storage(), 'access_token' );
 		$this->server->setScopeUtil( new Oauth2\Scope_Util() );
 
-		if ( '/oauth/token' === strtok( $_SERVER['REQUEST_URI'], '?' ) ) {
+		if ( '/oauth/token' === strtok( $_SERVER['REQUEST_URI'], '?' ) ) { // phpcs:ignore
 			// Avoid interference with private site plugins.
 			add_filter(
 				'pre_option_blog_public',
@@ -97,7 +97,7 @@ class Mastodon_OAuth {
 
 	public function handle_oauth( $return_value = false ) {
 		global $wp_query;
-		if ( 'POST' === $_SERVER['REQUEST_METHOD'] && empty( $_POST ) && ! empty( $_REQUEST ) ) {
+		if ( 'POST' === $_SERVER['REQUEST_METHOD'] && empty( $_POST ) && ! empty( $_REQUEST ) ) { // phpcs:ignore
 			$_POST = $_REQUEST;
 		}
 		$endpoint = null;
@@ -105,7 +105,7 @@ class Mastodon_OAuth {
 		if ( isset( $wp_query->query['mastodon-oauth'] ) ) {
 			$endpoint = $wp_query->query['mastodon-oauth'];
 		} else {
-			$request_uri = trim( strtok( $_SERVER['REQUEST_URI'], '?' ), '/' );
+			$request_uri = trim( strtok( $_SERVER['REQUEST_URI'], '?' ), '/' ); // phpcs:ignore
 
 			if ( in_array( $request_uri, array( 'oauth/authorize', 'oauth/token', 'oauth/revoke' ) ) ) {
 				$endpoint = explode( '/', $request_uri )[1];
@@ -125,7 +125,7 @@ class Mastodon_OAuth {
 				header( 'Access-Control-Allow-Methods: POST' );
 				header( 'Access-Control-Allow-Headers: content-type' );
 				header( 'Access-Control-Allow-Credentials: true' );
-				if ( 'OPTIONS' === $_SERVER['REQUEST_METHOD'] ) {
+				if ( 'OPTIONS' === $_SERVER['REQUEST_METHOD'] ) { // phpcs:ignore
 					header( 'Access-Control-Allow-Origin: *', true, 204 );
 					exit;
 				}
@@ -146,9 +146,11 @@ class Mastodon_OAuth {
 
 		if ( get_option( 'mastodon_api_debug_mode' ) > time() ) {
 			$app     = Mastodon_App::get_debug_app();
+			// phpcs:disable
 			$request = new \WP_REST_Request( $_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI'] );
 			$request->set_query_params( $_GET );
 			$request->set_body_params( $_POST );
+			// phpcs:enable
 			$request->set_headers( getallheaders() );
 			$app->was_used( $request );
 		}

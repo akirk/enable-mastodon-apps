@@ -421,7 +421,7 @@ foreach ( $filters as $hook => $data ) {
 			}
 
 
-			$count += 1;
+			++$count;
 			$p = preg_split( '/ +/', $param, 3 );
 			if ( '\\' === substr( $p[0], 0, 1 ) ) {
 				$p[0] = substr( $p[0], 1 );
