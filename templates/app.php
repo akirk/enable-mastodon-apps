@@ -11,10 +11,10 @@ use Enable_Mastodon_Apps\Mastodon_App;
 	)
 );
 
-$rest_nonce = wp_create_nonce( 'wp_rest' );
+$rest_nonce  = wp_create_nonce( 'wp_rest' );
 $_post_types = \get_post_types( array( 'show_ui' => true ), 'objects' );
-$app = $args['app'];
-$confirm = esc_html(
+$app         = $args['app'];
+$confirm     = esc_html(
 	sprintf(
 	// translators: %s is the app name.
 		__( 'Are you sure you want to delete %s?', 'enable-mastodon-apps' ),

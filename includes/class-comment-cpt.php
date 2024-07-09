@@ -23,7 +23,7 @@ namespace Enable_Mastodon_Apps;
  * This class maps comments to a custom post type.
  */
 class Comment_CPT {
-	const CPT = 'comment';
+	const CPT      = 'comment';
 	const META_KEY = 'comment_id';
 
 	/**
@@ -90,7 +90,7 @@ class Comment_CPT {
 			return;
 		}
 		$parent_post_id = $comment->comment_post_ID;
-		$post    = get_post( $parent_post_id );
+		$post           = get_post( $parent_post_id );
 		if ( ! $post ) {
 			return;
 		}

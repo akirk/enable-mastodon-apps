@@ -21,7 +21,7 @@ class Handler {
 		if ( $limit < 1 ) {
 			$limit = 20;
 		}
-		$app = Mastodon_App::get_current_app();
+		$app        = Mastodon_App::get_current_app();
 		$post_types = array( 'post' );
 		if ( $app ) {
 			$post_types = $app->get_view_post_types();
@@ -33,7 +33,7 @@ class Handler {
 
 		$pinned = $request->get_param( 'pinned' );
 		if ( $pinned || 'true' === $pinned ) {
-			$args['pinned'] = true;
+			$args['pinned']   = true;
 			$args['post__in'] = get_option( 'sticky_posts' );
 			if ( empty( $args['post__in'] ) ) {
 				// No pinned posts, we need to find nothing.
@@ -69,7 +69,7 @@ class Handler {
 					global $wpdb;
 					return $where . $wpdb->prepare( " AND {$wpdb->posts}.ID > %d", $min_id );
 				};
-				$args['order'] = 'ASC';
+				$args['order']      = 'ASC';
 				add_filter( 'posts_where', $min_filter_handler );
 			}
 

@@ -3,7 +3,7 @@
 
 function output_request_log( $request, $rest_nonce ) {
 	$date = \DateTimeImmutable::createFromFormat( 'U.u', $request['timestamp'] );
-	$url = add_query_arg(
+	$url  = add_query_arg(
 		array(
 			'_wpnonce' => $rest_nonce,
 			'_pretty'  => 1,

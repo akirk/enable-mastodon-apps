@@ -28,8 +28,8 @@ class Mastodon_App {
 	private static $current_app = null;
 
 	const DEBUG_CLIENT_ID = 'enable-mastodon-apps';
-	const TAXONOMY = 'mastodon-app';
-	const VALID_SCOPES = array(
+	const TAXONOMY        = 'mastodon-app';
+	const VALID_SCOPES    = array(
 		'read',
 		'write',
 		'follow',
@@ -242,7 +242,7 @@ class Mastodon_App {
 			)
 		) as $term ) {
 			if ( $term instanceof \WP_Term ) {
-				$app = new Mastodon_App( $term );
+				$app                           = new Mastodon_App( $term );
 				$apps[ $app->get_client_id() ] = $app;
 			}
 		}
@@ -498,7 +498,7 @@ class Mastodon_App {
 		}
 
 		$filter_by_post_format = $this->get_post_formats();
-		$post_formats = get_post_format_slugs();
+		$post_formats          = get_post_format_slugs();
 		$filter_by_post_format = array_filter(
 			$filter_by_post_format,
 			function ( $post_format ) use ( $post_formats ) {
@@ -593,7 +593,7 @@ class Mastodon_App {
 	}
 
 	public static function save( $client_name, array $redirect_uris, $scopes, $website ) {
-		$client_id = strtolower( wp_generate_password( 32, false ) );
+		$client_id     = strtolower( wp_generate_password( 32, false ) );
 		$client_secret = wp_generate_password( 128, false );
 
 		$term = wp_insert_term( $client_id, self::TAXONOMY );

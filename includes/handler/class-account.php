@@ -39,8 +39,8 @@ class Account extends Handler {
 			return $user_data;
 		}
 
-		$note    = get_user_meta( $user->ID, 'description', true );
-		$account = new Account_Entity();
+		$note                    = get_user_meta( $user->ID, 'description', true );
+		$account                 = new Account_Entity();
 		$account->id             = strval( $user->ID );
 		$account->username       = $user->user_login;
 		$account->display_name   = $user->display_name;

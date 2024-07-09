@@ -135,13 +135,13 @@ class Status extends Handler {
 			if ( ! ( $account instanceof \Enable_Mastodon_Apps\Entity\Account ) ) {
 				return $status;
 			}
-			$status = new Status_Entity();
-			$status->id = strval( Mastodon_API::remap_comment_id( $comment->comment_ID ) );
+			$status             = new Status_Entity();
+			$status->id         = strval( Mastodon_API::remap_comment_id( $comment->comment_ID ) );
 			$status->created_at = new \DateTime( $comment->comment_date_gmt, new \DateTimeZone( 'UTC' ) );
 			$status->visibility = 'public';
-			$status->uri = get_comment_link( $comment );
-			$status->content = $comment->comment_content;
-			$status->account = $account;
+			$status->uri        = get_comment_link( $comment );
+			$status->content    = $comment->comment_content;
+			$status->account    = $account;
 			if ( $comment->comment_parent ) {
 				$status->in_reply_to_id = strval( Mastodon_API::remap_comment_id( $comment->comment_parent ) );
 			} else {
@@ -154,19 +154,19 @@ class Status extends Handler {
 			if ( ! ( $account instanceof \Enable_Mastodon_Apps\Entity\Account ) ) {
 				return $status;
 			}
-			$status = new Status_Entity();
-			$status->id = strval( $post->ID );
+			$status             = new Status_Entity();
+			$status->id         = strval( $post->ID );
 			$status->created_at = new \DateTime( $post->post_date_gmt, new \DateTimeZone( 'UTC' ) );
 			$status->visibility = 'public';
-			$status->uri = get_permalink( $post->ID );
-			$status->content = $post->post_title . PHP_EOL . $post->post_content;
-			$status->account = $account;
-			$media_attachments = $this->get_block_attachments( $post );
+			$status->uri        = get_permalink( $post->ID );
+			$status->content    = $post->post_title . PHP_EOL . $post->post_content;
+			$status->account    = $account;
+			$media_attachments  = $this->get_block_attachments( $post );
 			foreach ( $media_attachments as $media_id => $html ) {
 				$media_attachment = apply_filters( 'mastodon_api_media_attachment', null, $media_id );
 				if ( $media_attachment ) {
 					// We don't want to show the media in the content as they are attachments.
-					$status->content = str_replace( $html, '', $status->content );
+					$status->content             = str_replace( $html, '', $status->content );
 					$status->media_attachments[] = $media_attachment;
 				}
 			}
@@ -263,8 +263,8 @@ class Status extends Handler {
 		if ( 'standard' === $post_format ) {
 			// Use the first line of a post as the post title if we're using a standard post format.
 			list( $post_title, $post_content ) = explode( PHP_EOL, $post_data['post_content'], 2 );
-			$post_data['post_title']   = $post_title;
-			$post_data['post_content'] = trim( $post_content );
+			$post_data['post_title']           = $post_title;
+			$post_data['post_content']         = trim( $post_content );
 		}
 
 		if ( $in_reply_to_id ) {
@@ -273,7 +273,7 @@ class Status extends Handler {
 
 		if ( $scheduled_at ) {
 			$post_data['post_status'] = 'future';
-			$post_data['post_date'] = $scheduled_at;
+			$post_data['post_date']   = $scheduled_at;
 		}
 
 		if ( ! empty( $media_ids ) ) {
@@ -288,7 +288,7 @@ class Status extends Handler {
 				$attachment = \wp_get_attachment_metadata( $media_id );
 				if ( \wp_attachment_is( 'image', $media_id ) ) {
 					$post_data['post_content'] .= PHP_EOL;
-					$meta_json = array(
+					$meta_json                  = array(
 						'id'       => $media_id,
 						'sizeSlug' => 'large',
 					);
@@ -431,11 +431,11 @@ class Status extends Handler {
 		 */
 		$parent_post_id = apply_filters( 'mastodon_api_comment_parent_post_id', $in_reply_to_id, $status_text );
 
-		$comment_data['comment_content'] = $status_text;
-		$comment_data['comment_post_ID'] = $parent_post_id;
-		$comment_data['comment_parent']  = 0;
-		$comment_data['comment_author'] = get_current_user_id();
-		$comment_data['user_id'] = get_current_user_id();
+		$comment_data['comment_content']  = $status_text;
+		$comment_data['comment_post_ID']  = $parent_post_id;
+		$comment_data['comment_parent']   = 0;
+		$comment_data['comment_author']   = get_current_user_id();
+		$comment_data['user_id']          = get_current_user_id();
 		$comment_data['comment_approved'] = 1;
 
 		$parent_comment_id = Mastodon_API::maybe_get_remapped_comment_id( $in_reply_to_id );
@@ -455,7 +455,7 @@ class Status extends Handler {
 				if ( 'attachment' !== $media->post_type ) {
 					return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Media not found', array( 'status' => 400 ) );
 				}
-				$attachment = \wp_get_attachment_metadata( $media_id );
+				$attachment                       = \wp_get_attachment_metadata( $media_id );
 				$comment_data['comment_content'] .= PHP_EOL;
 				$comment_data['comment_content'] .= '<!-- wp:image -->';
 				$comment_data['comment_content'] .= '<p><img src="' . esc_url( wp_get_attachment_url( $media_id ) ) . '" width="' . esc_attr( $attachment['width'] ) . '"  height="' . esc_attr( $attachment['height'] ) . '" class="size-full" /></p>';
@@ -505,12 +505,12 @@ class Status extends Handler {
 		 */
 		$parent_post_id = apply_filters( 'mastodon_api_comment_parent_post_id', $in_reply_to_id, $status_text );
 
-		$comment_data['comment_ID'] = $comment_id;
-		$comment_data['comment_content'] = $status_text;
-		$comment_data['comment_post_ID'] = $parent_post_id;
-		$comment_data['comment_parent']  = 0;
-		$comment_data['comment_author'] = get_current_user_id();
-		$comment_data['user_id'] = get_current_user_id();
+		$comment_data['comment_ID']       = $comment_id;
+		$comment_data['comment_content']  = $status_text;
+		$comment_data['comment_post_ID']  = $parent_post_id;
+		$comment_data['comment_parent']   = 0;
+		$comment_data['comment_author']   = get_current_user_id();
+		$comment_data['user_id']          = get_current_user_id();
 		$comment_data['comment_approved'] = 1;
 
 		$parent_comment_id = Mastodon_API::maybe_get_remapped_comment_id( $in_reply_to_id );
@@ -530,7 +530,7 @@ class Status extends Handler {
 				if ( 'attachment' !== $media->post_type ) {
 					return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Media not found', array( 'status' => 400 ) );
 				}
-				$attachment = \wp_get_attachment_metadata( $media_id );
+				$attachment                       = \wp_get_attachment_metadata( $media_id );
 				$comment_data['comment_content'] .= PHP_EOL;
 				$comment_data['comment_content'] .= '<!-- wp:image -->';
 				$comment_data['comment_content'] .= '<p><img src="' . esc_url( wp_get_attachment_url( $media_id ) ) . '" width="' . esc_attr( $attachment['width'] ) . '"  height="' . esc_attr( $attachment['height'] ) . '" class="size-full" /></p>';
@@ -595,7 +595,7 @@ class Status extends Handler {
 				continue;
 			}
 			$post_id = $post->ID;
-			$args = array();
+			$args    = array();
 			/**
 			 * Modify the status data.
 			 *
@@ -619,7 +619,7 @@ class Status extends Handler {
 
 		ksort( $context['descendants'] );
 
-		$context['ancestors'] = array_values( $context['ancestors'] );
+		$context['ancestors']   = array_values( $context['ancestors'] );
 		$context['descendants'] = array_values( $context['descendants'] );
 		return $context;
 	}

@@ -63,8 +63,8 @@ class Instance extends Handler {
 		$instance->registrations     = (bool) get_option( 'users_can_register' );
 		$instance->approval_required = false;
 		$instance->invites_enabled   = false;
-		$instance->languages     = empty( get_available_languages() ) ? array( 'en' ) : get_available_languages();
-		$instance->configuration = array(
+		$instance->languages         = empty( get_available_languages() ) ? array( 'en' ) : get_available_languages();
+		$instance->configuration     = array(
 			'media_attachment' => array(
 				'supported_mime_types' => array_values( get_allowed_mime_types() ),
 				'image_size_limit'     => \wp_max_upload_size(),

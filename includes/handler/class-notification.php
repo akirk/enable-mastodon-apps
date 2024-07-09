@@ -230,7 +230,7 @@ class Notification extends Handler {
 
 		if ( $status ) {
 			$notification['status'] = $status;
-			$notification['id'] .= $status->id;
+			$notification['id']    .= $status->id;
 		}
 
 		return $notification;

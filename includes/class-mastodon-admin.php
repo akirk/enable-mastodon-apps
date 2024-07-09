@@ -78,7 +78,7 @@ class Mastodon_Admin {
 
 	public function admin_page() {
 		$this->enable_debug = get_option( 'mastodon_api_enable_debug' );
-		$tab = $_GET['tab'] ?? 'welcome';
+		$tab                = $_GET['tab'] ?? 'welcome';
 		if ( isset( $_GET['app'] ) ) {
 			$app = Mastodon_App::get_by_client_id( $_GET['app'] );
 			if ( $app ) {
@@ -257,7 +257,7 @@ class Mastodon_Admin {
 		}
 
 		if ( isset( $_POST['delete-outdated'] ) ) {
-			$apps = Mastodon_App::get_all();
+			$apps    = Mastodon_App::get_all();
 			$deleted = OAuth2\Access_Token_Storage::cleanupOldTokens();
 			if ( ! $deleted ) {
 				$deleted = 0;
@@ -464,7 +464,7 @@ class Mastodon_Admin {
 	public function process_admin_app_page( Mastodon_App $app ) {
 
 		if ( isset( $_POST['delete-app'] ) && $_POST['delete-app'] === $app->get_client_id() ) {
-			$name = $app->get_client_name();
+			$name    = $app->get_client_name();
 			$deleted = $app->delete();
 			if ( $deleted ) {
 				$message = sprintf(

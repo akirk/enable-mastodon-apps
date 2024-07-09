@@ -45,7 +45,7 @@ abstract class Entity implements \JsonSerializable {
 				continue;
 			}
 
-			$object = rtrim( $type, '?' );
+			$object   = rtrim( $type, '?' );
 			$nullable = preg_match( '/\?\?$/', $type );
 			$optional = preg_match( '/\?$/', $type );
 
@@ -123,7 +123,7 @@ abstract class Entity implements \JsonSerializable {
 			if ( preg_match( '/array\[([^\]]+)\]/', $object, $matches ) ) {
 				$object = $matches[1];
 				if ( substr( $object, -1 ) === '?' ) {
-					$object = rtrim( $object, '?' );
+					$object    = rtrim( $object, '?' );
 					$skippable = true;
 				}
 				if ( ! class_exists( '\\Enable_Mastodon_Apps\\Entity\\' . $object ) ) {

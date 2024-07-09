@@ -64,7 +64,7 @@ $rest_nonce = wp_create_nonce( 'wp_rest' );
 		?>
 		<h2><?php esc_html_e( 'Recently Logged Requests', 'enable-mastodon-apps' ); ?></h2>
 		<?php
-		$debug_start_time = \DateTimeImmutable::createFromFormat( 'U', time() - HOUR_IN_SECONDS );
+		$debug_start_time  = \DateTimeImmutable::createFromFormat( 'U', time() - HOUR_IN_SECONDS );
 		$all_last_requests = array();
 		foreach ( \Enable_Mastodon_Apps\Mastodon_App::get_all() as $app ) {
 			$last_requests = $app->get_last_requests();

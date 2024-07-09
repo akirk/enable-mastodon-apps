@@ -67,7 +67,7 @@ class Mastodon_OAuth {
 
 	public function rewrite_rules() {
 		$existing_rules = get_option( 'rewrite_rules' );
-		$needs_flush = false;
+		$needs_flush    = false;
 
 		$generic =
 			array(
@@ -118,7 +118,7 @@ class Mastodon_OAuth {
 					return null;
 				}
 				$wp_query->is_404 = false;
-				$handler = new OAuth2\Authorize_Handler( $this->server );
+				$handler          = new OAuth2\Authorize_Handler( $this->server );
 				break;
 
 			case 'token':
@@ -131,12 +131,12 @@ class Mastodon_OAuth {
 				}
 				header( 'Access-Control-Allow-Origin: *' );
 				$wp_query->is_404 = false;
-				$handler = new OAuth2\Token_Handler( $this->server );
+				$handler          = new OAuth2\Token_Handler( $this->server );
 				break;
 
 			case 'revoke':
 				$wp_query->is_404 = false;
-				$handler = new OAuth2\Revokation_Handler( $this->server );
+				$handler          = new OAuth2\Revokation_Handler( $this->server );
 				break;
 		}
 
@@ -145,7 +145,7 @@ class Mastodon_OAuth {
 		}
 
 		if ( get_option( 'mastodon_api_debug_mode' ) > time() ) {
-			$app = Mastodon_App::get_debug_app();
+			$app     = Mastodon_App::get_debug_app();
 			$request = new \WP_REST_Request( $_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI'] );
 			$request->set_query_params( $_GET );
 			$request->set_body_params( $_POST );
@@ -169,7 +169,7 @@ class Mastodon_OAuth {
 	}
 
 	public function get_token() {
-		$request = Request::createFromGlobals();
+		$request  = Request::createFromGlobals();
 		$response = new Response();
 		if ( ! $this->server->verifyResourceRequest( $request, $response ) ) {
 			return null;

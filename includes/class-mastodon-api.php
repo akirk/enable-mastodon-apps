@@ -24,7 +24,7 @@ use function PHPUnit\Framework\returnCallback;
  */
 class Mastodon_API {
 	const ACTIVITYPUB_USERNAME_REGEXP = '(?:([A-Za-z0-9_-]+)@((?:[A-Za-z0-9_-]+\.)+[A-Za-z]+))';
-	const VERSION = ENABLE_MASTODON_APPS_VERSION;
+	const VERSION                     = ENABLE_MASTODON_APPS_VERSION;
 	/**
 	 * The OAuth handler.
 	 *
@@ -41,10 +41,10 @@ class Mastodon_API {
 
 	private static $last_error = false;
 
-	const PREFIX = 'enable-mastodon-apps';
-	const APP_TAXONOMY = 'mastodon-app';
+	const PREFIX         = 'enable-mastodon-apps';
+	const APP_TAXONOMY   = 'mastodon-app';
 	const REMAP_TAXONOMY = 'mastodon-api-remap';
-	const CPT = 'enable-mastodon-apps';
+	const CPT            = 'enable-mastodon-apps';
 
 	/**
 	 * Constructor
@@ -132,7 +132,7 @@ class Mastodon_API {
 		}
 
 		if ( ! isset( $result['code'] ) && isset( $result['error'] ) && is_string( $result['error'] ) ) {
-			$result['code'] = sanitize_title_with_dashes( $result['error'] );
+			$result['code']    = sanitize_title_with_dashes( $result['error'] );
 			$result['message'] = $result['error'];
 		}
 
@@ -189,9 +189,9 @@ class Mastodon_API {
 
 	public function rewrite_rules() {
 		$existing_rules = get_option( 'rewrite_rules' );
-		$needs_flush = false;
+		$needs_flush    = false;
 
-		$generic = apply_filters(
+		$generic      = apply_filters(
 			'mastodon_api_generic_routes',
 			array(
 				'api/v1/accounts/relationships',
@@ -1391,7 +1391,7 @@ class Mastodon_API {
 		}
 
 		$has_scope = false;
-		$token = $this->oauth->get_token();
+		$token     = $this->oauth->get_token();
 		if ( $token && isset( $token['scope'] ) ) {
 			foreach ( explode( ',', $scopes ) as $scope ) {
 				if ( OAuth2\Scope_Util::checkSingleScope( $scope, $token['scope'] ) ) {
@@ -1487,7 +1487,7 @@ class Mastodon_API {
 			);
 		} catch ( \Exception $e ) {
 			list( $code, $message ) = explode( ',', $e->getMessage(), 2 );
-			$app = new \WP_Error( $code, $message, array( 'status' => 422 ) );
+			$app                    = new \WP_Error( $code, $message, array( 'status' => 422 ) );
 		}
 
 		if ( is_wp_error( $app ) ) {
@@ -1631,7 +1631,7 @@ class Mastodon_API {
 		$wp_rest_response = false;
 		if ( $entities instanceof \WP_REST_Response ) {
 			$wp_rest_response = $entities;
-			$entities = $entities->data;
+			$entities         = $entities->data;
 		}
 		if ( ! is_array( $entities ) ) {
 			return array();
@@ -1693,10 +1693,10 @@ class Mastodon_API {
 		 */
 		$in_reply_to_id = apply_filters( 'mastodon_api_in_reply_to_id', $request->get_param( 'in_reply_to_id' ), $request );
 
-		$media_ids = $request->get_param( 'media_ids' );
+		$media_ids    = $request->get_param( 'media_ids' );
 		$scheduled_at = $request->get_param( 'scheduled_at' );
 
-		$app = Mastodon_App::get_current_app();
+		$app              = Mastodon_App::get_current_app();
 		$app_post_formats = array();
 		if ( $app ) {
 			$app_post_formats = $app->get_post_formats();
@@ -1919,7 +1919,7 @@ class Mastodon_API {
 		}
 
 		$context_post_id = self::maybe_get_remapped_reblog_id( $context_post_id );
-		$url = get_permalink( $context_post_id );
+		$url             = get_permalink( $context_post_id );
 
 		$context = array(
 			'ancestors'   => array(),
@@ -2068,10 +2068,10 @@ class Mastodon_API {
 		 */
 		$in_reply_to_id = apply_filters( 'mastodon_api_in_reply_to_id', $request->get_param( 'in_reply_to_id' ), $request );
 
-		$media_ids = $request->get_param( 'media_ids' );
+		$media_ids    = $request->get_param( 'media_ids' );
 		$scheduled_at = $request->get_param( 'scheduled_at' );
 
-		$app = Mastodon_App::get_current_app();
+		$app              = Mastodon_App::get_current_app();
 		$app_post_formats = array();
 		if ( $app ) {
 			$app_post_formats = $app->get_post_formats();
@@ -2523,8 +2523,8 @@ class Mastodon_API {
 
 
 	public static function remap_user_id( $user_id ) {
-		$user_id = apply_filters( 'mastodon_api_canonical_user_id', $user_id );
-		$term = get_term_by( 'name', $user_id, self::REMAP_TAXONOMY );
+		$user_id        = apply_filters( 'mastodon_api_canonical_user_id', $user_id );
+		$term           = get_term_by( 'name', $user_id, self::REMAP_TAXONOMY );
 		$remote_user_id = 0;
 		if ( $term ) {
 			$remote_user_id = $term->term_id;
@@ -2540,7 +2540,7 @@ class Mastodon_API {
 	}
 
 	public static function remap_url( $url ) {
-		$term = get_term_by( 'name', $url, self::REMAP_TAXONOMY );
+		$term        = get_term_by( 'name', $url, self::REMAP_TAXONOMY );
 		$remapped_id = 0;
 		if ( $term ) {
 			$remapped_id = $term->term_id;
@@ -2581,7 +2581,7 @@ class Mastodon_API {
 			'version' => self::VERSION,
 		);
 		$software = apply_filters( 'mastodon_api_nodeinfo_software', $software );
-		$ret = array(
+		$ret      = array(
 			'metadata'          => array(
 				'nodeName'        => html_entity_decode( get_bloginfo( 'name' ), ENT_QUOTES ),
 				'nodeDescription' => html_entity_decode( get_bloginfo( 'description' ), ENT_QUOTES ),
@@ -2636,7 +2636,7 @@ class Mastodon_API {
 		);
 
 		$post_formats = $app->get_post_formats();
-		$content[] = sprintf(
+		$content[]    = sprintf(
 			// Translators: %s is the post formats.
 			_n( 'Posts with the post format <strong>%s</strong> will appear in this app.', 'Posts with the post formats <strong>%s</strong> will appear in this app.', count( $app->get_post_formats() ), 'enable-mastodon-apps' ),
 			implode( ', ', $post_formats )
