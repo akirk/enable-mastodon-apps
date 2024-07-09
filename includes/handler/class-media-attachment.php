@@ -99,7 +99,7 @@ class Media_Attachment extends Handler {
 			$thumb_meta   = \wp_get_attachment_metadata( $thumbnail_id );
 			if ( isset( $thumb_meta['sizes']['medium-large'] ) ) {
 				$thumb = \wp_get_attachment_image_src( $thumbnail_id, 'medium-large' );
-			} elseif ( isset( $meta['sizes']['medium'] ) ) {
+			} elseif ( isset( $thumb_meta['sizes']['medium'] ) ) {
 				$thumb = \wp_get_attachment_image_src( $thumbnail_id, 'medium' );
 			}
 		}

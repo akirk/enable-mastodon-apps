@@ -175,7 +175,7 @@ class Authenticate_Handler {
 							$all = isset( $subscopes['all'] ) && $subscopes['all'];
 							unset( $subscopes['all'] );
 							if ( ! empty( $subscopes ) && ! $all ) {
-								echo ' ', __( 'Only the following sub-permissions:', 'enable-mastodon-apps' );
+								echo ' ', esc_html__( 'Only the following sub-permissions:', 'enable-mastodon-apps' );
 								echo '<ul style="margin-left: 1em">';
 								foreach ( $subscopes as $subscope => $true ) {
 									if ( ! isset( $scope_explanations[ $main_scope . ':' . $subscope ] ) ) {
