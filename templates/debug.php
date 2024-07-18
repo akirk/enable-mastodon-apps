@@ -173,7 +173,7 @@ $rest_nonce = wp_create_nonce( 'wp_rest' );
 					foreach ( $tokens as $token => $data ) {
 						$user = 'app-level';
 						if ( $data['user_id'] ) {
-							$userdata = get_user_by( 'ID', $data['user_id'] );
+							$userdata = get_user_by( 'ID', $data['user_id'] ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 							if ( $userdata ) {
 								if ( is_wp_error( $userdata ) ) {
 									$user = $userdata->get_error_message();
