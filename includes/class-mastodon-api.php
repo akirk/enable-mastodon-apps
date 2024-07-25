@@ -9,6 +9,7 @@
 
 namespace Enable_Mastodon_Apps;
 
+use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
 
@@ -245,7 +246,7 @@ class Mastodon_API {
 				'api/v1/notifications/([^/]+)/dismiss'   => 'api/v1/notifications/$matches[1]/dismiss',
 				'api/v1/notifications/([^/|$]+)/?$'      => 'api/v1/notifications/$matches[1]',
 				'api/v1/notifications'                   => 'api/v1/notifications',
-				'api/nodeinfo/([0-9]+[.][0-9]+).json'    => 'api/nodeinfo/$matches[1].json',
+				'api/nodeinfo/([0-9]+[.][0-9]+)'         => 'api/nodeinfo/$matches[1]',
 				'api/v1/media/([0-9]+)'                  => 'api/v1/media/$matches[1]',
 				'api/v1/statuses/([0-9]+)'               => 'api/v1/statuses/$matches[1]',
 				'api/v1/statuses'                        => 'api/v1/statuses',
@@ -393,7 +394,7 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
-			'api/nodeinfo/2.0.json',
+			'api/nodeinfo/(?P<version>[\w\.]+)',
 			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'api_nodeinfo' ),
@@ -2574,49 +2575,59 @@ class Mastodon_API {
 		return $software;
 	}
 
-	public function api_nodeinfo() {
-		global $wp_version;
-		$software = array(
-			'name'    => $this->software_string(),
-			'version' => self::VERSION,
-		);
-		$software = apply_filters( 'mastodon_api_nodeinfo_software', $software );
-		$ret = array(
-			'metadata'          => array(
-				'nodeName'        => html_entity_decode( get_bloginfo( 'name' ), ENT_QUOTES ),
-				'nodeDescription' => html_entity_decode( get_bloginfo( 'description' ), ENT_QUOTES ),
-				'software'        => $software,
-				'config'          => array(
-					'features' => array(
-						'timelines'   => array(
-							'local'   => true,
-							'network' => true,
-						),
-						'mobile_apis' => true,
-						'stories'     => false,
-						'video'       => false,
-						'import'      => array(
-							'instagram' => false,
-							'mastodon'  => false,
-							'pixelfed'  => false,
+	public function api_nodeinfo( $request ) {
+		$nodeinfo_version = $request->get_param( 'version' );
+
+		if ( '2.0' === $nodeinfo_version ) {
+			global $wp_version;
+			$software = array(
+				'name'    => $this->software_string(),
+				'version' => self::VERSION,
+			);
+			$software = apply_filters( 'mastodon_api_nodeinfo_software', $software );
+			$ret = array(
+				'metadata'          => array(
+					'nodeName'        => html_entity_decode( get_bloginfo( 'name' ), ENT_QUOTES ),
+					'nodeDescription' => html_entity_decode( get_bloginfo( 'description' ), ENT_QUOTES ),
+					'software'        => $software,
+					'config'          => array(
+						'features' => array(
+							'timelines'   => array(
+								'local'   => true,
+								'network' => true,
+							),
+							'mobile_apis' => true,
+							'stories'     => false,
+							'video'       => false,
+							'import'      => array(
+								'instagram' => false,
+								'mastodon'  => false,
+								'pixelfed'  => false,
+							),
 						),
 					),
 				),
-			),
-			'version'           => '2.0',
-			'protocols'         => array(
-				'activitpypub',
-			),
-			'services'          => array(
-				'inbound'  => array(),
-				'outbound' => array(),
-			),
+				'version'           => '2.0',
+				'protocols'         => array(
+					'activitpypub',
+				),
+				'services'          => array(
+					'inbound'  => array(),
+					'outbound' => array(),
+				),
 
-			'software'          => $software,
-			'openRegistrations' => false,
-		);
+				'software'          => $software,
+				'openRegistrations' => false,
+			);
+		} else {
+			$ret = new WP_Error(
+				'mastodon_api_nodeinfo',
+				'Unsupported version',
+				array( 'status' => 404 )
+			);
+		}
 
-		return apply_filters( 'mastodon_api_nodeinfo', $ret );
+		return apply_filters( 'mastodon_api_nodeinfo', $ret, $nodeinfo_version );
 	}
 
 	public function api_announcements() {
