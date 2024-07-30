@@ -1412,7 +1412,7 @@ class Mastodon_API {
 		// A helpful shim in case this is PHP <=5.6 when php://input could only be accessed once.
 		static $input;
 		if ( ! isset( $input ) ) {
-			$input = file_get_contents( 'php://input' ); //phcs:ignore
+			$input = file_get_contents( 'php://input' ); // phcs:ignore .
 		}
 
 		return $input;
