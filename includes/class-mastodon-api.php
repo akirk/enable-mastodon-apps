@@ -2416,6 +2416,10 @@ class Mastodon_API {
 	public function api_account( $request ) {
 		$user_id = $this->get_user_id_from_request( $request );
 
+		if ( is_multisite() && ! is_user_member_of_blog( $user_id ) ) {
+			return new \WP_Error( 'mastodon_api_account', 'Record not found', array( 'status' => 404 ) );
+		}
+
 		/**
 		 * Modify the account data returned for `/api/account/{user_id}` requests.
 		 *
