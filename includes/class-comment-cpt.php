@@ -105,7 +105,7 @@ class Comment_CPT {
 		}
 
 		$post_data = array(
-			'post_title'    => 'Comment',
+			'post_title'    => '',
 			'post_content'  => $comment->comment_content,
 			'post_author'   => $comment->user_id,
 			'post_status'   => 'publish',
