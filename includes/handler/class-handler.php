@@ -21,13 +21,17 @@ class Handler {
 		if ( $limit < 1 ) {
 			$limit = 20;
 		}
+
 		$app = Mastodon_App::get_current_app();
-		$post_types = array( 'post' );
-		if ( $app ) {
-			$post_types = $app->get_view_post_types();
+
+		if ( ! isset( $args['post_type'] ) ) {
+			$post_types = array( 'post' );
+			if ( $app ) {
+				$post_types = $app->get_view_post_types();
+			}
+			$args['post_type'] = array_merge( $post_types, array( Mastodon_API::CPT ) );
 		}
 		$args['posts_per_page']   = $limit;
-		$args['post_type']        = array_merge( $post_types, array( Mastodon_API::CPT ) );
 		$args['suppress_filters'] = false;
 		$args['post_status']      = array( 'publish', 'private' );
 
@@ -41,7 +45,6 @@ class Handler {
 			}
 		}
 
-		$app = Mastodon_App::get_current_app();
 		if ( $app ) {
 			$args = $app->modify_wp_query_args( $args );
 		}
