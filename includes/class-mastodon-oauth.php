@@ -47,7 +47,7 @@ class Mastodon_OAuth {
 		$this->server->addStorage( new Oauth2\Access_Token_Storage(), 'access_token' );
 		$this->server->setScopeUtil( new Oauth2\Scope_Util() );
 
-		if ( '/oauth/token' === strtok( $_SERVER['REQUEST_URI'], '?' ) ) {
+		if ( '/oauth/token' === strtok( $_SERVER['REQUEST_URI'], '?' ) ) { // phpcs:ignore
 			// Avoid interference with private site plugins.
 			add_filter(
 				'pre_option_blog_public',
@@ -67,7 +67,7 @@ class Mastodon_OAuth {
 
 	public function rewrite_rules() {
 		$existing_rules = get_option( 'rewrite_rules' );
-		$needs_flush = false;
+		$needs_flush    = false;
 
 		$generic =
 			array(
@@ -97,15 +97,15 @@ class Mastodon_OAuth {
 
 	public function handle_oauth( $return_value = false ) {
 		global $wp_query;
-		if ( 'POST' === $_SERVER['REQUEST_METHOD'] && empty( $_POST ) && ! empty( $_REQUEST ) ) {
-			$_POST = $_REQUEST;
+		if ( 'POST' === $_SERVER['REQUEST_METHOD'] && empty( $_POST ) && ! empty( $_REQUEST ) ) { // phpcs:ignore
+			$_POST = $_REQUEST; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		}
 		$endpoint = null;
 
 		if ( isset( $wp_query->query['mastodon-oauth'] ) ) {
 			$endpoint = $wp_query->query['mastodon-oauth'];
 		} else {
-			$request_uri = trim( strtok( $_SERVER['REQUEST_URI'], '?' ), '/' );
+			$request_uri = trim( strtok( $_SERVER['REQUEST_URI'], '?' ), '/' ); // phpcs:ignore
 
 			if ( in_array( $request_uri, array( 'oauth/authorize', 'oauth/token', 'oauth/revoke' ) ) ) {
 				$endpoint = explode( '/', $request_uri )[1];
@@ -118,25 +118,25 @@ class Mastodon_OAuth {
 					return null;
 				}
 				$wp_query->is_404 = false;
-				$handler = new OAuth2\Authorize_Handler( $this->server );
+				$handler          = new OAuth2\Authorize_Handler( $this->server );
 				break;
 
 			case 'token':
 				header( 'Access-Control-Allow-Methods: POST' );
 				header( 'Access-Control-Allow-Headers: content-type' );
 				header( 'Access-Control-Allow-Credentials: true' );
-				if ( 'OPTIONS' === $_SERVER['REQUEST_METHOD'] ) {
+				if ( 'OPTIONS' === $_SERVER['REQUEST_METHOD'] ) { // phpcs:ignore
 					header( 'Access-Control-Allow-Origin: *', true, 204 );
 					exit;
 				}
 				header( 'Access-Control-Allow-Origin: *' );
 				$wp_query->is_404 = false;
-				$handler = new OAuth2\Token_Handler( $this->server );
+				$handler          = new OAuth2\Token_Handler( $this->server );
 				break;
 
 			case 'revoke':
 				$wp_query->is_404 = false;
-				$handler = new OAuth2\Revokation_Handler( $this->server );
+				$handler          = new OAuth2\Revokation_Handler( $this->server );
 				break;
 		}
 
@@ -145,10 +145,12 @@ class Mastodon_OAuth {
 		}
 
 		if ( get_option( 'mastodon_api_debug_mode' ) > time() ) {
-			$app = Mastodon_App::get_debug_app();
+			// phpcs:disable
+			$app     = Mastodon_App::get_debug_app();
 			$request = new \WP_REST_Request( $_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI'] );
 			$request->set_query_params( $_GET );
 			$request->set_body_params( $_POST );
+			// phpcs:enable
 			$request->set_headers( getallheaders() );
 			$app->was_used( $request );
 		}
@@ -169,7 +171,7 @@ class Mastodon_OAuth {
 	}
 
 	public function get_token() {
-		$request = Request::createFromGlobals();
+		$request  = Request::createFromGlobals();
 		$response = new Response();
 		if ( ! $this->server->verifyResourceRequest( $request, $response ) ) {
 			return null;

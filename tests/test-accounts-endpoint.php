@@ -15,10 +15,6 @@ namespace Enable_Mastodon_Apps;
 class AccountsEndpoint_Test extends Mastodon_API_TestCase {
 	private $external_account = 'alex@kirk.at';
 
-	public function set_up() {
-		parent::set_up();
-	}
-
 	public function mastodon_api_webfinger( $body, $url ) {
 		if ( $url !== $this->external_account ) {
 			return $body;
@@ -55,7 +51,7 @@ class AccountsEndpoint_Test extends Mastodon_API_TestCase {
 
 		$this->assertEquals( 200, $response->get_status() );
 
-		$data = json_decode( json_encode( $response->get_data() ), true );
+		$data = json_decode( wp_json_encode( $response->get_data() ), true );
 		$userdata = get_userdata( $this->administrator );
 
 		$this->assertIsString( $data['id'] );

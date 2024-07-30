@@ -22,7 +22,7 @@ class Extended_Description extends Entity {
 	 *
 	 * @var array
 	 */
-	protected $_types = array(
+	protected $types = array(
 		'updated_at' => 'string',
 		'content'    => 'string',
 	);

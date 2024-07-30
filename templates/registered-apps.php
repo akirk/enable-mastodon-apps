@@ -1,6 +1,7 @@
 <?php
 
 use Enable_Mastodon_Apps\Mastodon_App;
+// phpcs:disable VariableAnalysis.CodeAnalysis.VariableAnalysis.UndefinedVariable
 
 \load_template(
 	__DIR__ . '/admin-header.php',

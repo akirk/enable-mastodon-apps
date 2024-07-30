@@ -43,8 +43,8 @@ class Status_Source extends Status {
 		if ( ! $post ) {
 			$comment = get_comment( $object_id );
 			if ( isset( $comment ) && $comment instanceof \WP_Comment ) {
-				$status_source = new Status_Source_Entity();
-				$status_source->id = strval( Mastodon_API::remap_comment_id( $comment->comment_ID ) );
+				$status_source       = new Status_Source_Entity();
+				$status_source->id   = strval( Mastodon_API::remap_comment_id( $comment->comment_ID ) );
 				$status_source->text = trim( wp_strip_all_tags( $comment->comment_content ) );
 			}
 
@@ -52,8 +52,8 @@ class Status_Source extends Status {
 		}
 
 		if ( $post instanceof \WP_Post ) {
-			$status_source = new Status_Source_Entity();
-			$status_source->id = strval( $post->ID );
+			$status_source       = new Status_Source_Entity();
+			$status_source->id   = strval( $post->ID );
 			$status_source->text = trim( wp_strip_all_tags( $post->post_title . PHP_EOL . $post->post_content ) );
 		}
 

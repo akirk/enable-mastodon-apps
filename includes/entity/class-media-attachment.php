@@ -13,7 +13,7 @@ namespace Enable_Mastodon_Apps\Entity;
  * This is the class that implements the Media_Attachment entity.
  */
 class Media_Attachment extends Entity {
-	protected $_types = array(
+	protected $types = array(
 		'id'          => 'string',
 		'type'        => 'string',
 		'url'         => 'string',

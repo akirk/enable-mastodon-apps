@@ -17,7 +17,7 @@ namespace Enable_Mastodon_Apps\Entity;
  * @package Enable_Mastodon_Apps
  */
 class Tag extends Entity {
-	protected $_types = array(
+	protected $types = array(
 		'name'      => 'string',
 		'url'       => 'string',
 		'history'   => 'array',

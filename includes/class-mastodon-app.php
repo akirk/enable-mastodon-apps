@@ -28,8 +28,8 @@ class Mastodon_App {
 	private static $current_app = null;
 
 	const DEBUG_CLIENT_ID = 'enable-mastodon-apps';
-	const TAXONOMY = 'mastodon-app';
-	const VALID_SCOPES = array(
+	const TAXONOMY        = 'mastodon-app';
+	const VALID_SCOPES    = array(
 		'read',
 		'write',
 		'follow',
@@ -92,7 +92,7 @@ class Mastodon_App {
 	}
 
 	public function get_admin_page() {
-		return admin_url( 'admin.php?page=enable-mastodon-apps&app=' . urlencode( $this->term->slug ) );
+		return add_query_arg( 'app', $this->term->slug, admin_url( 'admin.php?page=enable-mastodon-apps' ) );
 	}
 
 	public function get_create_post_type() {
@@ -185,8 +185,8 @@ class Mastodon_App {
 				array_merge(
 					array(
 						'timestamp'    => microtime( true ),
-						'path'         => $_SERVER['REQUEST_URI'],
-						'method'       => $_SERVER['REQUEST_METHOD'],
+						'path'         => $_SERVER['REQUEST_URI'], // phpcs:ignore
+						'method'       => $_SERVER['REQUEST_METHOD'], // phpcs:ignore
 						'params'       => $request->get_params(),
 						'json'         => $request->get_json_params(),
 						'files'        => $request->get_file_params(),
@@ -242,7 +242,7 @@ class Mastodon_App {
 			)
 		) as $term ) {
 			if ( $term instanceof \WP_Term ) {
-				$app = new Mastodon_App( $term );
+				$app                           = new Mastodon_App( $term );
 				$apps[ $app->get_client_id() ] = $app;
 			}
 		}
@@ -371,8 +371,8 @@ class Mastodon_App {
 					if ( ! $url ) {
 						return '';
 					}
-					$host = parse_url( $url, PHP_URL_HOST );
-					$protocol = parse_url( $url, PHP_URL_SCHEME );
+					$host = wp_parse_url( $url, PHP_URL_HOST );
+					$protocol = wp_parse_url( $url, PHP_URL_SCHEME );
 
 					if ( ! $host || 0 !== strpos( 'https', $protocol ) ) {
 						$url = '';
@@ -498,7 +498,7 @@ class Mastodon_App {
 		}
 
 		$filter_by_post_format = $this->get_post_formats();
-		$post_formats = get_post_format_slugs();
+		$post_formats          = get_post_format_slugs();
 		$filter_by_post_format = array_filter(
 			$filter_by_post_format,
 			function ( $post_format ) use ( $post_formats ) {
@@ -535,7 +535,7 @@ class Mastodon_App {
 			}
 			$tax_query[] = $post_format_query;
 		}
-		$args['tax_query'] = $tax_query;
+		$args['tax_query'] = $tax_query; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
 
 		return $args;
 	}
@@ -571,7 +571,7 @@ class Mastodon_App {
 		foreach ( self::get_all() as $app ) {
 			if ( $app->is_outdated() ) {
 				if ( $app->delete() ) {
-					$count += 1;
+					++$count;
 				}
 			}
 		}
@@ -592,8 +592,8 @@ class Mastodon_App {
 		return new self( $term );
 	}
 
-	public static function save( $client_name, array $redirect_uris, $scopes, $website ) {
-		$client_id = strtolower( wp_generate_password( 32, false ) );
+	public static function save( $client_name, array $redirect_uris, $scopes, $website ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+		$client_id     = strtolower( wp_generate_password( 32, false ) );
 		$client_secret = wp_generate_password( 128, false );
 
 		$term = wp_insert_term( $client_id, self::TAXONOMY );

@@ -22,7 +22,7 @@ class Instance_V1 extends Entity {
 	 *
 	 * @var array
 	 */
-	protected $_types = array(
+	protected $types = array(
 		'uri'               => 'string',
 		'title'             => 'string',
 		'short_description' => 'string',
