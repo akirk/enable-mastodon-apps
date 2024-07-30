@@ -29,7 +29,7 @@ function output_request_log( $request, $rest_nonce ) {
 		echo '</summary>';
 		echo '<pre style="padding-left: 1em; border-left: 3px solid #999; margin: 0">';
 		foreach ( $meta as $key => $value ) {
-			echo esc_html( $key ), ' ', esc_html( var_export( $value, true ) ), '<br/>';
+			echo esc_html( $key ), ' ', esc_html( var_export( $value, true ) ), '<br/>'; // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_var_export
 		}
 		echo '</pre>';
 		echo '</details>';
@@ -110,9 +110,8 @@ function td_timestamp( $timestamp, $strikethrough_past = false ) {
 </div>
 <hr class="wp-header-end">
 <?php
-if ( isset( $_GET['success'] ) ) {
-	// phpcs:ignore
-	$success = santize_text_field( wp_unslash( $_GET['success'] ) );
+if ( isset( $_GET['success'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+	$success = santize_text_field( wp_unslash( $_GET['success'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended,WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 	?>
 	<div class="notice notice-success is-dismissible"><p><?php echo esc_html( $success ); ?></p></div>
 	<?php

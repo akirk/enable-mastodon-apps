@@ -34,14 +34,14 @@ class Ids_Test extends Mastodon_API_TestCase {
 		$response = $this->dispatch( $request );
 
 		$this->assertEquals( 200, $response->get_status() );
-		$data = json_decode( json_encode( $response->get_data() ), true );
+		$data = json_decode( wp_json_encode( $response->get_data() ), true );
 		$this->assertEquals( $this->administrator, $data['id'] );
 
 		add_filter( 'mastodon_api_account', array( $this, 'account_id_mapper' ), 20, 2 );
 		$response = $this->dispatch( $request );
 
 		$this->assertEquals( 200, $response->get_status() );
-		$data = json_decode( json_encode( $response->get_data() ), true );
+		$data = json_decode( wp_json_encode( $response->get_data() ), true );
 		$this->assertTrue( $data['id'] > 1e10 );
 		$this->mapped_id = $data['id'];
 
@@ -50,7 +50,7 @@ class Ids_Test extends Mastodon_API_TestCase {
 		$response = $this->dispatch( $request );
 
 		$this->assertEquals( 200, $response->get_status() );
-		$data = json_decode( json_encode( $response->get_data() ), true );
+		$data = json_decode( wp_json_encode( $response->get_data() ), true );
 		$this->assertEquals( $this->mapped_id, $data['id'] );
 	}
 }

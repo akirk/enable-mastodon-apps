@@ -18,7 +18,7 @@ abstract class Entity implements \JsonSerializable {
 	 *
 	 * Example:
 	 * ```
-	 * protected $_types = array(
+	 * protected $types = array(
 	 *     'id'             => 'string',
 	 *     'created_at'     => 'DateTime', // DateTime is the PHP class.
 	 *     'text'           => 'string',
@@ -28,7 +28,7 @@ abstract class Entity implements \JsonSerializable {
 	 *
 	 * @var array
 	 */
-	protected $_types;
+	protected $types;
 
 	/**
 	 * Provide the data that should be serialized as JSON.
@@ -40,7 +40,7 @@ abstract class Entity implements \JsonSerializable {
 	#[\ReturnTypeWillChange]
 	public function jsonSerialize() {
 		$array = array();
-		foreach ( $this->_types as $var => $type ) {
+		foreach ( $this->types as $var => $type ) {
 			if ( is_wp_error( $this->$var ) ) {
 				continue;
 			}
@@ -63,14 +63,12 @@ abstract class Entity implements \JsonSerializable {
 					return array(
 						'error' => 'Required variable is missing: ' . $var,
 					);
-					continue;
 				}
 				$valid = $this->validate( $var );
 				if ( is_wp_error( $valid ) ) {
 					return array(
 						'error' => $var . ': ' . $valid->get_error_message(),
 					);
-					continue;
 				}
 
 				settype( $this->$var, $object );

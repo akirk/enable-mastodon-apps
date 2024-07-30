@@ -102,7 +102,7 @@ foreach ( $files as $file ) {
 		$comment = '';
 		$hook = false;
 
-		for ( $j = $i; $j > max( 0, $i - 10 ); $j-- ) {
+		for ( $j = $i, $l = max( 0, $i - 10 ); $j > $l; $j-- ) {
 			if ( ! is_array( $tokens[ $j ] ) ) {
 				continue;
 			}

@@ -17,7 +17,7 @@ namespace Enable_Mastodon_Apps\Entity;
  * @package Enable_Mastodon_Apps
  */
 class Account extends Entity {
-	protected $_types = array(
+	protected $types = array(
 		'id'              => 'string',
 		'username'        => 'string',
 		'acct'            => 'string',

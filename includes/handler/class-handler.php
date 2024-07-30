@@ -107,7 +107,7 @@ class Handler {
 			}
 
 			if ( is_wp_error( $status ) ) {
-				error_log( print_r( $status, true ) );
+				error_log( print_r( $status, true ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log,WordPress.PHP.DevelopmentFunctions.error_log_print_r
 				continue;
 			}
 
@@ -118,7 +118,7 @@ class Handler {
 			}
 
 			if ( ! $status->is_valid() ) {
-				error_log( wp_json_encode( compact( 'status', 'post' ) ) );
+				error_log( wp_json_encode( compact( 'status', 'post' ) ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 				continue;
 			}
 

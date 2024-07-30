@@ -78,7 +78,8 @@ class Mastodon_Admin {
 
 	public function admin_page() {
 		$this->enable_debug = get_option( 'mastodon_api_enable_debug' );
-		$tab                = isset( $_GET['tab'] ) ? sanitize_text_field( wp_unslash( $_GET['tab'] ) ) : 'welcome';
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended
+		$tab = isset( $_GET['tab'] ) ? sanitize_text_field( wp_unslash( $_GET['tab'] ) ) : 'welcome';
 		if ( isset( $_GET['app'] ) ) {
 			$app = Mastodon_App::get_by_client_id( sanitize_text_field( wp_unslash( $_GET['app'] ) ) );
 			if ( $app ) {
@@ -86,6 +87,7 @@ class Mastodon_Admin {
 			}
 			$tab = 'registered-apps';
 		}
+		// phpcs:enable
 		switch ( $tab ) {
 			case 'welcome':
 				$this->admin_welcome_page();

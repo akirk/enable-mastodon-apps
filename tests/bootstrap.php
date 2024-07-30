@@ -62,7 +62,7 @@ add_filter(
 add_filter(
 	'http_request_args',
 	function ( $args, $url ) {
-		if ( in_array( parse_url( $url, PHP_URL_HOST ), array( 'me.local', 'friend.local', 'mastodon.local' ) ) ) {
+		if ( in_array( wp_parse_url( $url, PHP_URL_HOST ), array( 'me.local', 'friend.local', 'mastodon.local' ) ) ) {
 			$args['reject_unsafe_urls'] = false;
 		}
 		return $args;
@@ -93,7 +93,7 @@ if ( defined( 'TESTS_VERBOSE' ) && TESTS_VERBOSE ) {
 			if ( is_numeric( $meta_value ) || is_string( $meta_value ) ) {
 				echo $meta_value, PHP_EOL;
 			} else {
-				var_dump( $meta_value );
+				var_dump( $meta_value ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_var_dump
 			}
 		},
 		10,

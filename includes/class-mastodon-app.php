@@ -92,7 +92,7 @@ class Mastodon_App {
 	}
 
 	public function get_admin_page() {
-		return admin_url( 'admin.php?page=enable-mastodon-apps&app=' . urlencode( $this->term->slug ) );
+		return add_query_arg( 'app', $this->term->slug, admin_url( 'admin.php?page=enable-mastodon-apps' ) );
 	}
 
 	public function get_create_post_type() {
@@ -371,8 +371,8 @@ class Mastodon_App {
 					if ( ! $url ) {
 						return '';
 					}
-					$host = parse_url( $url, PHP_URL_HOST );
-					$protocol = parse_url( $url, PHP_URL_SCHEME );
+					$host = wp_parse_url( $url, PHP_URL_HOST );
+					$protocol = wp_parse_url( $url, PHP_URL_SCHEME );
 
 					if ( ! $host || 0 !== strpos( 'https', $protocol ) ) {
 						$url = '';
@@ -535,7 +535,7 @@ class Mastodon_App {
 			}
 			$tax_query[] = $post_format_query;
 		}
-		$args['tax_query'] = $tax_query;
+		$args['tax_query'] = $tax_query; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
 
 		return $args;
 	}
@@ -592,7 +592,7 @@ class Mastodon_App {
 		return new self( $term );
 	}
 
-	public static function save( $client_name, array $redirect_uris, $scopes, $website ) {
+	public static function save( $client_name, array $redirect_uris, $scopes, $website ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
 		$client_id     = strtolower( wp_generate_password( 32, false ) );
 		$client_secret = wp_generate_password( 128, false );
 

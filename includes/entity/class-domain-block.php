@@ -22,7 +22,7 @@ class Domain_Block extends Entity {
 	 *
 	 * @var array
 	 */
-	protected $_types = array(
+	protected $types = array(
 		'domain'   => 'string',
 		'digest'   => 'string',
 		'severity' => 'string',

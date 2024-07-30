@@ -23,7 +23,7 @@ class MediaEndpoint_Test extends Mastodon_API_TestCase {
 
 	public function tearDown(): void {
 		if ( file_exists( $this->test_file ) ) {
-			unlink( $this->test_file );
+			wp_delete_file( $this->test_file );
 		}
 
 		$uploads  = wp_upload_dir();
@@ -31,7 +31,7 @@ class MediaEndpoint_Test extends Mastodon_API_TestCase {
 		$objects  = new \RecursiveIteratorIterator( $iterator );
 		foreach ( $objects as $name => $object ) {
 			if ( is_file( $name ) ) {
-				unlink( $name );
+				wp_delete_file( $name );
 			}
 		}
 
@@ -55,7 +55,7 @@ class MediaEndpoint_Test extends Mastodon_API_TestCase {
 		$request->set_file_params(
 			array(
 				'file' => array(
-					'file'     => file_get_contents( $this->test_file ),
+					'file'     => file_get_contents( $this->test_file ), // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 					'name'     => 'fox.jpg',
 					'size'     => filesize( $this->test_file ),
 					'tmp_name' => $this->test_file,
@@ -74,7 +74,7 @@ class MediaEndpoint_Test extends Mastodon_API_TestCase {
 		$request->set_file_params(
 			array(
 				'file' => array(
-					'file'     => file_get_contents( $this->test_file ),
+					'file'     => file_get_contents( $this->test_file ), // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 					'name'     => 'fox.jpg',
 					'size'     => filesize( $this->test_file ),
 					'tmp_name' => $this->test_file,

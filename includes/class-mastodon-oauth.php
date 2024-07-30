@@ -98,7 +98,7 @@ class Mastodon_OAuth {
 	public function handle_oauth( $return_value = false ) {
 		global $wp_query;
 		if ( 'POST' === $_SERVER['REQUEST_METHOD'] && empty( $_POST ) && ! empty( $_REQUEST ) ) { // phpcs:ignore
-			$_POST = $_REQUEST;
+			$_POST = $_REQUEST; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		}
 		$endpoint = null;
 
@@ -145,8 +145,8 @@ class Mastodon_OAuth {
 		}
 
 		if ( get_option( 'mastodon_api_debug_mode' ) > time() ) {
-			$app     = Mastodon_App::get_debug_app();
 			// phpcs:disable
+			$app     = Mastodon_App::get_debug_app();
 			$request = new \WP_REST_Request( $_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI'] );
 			$request->set_query_params( $_GET );
 			$request->set_body_params( $_POST );

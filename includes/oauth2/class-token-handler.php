@@ -25,7 +25,7 @@ class Token_Handler {
 		$this->server = $server;
 	}
 
-	public function handle( Request $request, Response $response ) {
+	public function handle( Request $request, Response $response ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
 		return $this->server->handleTokenRequest( $request );
 	}
 }
