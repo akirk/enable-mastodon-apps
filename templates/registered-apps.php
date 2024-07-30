@@ -19,6 +19,14 @@ $rest_nonce = wp_create_nonce( 'wp_rest' );
 	<form method="post">
 		<?php wp_nonce_field( 'enable-mastodon-apps' ); ?>
 		<h2><?php esc_html_e( 'Apps', 'enable-mastodon-apps' ); ?></h2>
+		<p>
+			<?php esc_html_e( 'These are the Mastodon apps that have been used with this WordPress site.', 'enable-mastodon-apps' ); ?>
+			<?php esc_html_e( 'You can customize the apps post types, or delete it by click on the Details link.', 'enable-mastodon-apps' ); ?>
+			<?php if ( $args['enable_debug'] ) : ?>
+				<br>
+				<?php esc_html_e( 'Since debug mode is activated, you\'ll also be able to see and manage access tokens on the details page.', 'enable-mastodon-apps' ); ?>
+			<?php endif; ?>
+		</p>
 		<span class="count">
 			<?php
 			echo esc_html(
@@ -38,6 +46,7 @@ $rest_nonce = wp_create_nonce( 'wp_rest' );
 				<th class="debug-hide"><?php esc_html_e( 'Post Formats', 'enable-mastodon-apps' ); ?></th>
 				<th><?php esc_html_e( 'Last Used', 'enable-mastodon-apps' ); ?></th>
 				<th><?php esc_html_e( 'Created', 'enable-mastodon-apps' ); ?></th>
+				<th></th>
 			</thead>
 			<tbody>
 				<?php
@@ -67,8 +76,9 @@ $rest_nonce = wp_create_nonce( 'wp_rest' );
 							}
 							?>
 						</td>
-							<?php td_timestamp( $app->get_last_used() ); ?>
-							<?php td_timestamp( $app->get_creation_date() ); ?>
+						<?php td_timestamp( $app->get_last_used() ); ?>
+						<?php td_timestamp( $app->get_creation_date() ); ?>
+						<td><a href="<?php echo esc_url( $app->get_admin_page() ); ?>"><?php esc_html_e( 'Details', 'enable-mastodon-apps' ); ?></a></td>
 					</tr>
 					<?php
 				}
