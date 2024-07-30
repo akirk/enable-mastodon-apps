@@ -70,7 +70,9 @@ $confirm = esc_html(
 				<tr class="debug-hide">
 					<th scope="row"><?php esc_html_e( 'Redirect URI', 'enable-mastodon-apps' ); ?></th>
 					<td>
-						<?php echo wp_kses( implode( '<br>', $app->get_redirect_uris() ), array( 'br' => array() ) ); ?>
+						<?php foreach ( $app->get_redirect_uris() as $redirect_uri ) : ?>
+							<input type="text" value="<?php echo esc_attr( $redirect_uri ); ?>" readonly onclick="this.select()" class="regular-text" /><br>
+						<?php endforeach; ?>
 						<p class="description">
 							<span><?php esc_html_e( 'The URI to redirect to after the user authorizes the app.', 'enable-mastodon-apps' ); ?></span>
 							<span>
