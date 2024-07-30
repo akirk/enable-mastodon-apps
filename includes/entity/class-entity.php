@@ -18,7 +18,7 @@ abstract class Entity implements \JsonSerializable {
 	 *
 	 * Example:
 	 * ```
-	 * protected $_types = array(
+	 * protected $types = array(
 	 *     'id'             => 'string',
 	 *     'created_at'     => 'DateTime', // DateTime is the PHP class.
 	 *     'text'           => 'string',
@@ -28,7 +28,7 @@ abstract class Entity implements \JsonSerializable {
 	 *
 	 * @var array
 	 */
-	protected $_types;
+	protected $types;
 
 	/**
 	 * Provide the data that should be serialized as JSON.
@@ -40,12 +40,12 @@ abstract class Entity implements \JsonSerializable {
 	#[\ReturnTypeWillChange]
 	public function jsonSerialize() {
 		$array = array();
-		foreach ( $this->_types as $var => $type ) {
+		foreach ( $this->types as $var => $type ) {
 			if ( is_wp_error( $this->$var ) ) {
 				continue;
 			}
 
-			$object = rtrim( $type, '?' );
+			$object   = rtrim( $type, '?' );
 			$nullable = preg_match( '/\?\?$/', $type );
 			$optional = preg_match( '/\?$/', $type );
 
@@ -63,14 +63,12 @@ abstract class Entity implements \JsonSerializable {
 					return array(
 						'error' => 'Required variable is missing: ' . $var,
 					);
-					continue;
 				}
 				$valid = $this->validate( $var );
 				if ( is_wp_error( $valid ) ) {
 					return array(
 						'error' => $var . ': ' . $valid->get_error_message(),
 					);
-					continue;
 				}
 
 				settype( $this->$var, $object );
@@ -123,7 +121,7 @@ abstract class Entity implements \JsonSerializable {
 			if ( preg_match( '/array\[([^\]]+)\]/', $object, $matches ) ) {
 				$object = $matches[1];
 				if ( substr( $object, -1 ) === '?' ) {
-					$object = rtrim( $object, '?' );
+					$object    = rtrim( $object, '?' );
 					$skippable = true;
 				}
 				if ( ! class_exists( '\\Enable_Mastodon_Apps\\Entity\\' . $object ) ) {

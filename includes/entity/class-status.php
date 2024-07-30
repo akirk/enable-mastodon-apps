@@ -17,7 +17,7 @@ namespace Enable_Mastodon_Apps\Entity;
  * @package Enable_Mastodon_Apps
  */
 class Status extends Entity {
-	protected $_types = array(
+	protected $types = array(
 		'id'                     => 'string',
 		'created_at'             => 'DateTime',
 		'spoiler_text'           => 'string',

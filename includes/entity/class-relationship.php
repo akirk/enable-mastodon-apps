@@ -21,7 +21,7 @@ class Relationship extends Entity {
 	 *
 	 * @var array
 	 */
-	protected $_types = array(
+	protected $types = array(
 		'id'                   => 'string',
 		'following'            => 'bool',
 		'showing_reblogs'      => 'bool',

@@ -39,7 +39,7 @@ class Search extends Handler {
 	 */
 	public function search( $search, object $request ) {
 		$type = $request->get_param( 'type' );
-		$ret = array(
+		$ret  = array(
 			'accounts' => array(),
 			'statuses' => array(),
 			'hashtags' => array(),
@@ -80,7 +80,7 @@ class Search extends Handler {
 			if ( empty( $args ) ) {
 				return array();
 			}
-			$args = apply_filters( 'mastodon_api_timelines_args', $args, $request );
+			$args      = apply_filters( 'mastodon_api_timelines_args', $args, $request );
 			$valid_url = wp_parse_url( $q );
 			if ( $valid_url && isset( $valid_url['host'] ) ) {
 				if ( ! $request->get_param( 'offset' ) ) {
@@ -88,14 +88,14 @@ class Search extends Handler {
 					// TODO allow lookup by URL.
 				}
 			} elseif ( is_user_logged_in() ) {
-				$args['s'] = $q;
-				$args['offset'] = $request->get_param( 'offset' );
+				$args['s']              = $q;
+				$args['offset']         = $request->get_param( 'offset' );
 				$args['posts_per_page'] = $request->get_param( 'limit' );
-				$ret['statuses'] = array_merge( $ret['statuses'], $this->get_posts( $args )->get_data() );
+				$ret['statuses']        = array_merge( $ret['statuses'], $this->get_posts( $args )->get_data() );
 			}
 		}
 		if ( ! $type || 'hashtags' === $type ) {
-			$q_param = $request->get_param( 'q' );
+			$q_param    = $request->get_param( 'q' );
 			$categories = get_categories(
 				array(
 					'orderby'    => 'name',

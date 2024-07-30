@@ -22,7 +22,7 @@ class Rule extends Entity {
 	 *
 	 * @var array
 	 */
-	protected $_types = array(
+	protected $types = array(
 		'id'   => 'string',
 		'text' => 'string',
 	);

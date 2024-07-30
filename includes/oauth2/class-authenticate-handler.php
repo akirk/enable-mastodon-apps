@@ -21,7 +21,8 @@ class Authenticate_Handler {
 		if ( ! is_user_logged_in() ) {
 			auth_redirect();
 		}
-		$app = Mastodon_App::get_by_client_id( $_GET['client_id'] );
+		$client_id = isset( $_GET['client_id'] ) ? sanitize_text_field( wp_unslash( $_GET['client_id'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$app = Mastodon_App::get_by_client_id( $client_id );
 		if ( is_wp_error( $app ) ) {
 			$response->setStatusCode( 404 );
 
@@ -30,13 +31,15 @@ class Authenticate_Handler {
 
 		$client_name = $app->get_client_name();
 
-		$redirect_uri = $app->check_redirect_uri( $_GET['redirect_uri'] );
+		$redirect_uri = isset( $_GET['redirect_uri'] ) ? sanitize_text_field( wp_unslash( $_GET['redirect_uri'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$redirect_uri = $app->check_redirect_uri( $redirect_uri );
 		if ( is_wp_error( $redirect_uri ) ) {
 			return $redirect_uri;
 		}
 
 		$scopes = array();
-		foreach ( explode( ' ', $_GET['scope'] ) as $scope ) {
+
+		foreach ( explode( ' ', $_GET['scope'] ) as $scope ) { // phpcs:ignore
 			if ( $app->has_scope( $scope ) ) {
 				$scopes[] = $scope;
 			}
@@ -53,7 +56,7 @@ class Authenticate_Handler {
 			'body_class_attr' => implode( ' ', array_diff( get_body_class(), array( 'error404' ) ) ),
 			'cancel_url'      => $this->get_cancel_url( $request ),
 			'form_url'        => home_url( '/oauth/authorize' ),
-			'form_fields'     => $_GET,
+			'form_fields'     => $_GET, // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		);
 
 		$has_permission = current_user_can( 'edit_private_posts' );
@@ -172,7 +175,7 @@ class Authenticate_Handler {
 							$all = isset( $subscopes['all'] ) && $subscopes['all'];
 							unset( $subscopes['all'] );
 							if ( ! empty( $subscopes ) && ! $all ) {
-								echo ' ', __( 'Only the following sub-permissions:', 'enable-mastodon-apps' );
+								echo ' ', esc_html__( 'Only the following sub-permissions:', 'enable-mastodon-apps' );
 								echo '<ul style="margin-left: 1em">';
 								foreach ( $subscopes as $subscope => $true ) {
 									if ( ! isset( $scope_explanations[ $main_scope . ':' . $subscope ] ) ) {

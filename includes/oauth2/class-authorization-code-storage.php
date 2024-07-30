@@ -243,7 +243,7 @@ class Authorization_Code_Storage implements AuthorizationCodeInterface {
 				'taxonomy'   => self::TAXONOMY,
 				'hide_empty' => false,
 				'fields'     => 'ids',
-				'meta_query' => array(
+				'meta_query' => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 					array(
 						'key'     => 'expires',
 						'value'   => time(),

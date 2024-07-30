@@ -128,7 +128,7 @@ class Mastodon_API_TestCase extends \WP_UnitTestCase {
 
 		add_filter(
 			'default_option_mastodon_api_default_post_formats',
-			function ( $post_formats ) {
+			function ( $post_formats ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
 				return array( 'status' );
 			},
 			20

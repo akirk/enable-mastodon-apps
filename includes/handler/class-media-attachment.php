@@ -95,11 +95,11 @@ class Media_Attachment extends Handler {
 		);
 		if ( \has_post_thumbnail( $attachment_id ) ) {
 			$thumbnail_id = get_post_thumbnail_id( $attachment_id );
-			$thumb = \wp_get_attachment_image_src( $thumbnail_id );
-			$thumb_meta = \wp_get_attachment_metadata( $thumbnail_id );
+			$thumb        = \wp_get_attachment_image_src( $thumbnail_id );
+			$thumb_meta   = \wp_get_attachment_metadata( $thumbnail_id );
 			if ( isset( $thumb_meta['sizes']['medium-large'] ) ) {
 				$thumb = \wp_get_attachment_image_src( $thumbnail_id, 'medium-large' );
-			} elseif ( isset( $meta['sizes']['medium'] ) ) {
+			} elseif ( isset( $thumb_meta['sizes']['medium'] ) ) {
 				$thumb = \wp_get_attachment_image_src( $thumbnail_id, 'medium' );
 			}
 		}
@@ -169,12 +169,12 @@ class Media_Attachment extends Handler {
 				continue;
 			}
 
-			$attachment = new \Enable_Mastodon_Apps\Entity\Media_Attachment();
-			$attachment->id = strval( 2e10 + crc32( $block['src'] ) );
-			$attachment->type = 'image';
-			$attachment->url = $block['src'];
+			$attachment              = new \Enable_Mastodon_Apps\Entity\Media_Attachment();
+			$attachment->id          = strval( 2e10 + crc32( $block['src'] ) );
+			$attachment->type        = 'image';
+			$attachment->url         = $block['src'];
 			$attachment->preview_url = $block['src'];
-			$attachment->remote_url = $block['src'];
+			$attachment->remote_url  = $block['src'];
 			if ( isset( $block['width'] ) && $block['width'] > 0 && isset( $block['height'] ) && $block['height'] > 0 ) {
 				$attachment->meta = array(
 					'width'  => intval( $block['width'] ),
@@ -190,10 +190,10 @@ class Media_Attachment extends Handler {
 					'aspect' => 1,
 				);
 			}
-			$original = $attachment->meta;
+			$original                     = $attachment->meta;
 			$attachment->meta['original'] = $original;
-			$attachment->description = '';
-			$status->media_attachments[] = $attachment;
+			$attachment->description      = '';
+			$status->media_attachments[]  = $attachment;
 		}
 		return $status;
 	}
@@ -218,7 +218,7 @@ class Media_Attachment extends Handler {
 
 		foreach ( $matches as $match ) {
 			$status->content = str_replace( $match[0], '', $status->content );
-			$block = array();
+			$block           = array();
 			foreach ( array( 'src', 'width', 'height', 'poster' ) as $attr ) {
 				if ( preg_match( '/\s' . $attr . '="(?P<' . $attr . '>[^"]+)"/', $match[1], $m ) ) {
 					$block[ $attr ] = $m[ $attr ];
@@ -229,10 +229,10 @@ class Media_Attachment extends Handler {
 				continue;
 			}
 
-			$attachment = new \Enable_Mastodon_Apps\Entity\Media_Attachment();
-			$attachment->id = strval( 2e10 + crc32( $block['src'] ) );
+			$attachment       = new \Enable_Mastodon_Apps\Entity\Media_Attachment();
+			$attachment->id   = strval( 2e10 + crc32( $block['src'] ) );
 			$attachment->type = 'video';
-			$attachment->url = $block['src'];
+			$attachment->url  = $block['src'];
 			if ( isset( $block['poster'] ) ) {
 				$attachment->preview_url = $block['poster'];
 			} else {
@@ -255,7 +255,7 @@ class Media_Attachment extends Handler {
 					'aspect' => 1,
 				);
 			}
-			$attachment->description = '';
+			$attachment->description     = '';
 			$status->media_attachments[] = $attachment;
 		}
 		return $status;

@@ -21,19 +21,23 @@ class Handler {
 		if ( $limit < 1 ) {
 			$limit = 20;
 		}
+
 		$app = Mastodon_App::get_current_app();
-		$post_types = array( 'post' );
-		if ( $app ) {
-			$post_types = $app->get_view_post_types();
+
+		if ( ! isset( $args['post_type'] ) ) {
+			$post_types = array( 'post' );
+			if ( $app ) {
+				$post_types = $app->get_view_post_types();
+			}
+			$args['post_type'] = array_merge( $post_types, array( Mastodon_API::CPT ) );
 		}
 		$args['posts_per_page']   = $limit;
-		$args['post_type']        = array_merge( $post_types, array( Mastodon_API::CPT ) );
 		$args['suppress_filters'] = false;
 		$args['post_status']      = array( 'publish', 'private' );
 
 		$pinned = $request->get_param( 'pinned' );
 		if ( $pinned || 'true' === $pinned ) {
-			$args['pinned'] = true;
+			$args['pinned']   = true;
 			$args['post__in'] = get_option( 'sticky_posts' );
 			if ( empty( $args['post__in'] ) ) {
 				// No pinned posts, we need to find nothing.
@@ -41,7 +45,6 @@ class Handler {
 			}
 		}
 
-		$app = Mastodon_App::get_current_app();
 		if ( $app ) {
 			$args = $app->modify_wp_query_args( $args );
 		}
@@ -69,7 +72,7 @@ class Handler {
 					global $wpdb;
 					return $where . $wpdb->prepare( " AND {$wpdb->posts}.ID > %d", $min_id );
 				};
-				$args['order'] = 'ASC';
+				$args['order']      = 'ASC';
 				add_filter( 'posts_where', $min_filter_handler );
 			}
 
@@ -107,7 +110,7 @@ class Handler {
 			}
 
 			if ( is_wp_error( $status ) ) {
-				error_log( print_r( $status, true ) );
+				error_log( print_r( $status, true ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log,WordPress.PHP.DevelopmentFunctions.error_log_print_r
 				continue;
 			}
 
@@ -118,7 +121,7 @@ class Handler {
 			}
 
 			if ( ! $status->is_valid() ) {
-				error_log( wp_json_encode( compact( 'status', 'post' ) ) );
+				error_log( wp_json_encode( compact( 'status', 'post' ) ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 				continue;
 			}
 
@@ -129,8 +132,9 @@ class Handler {
 
 		$response = new \WP_REST_Response( array_values( $statuses ) );
 		if ( ! empty( $statuses ) ) {
-			$response->add_link( 'next', remove_query_arg( 'min_id', add_query_arg( 'max_id', end( $statuses )->id, home_url( $_SERVER['REQUEST_URI'] ) ) ) );
-			$response->add_link( 'prev', remove_query_arg( 'max_id', add_query_arg( 'min_id', reset( $statuses )->id, home_url( $_SERVER['REQUEST_URI'] ) ) ) );
+			$req_uri = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
+			$response->add_link( 'next', remove_query_arg( 'min_id', add_query_arg( 'max_id', end( $statuses )->id, home_url( $req_uri ) ) ) );
+			$response->add_link( 'prev', remove_query_arg( 'max_id', add_query_arg( 'min_id', reset( $statuses )->id, home_url( $req_uri ) ) ) );
 		}
 		return $response;
 	}

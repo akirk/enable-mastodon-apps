@@ -34,7 +34,7 @@ OAuth2\Autoloader::register();
 
 		if ( strncmp( $full_class, $base, strlen( $base ) ) === 0 ) {
 			$maybe_uppercase = str_replace( $base, '', $full_class );
-			$class = strtolower( $maybe_uppercase );
+			$class           = strtolower( $maybe_uppercase );
 			// All classes should be capitalized. If this is instead looking for a lowercase method, we ignore that.
 			if ( $maybe_uppercase === $class ) {
 				return;

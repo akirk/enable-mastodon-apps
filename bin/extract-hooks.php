@@ -102,7 +102,7 @@ foreach ( $files as $file ) {
 		$comment = '';
 		$hook = false;
 
-		for ( $j = $i; $j > max( 0, $i - 10 ); $j-- ) {
+		for ( $j = $i, $l = max( 0, $i - 10 ); $j > $l; $j-- ) {
 			if ( ! is_array( $tokens[ $j ] ) ) {
 				continue;
 			}
@@ -421,7 +421,7 @@ foreach ( $filters as $hook => $data ) {
 			}
 
 
-			$count += 1;
+			++$count;
 			$p = preg_split( '/ +/', $param, 3 );
 			if ( '\\' === substr( $p[0], 0, 1 ) ) {
 				$p[0] = substr( $p[0], 1 );

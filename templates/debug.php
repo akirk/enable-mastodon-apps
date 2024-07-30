@@ -1,4 +1,5 @@
 <?php
+// phpcs:disable VariableAnalysis.CodeAnalysis.VariableAnalysis.UndefinedVariable
 \load_template(
 	__DIR__ . '/admin-header.php',
 	true,
@@ -64,7 +65,7 @@ $rest_nonce = wp_create_nonce( 'wp_rest' );
 		?>
 		<h2><?php esc_html_e( 'Recently Logged Requests', 'enable-mastodon-apps' ); ?></h2>
 		<?php
-		$debug_start_time = \DateTimeImmutable::createFromFormat( 'U', time() - HOUR_IN_SECONDS );
+		$debug_start_time  = \DateTimeImmutable::createFromFormat( 'U', time() - HOUR_IN_SECONDS );
 		$all_last_requests = array();
 		foreach ( \Enable_Mastodon_Apps\Mastodon_App::get_all() as $app ) {
 			$last_requests = $app->get_last_requests();
@@ -173,7 +174,7 @@ $rest_nonce = wp_create_nonce( 'wp_rest' );
 					foreach ( $tokens as $token => $data ) {
 						$user = 'app-level';
 						if ( $data['user_id'] ) {
-							$userdata = get_user_by( 'ID', $data['user_id'] ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+							$userdata = get_user_by( 'ID', $data['user_id'] ); // phpcs:ignore
 							if ( $userdata ) {
 								if ( is_wp_error( $userdata ) ) {
 									$user = $userdata->get_error_message();

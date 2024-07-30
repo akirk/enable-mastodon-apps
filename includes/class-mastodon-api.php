@@ -9,6 +9,7 @@
 
 namespace Enable_Mastodon_Apps;
 
+use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
 
@@ -24,7 +25,7 @@ use function PHPUnit\Framework\returnCallback;
  */
 class Mastodon_API {
 	const ACTIVITYPUB_USERNAME_REGEXP = '(?:([A-Za-z0-9_-]+)@((?:[A-Za-z0-9_-]+\.)+[A-Za-z]+))';
-	const VERSION = ENABLE_MASTODON_APPS_VERSION;
+	const VERSION                     = ENABLE_MASTODON_APPS_VERSION;
 	/**
 	 * The OAuth handler.
 	 *
@@ -41,10 +42,10 @@ class Mastodon_API {
 
 	private static $last_error = false;
 
-	const PREFIX = 'enable-mastodon-apps';
-	const APP_TAXONOMY = 'mastodon-app';
+	const PREFIX         = 'enable-mastodon-apps';
+	const APP_TAXONOMY   = 'mastodon-app';
 	const REMAP_TAXONOMY = 'mastodon-api-remap';
-	const CPT = 'enable-mastodon-apps';
+	const CPT            = 'enable-mastodon-apps';
 
 	/**
 	 * Constructor
@@ -89,7 +90,7 @@ class Mastodon_API {
 		header( 'Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS' );
 		header( 'Access-Control-Allow-Headers: content-type, authorization' );
 		header( 'Access-Control-Allow-Credentials: true' );
-		if ( 'OPTIONS' === $_SERVER['REQUEST_METHOD'] ) {
+		if ( 'OPTIONS' === $_SERVER['REQUEST_METHOD'] ) { // phpcs:ignore
 			header( 'Access-Control-Allow-Origin: *', true, 204 );
 			exit;
 		}
@@ -132,7 +133,7 @@ class Mastodon_API {
 		}
 
 		if ( ! isset( $result['code'] ) && isset( $result['error'] ) && is_string( $result['error'] ) ) {
-			$result['code'] = sanitize_title_with_dashes( $result['error'] );
+			$result['code']    = sanitize_title_with_dashes( $result['error'] );
 			$result['message'] = $result['error'];
 		}
 
@@ -189,9 +190,9 @@ class Mastodon_API {
 
 	public function rewrite_rules() {
 		$existing_rules = get_option( 'rewrite_rules' );
-		$needs_flush = false;
+		$needs_flush    = false;
 
-		$generic = apply_filters(
+		$generic      = apply_filters(
 			'mastodon_api_generic_routes',
 			array(
 				'api/v1/accounts/relationships',
@@ -246,7 +247,7 @@ class Mastodon_API {
 				'api/v1/notifications/([^/]+)/dismiss'   => 'api/v1/notifications/$matches[1]/dismiss',
 				'api/v1/notifications/([^/|$]+)/?$'      => 'api/v1/notifications/$matches[1]',
 				'api/v1/notifications'                   => 'api/v1/notifications',
-				'api/nodeinfo/([0-9]+[.][0-9]+).json'    => 'api/nodeinfo/$matches[1].json',
+				'api/nodeinfo/([0-9]+[.][0-9]+)'         => 'api/nodeinfo/$matches[1]',
 				'api/v1/media/([0-9]+)'                  => 'api/v1/media/$matches[1]',
 				'api/v1/statuses/([0-9]+)'               => 'api/v1/statuses/$matches[1]',
 				'api/v1/statuses'                        => 'api/v1/statuses',
@@ -394,7 +395,7 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
-			'api/nodeinfo/2.0.json',
+			'api/nodeinfo/(?P<version>[\w\.]+)',
 			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'api_nodeinfo' ),
@@ -1628,7 +1629,7 @@ class Mastodon_API {
 		}
 
 		$has_scope = false;
-		$token = $this->oauth->get_token();
+		$token     = $this->oauth->get_token();
 		if ( $token && isset( $token['scope'] ) ) {
 			foreach ( explode( ',', $scopes ) as $scope ) {
 				if ( OAuth2\Scope_Util::checkSingleScope( $scope, $token['scope'] ) ) {
@@ -1660,7 +1661,7 @@ class Mastodon_API {
 				$app->was_used(
 					$request,
 					array(
-						'user_agent' => $_SERVER['HTTP_USER_AGENT'],
+						'user_agent' => $_SERVER['HTTP_USER_AGENT'], // phpcs:ignore
 					)
 				);
 			}
@@ -1678,12 +1679,14 @@ class Mastodon_API {
 		if ( get_option( 'mastodon_api_debug_mode' ) <= time() ) {
 			return $template;
 		}
+		// phpcs:disable
 		if ( 0 !== strpos( $_SERVER['REQUEST_URI'], '/api/v' ) ) {
 			return $template;
 		}
 		$request = new WP_REST_Request( $_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI'] );
 		$request->set_query_params( $_GET );
 		$request->set_body_params( $_POST );
+		// phpcs:enable
 		$request->set_headers( getallheaders() );
 		if ( ! empty( $_SERVER['HTTP_AUTHORIZATION'] ) ) {
 			$this->oauth->get_token();
@@ -1695,7 +1698,7 @@ class Mastodon_API {
 		$app->was_used(
 			$request,
 			array(
-				'user_agent' => $_SERVER['HTTP_USER_AGENT'],
+				'user_agent' => $_SERVER['HTTP_USER_AGENT'], // phpcs:ignore
 				'status'     => 404,
 			)
 		);
@@ -1724,7 +1727,7 @@ class Mastodon_API {
 			);
 		} catch ( \Exception $e ) {
 			list( $code, $message ) = explode( ',', $e->getMessage(), 2 );
-			$app = new \WP_Error( $code, $message, array( 'status' => 422 ) );
+			$app                    = new \WP_Error( $code, $message, array( 'status' => 422 ) );
 		}
 
 		if ( is_wp_error( $app ) ) {
@@ -1787,7 +1790,7 @@ class Mastodon_API {
 	 *
 	 * @return     array   The potentially modified default value.
 	 */
-	public function default_option_mastodon_api_default_post_formats( $post_formats ) {
+	public function default_option_mastodon_api_default_post_formats( $post_formats ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
 		return array(
 			'standard',
 		);
@@ -1868,7 +1871,7 @@ class Mastodon_API {
 		$wp_rest_response = false;
 		if ( $entities instanceof \WP_REST_Response ) {
 			$wp_rest_response = $entities;
-			$entities = $entities->data;
+			$entities         = $entities->data;
 		}
 		if ( ! is_array( $entities ) ) {
 			return array();
@@ -1930,10 +1933,10 @@ class Mastodon_API {
 		 */
 		$in_reply_to_id = apply_filters( 'mastodon_api_in_reply_to_id', $request->get_param( 'in_reply_to_id' ), $request );
 
-		$media_ids = $request->get_param( 'media_ids' );
+		$media_ids    = $request->get_param( 'media_ids' );
 		$scheduled_at = $request->get_param( 'scheduled_at' );
 
-		$app = Mastodon_App::get_current_app();
+		$app              = Mastodon_App::get_current_app();
 		$app_post_formats = array();
 		if ( $app ) {
 			$app_post_formats = $app->get_post_formats();
@@ -2143,7 +2146,7 @@ class Mastodon_API {
 		return $this->validate_entity( $account, Entity\Account::class );
 	}
 
-	public function api_push_subscription( $request ) {
+	public function api_push_subscription( $request ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
 		return array();
 	}
 
@@ -2166,7 +2169,7 @@ class Mastodon_API {
 		}
 
 		$context_post_id = self::maybe_get_remapped_reblog_id( $context_post_id );
-		$url = get_permalink( $context_post_id );
+		$url             = get_permalink( $context_post_id );
 
 		$context = array(
 			'ancestors'   => array(),
@@ -2315,10 +2318,10 @@ class Mastodon_API {
 		 */
 		$in_reply_to_id = apply_filters( 'mastodon_api_in_reply_to_id', $request->get_param( 'in_reply_to_id' ), $request );
 
-		$media_ids = $request->get_param( 'media_ids' );
+		$media_ids    = $request->get_param( 'media_ids' );
 		$scheduled_at = $request->get_param( 'scheduled_at' );
 
-		$app = Mastodon_App::get_current_app();
+		$app              = Mastodon_App::get_current_app();
 		$app_post_formats = array();
 		if ( $app ) {
 			$app_post_formats = $app->get_post_formats();
@@ -2614,7 +2617,7 @@ class Mastodon_API {
 		return apply_filters( 'mastodon_api_notifications_get', array(), $request );
 	}
 
-	public function api_preferences( $request ) {
+	public function api_preferences( $request ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
 		$preferences = array(
 			'posting:default:language'   => self::get_mastodon_language( get_user_locale() ),
 			'posting:default:visibility' => apply_filters( 'mastodon_api_account_visibility', 'public', wp_get_current_user() ),
@@ -2774,8 +2777,8 @@ class Mastodon_API {
 
 
 	public static function remap_user_id( $user_id ) {
-		$user_id = apply_filters( 'mastodon_api_canonical_user_id', $user_id );
-		$term = get_term_by( 'name', $user_id, self::REMAP_TAXONOMY );
+		$user_id        = apply_filters( 'mastodon_api_canonical_user_id', $user_id );
+		$term           = get_term_by( 'name', $user_id, self::REMAP_TAXONOMY );
 		$remote_user_id = 0;
 		if ( $term ) {
 			$remote_user_id = $term->term_id;
@@ -2791,7 +2794,7 @@ class Mastodon_API {
 	}
 
 	public static function remap_url( $url ) {
-		$term = get_term_by( 'name', $url, self::REMAP_TAXONOMY );
+		$term        = get_term_by( 'name', $url, self::REMAP_TAXONOMY );
 		$remapped_id = 0;
 		if ( $term ) {
 			$remapped_id = $term->term_id;
@@ -2825,49 +2828,57 @@ class Mastodon_API {
 		return $software;
 	}
 
-	public function api_nodeinfo() {
-		global $wp_version;
-		$software = array(
-			'name'    => $this->software_string(),
-			'version' => self::VERSION,
-		);
-		$software = apply_filters( 'mastodon_api_nodeinfo_software', $software );
-		$ret = array(
-			'metadata'          => array(
-				'nodeName'        => html_entity_decode( get_bloginfo( 'name' ), ENT_QUOTES ),
-				'nodeDescription' => html_entity_decode( get_bloginfo( 'description' ), ENT_QUOTES ),
-				'software'        => $software,
-				'config'          => array(
-					'features' => array(
-						'timelines'   => array(
-							'local'   => true,
-							'network' => true,
-						),
-						'mobile_apis' => true,
-						'stories'     => false,
-						'video'       => false,
-						'import'      => array(
-							'instagram' => false,
-							'mastodon'  => false,
-							'pixelfed'  => false,
+	public function api_nodeinfo( $request ) {
+		$nodeinfo_version = $request->get_param( 'version' );
+
+		if ( '2.0' === $nodeinfo_version ) {
+			global $wp_version;
+			$software = array(
+				'name'    => $this->software_string(),
+				'version' => self::VERSION,
+			);
+			$software = apply_filters( 'mastodon_api_nodeinfo_software', $software );
+			$ret      = array(
+				'metadata' => array(
+					'nodeName'          => html_entity_decode( get_bloginfo( 'name' ), ENT_QUOTES ),
+					'nodeDescription'   => html_entity_decode( get_bloginfo( 'description' ), ENT_QUOTES ),
+					'config'            => array(
+						'features' => array(
+							'timelines'   => array(
+								'local'   => true,
+								'network' => true,
+							),
+							'mobile_apis' => true,
+							'stories'     => false,
+							'video'       => false,
+							'import'      => array(
+								'instagram' => false,
+								'mastodon'  => false,
+								'pixelfed'  => false,
+							),
 						),
 					),
+					'version'           => '2.0',
+					'protocols'         => array(
+						'activitpypub',
+					),
+					'services'          => array(
+						'outbound' => array(),
+					),
+
+					'software'          => $software,
+					'openRegistrations' => false,
 				),
-			),
-			'version'           => '2.0',
-			'protocols'         => array(
-				'activitpypub',
-			),
-			'services'          => array(
-				'inbound'  => array(),
-				'outbound' => array(),
-			),
+			);
+		} else {
+			$ret = new WP_Error(
+				'mastodon_api_nodeinfo',
+				'Unsupported version',
+				array( 'status' => 404 )
+			);
+		}
 
-			'software'          => $software,
-			'openRegistrations' => false,
-		);
-
-		return apply_filters( 'mastodon_api_nodeinfo', $ret );
+		return apply_filters( 'mastodon_api_nodeinfo', $ret, $nodeinfo_version );
 	}
 
 	public function api_announcements() {
@@ -2887,7 +2898,7 @@ class Mastodon_API {
 		);
 
 		$post_formats = $app->get_post_formats();
-		$content[] = sprintf(
+		$content[]    = sprintf(
 			// Translators: %s is the post formats.
 			_n( 'Posts with the post format <strong>%s</strong> will appear in this app.', 'Posts with the post formats <strong>%s</strong> will appear in this app.', count( $app->get_post_formats() ), 'enable-mastodon-apps' ),
 			implode( ', ', $post_formats )
@@ -2980,7 +2991,7 @@ class Mastodon_API {
 	 * @param WP_REST_Request $request The full request object.
 	 * @return WP_REST_Response
 	 */
-	public function api_instance_peers( WP_REST_Request $request ): WP_REST_Response {
+	public function api_instance_peers( WP_REST_Request $request ): WP_REST_Response { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
 		$peers = get_bookmarks();
 		$peers = wp_list_pluck( $peers, 'link_url' );
 
@@ -3010,7 +3021,7 @@ class Mastodon_API {
 	 * @param WP_REST_Request $request The full request object.
 	 * @return WP_REST_Response
 	 */
-	public function api_instance_rules( WP_REST_Request $request ): WP_REST_Response {
+	public function api_instance_rules( WP_REST_Request $request ): WP_REST_Response { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
 		/**
 		 * Modify the instance rules returned for `/api/instance/rules` requests.
 		 *
@@ -3037,7 +3048,7 @@ class Mastodon_API {
 	 * @param WP_REST_Request $request The full request object.
 	 * @return WP_REST_Response
 	 */
-	public function api_instance_domain_blocks( WP_REST_Request $request ): WP_REST_Response {
+	public function api_instance_domain_blocks( WP_REST_Request $request ): WP_REST_Response { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
 		/**
 		 * Modify the instance domain_blocks returned for `/api/instance/domain_blocks` requests.
 		 *
@@ -3064,7 +3075,7 @@ class Mastodon_API {
 	 * @param WP_REST_Request $request The full request object.
 	 * @return WP_REST_Response
 	 */
-	public function api_instance_extended_description( WP_REST_Request $request ): WP_REST_Response {
+	public function api_instance_extended_description( WP_REST_Request $request ): WP_REST_Response { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
 		/**
 		 * Modify the instance extended_description returned for `/api/instance/extended_description` requests.
 		 *
@@ -3089,7 +3100,7 @@ class Mastodon_API {
 	 * @param WP_REST_Request $request The full request object.
 	 * @return WP_REST_Response
 	 */
-	public function api_instance_translation_languages( WP_REST_Request $request ): WP_REST_Response {
+	public function api_instance_translation_languages( WP_REST_Request $request ): WP_REST_Response { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
 		/**
 		 * Modify the translation languages returned for `/api/instance/translation_languages` requests.
 		 *

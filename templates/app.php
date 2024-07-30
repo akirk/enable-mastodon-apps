@@ -11,10 +11,10 @@ use Enable_Mastodon_Apps\Mastodon_App;
 	)
 );
 
-$rest_nonce = wp_create_nonce( 'wp_rest' );
+$rest_nonce  = wp_create_nonce( 'wp_rest' );
 $_post_types = \get_post_types( array( 'show_ui' => true ), 'objects' );
-$app = $args['app'];
-$confirm = esc_html(
+$app         = $args['app'];
+$confirm     = esc_html(
 	sprintf(
 	// translators: %s is the app name.
 		__( 'Are you sure you want to delete %s?', 'enable-mastodon-apps' ),
@@ -70,7 +70,9 @@ $confirm = esc_html(
 				<tr class="debug-hide">
 					<th scope="row"><?php esc_html_e( 'Redirect URI', 'enable-mastodon-apps' ); ?></th>
 					<td>
-						<?php echo wp_kses( implode( '<br>', $app->get_redirect_uris() ), array( 'br' => array() ) ); ?>
+						<?php foreach ( $app->get_redirect_uris() as $redirect_uri ) : ?>
+							<input type="text" value="<?php echo esc_attr( $redirect_uri ); ?>" readonly onclick="this.select()" class="regular-text" /><br>
+						<?php endforeach; ?>
 						<p class="description">
 							<span><?php esc_html_e( 'The URI to redirect to after the user authorizes the app.', 'enable-mastodon-apps' ); ?></span>
 							<span>
@@ -121,7 +123,7 @@ $confirm = esc_html(
 					<td>
 						<select name="create_post_type">
 						<?php
-						foreach ( $_post_types as $post_type ) :
+						foreach ( $_post_types as $post_type ) : // phpcs:ignore
 							?>
 								<option value="<?php echo esc_attr( $post_type->name ); ?>" <?php selected( $post_type->name, $app->get_create_post_type() ); ?>><?php echo esc_html( $post_type->labels->singular_name ); ?></option>
 							<?php endforeach; ?>
@@ -135,7 +137,7 @@ $confirm = esc_html(
 					<th scope="row" class="view-post-type"><?php esc_html_e( 'Show these post types', 'enable-mastodon-apps' ); ?></th>
 					<td>
 						<fieldset>
-						<?php foreach ( $_post_types as $post_type ) : ?>
+						<?php foreach ( $_post_types as $post_type ) : /* phpcs:ignore */ ?>
 							<label><input type="checkbox" name="view_post_types[]" value="<?php echo esc_attr( $post_type->name ); ?>"<?php checked( in_array( $post_type->name, $app->get_view_post_types(), true ) ); ?> /> <?php echo esc_html( $post_type->label ); ?></label>
 						<?php endforeach; ?>
 						</fieldset>
@@ -196,7 +198,7 @@ $confirm = esc_html(
 				foreach ( $args['tokens'] as $token => $data ) {
 					$user = 'app-level';
 					if ( $data['user_id'] ) {
-						$userdata = get_user_by( 'ID', $data['user_id'] );
+						$userdata = get_user_by( 'ID', $data['user_id'] ); // phpcs:ignore
 						if ( $userdata ) {
 							if ( is_wp_error( $userdata ) ) {
 								$user = $userdata->get_error_message();

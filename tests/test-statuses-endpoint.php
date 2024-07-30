@@ -77,7 +77,7 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 	public function test_submit_status_basic_status() {
 		add_filter(
 			'mastodon_api_new_post_format',
-			function ( $format ) {
+			function ( $format ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
 				return 'status';
 			}
 		);
@@ -97,7 +97,7 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 	public function test_submit_status_multiline_status() {
 		add_filter(
 			'mastodon_api_new_post_format',
-			function ( $format ) {
+			function ( $format ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
 				return 'status';
 			}
 		);

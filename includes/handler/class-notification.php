@@ -9,6 +9,7 @@
 
 namespace Enable_Mastodon_Apps\Handler;
 
+use Enable_Mastodon_Apps\Comment_CPT;
 use Enable_Mastodon_Apps\Handler\Handler;
 use Enable_Mastodon_Apps\Entity\Notification as Notification_Entity;
 
@@ -120,13 +121,37 @@ class Notification extends Handler {
 		);
 		$exclude_types = $request->get_param( 'exclude_types' );
 		if ( ( ! is_array( $types ) || in_array( 'mention', $types, true ) ) && ( ! is_array( $exclude_types ) || ! in_array( 'mention', $exclude_types, true ) ) ) {
-			$external_user = apply_filters( 'mastodon_api_external_mentions_user', null );
-			if ( ! $external_user || ! ( $external_user instanceof \WP_User ) ) {
+			/**
+			 * Get the WP_Query arguments for fetching notifications.
+			 *
+			 * @param array $args WP_Query arguments.
+			 * @param string $type Type of notifications.
+			 * @param object $request Request object from WP.
+			 * @return array The modified WP_Query arguments.
+			 *
+			* Example:
+			* ```php
+			* add_filter( 'mastodon_api_get_notifications_query_args', function( $args, $type ) {
+			*     if ( $type === 'notification' ) {
+			*         $args['post_type'] = 'notification';
+			*     }
+			*     return $args;
+			* } );
+			* ```
+			 */
+			$args = apply_filters(
+				'mastodon_api_get_notifications_query_args',
+				array(
+					'post_type'      => Comment_CPT::CPT,
+					'author__not_in' => array( get_current_user_id() ),
+				),
+				'mention',
+				$request
+			);
+			if ( empty( $args ) ) {
 				return array();
 			}
-			$args                   = $this->get_posts_query_args( array(), $request );
 			$args['posts_per_page'] = $limit + 2;
-			$args['author']         = $external_user->ID;
 
 			$notification_dismissed_tag = get_term_by( 'slug', apply_filters( 'mastodon_api_notification_dismissed_tag', 'notification-dismissed' ), 'post_tag' );
 			if ( $notification_dismissed_tag ) {
@@ -230,7 +255,7 @@ class Notification extends Handler {
 
 		if ( $status ) {
 			$notification['status'] = $status;
-			$notification['id'] .= $status->id;
+			$notification['id']    .= $status->id;
 		}
 
 		return $notification;
