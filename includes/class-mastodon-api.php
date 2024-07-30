@@ -2581,45 +2581,47 @@ class Mastodon_API {
 		return $software;
 	}
 
-	public function api_nodeinfo() {
-		global $wp_version;
-		$software = array(
-			'name'    => $this->software_string(),
-			'version' => self::VERSION,
-		);
-		$software = apply_filters( 'mastodon_api_nodeinfo_software', $software );
-		$ret      = array(
-			'metadata'          => array(
-				'nodeName'        => html_entity_decode( get_bloginfo( 'name' ), ENT_QUOTES ),
-				'nodeDescription' => html_entity_decode( get_bloginfo( 'description' ), ENT_QUOTES ),
-				'software'        => $software,
-				'config'          => array(
-					'features' => array(
-						'timelines'   => array(
-							'local'   => true,
-							'network' => true,
-						),
-						'mobile_apis' => true,
-						'stories'     => false,
-						'video'       => false,
-						'import'      => array(
-							'instagram' => false,
-							'mastodon'  => false,
-							'pixelfed'  => false,
+	public function api_nodeinfo( $request ) {
+		$nodeinfo_version = $request->get_param( 'version' );
+
+		if ( '2.0' === $nodeinfo_version ) {
+			global $wp_version;
+			$software = array(
+				'name'    => $this->software_string(),
+				'version' => self::VERSION,
+			);
+			$software = apply_filters( 'mastodon_api_nodeinfo_software', $software );
+			$ret      = array(
+				'metadata' => array(
+					'nodeName'          => html_entity_decode( get_bloginfo( 'name' ), ENT_QUOTES ),
+					'nodeDescription'   => html_entity_decode( get_bloginfo( 'description' ), ENT_QUOTES ),
+					'config'            => array(
+						'features' => array(
+							'timelines'   => array(
+								'local'   => true,
+								'network' => true,
+							),
+							'mobile_apis' => true,
+							'stories'     => false,
+							'video'       => false,
+							'import'      => array(
+								'instagram' => false,
+								'mastodon'  => false,
+								'pixelfed'  => false,
+							),
 						),
 					),
-				),
-				'version'           => '2.0',
-				'protocols'         => array(
-					'activitpypub',
-				),
-				'services'          => array(
-					'inbound'  => array(),
-					'outbound' => array(),
-				),
+					'version'           => '2.0',
+					'protocols'         => array(
+						'activitpypub',
+					),
+					'services'          => array(
+						'outbound' => array(),
+					),
 
-				'software'          => $software,
-				'openRegistrations' => false,
+					'software'          => $software,
+					'openRegistrations' => false,
+				),
 			);
 		} else {
 			$ret = new WP_Error(
