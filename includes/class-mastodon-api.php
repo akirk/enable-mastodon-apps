@@ -1467,7 +1467,13 @@ class Mastodon_API {
 			// require the file needed fo wp_tempnam.
 			require_once ABSPATH . 'wp-admin/includes/file.php';
 			$tmp_name = wp_tempnam( 'patch_upload_' . $key );
-			file_put_contents( $tmp_name, $file_content );
+			// Use WP_Filesystem abstraction.
+			global $wp_filesystem;
+			if ( ! $wp_filesystem ) {
+				// init if not yet done.
+				WP_Filesystem();
+			}
+			$wp_filesystem->put_contents( $tmp_name, $file_content );
 
 			return array(
 				'name'     => $file_name,
