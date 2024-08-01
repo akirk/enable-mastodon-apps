@@ -1,3 +1,11 @@
+### 0.9.5
+- Add a details link to the apps page ([#163])
+- Show all comments by others as notifications ([#164])
+- Update NodeInfo endpoint by @pfefferle ([#162])
+- Multisite: ensure that user_ids only work for users of this site by @mattwiebe ([#158])
+- Increase phpcs rules and fix them by @mattwiebe ([#160], [#155])
+- Add `api/v1/accounts/update_credentials` route by @mattwiebe ([#157])
+
 ### 0.9.4
 - Added a dedicated page per app in the settings. There you can set which post types should be shown in the app. Also which post type should be created for new posts. ([#154])
 - Fixed authenticating Jetpack so that you can connect WordPress.com to this plugin ([#152])
@@ -108,6 +116,13 @@
 - Post replies as comments ([#3])
 - Fix a fatal when saving the default post format
 
+[#163]: https://github.com/akirk/enable-mastodon-apps/pull/163
+[#164]: https://github.com/akirk/enable-mastodon-apps/pull/164
+[#162]: https://github.com/akirk/enable-mastodon-apps/pull/162
+[#160]: https://github.com/akirk/enable-mastodon-apps/pull/160
+[#158]: https://github.com/akirk/enable-mastodon-apps/pull/158
+[#157]: https://github.com/akirk/enable-mastodon-apps/pull/157
+[#155]: https://github.com/akirk/enable-mastodon-apps/pull/155
 [#154]: https://github.com/akirk/enable-mastodon-apps/pull/154
 [#152]: https://github.com/akirk/enable-mastodon-apps/pull/152
 [#150]: https://github.com/akirk/enable-mastodon-apps/pull/150

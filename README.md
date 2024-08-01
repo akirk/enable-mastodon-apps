@@ -3,10 +3,10 @@
 - Contributors: akirk, pfefferle, drivingralle, kittmedia, obenland
 - Tags: mastodon, activitypub, friends, fediverse
 - Requires at least: 5.0
-- Tested up to: 6.5
+- Tested up to: 6.6
 - Requires PHP: 7.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 0.9.4
+- Stable tag: 0.9.5
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -58,6 +58,7 @@ Here is a list of endpoints and their implementation status:
 - [ ] `GET /api/v1/lists` (implemented as empty)
 - [ ] `GET /api/v1/custom_emojis` (implemented as empty) [View all custom emojis](https://docs.joinmastodon.org/methods/custom_emojis/#get)
 - [x] `GET /api/v1/accounts/verify_credentials` [Verify account credentials](https://docs.joinmastodon.org/methods/accounts/#verify_credentials)
+- [x] `PATCH /api/v1/accounts/update_credentials` [Update account credentials](https://docs.joinmastodon.org/methods/accounts/#update_credentials)
 - [x] `GET /api/v1/accounts/:id` [Get account](https://docs.joinmastodon.org/methods/accounts/#get)
 - [x] `GET /api/v1/accounts/:id/statuses` [Get account’s statuses](https://docs.joinmastodon.org/methods/accounts/statuses/#get)
 - [x] `GET /api/v1/accounts/:id/followers` [Get account’s followers](https://docs.joinmastodon.org/methods/accounts/#followers)
@@ -97,6 +98,14 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 
 ## Changelog
 
+### 0.9.5
+- Add a details link to the apps page ([#163])
+- Show all comments by others as notifications ([#164])
+- Update NodeInfo endpoint by @pfefferle ([#162])
+- Multisite: ensure that user_ids only work for users of this site by @mattwiebe ([#158])
+- Increase phpcs rules and fix them by @mattwiebe ([#160], [#155])
+- Add `api/v1/accounts/update_credentials` route by @mattwiebe ([#157])
+
 ### 0.9.4
 - Added a dedicated page per app in the settings. There you can set which post types should be shown in the app. Also which post type should be created for new posts. ([#154])
 - Fixed authenticating Jetpack so that you can connect WordPress.com to this plugin ([#152])
@@ -133,7 +142,13 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 ### 0.6.4
 - Address an incompatibility with the IndieAuth plugin ([#65])
 
-
+[#163]: https://github.com/akirk/enable-mastodon-apps/pull/163
+[#164]: https://github.com/akirk/enable-mastodon-apps/pull/164
+[#162]: https://github.com/akirk/enable-mastodon-apps/pull/162
+[#160]: https://github.com/akirk/enable-mastodon-apps/pull/160
+[#158]: https://github.com/akirk/enable-mastodon-apps/pull/158
+[#157]: https://github.com/akirk/enable-mastodon-apps/pull/157
+[#155]: https://github.com/akirk/enable-mastodon-apps/pull/155
 [#154]: https://github.com/akirk/enable-mastodon-apps/pull/154
 [#152]: https://github.com/akirk/enable-mastodon-apps/pull/152
 [#150]: https://github.com/akirk/enable-mastodon-apps/pull/150
