@@ -108,7 +108,7 @@ class Authenticate_Handler {
 	private function render_consent_screen( $data ) {
 		$scope_explanations = array(
 			'read'   => __( 'Read information from your account, for example read your statuses.', 'enable-mastodon-apps' ),
-			'write'  => __( 'Write information to your account, for example post a status on your behalf.', 'enable-mastodon-apps' ),
+			'write'  => __( 'Write information to your account, for example post a status on your behalf, or edit your profile.', 'enable-mastodon-apps' ),
 			'follow' => __( 'Follow other accounts using your account.', 'enable-mastodon-apps' ),
 			'push'   => __( 'Subscribe to push events for your account.', 'enable-mastodon-apps' ),
 		);
