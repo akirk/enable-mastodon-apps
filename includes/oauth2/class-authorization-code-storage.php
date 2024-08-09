@@ -29,7 +29,7 @@ class Authorization_Code_Storage implements AuthorizationCodeInterface {
 		add_action( 'mastodon_api_cron_hook', array( $this, 'cleanupOldCodes' ) );
 
 		// Store the authorization codes in a taxonomy.
-		register_taxonomy( self::TAXONOMY, null, [ 'public' => false ] );
+		register_taxonomy( self::TAXONOMY, null, array( 'public' => false ) );
 		foreach ( self::$authorization_code_data as $key => $type ) {
 			register_term_meta(
 				self::TAXONOMY,

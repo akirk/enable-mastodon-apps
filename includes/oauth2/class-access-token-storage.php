@@ -28,7 +28,7 @@ class Access_Token_Storage implements AccessTokenInterface {
 		add_action( 'mastodon_api_cron_hook', array( $this, 'cleanupOldCodes' ) );
 
 		// Store the access tokens in a taxonomy.
-		register_taxonomy( self::TAXONOMY, null, [ 'public' => false ] );
+		register_taxonomy( self::TAXONOMY, null, array( 'public' => false ) );
 		foreach ( self::$access_token_data as $key => $type ) {
 			register_term_meta(
 				self::TAXONOMY,
