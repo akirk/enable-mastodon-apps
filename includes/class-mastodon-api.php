@@ -1537,7 +1537,32 @@ class Mastodon_API {
 					if ( preg_match( '/name="([^"]+)"/', $part, $matches ) ) {
 						$name          = $matches[1];
 						$value         = substr( $part, strpos( $part, "\r\n\r\n" ) + 4, -2 );
-						$data[ $name ] = $value;
+
+						// Handle different array forms
+						if ( preg_match( '/^([^\[]+)\[\]$/', $name, $matches ) ) {
+							// Simple array
+							$key = $matches[1];
+							$data[ $key ][] = $value;
+						} elseif ( preg_match( '/^([^\[]+)\[(\d+)\]$/', $name, $matches ) ) {
+							// Indexed array
+							$key = $matches[1];
+							$index = $matches[2];
+							$data[ $key ][ $index ] = $value;
+						} elseif ( preg_match( '/^([^\[]+)\[(\d+)\]\[(\w+)\]$/', $name, $matches ) ) {
+							// Nested array
+							$key = $matches[1];
+							$index = $matches[2];
+							$subkey = $matches[3];
+							$data[ $key ][ $index ][ $subkey ] = $value;
+						} elseif ( preg_match( '/^([^\[]+)\[(\w+)\]$/', $name, $matches ) ) {
+							// Associative array
+							$key = $matches[1];
+							$subkey = $matches[2];
+							$data[ $key ][ $subkey ] = $value;
+						} else {
+							// Simple key-value pair
+							$data[ $name ] = $value;
+						}
 					}
 				}
 				break;
