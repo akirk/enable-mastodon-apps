@@ -208,6 +208,11 @@ summary {
 	background-color: #c05621;
 }
 
+.settings_page_enable-mastodon-apps .pill-never-used {
+	color: #fff;
+	background-color: #c03c14;
+}
+
 
 .settings_page_enable-mastodon-apps .disable-debug .debug-hide {
 	display: none;

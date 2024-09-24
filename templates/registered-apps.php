@@ -60,7 +60,9 @@ $rest_nonce = wp_create_nonce( 'wp_rest' );
 							<a href="<?php echo esc_url( $app->get_admin_page() ); ?>"><?php echo esc_html( $app->get_client_name() ); ?></a>
 							<?php
 
-							if ( $app->is_outdated() && Mastodon_App::DEBUG_CLIENT_ID !== $app->get_client_id() ) {
+							if ( ! $app->get_last_used() && Mastodon_App::DEBUG_CLIENT_ID !== $app->get_client_id() ) {
+								echo ' <span class="pill pill-never-used" title="' . esc_html__( 'No tokens or authorization codes associated with this app.', 'enable-mastodon-apps' ) . '">' . esc_html__( 'Never Used', 'enable-mastodon-apps' ) . '</span>';
+							} elseif ( $app->is_outdated() && Mastodon_App::DEBUG_CLIENT_ID !== $app->get_client_id() ) {
 								echo ' <span class="pill pill-outdated" title="' . esc_html__( 'No tokens or authorization codes associated with this app.', 'enable-mastodon-apps' ) . '">' . esc_html__( 'Outdated', 'enable-mastodon-apps' ) . '</span>';
 							}
 							?>

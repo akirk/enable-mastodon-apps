@@ -228,7 +228,6 @@ class Mastodon_App {
 		return true;
 	}
 
-
 	public function delete() {
 		return wp_delete_term( $this->term->term_id, self::TAXONOMY );
 	}
