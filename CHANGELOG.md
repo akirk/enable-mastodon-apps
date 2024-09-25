@@ -1,3 +1,10 @@
+### 0.9.6
+- Adds steaming_api to instance_v1, props @mediaformat ([#171])
+- PATCH routes: support field_attributes, props @mattwiebe ([#167])
+- Make token storage taxonomies private, props @mattwiebe ([#165])
+- Updated tester.html from upstream
+- Introduce a Never Used label to the registered apps screen.
+
 ### 0.9.5
 - Add a details link to the apps page ([#163])
 - Show all comments by others as notifications ([#164])
@@ -116,6 +123,9 @@
 - Post replies as comments ([#3])
 - Fix a fatal when saving the default post format
 
+[#171]: https://github.com/akirk/enable-mastodon-apps/pull/171
+[#167]: https://github.com/akirk/enable-mastodon-apps/pull/167
+[#165]: https://github.com/akirk/enable-mastodon-apps/pull/165
 [#163]: https://github.com/akirk/enable-mastodon-apps/pull/163
 [#164]: https://github.com/akirk/enable-mastodon-apps/pull/164
 [#162]: https://github.com/akirk/enable-mastodon-apps/pull/162

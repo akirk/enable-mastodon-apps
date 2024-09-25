@@ -6,7 +6,7 @@
 - Tested up to: 6.6
 - Requires PHP: 7.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 0.9.5
+- Stable tag: 0.9.6
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -98,6 +98,13 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 
 ## Changelog
 
+### 0.9.6
+- Adds steaming_api to instance_v1, props @mediaformat ([#171])
+- PATCH routes: support field_attributes, props @mattwiebe ([#167])
+- Make token storage taxonomies private, props @mattwiebe ([#165])
+- Updated tester.html from upstream
+- Introduce a Never Used label to the registered apps screen.
+
 ### 0.9.5
 - Add a details link to the apps page ([#163])
 - Show all comments by others as notifications ([#164])
@@ -132,16 +139,9 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 - Improves to Attachments ([#132], [#136])
 - Fix OAuth rewrite path ([#130])
 
-### 0.6.6
-- Implement Autoloader ([#73])
-- Add scope adherence ([#76])
-
-### 0.6.5
-- Fix missing image attachments for WordPress posts, props @thatguygriff ([#72])
-
-### 0.6.4
-- Address an incompatibility with the IndieAuth plugin ([#65])
-
+[#171]: https://github.com/akirk/enable-mastodon-apps/pull/171
+[#167]: https://github.com/akirk/enable-mastodon-apps/pull/167
+[#165]: https://github.com/akirk/enable-mastodon-apps/pull/165
 [#163]: https://github.com/akirk/enable-mastodon-apps/pull/163
 [#164]: https://github.com/akirk/enable-mastodon-apps/pull/164
 [#162]: https://github.com/akirk/enable-mastodon-apps/pull/162
@@ -163,7 +163,3 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 [#136]: https://github.com/akirk/enable-mastodon-apps/pull/136
 [#132]: https://github.com/akirk/enable-mastodon-apps/pull/132
 [#130]: https://github.com/akirk/enable-mastodon-apps/pull/130
-[#73]: https://github.com/akirk/enable-mastodon-apps/pull/73
-[#76]: https://github.com/akirk/enable-mastodon-apps/pull/76
-[#72]: https://github.com/akirk/enable-mastodon-apps/pull/72
-[#65]: https://github.com/akirk/enable-mastodon-apps/pull/65
