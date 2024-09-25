@@ -1511,36 +1511,39 @@ class Mastodon_API {
 
 		$input = self::get_body_from_php_input();
 
-		switch ( $content_type['value'] ) {
-			case 'application/x-www-form-urlencoded':
-				parse_str( $input, $data );
-				break;
-			case 'application/json':
-				$json_data = json_decode( $input, true );
-				if ( is_array( $json_data ) ) {
-					$data = $json_data;
-				}
-				break;
-			case 'multipart/form-data':
-				$boundary = preg_match( '/boundary="?([^";]+)"?/', $content_type['parameters'], $matches ) ? $matches[1] : null;
-				if ( empty( $boundary ) ) {
-					return $data;
-				}
-				$parts = array_slice( explode( $boundary, $input ), 1, -1 );
+		// We only handle multipart/form-data.
+		if ( 'multipart/form-data' !== $content_type['value'] ) {
+			return $data;
+		}
 
-				foreach ( $parts as $part ) {
-					if ( strpos( $part, 'filename=' ) !== false ) {
-						// This is a file upload, handle separately.
-						continue;
-					}
+		$boundary = preg_match( '/boundary="?([^";]+)"?/', $content_type['parameters'], $matches ) ? $matches[1] : null;
+		if ( empty( $boundary ) ) {
+			return $data;
+		}
+		$parts = array_slice( explode( $boundary, $input ), 1, -1 );
 
-					if ( preg_match( '/name="([^"]+)"/', $part, $matches ) ) {
-						$name          = $matches[1];
-						$value         = substr( $part, strpos( $part, "\r\n\r\n" ) + 4, -2 );
-						$data[ $name ] = $value;
-					}
+		foreach ( $parts as $part ) {
+			if ( strpos( $part, 'filename=' ) !== false ) {
+				// This is a file upload, handle separately.
+				continue;
+			}
+
+			if ( preg_match( '/name="([^"]+)"/', $part, $matches ) ) {
+				$name          = $matches[1];
+				$value         = substr( $part, strpos( $part, "\r\n\r\n" ) + 4, -2 );
+
+				// Handle nested arrays, or just simple key-value pairs.
+				if ( preg_match( '/^(\w+)\[(\d+)\]\[(\w+)\]$/', $name, $matches ) ) {
+					// Nested array.
+					$key = $matches[1];
+					$index = $matches[2];
+					$subkey = $matches[3];
+					$data[ $key ][ $index ][ $subkey ] = $value;
+				} else {
+					// Simple key-value pair.
+					$data[ $name ] = $value;
 				}
-				break;
+			}
 		}
 
 		return $data;
