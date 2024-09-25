@@ -38,6 +38,7 @@ class Instance_V1 extends Entity {
 		'configuration'     => 'array',
 		'contact_account'   => 'Account?',
 		'rules'             => 'array',
+		'urls'              => 'array',
 	);
 
 	/**

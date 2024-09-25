@@ -74,6 +74,9 @@ class Instance extends Handler {
 				'enabled' => false,
 			),
 		);
+		$instance->urls       = array(
+			'streaming_api' => null,
+		);
 
 		return $instance;
 	}
