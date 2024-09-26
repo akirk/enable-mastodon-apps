@@ -79,6 +79,7 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 			'basic_status'              => array(
 				'status'           => 'test',
 				'new_format'       => 'status',
+				'new_post_type'    => 'post',
 				'disable_blocks'   => true,
 				'expected_title'   => '',
 				'expected_content' => 'test',
@@ -86,6 +87,7 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 			'basic_status_blocks'       => array(
 				'status'           => 'test',
 				'new_format'       => 'status',
+				'new_post_type'    => 'post',
 				'disable_blocks'   => false,
 				'expected_title'   => '',
 				'expected_content' => "<!-- wp:paragraph -->\n<p>test</p>\n<!-- /wp:paragraph -->",
@@ -93,6 +95,7 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 			'basic_standard'            => array(
 				'status'           => 'test',
 				'new_format'       => 'standard',
+				'new_post_type'    => 'post',
 				'disable_blocks'   => true,
 				'expected_title'   => '',
 				'expected_content' => 'test',
@@ -100,13 +103,23 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 			'basic_standard_blocks'     => array(
 				'status'           => 'test',
 				'new_format'       => 'standard',
+				'new_post_type'    => 'post',
 				'disable_blocks'   => false,
 				'expected_title'   => '',
 				'expected_content' => "<!-- wp:paragraph -->\n<p>test</p>\n<!-- /wp:paragraph -->",
 			),
+			'basic_cpt'                 => array(
+				'status'           => 'test',
+				'new_format'       => 'standard',
+				'new_post_type'    => 'my_custom_post_type',
+				'disable_blocks'   => true,
+				'expected_title'   => '',
+				'expected_content' => 'test',
+			),
 			'multiline_status'          => array(
 				'status'           => 'headline' . PHP_EOL . 'post_content',
 				'new_format'       => 'status',
+				'new_post_type'    => 'post',
 				'disable_blocks'   => true,
 				'expected_title'   => '',
 				'expected_content' => 'headline' . PHP_EOL . 'post_content',
@@ -114,6 +127,7 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 			'multiline_status_blocks'   => array(
 				'status'           => 'headline' . PHP_EOL . 'post_content',
 				'new_format'       => 'status',
+				'new_post_type'    => 'post',
 				'disable_blocks'   => false,
 				'expected_title'   => '',
 				'expected_content' => "<!-- wp:paragraph -->\n<p>headline</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:paragraph -->\n<p>post_content</p>\n<!-- /wp:paragraph -->",
@@ -121,6 +135,7 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 			'multiline_standard'        => array(
 				'status'           => 'headline' . PHP_EOL . 'post_content',
 				'new_format'       => 'standard',
+				'new_post_type'    => 'post',
 				'disable_blocks'   => true,
 				'expected_title'   => 'headline',
 				'expected_content' => 'post_content',
@@ -128,6 +143,7 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 			'multiline_standard_blocks' => array(
 				'status'           => 'headline' . PHP_EOL . 'post_content',
 				'new_format'       => 'standard',
+				'new_post_type'    => 'post',
 				'disable_blocks'   => false,
 				'expected_title'   => 'headline',
 				'expected_content' => "<!-- wp:paragraph -->\n<p>post_content</p>\n<!-- /wp:paragraph -->",
@@ -141,13 +157,15 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 	 * @dataProvider submit_status_data_provider
 	 * @param string $status The status to submit.
 	 * @param string $new_format The new post format.
+	 * @param string $new_post_type The new post type.
 	 * @param bool   $disable_blocks Whether to disable blocks.
 	 * @param string $expected_title The expected post title.
 	 * @param string $expected_content The expected post content.
 	 * @return void
 	 */
-	public function test_submit_status( $status, $new_format, $disable_blocks, $expected_title, $expected_content ) {
+	public function test_submit_status( $status, $new_format, $new_post_type, $disable_blocks, $expected_title, $expected_content ) {
 		$this->app->set_post_formats( $new_format );
+		$this->app->set_create_post_type( $new_post_type );
 		$this->app->set_disable_blocks( $disable_blocks );
 
 		$request = $this->api_request( 'POST', '/api/v1/statuses' );
@@ -161,6 +179,7 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$p = get_post( $data->id );
 		$this->assertEquals( $p->post_title, $expected_title );
 		$this->assertEquals( $p->post_content, $expected_content );
+		$this->assertEquals( $p->post_type, $new_post_type );
 	}
 
 	public function test_submit_status_reply() {

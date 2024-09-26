@@ -263,10 +263,11 @@ class Status extends Handler {
 		if ( $post_id ) {
 			$post_data['ID'] = $post_id;
 		}
+		$app = Mastodon_App::get_current_app();
 
 		$post_data['post_content'] = $status_text;
 		$post_data['post_status']  = 'public' === $visibility ? 'publish' : 'private';
-		$post_data['post_type']    = 'post';
+		$post_data['post_type']    = $app->get_create_post_type();
 		$post_data['post_title']   = '';
 
 		if ( 'standard' === $post_format ) {
@@ -277,7 +278,7 @@ class Status extends Handler {
 			}
 		}
 
-		if ( ! Mastodon_App::get_current_app()->get_disable_blocks() ) {
+		if ( ! $app->get_disable_blocks() ) {
 			$post_data['post_content'] = $this->convert_to_blocks( $post_data['post_content'] );
 		}
 
