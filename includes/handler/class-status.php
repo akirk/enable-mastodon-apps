@@ -11,6 +11,7 @@ namespace Enable_Mastodon_Apps\Handler;
 
 use Enable_Mastodon_Apps\Entity\Entity;
 use Enable_Mastodon_Apps\Handler\Handler;
+use Enable_Mastodon_Apps\Comment_CPT;
 use Enable_Mastodon_Apps\Mastodon_API;
 use Enable_Mastodon_Apps\Mastodon_App;
 use Enable_Mastodon_Apps\Entity\Status as Status_Entity;
@@ -31,7 +32,6 @@ class Status extends Handler {
 	public function register_hooks() {
 		add_filter( 'mastodon_api_status', array( $this, 'api_status' ), 10, 3 );
 		add_filter( 'mastodon_api_status', array( $this, 'api_status_ensure_numeric_id' ), 100 );
-		add_filter( 'mastodon_api_comment_parent_post_id', array( Mastodon_API::class, 'maybe_get_remapped_comment_id' ), 30 );
 		add_filter( 'mastodon_api_account_statuses_args', array( $this, 'mastodon_api_account_statuses_args' ), 10, 2 );
 		add_filter( 'mastodon_api_statuses', array( $this, 'api_statuses' ), 10, 4 );
 		add_filter( 'mastodon_api_statuses', array( $this, 'api_statuses_ensure_numeric_id' ), 100 );
@@ -436,30 +436,20 @@ class Status extends Handler {
 			return $status;
 		}
 		$comment_data = array();
-
-		/**
-		 * Get the post id that is being responded to.
-		 *
-		 * @param int $in_reply_to_id The post ID that is being responded to.
-		 * @param string $status_text The status text.
-		 * @return int The post ID that is being responded to.
-		 */
-		$parent_post_id = apply_filters( 'mastodon_api_comment_parent_post_id', $in_reply_to_id, $status_text );
-
 		$comment_data['comment_content']  = $status_text;
-		$comment_data['comment_post_ID']  = $parent_post_id;
 		$comment_data['comment_parent']   = 0;
+
+		$parent_comment = get_comment( $in_reply_to_id );
+		if ( $parent_comment ) {
+			$comment_data['comment_post_ID'] = $parent_comment->comment_post_ID;
+			$comment_data['comment_parent'] = $in_reply_to_id;
+		} else {
+			$comment_data['comment_post_ID'] = $in_reply_to_id;
+		}
+
 		$comment_data['comment_author']   = get_current_user_id();
 		$comment_data['user_id']          = get_current_user_id();
 		$comment_data['comment_approved'] = 1;
-
-		$parent_comment_id = Mastodon_API::maybe_get_remapped_comment_id( $in_reply_to_id );
-		if ( intval( $parent_comment_id ) !== intval( $in_reply_to_id ) ) {
-			$parent_comment = get_comment( $parent_comment_id );
-			if ( $parent_comment ) {
-				$comment_data['comment_parent'] = $parent_comment_id;
-			}
-		}
 
 		if ( ! empty( $media_ids ) ) {
 			foreach ( $media_ids as $media_id ) {
@@ -510,31 +500,20 @@ class Status extends Handler {
 		}
 
 		$comment_data = array();
-
-		/**
-		 * Get the post id that is being responded to.
-		 *
-		 * @param int $in_reply_to_id The post ID that is being responded to.
-		 * @param string $status_text The status text.
-		 * @return int The post ID that is being responded to.
-		 */
-		$parent_post_id = apply_filters( 'mastodon_api_comment_parent_post_id', $in_reply_to_id, $status_text );
-
-		$comment_data['comment_ID']       = $comment_id;
 		$comment_data['comment_content']  = $status_text;
 		$comment_data['comment_post_ID']  = $parent_post_id;
-		$comment_data['comment_parent']   = 0;
+
+		$parent_comment = get_comment( $in_reply_to_id );
+		if ( $parent_comment ) {
+			$comment_data['comment_post_ID'] = $parent_comment->comment_post_ID;
+			$comment_data['comment_parent'] = $in_reply_to_id;
+		} else {
+			$comment_data['comment_post_ID'] = $in_reply_to_id;
+		}
+
 		$comment_data['comment_author']   = get_current_user_id();
 		$comment_data['user_id']          = get_current_user_id();
 		$comment_data['comment_approved'] = 1;
-
-		$parent_comment_id = Mastodon_API::maybe_get_remapped_comment_id( $in_reply_to_id );
-		if ( intval( $parent_comment_id ) !== intval( $in_reply_to_id ) ) {
-			$parent_comment = get_comment( $parent_comment_id );
-			if ( $parent_comment ) {
-				$comment_data['comment_parent'] = $parent_comment_id;
-			}
-		}
 
 		if ( ! empty( $media_ids ) ) {
 			foreach ( $media_ids as $media_id ) {

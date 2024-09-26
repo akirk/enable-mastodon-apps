@@ -2745,9 +2745,9 @@ class Mastodon_API {
 	}
 
 	public static function maybe_get_remapped_comment_id( $remapped_post_id ) {
-		$post_id = get_post_meta( $remapped_post_id, 'mastodon_comment_id', true );
-		if ( $post_id ) {
-			return $post_id;
+		$comment_id = get_post_meta( $remapped_post_id, 'mastodon_comment_id', true );
+		if ( $comment_id ) {
+			return $comment_id;
 		}
 		return $remapped_post_id;
 	}

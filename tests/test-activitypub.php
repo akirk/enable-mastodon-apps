@@ -6,6 +6,7 @@
  */
 
 namespace Enable_Mastodon_Apps;
+
 use Enable_Mastodon_Apps\Comment_CPT;
 
 /**
@@ -39,9 +40,9 @@ class ActivityPub_Test extends Mastodon_API_TestCase {
 		if ( get_the_permalink( $this->post ) === $url ) {
 			return array(
 				'headers'  => array(),
-				'body'     => json_encode(
+				'body'     => wp_json_encode(
 					array(
-						'type' => 'Note',
+						'type'    => 'Note',
 						'content' => 'Test post',
 					)
 				),
@@ -53,13 +54,13 @@ class ActivityPub_Test extends Mastodon_API_TestCase {
 		if ( 'https://example.org/.well-known/webfinger?resource=https%3A%2F%2Fexample.org%2F%40user' === $url ) {
 			return array(
 				'headers'  => array(),
-				'body'     => json_encode(
+				'body'     => wp_json_encode(
 					array(
 						'subject' => 'acct:https://example.org/@user',
 						'aliases' => array(
 							'https://example.org/@user',
 						),
-						'links' => array(
+						'links'   => array(
 							array(
 								'rel'  => 'self',
 								'type' => 'application/activity+json',
@@ -76,16 +77,16 @@ class ActivityPub_Test extends Mastodon_API_TestCase {
 		if ( 'https://example.org/@user' === $url ) {
 			return array(
 				'headers'  => array(),
-				'body'     => json_encode(
+				'body'     => wp_json_encode(
 					array(
-						'id' => 'https://example.org/@user',
+						'id'                => 'https://example.org/@user',
 						'preferredUsername' => 'user',
-						'name' => 'user',
-						'summary' => 'A user',
-						'followers' => 0,
-						'following' => 0,
-						'inbox' => 'https://example.org/@user/inbox',
-						'outbox' => 'https://example.org/@user/outbox',
+						'name'              => 'user',
+						'summary'           => 'A user',
+						'followers'         => 0,
+						'following'         => 0,
+						'inbox'             => 'https://example.org/@user/inbox',
+						'outbox'            => 'https://example.org/@user/outbox',
 					)
 				),
 				'response' => array(
@@ -101,12 +102,12 @@ class ActivityPub_Test extends Mastodon_API_TestCase {
 		$comment_content = 'Test comment';
 		$comment_id = wp_insert_comment(
 			array(
-				'comment_post_ID' => $this->post,
-				'comment_type' => 'comment',
-				'comment_content' => $comment_content,
-				'comment_author_url' => 'https://example.org/@user',
+				'comment_post_ID'      => $this->post,
+				'comment_type'         => 'comment',
+				'comment_content'      => $comment_content,
+				'comment_author_url'   => 'https://example.org/@user',
 				'comment_author_email' => '',
-				'comment_meta' => array(
+				'comment_meta'         => array(
 					'protocol' => 'activitypub',
 				),
 			)
@@ -144,7 +145,6 @@ class ActivityPub_Test extends Mastodon_API_TestCase {
 		}
 		$this->assertNotEmpty( $comment );
 		$this->assertTrue( \ActivityPub\should_comment_be_federated( $comment ) );
-		// $this->assertEquals( $data->id, Comment_CPT::comment_id_to_post_id( $comment->comment_ID ) );
 
 		$type = 'Create';
 		$schedule = \wp_next_scheduled( 'activitypub_send_comment', array( $comment->comment_ID, $type ) );
@@ -159,7 +159,5 @@ class ActivityPub_Test extends Mastodon_API_TestCase {
 
 		$data = json_decode( wp_json_encode( $response->get_data() ), true );
 		$this->assertCount( 5, $data );
-
-
 	}
 }
