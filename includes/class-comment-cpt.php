@@ -43,7 +43,7 @@ class Comment_CPT {
 		add_action( 'edit_comment', array( $this, 'update_comment_post' ), 10, 2 );
 		add_filter( 'mastodon_api_get_posts_query_args', array( $this, 'api_get_posts_query_args' ) );
 		add_filter( 'mastodon_api_account', array( $this, 'api_account' ), 10, 4 );
-		add_filter( 'mastodon_api_in_reply_to_id', array( self::class, 'mastodon_api_in_reply_to_id' ), 15 );
+		add_filter( 'mastodon_api_in_reply_to_id', array( $this, 'mastodon_api_in_reply_to_id' ), 15 );
 	}
 
 	public function register_custom_post_type() {
@@ -72,15 +72,15 @@ class Comment_CPT {
 		return $remapped_comment_id;
 	}
 
-	public static function mastodon_api_in_reply_to_id( $post_id ) {
-		$comment_id = self::post_id_to_comment_id( $post_id );
+	public function mastodon_api_in_reply_to_id( $post_id ) {
+		$comment_id = $this->post_id_to_comment_id( $post_id );
 		if ( $comment_id ) {
 			return $comment_id;
 		}
 		return $post_id;
 	}
 
-	public static function post_id_to_comment_id( $post_id ) {
+	public function post_id_to_comment_id( $post_id ) {
 		if ( get_post_type( $post_id ) !== self::CPT ) {
 			return null;
 		}
@@ -152,7 +152,7 @@ class Comment_CPT {
 		if ( doing_action( 'delete_comment' ) ) {
 			return;
 		}
-		$comment_id = self::post_id_to_comment_id( $post_id );
+		$comment_id = $this->post_id_to_comment_id( $post_id );
 		if ( ! $comment_id ) {
 			return;
 		}
@@ -216,7 +216,6 @@ class Comment_CPT {
 	}
 
 	public function api_account( $account, $user_id, $request = null, $post = null ) {
-
 		if ( ! $post instanceof \WP_Post ) {
 			return $account;
 		}
@@ -237,6 +236,6 @@ class Comment_CPT {
 			return $account;
 		}
 
-		return apply_filters( 'mastodon_api_account', $account, $comment->comment_author_url, $request, null );
+		return apply_filters( 'mastodon_api_account', null, $comment->comment_author_url, $request, null );
 	}
 }

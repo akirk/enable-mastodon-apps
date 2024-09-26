@@ -50,6 +50,7 @@ class Timeline extends Handler {
 		 * @return array The modified query arguments.
 		 */
 		$args = apply_filters( 'mastodon_api_timelines_args', $args, $request );
+
 		if ( empty( $args ) ) {
 			return array();
 		}
