@@ -114,6 +114,14 @@ class Mastodon_App {
 		return apply_filters( 'mastodon_api_view_post_types', $view_post_types );
 	}
 
+	public function get_disable_blocks() {
+		$options = get_term_meta( $this->term->term_id, 'options', true );
+		if ( ! is_array( $options ) ) {
+			return false;
+		}
+		return boolval( $options['blocks'] );
+	}
+
 	public function set_client_secret( $client_secret ) {
 		return update_term_meta( $this->term->term_id, 'client_secret', $client_secret );
 	}
@@ -126,7 +134,6 @@ class Mastodon_App {
 		return update_term_meta( $this->term->term_id, 'view_post_types', $view_post_types );
 	}
 
-
 	public function set_post_formats( $post_formats ) {
 		$query_args = $this->get_query_args();
 		if ( ! is_array( $query_args ) ) {
@@ -135,6 +142,15 @@ class Mastodon_App {
 		$query_args['post_formats'] = $post_formats;
 		update_term_meta( $this->term->term_id, 'query_args', $query_args );
 		return $this->get_post_formats();
+	}
+
+	public function set_disable_blocks( $disable_blocks ) {
+		$options = get_term_meta( $this->term->term_id, 'options', true );
+		if ( ! is_array( $options ) ) {
+			$options = array();
+		}
+		$options['blocks'] = $disable_blocks;
+		return update_term_meta( $this->term->term_id, 'options', $options );
 	}
 
 	public function check_redirect_uri( $redirect_uri ) {
@@ -443,6 +459,31 @@ class Mastodon_App {
 							unset( $value['post_formats'] );
 						}
 					}
+					return $value;
+				},
+			)
+		);
+
+		register_term_meta(
+			self::TAXONOMY,
+			'options',
+			array(
+				'show_in_rest'      => false,
+				'single'            => true,
+				'type'              => 'array',
+				'sanitize_callback' => function ( $value ) {
+					if ( ! is_array( $value ) ) {
+						return array();
+					}
+
+					foreach ( array_keys( $value ) as $key ) {
+						if ( 'blocks' === $key ) {
+							$value[ $key ] = boolval( $value[ $key ] );
+							continue;
+						}
+						unset( $value[ $key ] );
+					}
+
 					return $value;
 				},
 			)

@@ -146,6 +146,15 @@ $confirm     = esc_html(
 						</p>
 					</td>
 				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'Options', 'enable-mastodon-apps' ); ?></th>
+					<td>
+						<label><input type="checkbox" name="disable_blocks" value="1" <?php checked( $app->get_disable_blocks() ); ?> /> <?php esc_html_e( 'Disable automatic conversion to blocks', 'enable-mastodon-apps' ); ?></label>
+						<p class="description">
+							<span><?php esc_html_e( 'If checked, post content will not be converted to blocks.', 'enable-mastodon-apps' ); ?></span>
+						</p>
+					</td>
+				</tr>
 			</tbody>
 		</table>
 
