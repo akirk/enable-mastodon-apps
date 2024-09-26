@@ -6,7 +6,7 @@
 - Tested up to: 6.6
 - Requires PHP: 7.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 0.9.6
+- Stable tag: 0.9.7
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -98,6 +98,10 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 
 ## Changelog
 
+### 0.9.7
+- Fixed bug where the create post type was ignored ([#175])
+- Automatically convert post content to blocks, can be disabled ([#174])
+
 ### 0.9.6
 - Adds steaming_api to instance_v1, props @mediaformat ([#171])
 - PATCH routes: support field_attributes, props @mattwiebe ([#167])
@@ -139,6 +143,8 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 - Improves to Attachments ([#132], [#136])
 - Fix OAuth rewrite path ([#130])
 
+[#174]: https://github.com/akirk/enable-mastodon-apps/pull/174
+[#173]: https://github.com/akirk/enable-mastodon-apps/pull/173
 [#171]: https://github.com/akirk/enable-mastodon-apps/pull/171
 [#167]: https://github.com/akirk/enable-mastodon-apps/pull/167
 [#165]: https://github.com/akirk/enable-mastodon-apps/pull/165

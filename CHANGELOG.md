@@ -1,3 +1,7 @@
+### 0.9.7
+- Fixed bug where the create post type was ignored ([#175])
+- Automatically convert post content to blocks, can be disabled ([#174])
+
 ### 0.9.6
 - Adds steaming_api to instance_v1, props @mediaformat ([#171])
 - PATCH routes: support field_attributes, props @mattwiebe ([#167])
@@ -123,6 +127,8 @@
 - Post replies as comments ([#3])
 - Fix a fatal when saving the default post format
 
+[#174]: https://github.com/akirk/enable-mastodon-apps/pull/174
+[#173]: https://github.com/akirk/enable-mastodon-apps/pull/173
 [#171]: https://github.com/akirk/enable-mastodon-apps/pull/171
 [#167]: https://github.com/akirk/enable-mastodon-apps/pull/167
 [#165]: https://github.com/akirk/enable-mastodon-apps/pull/165
