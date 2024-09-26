@@ -74,36 +74,84 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertEquals( 422, $response->get_status() );
 	}
 
-	public function test_submit_status_basic_status() {
-		add_filter(
-			'mastodon_api_new_post_format',
-			function ( $format ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
-				return 'status';
-			}
+	public function submit_status_data_provider() {
+		return array(
+			'basic_status'              => array(
+				'status'           => 'test',
+				'new_format'       => 'status',
+				'disable_blocks'   => true,
+				'expected_title'   => '',
+				'expected_content' => 'test',
+			),
+			'basic_status_blocks'       => array(
+				'status'           => 'test',
+				'new_format'       => 'status',
+				'disable_blocks'   => false,
+				'expected_title'   => '',
+				'expected_content' => "<!-- wp:paragraph -->\n<p>test</p>\n<!-- /wp:paragraph -->",
+			),
+			'basic_standard'            => array(
+				'status'           => 'test',
+				'new_format'       => 'standard',
+				'disable_blocks'   => true,
+				'expected_title'   => '',
+				'expected_content' => 'test',
+			),
+			'basic_standard_blocks'     => array(
+				'status'           => 'test',
+				'new_format'       => 'standard',
+				'disable_blocks'   => false,
+				'expected_title'   => '',
+				'expected_content' => "<!-- wp:paragraph -->\n<p>test</p>\n<!-- /wp:paragraph -->",
+			),
+			'multiline_status'          => array(
+				'status'           => 'headline' . PHP_EOL . 'post_content',
+				'new_format'       => 'status',
+				'disable_blocks'   => true,
+				'expected_title'   => '',
+				'expected_content' => 'headline' . PHP_EOL . 'post_content',
+			),
+			'multiline_status_blocks'   => array(
+				'status'           => 'headline' . PHP_EOL . 'post_content',
+				'new_format'       => 'status',
+				'disable_blocks'   => false,
+				'expected_title'   => '',
+				'expected_content' => "<!-- wp:paragraph -->\n<p>headline</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:paragraph -->\n<p>post_content</p>\n<!-- /wp:paragraph -->",
+			),
+			'multiline_standard'        => array(
+				'status'           => 'headline' . PHP_EOL . 'post_content',
+				'new_format'       => 'standard',
+				'disable_blocks'   => true,
+				'expected_title'   => 'headline',
+				'expected_content' => 'post_content',
+			),
+			'multiline_standard_blocks' => array(
+				'status'           => 'headline' . PHP_EOL . 'post_content',
+				'new_format'       => 'standard',
+				'disable_blocks'   => false,
+				'expected_title'   => 'headline',
+				'expected_content' => "<!-- wp:paragraph -->\n<p>post_content</p>\n<!-- /wp:paragraph -->",
+			),
 		);
-
-		$request = $this->api_request( 'POST', '/api/v1/statuses' );
-		$request->set_param( 'status', 'test' );
-		$response = $this->dispatch_authenticated( $request );
-		$this->assertEquals( 200, $response->get_status() );
-
-		$data = $response->get_data();
-		$this->assertIsString( $data->id );
-		$this->assertIsNumeric( $data->id );
-		$p = get_post( $data->id );
-		$this->assertEquals( $p->post_content, 'test' );
 	}
 
-	public function test_submit_status_multiline_status() {
-		add_filter(
-			'mastodon_api_new_post_format',
-			function ( $format ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
-				return 'status';
-			}
-		);
+	/**
+	 * Test submitting statuses.
+	 *
+	 * @dataProvider submit_status_data_provider
+	 * @param string $status The status to submit.
+	 * @param string $new_format The new post format.
+	 * @param bool   $disable_blocks Whether to disable blocks.
+	 * @param string $expected_title The expected post title.
+	 * @param string $expected_content The expected post content.
+	 * @return void
+	 */
+	public function test_submit_status( $status, $new_format, $disable_blocks, $expected_title, $expected_content ) {
+		$this->app->set_post_formats( $new_format );
+		$this->app->set_disable_blocks( $disable_blocks );
 
 		$request = $this->api_request( 'POST', '/api/v1/statuses' );
-		$request->set_param( 'status', 'headline' . PHP_EOL . 'post_content' );
+		$request->set_param( 'status', $status );
 		$response = $this->dispatch_authenticated( $request );
 		$this->assertEquals( 200, $response->get_status() );
 
@@ -111,46 +159,8 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertIsString( $data->id );
 		$this->assertIsNumeric( $data->id );
 		$p = get_post( $data->id );
-
-		$this->assertEquals( 'status', get_post_format( $p->ID ) );
-
-		$this->assertEquals( $p->post_title, '' );
-		$this->assertEquals( $p->post_content, 'headline' . PHP_EOL . 'post_content' );
-	}
-
-	public function test_submit_status_multiline_standard() {
-		$this->app->set_post_formats( 'standard' );
-		$request = $this->api_request( 'POST', '/api/v1/statuses' );
-		$request->set_param( 'status', 'headline' . PHP_EOL . 'post_content' );
-		$response = $this->dispatch_authenticated( $request );
-		$this->assertEquals( 200, $response->get_status() );
-
-		$data = $response->get_data();
-		$this->assertIsString( $data->id );
-		$this->assertIsNumeric( $data->id );
-		$p = get_post( $data->id );
-		$this->assertFalse( get_post_format( $p->ID ) );
-
-		$this->assertEquals( $p->post_title, 'headline' );
-		$this->assertEquals( $p->post_content, 'post_content' );
-	}
-
-	public function test_submit_status_multiline_standard_html() {
-		$this->app->set_post_formats( 'standard' );
-		$request = $this->api_request( 'POST', '/api/v1/statuses' );
-		$request->set_param( 'status', '<p>headline</p>' . PHP_EOL . '<p>post_content</p>' );
-
-		$response = $this->dispatch_authenticated( $request );
-		$this->assertEquals( 200, $response->get_status() );
-
-		$data = $response->get_data();
-		$this->assertIsString( $data->id );
-		$this->assertIsNumeric( $data->id );
-		$p = get_post( $data->id );
-		$this->assertFalse( get_post_format( $p->ID ) );
-
-		$this->assertEquals( $p->post_title, '<p>headline</p>' );
-		$this->assertEquals( $p->post_content, '<p>post_content</p>' );
+		$this->assertEquals( $p->post_title, $expected_title );
+		$this->assertEquals( $p->post_content, $expected_content );
 	}
 
 	public function test_submit_status_reply() {

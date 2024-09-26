@@ -12,6 +12,7 @@ namespace Enable_Mastodon_Apps\Handler;
 use Enable_Mastodon_Apps\Entity\Entity;
 use Enable_Mastodon_Apps\Handler\Handler;
 use Enable_Mastodon_Apps\Mastodon_API;
+use Enable_Mastodon_Apps\Mastodon_App;
 use Enable_Mastodon_Apps\Entity\Status as Status_Entity;
 use WP_REST_Response;
 
@@ -248,6 +249,14 @@ class Status extends Handler {
 		return $status;
 	}
 
+	public function convert_to_blocks( $post_content ) {
+		$post_content = explode( PHP_EOL, $post_content );
+		$post_content = array_map( 'trim', $post_content );
+		$post_content = array_filter( $post_content );
+		$post_content = '<!-- wp:paragraph -->' . PHP_EOL . '<p>' . implode( '</p>' . PHP_EOL . '<!-- /wp:paragraph -->' . PHP_EOL . PHP_EOL . '<!-- wp:paragraph -->' . PHP_EOL . '<p>', $post_content ) . '</p>' . PHP_EOL . '<!-- /wp:paragraph -->';
+		return $post_content;
+	}
+
 	public function prepare_post_data( $post_id, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at ) {
 		$post_data = array();
 
@@ -261,10 +270,15 @@ class Status extends Handler {
 		$post_data['post_title']   = '';
 
 		if ( 'standard' === $post_format ) {
-			// Use the first line of a post as the post title if we're using a standard post format.
-			list( $post_title, $post_content ) = explode( PHP_EOL, $post_data['post_content'], 2 );
-			$post_data['post_title']           = $post_title;
-			$post_data['post_content']         = trim( $post_content );
+			$post_content_parts = explode( PHP_EOL, $post_data['post_content'], 2 );
+			if ( count( $post_content_parts ) === 2 ) {
+				$post_data['post_title']           = wp_strip_all_tags( $post_content_parts[0] );
+				$post_data['post_content']         = trim( $post_content_parts[1] );
+			}
+		}
+
+		if ( ! Mastodon_App::get_current_app()->get_disable_blocks() ) {
+			$post_data['post_content'] = $this->convert_to_blocks( $post_data['post_content'] );
 		}
 
 		if ( $in_reply_to_id ) {
