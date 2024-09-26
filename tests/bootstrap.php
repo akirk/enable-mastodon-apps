@@ -34,6 +34,14 @@ if ( file_exists( $phpunitpolyfills ) ) {
  * Manually load the plugin being tested.
  */
 function _manually_load_plugin() {
+	$activitypub_plugin = dirname( dirname( __DIR__ ) ) . '/activitypub/activitypub.php'; // phpcs:ignore
+	$activitypub_plugin_alternate = dirname( dirname( __DIR__ ) ) . '/wordpress-activitypub/activitypub.php'; // phpcs:ignore
+	if ( file_exists( $activitypub_plugin ) ) {
+		require $activitypub_plugin;
+	} elseif ( file_exists( $activitypub_plugin_alternate ) ) {
+		require $activitypub_plugin_alternate;
+	}
+
 	require dirname( __DIR__ ) . '/enable-mastodon-apps.php'; // phpcs:ignore
 }
 tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
