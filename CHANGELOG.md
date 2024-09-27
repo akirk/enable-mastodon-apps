@@ -1,3 +1,6 @@
+### 0.9.8
+- Fix replying on received comments via the ActivityPub plugin ([#176])
+
 ### 0.9.7
 - Fixed bug where the create post type was ignored ([#175])
 - Automatically convert post content to blocks, can be disabled ([#174])
@@ -127,6 +130,8 @@
 - Post replies as comments ([#3])
 - Fix a fatal when saving the default post format
 
+[#176]: https://github.com/akirk/enable-mastodon-apps/pull/176
+[#175]: https://github.com/akirk/enable-mastodon-apps/pull/175
 [#174]: https://github.com/akirk/enable-mastodon-apps/pull/174
 [#173]: https://github.com/akirk/enable-mastodon-apps/pull/173
 [#171]: https://github.com/akirk/enable-mastodon-apps/pull/171
