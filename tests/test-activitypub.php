@@ -36,6 +36,11 @@ class ActivityPub_Test extends Mastodon_API_TestCase {
 		add_filter( 'pre_http_request', array( $this, 'mock_http_requests' ), 10, 3 );
 	}
 
+	public function tear_down() {
+		remove_filter( 'pre_http_request', array( $this, 'mock_http_requests' ) );
+		parent::tear_down();
+	}
+
 	public function mock_http_requests( $preempt, $request, $url ) {
 		if ( get_the_permalink( $this->post ) === $url ) {
 			return array(
