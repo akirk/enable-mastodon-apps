@@ -39,8 +39,9 @@ class Status_Source extends Status {
 		if ( $status_source instanceof Status_Source_Entity ) {
 			return $status_source;
 		}
-		$post = get_post( $object_id );
-		if ( ! $post ) {
+
+		$remapped_comment_id = get_comment_meta( $object_id, 'mastodon_comment_id', true );
+		if ( $remapped_comment_id ) {
 			$comment = get_comment( $object_id );
 			if ( isset( $comment ) && $comment instanceof \WP_Comment ) {
 				$status_source       = new Status_Source_Entity();
@@ -50,6 +51,8 @@ class Status_Source extends Status {
 
 			return $status_source;
 		}
+
+		$post = get_post( $object_id );
 
 		if ( $post instanceof \WP_Post ) {
 			$status_source       = new Status_Source_Entity();

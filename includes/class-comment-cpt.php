@@ -43,6 +43,7 @@ class Comment_CPT {
 		add_action( 'edit_comment', array( $this, 'update_comment_post' ), 10, 2 );
 		add_filter( 'mastodon_api_get_posts_query_args', array( $this, 'api_get_posts_query_args' ) );
 		add_filter( 'mastodon_api_account', array( $this, 'api_account' ), 10, 4 );
+		add_filter( 'mastodon_api_in_reply_to_id', array( $this, 'mastodon_api_in_reply_to_id' ), 15 );
 	}
 
 	public function register_custom_post_type() {
@@ -57,6 +58,7 @@ class Comment_CPT {
 			'show_in_menu' => false,
 			'show_in_rest' => false,
 			'rewrite'      => false,
+			'supports'     => array( 'post-formats' ),
 		);
 
 		register_post_type( self::CPT, $args );
@@ -68,6 +70,14 @@ class Comment_CPT {
 			$remapped_comment_id = self::create_comment_post( $comment_id, get_comment( $comment_id ) );
 		}
 		return $remapped_comment_id;
+	}
+
+	public function mastodon_api_in_reply_to_id( $post_id ) {
+		$comment_id = $this->post_id_to_comment_id( $post_id );
+		if ( $comment_id ) {
+			return $comment_id;
+		}
+		return $post_id;
 	}
 
 	public function post_id_to_comment_id( $post_id ) {
@@ -119,7 +129,6 @@ class Comment_CPT {
 		);
 
 		$post_id = wp_insert_post( $post_data );
-
 		if ( $post_format ) {
 			set_post_format( $post_id, $post_format );
 		}
@@ -226,6 +235,7 @@ class Comment_CPT {
 		if ( ! $comment ) {
 			return $account;
 		}
+
 		return apply_filters( 'mastodon_api_account', null, $comment->comment_author_url, $request, null );
 	}
 }
