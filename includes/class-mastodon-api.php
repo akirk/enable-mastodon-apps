@@ -74,7 +74,6 @@ class Mastodon_API {
 		add_action( 'wp_loaded', array( $this, 'rewrite_rules' ) );
 		add_action( 'query_vars', array( $this, 'query_vars' ) );
 		add_action( 'rest_api_init', array( $this, 'add_rest_routes' ) );
-		add_filter( 'rest_pre_serve_request', array( $this, 'allow_cors' ), 10, 0 );
 		add_filter( 'rest_post_dispatch', array( $this, 'send_http_links' ), 10, 3 );
 		add_filter( 'rest_pre_echo_response', array( $this, 'reformat_error_response' ), 10, 3 );
 		add_filter( 'template_include', array( $this, 'log_404s' ) );
@@ -85,14 +84,18 @@ class Mastodon_API {
 		add_filter( 'mastodon_api_in_reply_to_id', array( self::class, 'maybe_get_remapped_reblog_id' ), 15 );
 	}
 
-	public function allow_cors() {
+	/**
+	 * Allow the Mastodon API to be accessed via CORS.
+	 *
+	 * @param WP_REST_Request $request Request used to generate the response.
+	 */
+	public function allow_cors( $request ) {
 		header( 'Access-Control-Allow-Origin: *' );
 		header( 'Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS' );
 		header( 'Access-Control-Allow-Headers: content-type, authorization' );
 		header( 'Access-Control-Allow-Credentials: true' );
-		if ( 'OPTIONS' === $_SERVER['REQUEST_METHOD'] ) { // phpcs:ignore
+		if ( 'OPTIONS' === $request->get_method() ) {
 			header( 'Access-Control-Allow-Origin: *', true, 204 );
-			exit;
 		}
 	}
 
@@ -1661,7 +1664,7 @@ class Mastodon_API {
 	}
 
 	public function public_api_permission( $request ) {
-		$this->allow_cors();
+		$this->allow_cors( $request );
 		// Optionally log in.
 		$token = $this->oauth->get_token();
 		if ( ! $token ) {
@@ -1755,7 +1758,7 @@ class Mastodon_API {
 	}
 
 	public function logged_in_permission( $request ) {
-		$this->allow_cors();
+		$this->allow_cors( $request );
 		$token = $this->oauth->get_token();
 		if ( ! $token ) {
 			return is_user_logged_in();
@@ -1768,7 +1771,7 @@ class Mastodon_API {
 	}
 
 	public function have_token_permission( $request ) {
-		$this->allow_cors();
+		$this->allow_cors( $request );
 		$token = $this->oauth->get_token();
 		if ( ! $token ) {
 			return is_user_logged_in();
