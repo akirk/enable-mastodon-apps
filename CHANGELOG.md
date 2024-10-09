@@ -1,3 +1,7 @@
+### 0.9.9
+- Improve targeting of CORS headers ([#181])
+- Fix fatal when deleting an app ([#182])
+
 ### 0.9.8
 - Fix replying on received comments via the ActivityPub plugin ([#176])
 
@@ -130,6 +134,8 @@
 - Post replies as comments ([#3])
 - Fix a fatal when saving the default post format
 
+[#182]: https://github.com/akirk/enable-mastodon-apps/pull/182
+[#181]: https://github.com/akirk/enable-mastodon-apps/pull/181
 [#176]: https://github.com/akirk/enable-mastodon-apps/pull/176
 [#175]: https://github.com/akirk/enable-mastodon-apps/pull/175
 [#174]: https://github.com/akirk/enable-mastodon-apps/pull/174

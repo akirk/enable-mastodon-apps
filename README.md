@@ -6,7 +6,7 @@
 - Tested up to: 6.6
 - Requires PHP: 7.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 0.9.8
+- Stable tag: 0.9.9
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -98,6 +98,10 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 
 ## Changelog
 
+### 0.9.9
+- Improve targeting of CORS headers ([#181])
+- Fix fatal when deleting an app ([#182])
+
 ### 0.9.8
 - Fix replying on received comments via the ActivityPub plugin ([#176])
 
@@ -146,6 +150,8 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 - Improves to Attachments ([#132], [#136])
 - Fix OAuth rewrite path ([#130])
 
+[#182]: https://github.com/akirk/enable-mastodon-apps/pull/182
+[#181]: https://github.com/akirk/enable-mastodon-apps/pull/181
 [#176]: https://github.com/akirk/enable-mastodon-apps/pull/176
 [#175]: https://github.com/akirk/enable-mastodon-apps/pull/175
 [#174]: https://github.com/akirk/enable-mastodon-apps/pull/174
