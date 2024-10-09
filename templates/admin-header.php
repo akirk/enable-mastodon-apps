@@ -111,7 +111,7 @@ function td_timestamp( $timestamp, $strikethrough_past = false ) {
 <hr class="wp-header-end">
 <?php
 if ( isset( $_GET['success'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-	$success = santize_text_field( wp_unslash( $_GET['success'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended,WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+	$success = sanitize_text_field( wp_unslash( $_GET['success'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 	?>
 	<div class="notice notice-success is-dismissible"><p><?php echo esc_html( $success ); ?></p></div>
 	<?php
