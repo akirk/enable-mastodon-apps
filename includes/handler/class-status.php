@@ -304,7 +304,7 @@ class Status extends Handler {
 				if ( \wp_attachment_is( 'image', $media_id ) ) {
 					$post_data['post_content'] .= PHP_EOL;
 					$meta_json                  = array(
-						'id'       => $media_id,
+						'id'       => intval( $media_id ),
 						'sizeSlug' => 'large',
 					);
 					$post_data['post_content'] .= '<!-- wp:image ' . wp_json_encode( $meta_json ) . ' -->' . PHP_EOL;
