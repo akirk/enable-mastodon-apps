@@ -253,6 +253,9 @@ class Status extends Handler {
 		$post_content = explode( PHP_EOL, $post_content );
 		$post_content = array_map( 'trim', $post_content );
 		$post_content = array_filter( $post_content );
+		if ( empty( $post_content ) ) {
+			return '';
+		}
 		$post_content = '<!-- wp:paragraph -->' . PHP_EOL . '<p>' . implode( '</p>' . PHP_EOL . '<!-- /wp:paragraph -->' . PHP_EOL . PHP_EOL . '<!-- wp:paragraph -->' . PHP_EOL . '<p>', $post_content ) . '</p>' . PHP_EOL . '<!-- /wp:paragraph -->';
 		return $post_content;
 	}
@@ -271,11 +274,9 @@ class Status extends Handler {
 		$post_data['post_title']   = '';
 
 		if ( 'standard' === $post_format ) {
-			$post_content_parts = explode( PHP_EOL, $post_data['post_content'], 2 );
-			if ( count( $post_content_parts ) === 2 ) {
-				$post_data['post_title']           = wp_strip_all_tags( $post_content_parts[0] );
-				$post_data['post_content']         = trim( $post_content_parts[1] );
-			}
+			$post_content_parts = explode( PHP_EOL, $post_data['post_content'] . PHP_EOL, 2 );
+			$post_data['post_title']   = wp_strip_all_tags( $post_content_parts[0] );
+			$post_data['post_content'] = trim( $post_content_parts[1] );
 		}
 
 		if ( ! $app->get_disable_blocks() ) {

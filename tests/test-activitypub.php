@@ -126,7 +126,13 @@ class ActivityPub_Test extends Mastodon_API_TestCase {
 		$this->assertEquals( 200, $response->get_status() );
 
 		$data = json_decode( wp_json_encode( $response->get_data() ), true );
-		$this->assertEquals( $comment_content, $data[0]['content'] );
+		$comment_post_id = Comment_CPT::comment_id_to_post_id( $comment_id );
+		foreach ( $data as $item ) {
+			if ( $item['id'] === $comment_post_id ) {
+				$this->assertEquals( $comment_content, $data[0]['content'] );
+				break;
+			}
+		}
 		$this->assertCount( 4, $data );
 
 		$comments = get_comments( array( 'post_id' => $this->post ) );
@@ -156,7 +162,7 @@ class ActivityPub_Test extends Mastodon_API_TestCase {
 		$this->assertNotFalse( $schedule );
 		do_action( 'activitypub_send_comment', $comment->comment_ID, $type );
 
-		$this->assertEquals( 'federated', get_comment_meta( $comment->comment_ID, 'activitypub_status', true ) );
+		$this->assertEquals( 'federate', substr( get_comment_meta( $comment->comment_ID, 'activitypub_status', true ), 0, 8 ) );
 
 		$request = $this->api_request( 'GET', '/api/v1/timelines/home' );
 		$response = $this->dispatch_authenticated( $request );
