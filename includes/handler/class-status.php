@@ -253,6 +253,9 @@ class Status extends Handler {
 		$post_content = explode( PHP_EOL, $post_content );
 		$post_content = array_map( 'trim', $post_content );
 		$post_content = array_filter( $post_content );
+		if ( empty( $post_content ) ) {
+			return '';
+		}
 		$post_content = '<!-- wp:paragraph -->' . PHP_EOL . '<p>' . implode( '</p>' . PHP_EOL . '<!-- /wp:paragraph -->' . PHP_EOL . PHP_EOL . '<!-- wp:paragraph -->' . PHP_EOL . '<p>', $post_content ) . '</p>' . PHP_EOL . '<!-- /wp:paragraph -->';
 		return $post_content;
 	}

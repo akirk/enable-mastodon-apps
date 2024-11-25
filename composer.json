@@ -35,7 +35,7 @@
       "@php ./vendor/bin/phpcbf"
     ],
     "test": [
-      "@php ./vendor/phpunit/phpunit/phpunit --no-coverage"
+      "@php ./vendor/phpunit/phpunit/phpunit --testdox --no-coverage"
     ],
     "docker-test": [
       "composer install",
