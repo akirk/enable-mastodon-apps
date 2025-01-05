@@ -80,6 +80,7 @@ class Mastodon_API {
 		add_filter( 'rest_json_encode_options', array( $this, 'rest_json_encode_options' ), 10, 2 );
 		add_action( 'default_option_mastodon_api_default_post_formats', array( $this, 'default_option_mastodon_api_default_post_formats' ) );
 		add_filter( 'rest_request_before_callbacks', array( $this, 'rest_request_before_callbacks' ) );
+		add_filter( 'rest_authentication_errors', array( $this, 'rest_authentication_errors' ) );
 		add_filter( 'mastodon_api_mapback_user_id', array( $this, 'mapback_user_id' ) );
 		add_filter( 'mastodon_api_in_reply_to_id', array( self::class, 'maybe_get_remapped_reblog_id' ), 15 );
 	}
@@ -1820,6 +1821,32 @@ class Mastodon_API {
 		}
 
 		return $response;
+	}
+
+	/**
+	 * Log REST API errors for debugging.
+	 *
+	 * @param WP_Error $errors WP_Error object.
+	 * @return WP_Error WP_Error object.
+	 */
+	public function rest_authentication_errors( $errors ) {
+		if ( $errors && get_option( 'mastodon_api_debug_mode' ) > time() ) {
+			$request = new WP_REST_Request( $_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI'] ); // phpcs:ignore
+			$request->set_query_params( $_GET ); // phpcs:ignore
+			$request->set_body_params( $_POST ); // phpcs:ignore
+			$request->set_headers( getallheaders() );
+
+			$app = Mastodon_App::get_debug_app();
+			$app->was_used(
+				$request,
+				array(
+					'user_agent' => $_SERVER['HTTP_USER_AGENT'], // phpcs:ignore
+					'errors'     => $errors,
+				)
+			);
+		}
+
+		return $errors;
 	}
 
 	public function api_verify_credentials( $request ) {
