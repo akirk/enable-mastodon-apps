@@ -518,7 +518,15 @@ class Mastodon_App {
 							if ( 'method' === $key && preg_match( '/^[A-Z]{3,15}$/', $value[ $key ] ) ) {
 								continue;
 							}
-							if ( ( 'files' === $key || 'params' === $key || 'json' === $key ) && ! empty( $value[ $key ] ) ) {
+							if (
+								(
+									'files' === $key ||
+									'params' === $key ||
+									'json' === $key ||
+									'errors' === $key
+								) &&
+								! empty( $value[ $key ] )
+							) {
 								continue;
 							}
 							unset( $value[ $key ] );
