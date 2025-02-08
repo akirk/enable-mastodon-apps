@@ -658,6 +658,21 @@ class Mastodon_App {
 		);
 
 		$post_formats = get_option( 'mastodon_api_default_post_formats', array() );
+		/**
+		 * Post formats to be enabled for new apps.
+		 *
+		 * @param array $post_formats    The post formats.
+		 *
+		 * @return array The post formats.
+		 *
+		 * Example:
+		 * ```php
+		 * add_filter( 'mastodon_api_new_app_post_formats', function( $post_formats ) {
+		 *    // This will enable standard and aside post formats for new apps.
+		 *    return array( 'standard', 'aside' );
+		 * } );
+		 * ```
+		 */
 		$post_formats = apply_filters( 'mastodon_api_new_app_post_formats', $post_formats, $app_metadata );
 		$app_metadata['query_args'] = array( 'post_formats' => $post_formats );
 
@@ -667,6 +682,21 @@ class Mastodon_App {
 			$view_post_types[] = $app_metadata['create_post_type'];
 		}
 
+		/**
+		 * Standard post types that the app can view.
+		 *
+		 * @param array $view_post_types    The post types.
+		 *
+		 * @return array The post types.
+		 *
+		 * Example:
+		 * ```php
+		 * add_filter( 'mastodon_api_view_post_types', function( $view_post_types ) {
+		 *   // This will allow the app to view pages.
+		 *   return array_merge( $view_post_types, array( 'page' ) );
+		 * } );
+		 * ```
+		 */
 		$app_metadata['view_post_types'] = apply_filters( 'mastodon_api_view_post_types', $view_post_types );
 
 		$term_id = $term['term_id'];

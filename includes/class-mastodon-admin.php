@@ -132,7 +132,7 @@ class Mastodon_Admin {
 		 *
 		 * This only applies if the user unchekcks: Make posts through Mastodon apps appear on this WordPress
 		 *
-		 * @var string $post_type The default post type.
+		 * @param string $post_type The default post type.
 		 *
 		 * Example:
 		 * ```php
