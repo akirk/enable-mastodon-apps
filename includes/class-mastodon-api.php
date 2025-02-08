@@ -191,7 +191,7 @@ class Mastodon_API {
 				'singular_name' => __( 'Mastodon Post', 'enable-mastodon-apps' ),
 				'menu_name'     => __( 'Mastodon Posts', 'enable-mastodon-apps' ),
 			),
-			'description'  => __( 'Posted through a Mastodon app', 'enable-mastodon-apps' ),
+			'description'  => __( 'Posted through a Mastodon app.', 'enable-mastodon-apps' ),
 			'public'       => ! get_option( 'mastodon_api_posting_cpt' ),
 			'show_in_rest' => false,
 			'rewrite'      => false,
