@@ -29,7 +29,7 @@ class Handler {
 			if ( $app ) {
 				$post_types = $app->get_view_post_types();
 			}
-			$args['post_type'] = array_merge( $post_types, array( Mastodon_API::CPT ) );
+			$args['post_type'] = $post_types;
 		}
 		$args['posts_per_page']   = $limit;
 		$args['suppress_filters'] = false;
