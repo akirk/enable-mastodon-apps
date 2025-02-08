@@ -9,7 +9,6 @@
 
 namespace Enable_Mastodon_Apps\Handler;
 
-use Enable_Mastodon_Apps\Mastodon_API;
 use Enable_Mastodon_Apps\Mastodon_App;
 
 /**
@@ -25,7 +24,7 @@ class Handler {
 		$app = Mastodon_App::get_current_app();
 
 		if ( ! isset( $args['post_type'] ) ) {
-			$post_types = array( 'post' );
+			$post_types = array( 'post', 'comment' );
 			if ( $app ) {
 				$post_types = $app->get_view_post_types();
 			}

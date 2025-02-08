@@ -49,7 +49,7 @@ class Mastodon_API {
 		$this->oauth = new Mastodon_OAuth();
 		$this->register_hooks();
 		$this->register_taxonomy();
-		self::register_custom_post_types();
+		$this->register_custom_post_types();
 		new Mastodon_Admin( $this->oauth );
 
 		// Register Handlers.
@@ -169,7 +169,7 @@ class Mastodon_API {
 		register_term_meta( self::REMAP_TAXONOMY, 'meta', array( 'type' => 'string' ) );
 	}
 
-	public static function register_custom_post_types() {
+	public function register_custom_post_types() {
 		$args = array(
 			'labels'       => array(
 				'name'          => 'Mapping',
@@ -195,6 +195,7 @@ class Mastodon_API {
 			'show_in_rest' => false,
 			'rewrite'      => false,
 			'menu_icon'    => 'dashicons-megaphone',
+			'supports'     => array( 'post-formats' ),
 		);
 
 		register_post_type( self::POST_CPT, $args );
