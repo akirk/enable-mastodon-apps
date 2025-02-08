@@ -158,9 +158,18 @@ class ActivityPub_Test extends Mastodon_API_TestCase {
 		$this->assertTrue( \ActivityPub\should_comment_be_federated( $comment ) );
 
 		$type = 'Create';
-		$schedule = \wp_next_scheduled( 'activitypub_send_comment', array( $comment->comment_ID, $type ) );
-		$this->assertNotFalse( $schedule );
-		do_action( 'activitypub_send_comment', $comment->comment_ID, $type );
+		$outbox = \get_posts(
+			array(
+				'post_type'      => \Activitypub\Collection\Outbox::POST_TYPE,
+				'posts_per_page' => 1,
+				'post_status'    => 'pending',
+				'orderby'        => 'date',
+				'order'          => 'DESC',
+			)
+		);
+		$this->assertNotEmpty( $outbox );
+		$this->assertEquals( $outbox[0]->post_title, home_url( '?c=' . $comment->comment_ID ) );
+		do_action( 'activitypub_process_outbox' );
 
 		$this->assertEquals( 'federate', substr( get_comment_meta( $comment->comment_ID, 'activitypub_status', true ), 0, 8 ) );
 
