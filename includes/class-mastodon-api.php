@@ -2150,6 +2150,10 @@ class Mastodon_API {
 		 *
 		 * Example:
 		 * ```php
+		 * add_filter( 'mastodon_api_public_timeline', function( $statuses, $request ) {
+		 *    array_unshift( $statuses, new Entity\Status( array( 'content' => 'Hello World' ) ) );
+		 *    return $statuses;
+		 * } );
 		 * ```
 		 */
 		return \apply_filters( 'mastodon_api_public_timeline', null, $request );
