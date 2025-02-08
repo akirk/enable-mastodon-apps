@@ -13,6 +13,15 @@ use Enable_Mastodon_Apps\Mastodon_App;
 
 $rest_nonce  = wp_create_nonce( 'wp_rest' );
 $_post_types = \get_post_types( array( 'show_ui' => true ), 'objects' );
+if ( ! isset( $_post_types[ \Enable_Mastodon_Apps\Mastodon_Api::POST_CPT ] ) ) {
+	$_post_types = array_merge(
+		array(
+			\Enable_Mastodon_Apps\Mastodon_Api::POST_CPT => get_post_type_object( \Enable_Mastodon_Apps\Mastodon_Api::POST_CPT ),
+		),
+		$_post_types
+	);
+}
+
 $app         = $args['app'];
 $confirm     = esc_html(
 	sprintf(
@@ -130,6 +139,34 @@ $confirm     = esc_html(
 						</select>
 						<p class="description">
 							<span><?php esc_html_e( 'When posting through the app, this post type will be created.', 'enable-mastodon-apps' ); ?></span>
+							<br>
+							<span>
+								<?php
+								echo wp_kses(
+									sprintf(
+										// translators: %s is a post type singular name that appears in the dropdown above.
+										__( 'Choose %s to make posts through Mastodon apps appear on this WordPress.', 'enable-mastodon-apps' ),
+										'<strong>' . get_post_type_object( 'post' )->labels->singular_name . '</strong>'
+									),
+									array( 'strong' => true )
+								);
+
+								?>
+							</span>
+							<br>
+							<span>
+								<?php
+								echo wp_kses(
+									sprintf(
+									// translators: %s is a post type singular name that appears in the dropdown above.
+										__( 'Choose %s if you want to <strong>hide posts through Mastodon apps</strong> from this WordPress.', 'enable-mastodon-apps' ),
+										'<strong>' . __( 'Mastodon Post', 'enable-mastodon-apps' ) . '</strong>'
+									),
+									array( 'strong' => true )
+								);
+
+								?>
+							</span>
 						</p>
 					</td>
 				</tr>

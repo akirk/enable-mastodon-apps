@@ -100,7 +100,7 @@ class Mastodon_App {
 		if ( ! $create_post_type ) {
 			$create_post_type = 'post';
 		}
-		return apply_filters( 'mastodon_api_create_post_type', $create_post_type );
+		return $create_post_type;
 	}
 
 	public function get_view_post_types() {
@@ -111,7 +111,7 @@ class Mastodon_App {
 		if ( ! is_array( $view_post_types ) ) {
 			$view_post_types = array( $view_post_types );
 		}
-		return apply_filters( 'mastodon_api_view_post_types', $view_post_types );
+		return $view_post_types;
 	}
 
 	public function get_disable_blocks() {
@@ -659,6 +659,14 @@ class Mastodon_App {
 
 		$post_formats = get_option( 'mastodon_api_default_post_formats', array() );
 		$post_formats = apply_filters( 'mastodon_api_new_app_post_formats', $post_formats, $app_metadata );
+		$app_metadata['query_args'] = array( 'post_formats' => $post_formats );
+		$app_metadata['create_post_type'] = get_option( 'mastodon_api_posting_cpt', \Enable_Mastodon_Apps\Mastodon_API::POST_CPT );
+		$view_post_types = array( 'post' );
+		if ( 'post' !== $app_metadata['create_post_type'] ) {
+			$view_post_types[] = $app_metadata['create_post_type'];
+		}
+
+		$app_metadata['view_post_types'] = apply_filters( 'mastodon_api_view_post_types', $view_post_types );
 
 		$term_id = $term['term_id'];
 		foreach ( $app_metadata as $key => $value ) {

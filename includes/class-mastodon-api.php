@@ -33,19 +33,13 @@ class Mastodon_API {
 	 */
 	private $oauth;
 
-	/**
-	 * The Mastodon App.
-	 *
-	 * @var Mastodon_App
-	 */
-	private $app;
-
 	private static $last_error = false;
 
 	const PREFIX         = 'enable-mastodon-apps';
 	const APP_TAXONOMY   = 'mastodon-app';
 	const REMAP_TAXONOMY = 'mastodon-api-remap';
 	const CPT            = 'enable-mastodon-apps';
+	const POST_CPT       = 'ema-post';
 
 	/**
 	 * Constructor
@@ -55,7 +49,7 @@ class Mastodon_API {
 		$this->oauth = new Mastodon_OAuth();
 		$this->register_hooks();
 		$this->register_taxonomy();
-		$this->register_custom_post_type();
+		self::register_custom_post_types();
 		new Mastodon_Admin( $this->oauth );
 
 		// Register Handlers.
@@ -83,6 +77,7 @@ class Mastodon_API {
 		add_filter( 'rest_authentication_errors', array( $this, 'rest_authentication_errors' ) );
 		add_filter( 'mastodon_api_mapback_user_id', array( $this, 'mapback_user_id' ) );
 		add_filter( 'mastodon_api_in_reply_to_id', array( self::class, 'maybe_get_remapped_reblog_id' ), 15 );
+		add_filter( 'activitypub_support_post_types', array( $this, 'activitypub_support_post_types' ) );
 	}
 
 	/**
@@ -174,7 +169,7 @@ class Mastodon_API {
 		register_term_meta( self::REMAP_TAXONOMY, 'meta', array( 'type' => 'string' ) );
 	}
 
-	public function register_custom_post_type() {
+	public static function register_custom_post_types() {
 		$args = array(
 			'labels'       => array(
 				'name'          => 'Mapping',
@@ -189,9 +184,26 @@ class Mastodon_API {
 		);
 
 		register_post_type( self::CPT, $args );
+
+		$args = array(
+			'labels'       => array(
+				'name'          => __( 'Mastodon Posts', 'enable-mastodon-apps' ),
+				'singular_name' => __( 'Mastodon Post', 'enable-mastodon-apps' ),
+				'menu_name'     => __( 'Mastodon Posts', 'enable-mastodon-apps' ),
+			),
+			'public'       => ! get_option( 'mastodon_api_posting_cpt' ),
+			'show_in_rest' => false,
+			'rewrite'      => false,
+			'menu_icon'    => 'dashicons-megaphone',
+		);
+
+		register_post_type( self::POST_CPT, $args );
 	}
 
-
+	public function activitypub_support_post_types( $post_types ) {
+		$post_types[] = self::POST_CPT;
+		return $post_types;
+	}
 	public function rewrite_rules() {
 		$existing_rules = get_option( 'rewrite_rules' );
 		$needs_flush    = false;
