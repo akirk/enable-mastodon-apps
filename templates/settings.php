@@ -56,7 +56,7 @@
 									sprintf(
 										// translators: %s: Post type.
 										__( 'When set, posts through Mastodon apps will have the post type: %s', 'enable-mastodon-apps' ),
-										'<tt>' . \Enable_Mastodon_Apps\Mastodon_API::POST_CPT . '</tt>'
+										'<tt>' . apply_filters( 'mastodon_api_default_post_type', \Enable_Mastodon_Apps\Mastodon_API::POST_CPT ) . '</tt>'
 									),
 									array( 'tt' => true )
 								);

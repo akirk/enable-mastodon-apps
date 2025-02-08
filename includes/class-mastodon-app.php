@@ -661,7 +661,7 @@ class Mastodon_App {
 		$post_formats = apply_filters( 'mastodon_api_new_app_post_formats', $post_formats, $app_metadata );
 		$app_metadata['query_args'] = array( 'post_formats' => $post_formats );
 
-		$app_metadata['create_post_type'] = get_option( 'mastodon_api_posting_cpt', \Enable_Mastodon_Apps\Mastodon_API::POST_CPT );
+		$app_metadata['create_post_type'] = get_option( 'mastodon_api_posting_cpt', apply_filters( 'mastodon_api_default_post_type', \Enable_Mastodon_Apps\Mastodon_API::POST_CPT ) );
 		$view_post_types = array( 'post', 'comment' );
 		if ( ! in_array( $app_metadata['create_post_type'], $view_post_types ) ) {
 			$view_post_types[] = $app_metadata['create_post_type'];
