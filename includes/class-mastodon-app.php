@@ -100,7 +100,7 @@ class Mastodon_App {
 		if ( ! $create_post_type ) {
 			$create_post_type = 'post';
 		}
-		return apply_filters( 'mastodon_api_create_post_type', $create_post_type );
+		return $create_post_type;
 	}
 
 	public function get_view_post_types() {
@@ -111,7 +111,7 @@ class Mastodon_App {
 		if ( ! is_array( $view_post_types ) ) {
 			$view_post_types = array( $view_post_types );
 		}
-		return apply_filters( 'mastodon_api_view_post_types', $view_post_types );
+		return $view_post_types;
 	}
 
 	public function get_disable_blocks() {
@@ -658,7 +658,46 @@ class Mastodon_App {
 		);
 
 		$post_formats = get_option( 'mastodon_api_default_post_formats', array() );
+		/**
+		 * Post formats to be enabled for new apps.
+		 *
+		 * @param array $post_formats    The post formats.
+		 *
+		 * @return array The post formats.
+		 *
+		 * Example:
+		 * ```php
+		 * add_filter( 'mastodon_api_new_app_post_formats', function( $post_formats ) {
+		 *    // This will enable standard and aside post formats for new apps.
+		 *    return array( 'standard', 'aside' );
+		 * } );
+		 * ```
+		 */
 		$post_formats = apply_filters( 'mastodon_api_new_app_post_formats', $post_formats, $app_metadata );
+		$app_metadata['query_args'] = array( 'post_formats' => $post_formats );
+
+		$app_metadata['create_post_type'] = get_option( 'mastodon_api_posting_cpt', apply_filters( 'mastodon_api_default_post_type', \Enable_Mastodon_Apps\Mastodon_API::POST_CPT ) );
+		$view_post_types = array( 'post', 'comment' );
+		if ( ! in_array( $app_metadata['create_post_type'], $view_post_types ) ) {
+			$view_post_types[] = $app_metadata['create_post_type'];
+		}
+
+		/**
+		 * Standard post types that the app can view.
+		 *
+		 * @param array $view_post_types    The post types.
+		 *
+		 * @return array The post types.
+		 *
+		 * Example:
+		 * ```php
+		 * add_filter( 'mastodon_api_view_post_types', function( $view_post_types ) {
+		 *   // This will allow the app to view pages.
+		 *   return array_merge( $view_post_types, array( 'page' ) );
+		 * } );
+		 * ```
+		 */
+		$app_metadata['view_post_types'] = apply_filters( 'mastodon_api_view_post_types', $view_post_types );
 
 		$term_id = $term['term_id'];
 		foreach ( $app_metadata as $key => $value ) {

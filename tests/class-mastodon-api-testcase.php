@@ -46,7 +46,7 @@ class Mastodon_API_TestCase extends \WP_UnitTestCase {
 				'post_content' => 'Test post',
 				'post_title'   => '',
 				'post_status'  => 'publish',
-				'post_type'    => 'post',
+				'post_type'    => Mastodon_API::POST_CPT,
 				'post_date'    => '2023-01-03 00:00:00',
 			)
 		);
@@ -58,7 +58,7 @@ class Mastodon_API_TestCase extends \WP_UnitTestCase {
 				'post_content' => 'Private post',
 				'post_title'   => '',
 				'post_status'  => 'private',
-				'post_type'    => 'post',
+				'post_type'    => Mastodon_API::POST_CPT,
 				'post_date'    => '2023-01-03 00:00:01',
 			)
 		);
@@ -120,11 +120,6 @@ class Mastodon_API_TestCase extends \WP_UnitTestCase {
 		);
 
 		set_post_format( $this->friend_post, 'status' );
-		$this->app = Mastodon_App::save( 'Test App', array( 'https://test' ), 'read write follow push', 'https://mastodon.local' );
-		$oauth = new Mastodon_OAuth();
-		$this->token = wp_generate_password( 128, false );
-		$userdata = get_userdata( $this->administrator );
-		$oauth->get_token_storage()->setAccessToken( $this->token, $this->app->get_client_id(), $userdata->ID, time() + HOUR_IN_SECONDS, $this->app->get_scopes() );
 
 		add_filter(
 			'default_option_mastodon_api_default_post_formats',
@@ -133,6 +128,12 @@ class Mastodon_API_TestCase extends \WP_UnitTestCase {
 			},
 			20
 		);
+
+		$this->app = Mastodon_App::save( 'Test App', array( 'https://test' ), 'read write follow push', 'https://mastodon.local' );
+		$oauth = new Mastodon_OAuth();
+		$this->token = wp_generate_password( 128, false );
+		$userdata = get_userdata( $this->administrator );
+		$oauth->get_token_storage()->setAccessToken( $this->token, $this->app->get_client_id(), $userdata->ID, time() + HOUR_IN_SECONDS, $this->app->get_scopes() );
 
 		add_filter( 'pre_http_request', array( $this, 'block_http_requests' ), 10 );
 	}

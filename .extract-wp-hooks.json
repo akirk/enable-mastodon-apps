@@ -3,6 +3,7 @@
   "wiki_directory": "../enable-mastodon-apps.wiki",
   "github_blob_url": "https://github.com/akirk/enable-mastodon-apps/blob/main/",
   "ignore_filter": [
-    "rest_api_init"
+    "rest_api_init",
+    "activitypub_process_outbox"
   ]
 }

@@ -66,6 +66,8 @@ class Mastodon_Admin {
 		switch ( $tab ) {
 			case 'settings':
 				$this->process_admin_settings_page();
+				// We need to reload the page so that the POST_CPT shows up in the correct state.
+				wp_safe_redirect( admin_url( 'options-general.php?page=enable-mastodon-apps&tab=settings' ) );
 				break;
 			case 'debug':
 				$this->process_admin_debug_page();
@@ -123,6 +125,38 @@ class Mastodon_Admin {
 			delete_option( 'mastodon_api_disable_logins' );
 		} else {
 			update_option( 'mastodon_api_disable_logins', true );
+		}
+
+		/**
+		 * The default post type for posting from Mastodon apps when the configured to do so.
+		 *
+		 * This only applies if the user unchekcks: Make posts through Mastodon apps appear on this WordPress
+		 *
+		 * @param string $post_type The default post type.
+		 *
+		 * Example:
+		 * ```php
+		 * add_filter( 'mastodon_api_default_post_type', function( $post_type ) {
+		 *    return 'my-own-custom-post-type';
+		 * } );
+		 * ```
+		 */
+		$default_ema_post_type = apply_filters( 'mastodon_api_default_post_type', \Enable_Mastodon_Apps\Mastodon_API::POST_CPT );
+
+		if ( isset( $_POST['mastodon_api_posting_cpt'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+			update_option( 'mastodon_api_posting_cpt', 'post' );
+
+			$supported_post_types = (array) \get_option( 'activitypub_support_post_types', array( 'post' ) );
+			if ( in_array( $default_ema_post_type, $supported_post_types, true ) ) {
+				$supported_post_types = array_diff( $supported_post_types, array( $default_ema_post_type ) );
+				\update_option( 'activitypub_support_post_types', $supported_post_types );
+			}
+		} else {
+			delete_option( 'mastodon_api_posting_cpt' );
+
+			$supported_post_types = (array) \get_option( 'activitypub_support_post_types', array( 'post' ) );
+			$supported_post_types[] = $default_ema_post_type;
+			\update_option( 'activitypub_support_post_types', $supported_post_types );
 		}
 
 		if ( isset( $_POST['mastodon_api_enable_debug'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
@@ -608,6 +642,18 @@ class Mastodon_Admin {
 			$old_version = $override_old_version;
 		} else {
 			update_option( 'ema_plugin_version', ENABLE_MASTODON_APPS_VERSION );
+		}
+
+		if ( version_compare( $old_version, '1.0.0', '<' ) ) {
+			// If the friends plugin is installed, add the friends post type to the list of post types that can be viewed.
+			if ( class_exists( 'Friends\Friends' ) ) {
+				$apps = Mastodon_App::get_all();
+				foreach ( $apps as $app ) {
+					$view_post_types = $app->get_view_post_types();
+					$view_post_types[] = \Friends\Friends::CPT;
+					$app->set_view_post_types( $view_post_types );
+				}
+			}
 		}
 
 		if ( version_compare( $old_version, '0.9.1', '<' ) ) {

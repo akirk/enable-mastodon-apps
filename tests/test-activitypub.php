@@ -27,7 +27,7 @@ class ActivityPub_Test extends Mastodon_API_TestCase {
 				'post_content' => 'Test post',
 				'post_title'   => '',
 				'post_status'  => 'publish',
-				'post_type'    => 'post',
+				'post_type'    => Mastodon_API::POST_CPT,
 				'post_date'    => '2023-01-03 00:00:00',
 			)
 		);
