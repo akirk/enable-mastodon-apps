@@ -18,6 +18,7 @@ class Mastodon_Admin {
 		$this->oauth = $oauth;
 		add_action( 'admin_menu', array( $this, 'admin_menu' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'admin_enqueue_scripts' ) );
+		add_action( 'current_screen', array( $this, 'register_help' ) );
 	}
 
 	public function admin_menu() {
@@ -41,6 +42,72 @@ class Mastodon_Admin {
 		wp_enqueue_style( 'enable-mastodon-apps-admin-styles', plugins_url( 'admin.css', __DIR__ ), array(), '1.0.0' );
 		wp_enqueue_script( 'enable-mastodon-apps-admin-js', plugins_url( 'admin.js', __DIR__ ), array( 'jquery' ), '1.0.0', false );
 	}
+
+	public function register_help( $screen ) {
+		if ( 'settings_page_enable-mastodon-apps' !== $screen->id ) {
+			return;
+		}
+		$ema_post_cpt = get_post_type_object( apply_filters( 'mastodon_api_default_post_type', \Enable_Mastodon_Apps\Mastodon_API::POST_CPT ) );
+		$post_cpt = get_post_type_object( 'post' );
+
+		$screen->add_help_tab(
+			array(
+				'id'      => 'enable-mastodon-apps-help',
+				'title'   => __( 'Settings' ), // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
+				'content' =>
+					'<p><strong>' . esc_html__( 'Make posts through Mastodon apps appear on this WordPress', 'enable-mastodon-apps' ) . '</strong><br>' .
+					'<span>' . esc_html__( 'Setting this depends on your use case:', 'enable-mastodon-apps' ) . '</span>' .
+					'<ul>' .
+					'<li>' . esc_html__( 'If you want to use Mastodon apps to read just the posts on your site (for example in a blog with many authors, and you are interested in what the other authors post), and post to the site directly, check the box.', 'enable-mastodon-apps' ) . '</li>' .
+					'<li>' .
+					wp_kses(
+						sprintf(
+							// translators: Links to the plugins.
+							__( 'If you want to use Mastodon apps to post to Mastodon (when combining with the <a href="%1$s">Friends plugin</a> and <a href="%2$s">ActivityPub plugin</a>) but want to avoid posting it visibly to your site (which for example would be sent to your subscribers), leave it unchecked.', 'enable-mastodon-apps' ),
+							'https://wordpress.org/plugins/friends/" target="_blank',
+							'https://wordpress.org/plugins/activitypub/" target="_blank'
+						),
+						array(
+						'a' => array(
+						'href'   => true,
+						'target' => true,
+						),
+						)
+					) .
+					'</li>' .
+					'<li>' .
+					wp_kses(
+						sprintf(
+							// translators: Links to the plugins.
+							__( 'If you do want to expose such posts also on your site (for example in a <a href="%s">POSSE</a> use case), check the box.', 'enable-mastodon-apps' ),
+							'https://indieweb.org/POSSE" target="_blank'
+						),
+						array(
+						'a' => array(
+						'href'   => true,
+						'target' => true,
+						),
+						)
+					) .
+					'</li>' .
+					'</ul>' .
+					'<span>' .
+					wp_kses(
+						sprintf(
+							// translators: %1$s and %2$s: a post type.
+							__( 'When checked, new posts made through Mastodon apps will have the post type %1$s, otherwise %2$s when unchecked.', 'enable-mastodon-apps' ),
+							'<strong>' . $ema_post_cpt->labels->singular_name . '</strong>',
+							'<strong>' . $post_cpt->labels->singular_name . '</strong>'
+						),
+						array( 'strong' => true )
+					) .
+					'</span>' .
+					'</p>',
+			)
+		);
+	}
+
+
 
 	public function process_admin() {
 		if ( ! current_user_can( 'edit_private_posts' ) ) {
@@ -144,6 +211,12 @@ class Mastodon_Admin {
 		$default_ema_post_type = apply_filters( 'mastodon_api_default_post_type', \Enable_Mastodon_Apps\Mastodon_API::POST_CPT );
 
 		if ( isset( $_POST['mastodon_api_posting_cpt'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+			delete_option( 'mastodon_api_posting_cpt' );
+
+			$supported_post_types = (array) \get_option( 'activitypub_support_post_types', array( 'post' ) );
+			$supported_post_types[] = $default_ema_post_type;
+			\update_option( 'activitypub_support_post_types', $supported_post_types );
+		} else {
 			update_option( 'mastodon_api_posting_cpt', 'post' );
 
 			$supported_post_types = (array) \get_option( 'activitypub_support_post_types', array( 'post' ) );
@@ -151,12 +224,6 @@ class Mastodon_Admin {
 				$supported_post_types = array_diff( $supported_post_types, array( $default_ema_post_type ) );
 				\update_option( 'activitypub_support_post_types', $supported_post_types );
 			}
-		} else {
-			delete_option( 'mastodon_api_posting_cpt' );
-
-			$supported_post_types = (array) \get_option( 'activitypub_support_post_types', array( 'post' ) );
-			$supported_post_types[] = $default_ema_post_type;
-			\update_option( 'activitypub_support_post_types', $supported_post_types );
 		}
 
 		if ( isset( $_POST['mastodon_api_enable_debug'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
