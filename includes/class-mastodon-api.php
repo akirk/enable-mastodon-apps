@@ -73,7 +73,7 @@ class Mastodon_API {
 		add_filter( 'template_include', array( $this, 'log_404s' ) );
 		add_filter( 'rest_json_encode_options', array( $this, 'rest_json_encode_options' ), 10, 2 );
 		add_action( 'default_option_mastodon_api_default_post_formats', array( $this, 'default_option_mastodon_api_default_post_formats' ) );
-		add_filter( 'rest_request_before_callbacks', array( $this, 'rest_request_before_callbacks' ) );
+		add_filter( 'rest_request_before_callbacks', array( $this, 'rest_request_before_callbacks' ), 10, 3 );
 		add_filter( 'rest_authentication_errors', array( $this, 'rest_authentication_errors' ) );
 		add_filter( 'mastodon_api_mapback_user_id', array( $this, 'mapback_user_id' ) );
 		add_filter( 'mastodon_api_in_reply_to_id', array( self::class, 'maybe_get_remapped_reblog_id' ), 15 );
@@ -1827,9 +1827,16 @@ class Mastodon_API {
 	 * Converts param validation errors to error codes expected by Mastodon apps.
 	 *
 	 * @param WP_REST_Response|\WP_HTTP_Response|\WP_Error|mixed $response Result to send to the client.
+	 * @param WP_REST_Server                                     $handler The handler instance.
+	 * @param WP_REST_Request                                    $request Thr request.
+	 *
 	 * @return WP_REST_Response|\WP_HTTP_Response|\WP_Error|mixed
 	 */
-	public function rest_request_before_callbacks( $response ) {
+	public function rest_request_before_callbacks( $response, $handler, $request ) {
+		if ( 0 !== strpos( $request->get_route(), '/' . self::PREFIX ) ) {
+			return $response;
+		}
+
 		if ( is_wp_error( $response ) && 'rest_missing_callback_param' === $response->get_error_code() ) {
 			$response = new \WP_Error( $response->get_error_code(), $response->get_error_message(), array( 'status' => 422 ) );
 		}
