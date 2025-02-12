@@ -9,9 +9,6 @@
 	)
 );
 
-$ema_post_cpt = get_post_type_object( apply_filters( 'mastodon_api_default_post_type', \Enable_Mastodon_Apps\Mastodon_API::POST_CPT ) );
-$post_cpt = get_post_type_object( 'post' );
-
 ?>
 
 <div class="enable-mastodon-apps-settings enable-mastodon-apps-settings-page">
@@ -36,8 +33,8 @@ $post_cpt = get_post_type_object( 'post' );
 					<td>
 						<fieldset>
 							<label for="mastodon_api_posting_cpt">
-								<input name="mastodon_api_posting_cpt" type="checkbox" id="mastodon_api_posting_cpt" value="1" <?php checked( 'post' === get_option( 'mastodon_api_posting_cpt' ) ); ?> />
-								<span><?php esc_html_e( 'Make posts through Mastodon apps appear on this WordPress', 'enable-mastodon-apps' ); ?></span>
+								<input name="mastodon_api_posting_cpt" type="checkbox" id="mastodon_api_posting_cpt" value="1" <?php checked( ! get_option( 'mastodon_api_posting_cpt' ) ); ?> />
+								<span><?php esc_html_e( 'Hide posts through Mastodon apps from appearing on the WordPress frontend', 'enable-mastodon-apps' ); ?></span>
 							</label>
 						</fieldset>
 						<p class="description">
@@ -45,25 +42,30 @@ $post_cpt = get_post_type_object( 'post' );
 								<?php
 								echo wp_kses(
 									sprintf(
-										// translators: %1$s: URL to the Mastodon API settings page Registered Apps tab, %2$s: Registered Apps tab title.
-										__( 'New apps will be automatically configured according to this setting, but you can change it individually for each app on the <a href="%1$s">%2$s</a> page.', 'enable-mastodon-apps' ),
-										esc_url( admin_url( 'admin.php?page=enable-mastodon-apps-settings&tab=registered-apps' ) ),
-										__( 'Registered Apps', 'enable-mastodon-apps' )
+										// translators: %s: Help tab link.
+										__( 'To understand this setting better, please check <a href="" onclick="%s">Help tab</a> for some use cases.', 'enable-mastodon-apps' ),
+										'document.getElementById(\'contextual-help-link\').click(); return false;'
 									),
-									array( 'a' => array( 'href' => array() ) )
+									array(
+										'a' => array(
+											'href'    => true,
+											'onclick' => true,
+										),
+									)
 								);
 								?>
-							</span><br>
+							</span>
+							<br>
 							<span>
 								<?php
 								echo wp_kses(
 									sprintf(
-										// translators: %1$s and %2$s: a post type.
-										__( 'New posts made through Mastodon apps will have the post type %1$s when checked, otherwise %2$s.', 'enable-mastodon-apps' ),
-										'<strong>' . $post_cpt->labels->singular_name . '</strong>',
-										'<strong>' . $ema_post_cpt->labels->singular_name . '</strong>'
+										// translators: %1$s: URL to the Mastodon API settings page Registered Apps tab, %2$s: Registered Apps tab title.
+										__( 'This setting only applies to newly registered apps, but you can change it individually for each app on the <a href="%1$s">%2$s</a> page.', 'enable-mastodon-apps' ),
+										esc_url( admin_url( 'admin.php?page=enable-mastodon-apps-settings&tab=registered-apps' ) ),
+										__( 'Registered Apps', 'enable-mastodon-apps' )
 									),
-									array( 'strong' => true )
+									array( 'a' => array( 'href' => array() ) )
 								);
 								?>
 							</span>
