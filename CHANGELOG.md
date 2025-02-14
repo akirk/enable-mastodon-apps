@@ -1,3 +1,15 @@
+### 1.0.0
+- Post through Mastodon Apps to a new post type by default ([#192])
+- Explain the new hide posts setting better ([#198])
+- Don't enforce parameters on non-EMA REST requests ([#197])
+- Add missing CPT supports ([#196])
+- Don't show reblog mapping posts ([#193])
+- Update PHPCompatibility and restrict PHPUnit ([#195])
+- Add missing svn in Github Actions ([#194])
+- Improve REST Authentication Error Debugging ([#191])
+- Use title instead of post_content when there is no line break ([#185])
+- Fix wp:image block created for attachments ([#184])
+
 ### 0.9.9
 - Improve targeting of CORS headers ([#181])
 - Fix fatal when deleting an app ([#182])
@@ -134,6 +146,16 @@
 - Post replies as comments ([#3])
 - Fix a fatal when saving the default post format
 
+[#198]: https://github.com/akirk/enable-mastodon-apps/pull/198
+[#197]: https://github.com/akirk/enable-mastodon-apps/pull/197
+[#196]: https://github.com/akirk/enable-mastodon-apps/pull/196
+[#192]: https://github.com/akirk/enable-mastodon-apps/pull/192
+[#193]: https://github.com/akirk/enable-mastodon-apps/pull/193
+[#195]: https://github.com/akirk/enable-mastodon-apps/pull/195
+[#194]: https://github.com/akirk/enable-mastodon-apps/pull/194
+[#191]: https://github.com/akirk/enable-mastodon-apps/pull/191
+[#185]: https://github.com/akirk/enable-mastodon-apps/pull/185
+[#184]: https://github.com/akirk/enable-mastodon-apps/pull/184
 [#182]: https://github.com/akirk/enable-mastodon-apps/pull/182
 [#181]: https://github.com/akirk/enable-mastodon-apps/pull/181
 [#176]: https://github.com/akirk/enable-mastodon-apps/pull/176
