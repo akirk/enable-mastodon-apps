@@ -62,7 +62,7 @@
 									sprintf(
 										// translators: %1$s: URL to the Mastodon API settings page Registered Apps tab, %2$s: Registered Apps tab title.
 										__( 'This setting only applies to newly registered apps, but you can change it individually for each app on the <a href="%1$s">%2$s</a> page.', 'enable-mastodon-apps' ),
-										esc_url( admin_url( 'admin.php?page=enable-mastodon-apps-settings&tab=registered-apps' ) ),
+										esc_url( admin_url( 'options-general.php?page=enable-mastodon-apps-settings&tab=registered-apps' ) ),
 										__( 'Registered Apps', 'enable-mastodon-apps' )
 									),
 									array( 'a' => array( 'href' => array() ) )
