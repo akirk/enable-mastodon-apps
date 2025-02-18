@@ -11,7 +11,6 @@ namespace Enable_Mastodon_Apps\Handler;
 
 use Enable_Mastodon_Apps\Entity\Entity;
 use Enable_Mastodon_Apps\Handler\Handler;
-use Enable_Mastodon_Apps\Comment_CPT;
 use Enable_Mastodon_Apps\Mastodon_API;
 use Enable_Mastodon_Apps\Mastodon_App;
 use Enable_Mastodon_Apps\Entity\Status as Status_Entity;

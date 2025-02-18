@@ -86,6 +86,8 @@ Here is a list of endpoints and their implementation status:
 - [ ] `GET /api/v1/markers` (implemented as empty) [Get saved timeline positions](https://docs.joinmastodon.org/methods/markers/#get)
 - [ ] `POST /api/v1/markers` [Save your position in a timeline](https://docs.joinmastodon.org/methods/markers/#create)
 - [x] `GET /api/v2/search` (partial, accounts (local and exact match for remote) and statuses in the local db) [Perform a search](https://docs.joinmastodon.org/methods/search/#v2)
+- [x] `GET /api/v1/favourites` [View your favourites](https://docs.joinmastodon.org/methods/favourites/#get)
+- [x] `GET /api/v1/bookmarks` [View your bookmarks](https://docs.joinmastodon.org/methods/bookmarks/#get)
 
 Unmentioned endpoints are not implemented. Contributions welcome!
 
