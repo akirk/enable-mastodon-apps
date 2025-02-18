@@ -129,15 +129,4 @@ class Search extends Handler {
 		$ret = array_merge( $search, $ret );
 		return $ret;
 	}
-
-	protected function convert_outbox_to_status( $outbox, $user_id ) {
-		$items = array();
-		foreach ( $outbox['orderedItems'] as $item ) {
-			$status = $this->convert_activity_to_status( $item, $user_id );
-			if ( $status ) {
-				$items[] = $status;
-			}
-		}
-		return $items;
-	}
 }

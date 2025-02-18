@@ -450,7 +450,7 @@ class Mastodon_API {
 			'api/v1/bookmarks',
 			array(
 				'methods'             => 'GET',
-				'callback'            => '__return_empty_array',
+				'callback'            => array( $this, 'api_bookmarks' ),
 				'permission_callback' => $this->required_scope( 'read:bookmarks' ),
 				'args'                => array(
 					'limit' => array(
@@ -483,7 +483,7 @@ class Mastodon_API {
 			'api/v1/favourites',
 			array(
 				'methods'             => 'GET',
-				'callback'            => '__return_empty_array',
+				'callback'            => array( $this, 'api_favourites' ),
 				'permission_callback' => $this->required_scope( 'read:favourites' ),
 				'args'                => array(
 					'limit' => array(
@@ -3183,5 +3183,65 @@ class Mastodon_API {
 		$translation_languages = apply_filters( 'mastodon_api_instance_translation_languages', array() );
 
 		return rest_ensure_response( $translation_languages );
+	}
+
+	public function api_favourites( WP_REST_Request $request ) {
+		/**
+		 * Modify the arguments for the favourites API request.
+		 *
+		 * @param array $args The arguments.
+		 * @param int $user_id The user ID.
+		 * @param int $limit The number of statuses to return.
+		 *
+		 * @return array The modified arguments.
+		 */
+		$args = apply_filters( 'mastodon_api_favourites_args', array(), get_current_user_id(), $request->get_param( 'limit' ) );
+
+		if ( empty( $args ) ) {
+			return array();
+		}
+		$args = apply_filters( 'mastodon_api_account_statuses_args', $args, $request );
+
+		/**
+		 * Filter the account statuses.
+		 *
+		 * @param array|null $statuses Current statuses.
+		 * @param array $args Current statuses arguments.
+		 * @param int|null $min_id Optional minimum status ID.
+		 * @param int|null $max_id Optional maximum status ID.
+		 */
+		$statuses = apply_filters( 'mastodon_api_statuses', null, $args, $request->get_param( 'min_id' ), $request->get_param( 'max_id' ) );
+
+		return $this->filter_non_entities( $statuses, Entity\Status::class );
+	}
+
+	public function api_bookmarks( WP_REST_Request $request ) {
+		/**
+		 * Modify the arguments for the bookmarks API request.
+		 *
+		 * @param array $args The arguments.
+		 * @param int $user_id The user ID.
+		 * @param int $limit The number of statuses to return.
+		 *
+		 * @return array The modified arguments.
+		 */
+		$args = apply_filters( 'mastodon_api_bookmarks_args', array(), get_current_user_id(), $request->get_param( 'limit' ) );
+
+		if ( empty( $args ) ) {
+			return array();
+		}
+		$args = apply_filters( 'mastodon_api_account_statuses_args', $args, $request );
+
+		/**
+		 * Filter the account statuses.
+		 *
+		 * @param array|null $statuses Current statuses.
+		 * @param array $args Current statuses arguments.
+		 * @param int|null $min_id Optional minimum status ID.
+		 * @param int|null $max_id Optional maximum status ID.
+		 */
+		$statuses = apply_filters( 'mastodon_api_statuses', null, $args, $request->get_param( 'min_id' ), $request->get_param( 'max_id' ) );
+
+		return $this->filter_non_entities( $statuses, Entity\Status::class );
 	}
 }
