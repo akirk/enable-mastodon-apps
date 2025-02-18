@@ -108,9 +108,19 @@ class Mastodon_App {
 		if ( ! $view_post_types ) {
 			$view_post_types = 'post';
 		}
+
 		if ( ! is_array( $view_post_types ) ) {
 			$view_post_types = array( $view_post_types );
 		}
+
+		if ( ! in_array( Mastodon_API::ANNOUNCE_CPT, $view_post_types, true ) ) {
+			$view_post_types[] = Mastodon_API::ANNOUNCE_CPT;
+		}
+
+		if ( ! in_array( Mastodon_API::POST_CPT, $view_post_types, true ) ) {
+			$view_post_types[] = Mastodon_API::POST_CPT;
+		}
+
 		return $view_post_types;
 	}
 
