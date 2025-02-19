@@ -685,16 +685,23 @@ class Mastodon_Admin {
 			$app->set_view_post_types( array_keys( $view_post_types ) );
 		}
 
-		// TODO: Only make this visible in the respective app.
 		wp_insert_post(
 			array(
 				'post_type'    => Mastodon_API::ANNOUNCE_CPT,
 				'post_title'   => __( 'Only Visible to You', 'enable-mastodon-apps' ),
-				'post_content' => __( 'The settings for this app were changed as follows:', 'enable-mastodon-apps' ) . PHP_EOL .
+				'post_content' =>
+					sprintf(
+						// translators: %s: app name.
+						__( 'The settings for %s were changed as follows:', 'enable-mastodon-apps' ),
+						$app->get_client_name()
+					) . PHP_EOL .
 					'Post Formats: ' . implode( ', ', $post_formats ) . PHP_EOL .
 					'Create Post Type: ' . $create_post_type . PHP_EOL .
 					'Post Types: ' . implode( ', ', array_keys( $view_post_types ) ),
 				'post_status'  => 'publish',
+				'meta_input'   => array(
+					'ema_app_id' => $app->get_client_id(),
+				),
 			)
 		);
 	}

@@ -127,7 +127,18 @@ class Status extends Handler {
 		if ( $status instanceof Status_Entity ) {
 			return $status;
 		}
+
 		$post = get_post( $object_id );
+
+		if ( Mastodon_API::ANNOUNCE_CPT === $post->post_type ) {
+			$meta = get_post_meta( $post->ID, 'ema_app_id', true );
+			if ( $meta ) {
+				$app = Mastodon_App::get_current_app();
+				if ( ! $app || $app->get_client_id() !== $meta ) {
+					return null;
+				}
+			}
+		}
 
 		if ( isset( $data['comment'] ) && $data['comment'] instanceof \WP_Comment ) {
 			$comment = $data['comment'];
@@ -159,7 +170,10 @@ class Status extends Handler {
 			$status->created_at = new \DateTime( $post->post_date_gmt, new \DateTimeZone( 'UTC' ) );
 			$status->visibility = 'public';
 			$status->uri        = get_permalink( $post->ID );
-			$status->content    = $post->post_title . PHP_EOL . $post->post_content;
+			$status->content    = $post->post_content;
+			if ( ! empty( $post->post_title ) && trim( $post->post_title ) ) {
+				$status->content = '<strong>' . esc_html( $post->post_title ) . '</strong>' . PHP_EOL . $status->content;
+			}
 			$status->account    = $account;
 			$media_attachments  = $this->get_block_attachments( $post );
 			foreach ( $media_attachments as $media_id => $html ) {

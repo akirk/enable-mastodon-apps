@@ -2467,7 +2467,7 @@ class Mastodon_API {
 		 */
 		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
 
-		if ( $status->id !== $request->get_param( 'post_id' ) && isset( $status->reblog ) && $status->reblog->id === $request->get_param( 'post_id' ) ) {
+		if ( $status && $status->id !== $request->get_param( 'post_id' ) && isset( $status->reblog ) && $status->reblog->id === $request->get_param( 'post_id' ) ) {
 			$status = $status->reblog;
 		}
 
