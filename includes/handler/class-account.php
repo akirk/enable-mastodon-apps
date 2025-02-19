@@ -30,7 +30,7 @@ class Account extends Handler {
 		add_filter( 'mastodon_api_account', array( $this, 'api_account_ensure_numeric_id' ), 100, 2 );
 	}
 
-	public function api_account_ema( $account, $user_id, ?\WP_REST_Request $request = null, ?\WP_Post $post = null ) {
+	public function api_account_ema( $account, $user_id, ?\WP_REST_Request $request = null, \WP_Post|\WP_Comment|null $post = null ) {
 		if ( is_null( $post ) || ! is_object( $post ) || \Enable_Mastodon_Apps\Mastodon_API::ANNOUNCE_CPT !== $post->post_type ) {
 			return $account;
 		}
