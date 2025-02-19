@@ -81,7 +81,7 @@ class Account extends Handler {
 		$account->note           = wpautop( $note );
 		$account->created_at     = new \DateTime( $user->user_registered );
 		$account->statuses_count = count_user_posts( $user->ID, 'post', true );
-		$account->last_status_at = new \DateTime( $post->post_date_gmt );
+		$account->last_status_at = new \DateTime( $user->user_registered );
 		$account->url            = get_author_posts_url( $user->ID );
 
 		$account->source = array(
