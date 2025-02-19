@@ -12,15 +12,13 @@ use Enable_Mastodon_Apps\Mastodon_App;
 );
 
 $rest_nonce  = wp_create_nonce( 'wp_rest' );
-$_post_types = \get_post_types( array( 'show_ui' => true ), 'objects' );
-if ( ! isset( $_post_types[ \Enable_Mastodon_Apps\Mastodon_Api::POST_CPT ] ) ) {
-	$_post_types = array_merge(
-		array(
-			\Enable_Mastodon_Apps\Mastodon_Api::POST_CPT => get_post_type_object( \Enable_Mastodon_Apps\Mastodon_Api::POST_CPT ),
-		),
-		$_post_types
-	);
-}
+$_post_types = array_merge(
+	array(
+		\Enable_Mastodon_Apps\Mastodon_Api::ANNOUNCE_CPT => get_post_type_object( \Enable_Mastodon_Apps\Mastodon_Api::ANNOUNCE_CPT ),
+		\Enable_Mastodon_Apps\Mastodon_Api::POST_CPT     => get_post_type_object( \Enable_Mastodon_Apps\Mastodon_Api::POST_CPT ),
+	),
+	\get_post_types( array( 'show_ui' => true ), 'objects' ),
+);
 
 $app         = $args['app'];
 $confirm     = esc_html(
@@ -132,9 +130,13 @@ $confirm     = esc_html(
 					<td>
 						<select name="create_post_type">
 						<?php
-						foreach ( $_post_types as $post_type ) : // phpcs:ignore
+						foreach ( $_post_types as $_post_type ) :
+							if ( \Enable_Mastodon_Apps\Mastodon_Api::ANNOUNCE_CPT === $_post_type->name ) {
+								continue;
+							}
+
 							?>
-								<option value="<?php echo esc_attr( $post_type->name ); ?>" <?php selected( $post_type->name, $app->get_create_post_type() ); ?>><?php echo esc_html( $post_type->labels->singular_name ); ?></option>
+								<option value="<?php echo esc_attr( $_post_type->name ); ?>" <?php selected( $_post_type->name, $app->get_create_post_type() ); ?>><?php echo esc_html( $_post_type->labels->singular_name ); ?></option>
 							<?php endforeach; ?>
 						</select>
 						<p class="description">
@@ -174,8 +176,16 @@ $confirm     = esc_html(
 					<th scope="row" class="view-post-type"><?php esc_html_e( 'Show these post types', 'enable-mastodon-apps' ); ?></th>
 					<td>
 						<fieldset>
-						<?php foreach ( $_post_types as $post_type ) : /* phpcs:ignore */ ?>
-							<label><input type="checkbox" name="view_post_types[]" value="<?php echo esc_attr( $post_type->name ); ?>"<?php checked( in_array( $post_type->name, $app->get_view_post_types(), true ) ); ?> /> <?php echo esc_html( $post_type->label ); ?></label>
+						<?php
+						foreach ( $_post_types as $_post_type ) :
+							if ( \Enable_Mastodon_Apps\Mastodon_Api::POST_CPT === $_post_type->name || \Enable_Mastodon_Apps\Mastodon_Api::ANNOUNCE_CPT === $_post_type->name ) {
+								?>
+								<label title="<?php esc_attr_e( 'Always enabled.', 'enable-mastodon-apps' ); ?> <?php echo esc_attr( $_post_type->description ); ?>"><input type="checkbox" name="view_post_types[]" value="<?php echo esc_attr( $_post_type->name ); ?>" checked="checked" disabled="disabled"> <?php echo esc_html( $_post_type->label ); ?></label>
+								<?php
+								continue;
+							}
+							?>
+							<label title="<?php echo esc_attr( $_post_type->description ); ?>"><input type="checkbox" name="view_post_types[]" value="<?php echo esc_attr( $_post_type->name ); ?>"<?php checked( in_array( $_post_type->name, $app->get_view_post_types(), true ) ); ?> /> <?php echo esc_html( $_post_type->label ); ?></label>
 						<?php endforeach; ?>
 						</fieldset>
 						<p class="description">

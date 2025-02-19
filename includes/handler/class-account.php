@@ -26,7 +26,38 @@ class Account extends Handler {
 
 	public function register_hooks() {
 		add_filter( 'mastodon_api_account', array( $this, 'api_account' ), 10, 2 );
+		add_filter( 'mastodon_api_account', array( $this, 'api_account_ema' ), 10, 4 );
 		add_filter( 'mastodon_api_account', array( $this, 'api_account_ensure_numeric_id' ), 100, 2 );
+	}
+
+	public function api_account_ema( $account, $user_id, $request = null, $post = null ) {
+		if ( is_null( $post ) || ! is_object( $post ) || \Enable_Mastodon_Apps\Mastodon_API::ANNOUNCE_CPT !== $post->post_type ) {
+			return $account;
+		}
+		$user_id = \Enable_Mastodon_Apps\Mastodon_API::remap_user_id( -30 );
+		$ema_php = ENABLE_MASTODON_APPS_PLUGIN_DIR . '/enable-mastodon-apps.php';
+		$account                 = new Account_Entity();
+		$account->id             = strval( $user_id );
+		$account->username       = 'Enable Mastodon Apps';
+		$account->display_name   = 'Enable Mastodon Apps';
+		$account->avatar         = plugin_dir_url( $ema_php ) . 'logo-256x256.png';
+		$account->avatar_static  = plugin_dir_url( $ema_php ) . 'logo-256x256.png';
+		$account->acct           = 'ema@kirk.at';
+		$account->note           = 'Enable Mastodon Apps plugin';
+		$account->created_at     = new \DateTime( '@' . filemtime( $ema_php ) );
+		$account->statuses_count = 0;
+		$account->last_status_at = new \DateTime( $post->post_date_gmt );
+		$account->url            = 'https://wordpress.org/plugins/enable-mastodon-apps/';
+
+		$account->source = array(
+			'privacy'   => 'public',
+			'sensitive' => false,
+			'language'  => 'en',
+			'note'      => 'Enable Mastodon Apps plugin',
+			'fields'    => array(),
+		);
+
+		return $account;
 	}
 
 	public function api_account( $user_data, $user_id ) {

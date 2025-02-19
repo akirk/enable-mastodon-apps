@@ -40,6 +40,7 @@ class Mastodon_API {
 	const REMAP_TAXONOMY = 'mastodon-api-remap';
 	const CPT            = 'enable-mastodon-apps';
 	const POST_CPT       = 'ema-post';
+	const ANNOUNCE_CPT   = 'ema-announce';
 
 	/**
 	 * Constructor
@@ -182,7 +183,6 @@ class Mastodon_API {
 			'show_in_rest' => false,
 			'rewrite'      => false,
 		);
-
 		register_post_type( self::CPT, $args );
 
 		$args = array(
@@ -198,8 +198,22 @@ class Mastodon_API {
 			'menu_icon'    => 'dashicons-megaphone',
 			'supports'     => array( 'post-formats', 'comments', 'revisions', 'author' ),
 		);
-
 		register_post_type( self::POST_CPT, $args );
+
+		$args = array(
+			'labels'       => array(
+				'name'          => __( 'EMA Announcements', 'enable-mastodon-apps' ),
+				'singular_name' => __( 'EMA Announcement', 'enable-mastodon-apps' ),
+				'menu_name'     => __( 'EMA Announcements', 'enable-mastodon-apps' ),
+			),
+			'description'  => __( 'Announcement by the Enable Mastodon Apps plugin.', 'enable-mastodon-apps' ),
+			'public'       => false,
+			'show_in_rest' => false,
+			'rewrite'      => false,
+			'menu_icon'    => 'dashicons-megaphone',
+			'supports'     => array( 'post-formats' ),
+		);
+		register_post_type( self::ANNOUNCE_CPT, $args );
 	}
 
 	public function activitypub_support_post_types( $post_types ) {
@@ -2453,7 +2467,7 @@ class Mastodon_API {
 		 */
 		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
 
-		if ( $status->id !== $request->get_param( 'post_id' ) && isset( $status->reblog ) && $status->reblog->id === $request->get_param( 'post_id' ) ) {
+		if ( $status && $status->id !== $request->get_param( 'post_id' ) && isset( $status->reblog ) && $status->reblog->id === $request->get_param( 'post_id' ) ) {
 			$status = $status->reblog;
 		}
 

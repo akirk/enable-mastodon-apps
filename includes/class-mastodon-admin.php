@@ -670,7 +670,10 @@ class Mastodon_Admin {
 		}
 
 		if ( isset( $_POST['view_post_types'] ) && is_array( $_POST['view_post_types'] ) ) {
-			$view_post_types = array();
+			$view_post_types = array(
+				Mastodon_API::ANNOUNCE_CPT => true,
+				Mastodon_API::POST_CPT     => true,
+			);
 			foreach ( wp_unslash( $_POST['view_post_types'] ) as $post_type ) {
 				if ( isset( $post_types[ $post_type ] ) ) {
 					$view_post_types[ $post_type ] = true;
@@ -681,6 +684,26 @@ class Mastodon_Admin {
 			}
 			$app->set_view_post_types( array_keys( $view_post_types ) );
 		}
+
+		wp_insert_post(
+			array(
+				'post_type'    => Mastodon_API::ANNOUNCE_CPT,
+				'post_title'   => __( 'Only Visible to You', 'enable-mastodon-apps' ),
+				'post_content' =>
+					sprintf(
+						// translators: %s: app name.
+						__( 'The settings for %s were changed as follows:', 'enable-mastodon-apps' ),
+						$app->get_client_name()
+					) . PHP_EOL .
+					'Post Formats: ' . implode( ', ', $post_formats ) . PHP_EOL .
+					'Create Post Type: ' . $create_post_type . PHP_EOL .
+					'Post Types: ' . implode( ', ', array_keys( $view_post_types ) ),
+				'post_status'  => 'publish',
+				'meta_input'   => array(
+					'ema_app_id' => $app->get_client_id(),
+				),
+			)
+		);
 	}
 
 	public function admin_app_page( Mastodon_App $app ) {
