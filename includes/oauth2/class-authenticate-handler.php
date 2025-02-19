@@ -106,6 +106,7 @@ class Authenticate_Handler {
 	}
 
 	private function render_consent_screen( $data ) {
+		switch_to_user_locale( $data['user']->ID );
 		$scope_explanations = array(
 			'read'   => __( 'Read information from your account, for example read your statuses.', 'enable-mastodon-apps' ),
 			'write'  => __( 'Write information to your account, for example post a status on your behalf, or edit your profile.', 'enable-mastodon-apps' ),
