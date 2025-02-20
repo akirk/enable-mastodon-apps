@@ -55,15 +55,15 @@ class Mastodon_Admin {
 				'id'      => 'enable-mastodon-apps-help',
 				'title'   => __( 'Settings' ), // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
 				'content' =>
-					'<p><strong>' . esc_html__( 'Make posts through Mastodon apps appear on this WordPress', 'enable-mastodon-apps' ) . '</strong><br>' .
+					'<p><strong>' . esc_html__( 'Hide posts through Mastodon apps from appearing on the WordPress frontend', 'enable-mastodon-apps' ) . '</strong><br>' .
 					'<span>' . esc_html__( 'Setting this depends on your use case:', 'enable-mastodon-apps' ) . '</span>' .
 					'<ul>' .
-					'<li>' . esc_html__( 'If you want to use Mastodon apps to read just the posts on your site (for example in a blog with many authors, and you are interested in what the other authors post), and post to the site directly, check the box.', 'enable-mastodon-apps' ) . '</li>' .
+					'<li>' . esc_html__( 'If you want to use Mastodon apps to read just the posts on your site (for example in a blog with many authors, and you are interested in what the other authors post), and post to the site directly, uncheck the box.', 'enable-mastodon-apps' ) . '</li>' .
 					'<li>' .
 					wp_kses(
 						sprintf(
 							// translators: Links to the plugins.
-							__( 'If you want to use Mastodon apps to post to Mastodon (when combining with the <a href="%1$s">Friends plugin</a> and <a href="%2$s">ActivityPub plugin</a>) but want to avoid posting it visibly to your site (which for example would be sent to your subscribers), leave it unchecked.', 'enable-mastodon-apps' ),
+							__( 'If you want to use Mastodon apps to post to Mastodon (when combining with the <a href="%1$s">Friends plugin</a> and <a href="%2$s">ActivityPub plugin</a>) but want to avoid posting it visibly to your site (which for example would be sent to your subscribers), leave it checked.', 'enable-mastodon-apps' ),
 							'https://wordpress.org/plugins/friends/" target="_blank',
 							'https://wordpress.org/plugins/activitypub/" target="_blank'
 						),
@@ -79,7 +79,7 @@ class Mastodon_Admin {
 					wp_kses(
 						sprintf(
 							// translators: Links to the plugins.
-							__( 'If you do want to expose such posts also on your site (for example in a <a href="%s">POSSE</a> use case), check the box.', 'enable-mastodon-apps' ),
+							__( 'If you do want to expose such posts also on your site (for example in a <a href="%s">POSSE</a> use case), uncheck the box.', 'enable-mastodon-apps' ),
 							'https://indieweb.org/POSSE" target="_blank'
 						),
 						array(
