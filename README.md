@@ -6,7 +6,7 @@
 - Tested up to: 6.6
 - Requires PHP: 7.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 1.0.0
+- Stable tag: 1.1.0
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -100,6 +100,12 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 
 ## Changelog
 
+### 1.1.0
+- Add an Announcement CPT so that we can inform about the changed app settings ([#204])
+- Add support for viewing bookmarks and favourites ([#203])
+- Fix a wrong settings link, thanks @jeherve! ([#202])
+- Fix problems with user language when authorizing ([#201])
+
 ### 1.0.0
 - Post through Mastodon Apps to a new post type by default ([#192])
 - Explain the new hide posts setting better ([#198])
@@ -164,6 +170,20 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 - Improves to Attachments ([#132], [#136])
 - Fix OAuth rewrite path ([#130])
 
+[#204]: https://github.com/akirk/enable-mastodon-apps/pull/204
+[#203]: https://github.com/akirk/enable-mastodon-apps/pull/203
+[#202]: https://github.com/akirk/enable-mastodon-apps/pull/202
+[#201]: https://github.com/akirk/enable-mastodon-apps/pull/201
+[#198]: https://github.com/akirk/enable-mastodon-apps/pull/198
+[#197]: https://github.com/akirk/enable-mastodon-apps/pull/197
+[#196]: https://github.com/akirk/enable-mastodon-apps/pull/196
+[#192]: https://github.com/akirk/enable-mastodon-apps/pull/192
+[#193]: https://github.com/akirk/enable-mastodon-apps/pull/193
+[#195]: https://github.com/akirk/enable-mastodon-apps/pull/195
+[#194]: https://github.com/akirk/enable-mastodon-apps/pull/194
+[#191]: https://github.com/akirk/enable-mastodon-apps/pull/191
+[#185]: https://github.com/akirk/enable-mastodon-apps/pull/185
+[#184]: https://github.com/akirk/enable-mastodon-apps/pull/184
 [#182]: https://github.com/akirk/enable-mastodon-apps/pull/182
 [#181]: https://github.com/akirk/enable-mastodon-apps/pull/181
 [#176]: https://github.com/akirk/enable-mastodon-apps/pull/176

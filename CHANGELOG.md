@@ -1,3 +1,9 @@
+### 1.1.0
+- Add an Announcement CPT so that we can inform about the changed app settings ([#204])
+- Add support for viewing bookmarks and favourites ([#203])
+- Fix a wrong settings link, thanks @jeherve! ([#202])
+- Fix problems with user language when authorizing ([#201])
+
 ### 1.0.0
 - Post through Mastodon Apps to a new post type by default ([#192])
 - Explain the new hide posts setting better ([#198])
@@ -146,6 +152,10 @@
 - Post replies as comments ([#3])
 - Fix a fatal when saving the default post format
 
+[#204]: https://github.com/akirk/enable-mastodon-apps/pull/204
+[#203]: https://github.com/akirk/enable-mastodon-apps/pull/203
+[#202]: https://github.com/akirk/enable-mastodon-apps/pull/202
+[#201]: https://github.com/akirk/enable-mastodon-apps/pull/201
 [#198]: https://github.com/akirk/enable-mastodon-apps/pull/198
 [#197]: https://github.com/akirk/enable-mastodon-apps/pull/197
 [#196]: https://github.com/akirk/enable-mastodon-apps/pull/196
