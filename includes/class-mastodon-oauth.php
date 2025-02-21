@@ -11,7 +11,7 @@ namespace Enable_Mastodon_Apps;
 
 use OAuth2\Server;
 use OAuth2\Request;
-use OAuth2\Response;
+use Enable_Mastodon_Apps\OAuth2\Response;
 
 /**
  * This is the class that implements the Mastodon Oauth endpoints.
