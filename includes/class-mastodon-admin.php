@@ -808,11 +808,6 @@ class Mastodon_Admin {
 			if ( ! $old_version ) {
 				$title = __( 'Welcome to Enable Mastodon Apps', 'enable-mastodon-apps' );
 				$content = __( 'This message comes from the Enable Mastodon Apps plugin that you have installed on your WordPress.', 'enable-mastodon-apps' );
-				$content .= ' ';
-				$content .= __( 'The plugin works by providing the same API that Mastodon servers offer, which brings two worlds together that were not really designed for this interoperability. Thus, while it typically functions well, you might still experience some unexpected behavior.', 'enable-mastodon-apps' );
-				$content .= ' ';
-				// translators: %s is a clickable URL.
-				$content .= make_clickable( sprintf( __( 'Please visit %s to get help in such a case.', 'enable-mastodon-apps' ), 'https://github.com/akirk/enable-mastodon-apps/issues' ) );
 				$content .= PHP_EOL . '<br>';
 				$content .= __( 'The plugin allows you to see all posts on your site inside this app.', 'enable-mastodon-apps' );
 				if ( ! defined( 'ACTIVITYPUB_PLUGIN_VERSION' ) ) {
@@ -833,6 +828,11 @@ class Mastodon_Admin {
 				}
 				$content .= ' ';
 				$content .= __( 'This can be changed individually per app (see the link below).', 'enable-mastodon-apps' );
+				$content .= PHP_EOL . '<br>';
+				$content .= __( 'How it works: By providing the same API that Mastodon offer, it brings two worlds together that were not really designed for this interoperability. Thus, while it typically functions well, you might still experience some unexpected behavior.', 'enable-mastodon-apps' );
+				$content .= ' ';
+				// translators: %s is a clickable URL.
+				$content .= make_clickable( sprintf( __( 'Please visit %s to get help in such a case.', 'enable-mastodon-apps' ), 'https://github.com/akirk/enable-mastodon-apps/issues' ) );
 				$content .= PHP_EOL . '<br>';
 				// translators: %s is a URL.
 				$content .= sprintf( __( 'If you enjoy using this plugin, please let us know at the <a href=%s>EMA WordPress.org plugin page</a>.', 'enable-mastodon-apps' ), '"https://wordpress.org/plugins/enable-mastodon-apps/"' );
