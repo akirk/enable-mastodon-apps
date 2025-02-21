@@ -805,7 +805,7 @@ class Mastodon_Admin {
 				$title = __( 'Welcome to Enable Mastodon Apps', 'enable-mastodon-apps' );
 				$content = __( 'This message comes from the Enable Mastodon Apps plugin that you have installed on your WordPress.', 'enable-mastodon-apps' );
 				$content .= ' ';
-				$content .= __( 'This works by providing the same API of Mastodon servers which generally already works well, but you might still run into unexpected behavior.', 'enable-mastodon-apps' );
+				$content .= __( "The plugin provides the same API that Mastodon servers offer. Since you're reading this inside a Mastodon app it means that this worked! While it typically functions well, you might still experience some unexpected behavior.", 'enable-mastodon-apps' );
 				$content .= ' ';
 				// translators: %s is a clickable URL.
 				$content .= make_clickable( sprintf( __( 'Please visit %s to get help in such a case.', 'enable-mastodon-apps' ), 'https://github.com/akirk/enable-mastodon-apps/issues' ) );
@@ -817,6 +817,7 @@ class Mastodon_Admin {
 					$content .= __( 'You can see all posts on your site, and a new status will be posted to your site.', 'enable-mastodon-apps' );
 					$content .= ' ' . __( "Be aware that this means that it will also be shown in your site's feed.", 'enable-mastodon-apps' );
 				} else {
+					$default_ema_post_type = apply_filters( 'mastodon_api_default_post_type', \Enable_Mastodon_Apps\Mastodon_API::POST_CPT );
 					$supported_post_types = (array) \get_option( 'activitypub_support_post_types', array( 'post' ) );
 					if ( ! in_array( $default_ema_post_type, $supported_post_types, true ) ) {
 						$supported_post_types[] = $default_ema_post_type;

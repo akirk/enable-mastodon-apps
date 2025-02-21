@@ -132,11 +132,9 @@ class Status extends Handler {
 
 		if ( Mastodon_API::ANNOUNCE_CPT === $post->post_type ) {
 			$meta = get_post_meta( $post->ID, 'ema_app_id', true );
-			if ( $meta ) {
-				$app = Mastodon_App::get_current_app();
-				if ( ! $app || $app->get_client_id() !== $meta ) {
-					return null;
-				}
+			$app = Mastodon_App::get_current_app();
+			if ( $meta && ( ! $app || $app->get_client_id() !== $meta ) ) {
+				return null;
 			}
 
 			// translators: %s: settings page URL.
