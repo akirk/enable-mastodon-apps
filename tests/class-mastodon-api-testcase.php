@@ -121,14 +121,6 @@ class Mastodon_API_TestCase extends \WP_UnitTestCase {
 
 		set_post_format( $this->friend_post, 'status' );
 
-		add_filter(
-			'default_option_mastodon_api_default_post_formats',
-			function ( $post_formats ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
-				return array( 'status' );
-			},
-			20
-		);
-
 		$this->app = Mastodon_App::save( 'Test App', array( 'https://test' ), 'read write follow push', 'https://mastodon.local' );
 		$oauth = new Mastodon_OAuth();
 		$this->token = wp_generate_password( 128, false );

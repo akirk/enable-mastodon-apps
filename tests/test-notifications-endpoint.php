@@ -20,12 +20,6 @@ class NotificationsEndpoint_Test extends Mastodon_API_TestCase {
 				'role' => 'read',
 			)
 		);
-		add_action(
-			'default_option_mastodon_api_default_post_formats',
-			function () {
-				return array( 'standard' );
-			}
-		);
 	}
 	public function test_register_routes() {
 		global $wp_rest_server;
