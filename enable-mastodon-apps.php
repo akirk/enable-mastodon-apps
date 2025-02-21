@@ -69,6 +69,6 @@ add_action(
 	}
 );
 
-if ( is_admin() && version_compare( get_option( 'ema_plugin_version', ENABLE_MASTODON_APPS_VERSION ), '<' ) ) {
+if ( is_admin() && version_compare( get_option( 'ema_plugin_version' ), ENABLE_MASTODON_APPS_VERSION, '<' ) ) {
 	add_action( 'admin_init', array( __NAMESPACE__ . '\Mastodon_Admin', 'upgrade_plugin' ) );
 }

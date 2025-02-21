@@ -734,6 +734,40 @@ class Mastodon_Admin {
 			update_option( 'ema_plugin_version', ENABLE_MASTODON_APPS_VERSION );
 		}
 
+		if ( ! get_option( 'mastodon_api_disable_ema_announcements' ) ) {
+			$readme = file_get_contents( ENABLE_MASTODON_APPS_PLUGIN_DIR . 'README.md' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+			$changelog = substr( $readme, strpos( $readme, '## Changelog' ) );
+			$first_section = strpos( $changelog, '###' );
+			$changelog = substr( $changelog, $first_section, strpos( $changelog, '###', $first_section + 1 ) - $first_section );
+
+			$changelog = preg_replace( '/\[#(\d+)\]/', '<a href="https://github.com/akirk/enable-mastodon-apps/pull/\1">#\1</a>', $changelog );
+			list( $headline, $changes ) = explode( PHP_EOL, $changelog, 2 );
+
+			// translators: %s: version number.
+			$title = sprintf( __( "What's new in EMA %s?", 'enable-mastodon-apps' ), trim( $headline, ' #' ) );
+
+			$posts = get_posts(
+				array(
+					'post_type'      => Mastodon_API::ANNOUNCE_CPT,
+					'posts_per_page' => 1,
+					'post_status'    => 'publish',
+					'title'          => $title,
+				)
+			);
+			if ( ! $posts ) {
+				$changes = wp_kses( $changes, array( 'a' => array( 'href' => true ) ) );
+
+				wp_insert_post(
+					array(
+						'post_type'    => Mastodon_API::ANNOUNCE_CPT,
+						'post_title'   => $title,
+						'post_status'  => 'publish',
+						'post_content' => $changes,
+					)
+				);
+			}
+		}
+
 		if ( version_compare( $old_version, '1.0.0', '<' ) ) {
 			// If the friends plugin is installed, add the friends post type to the list of post types that can be viewed.
 			if ( class_exists( 'Friends\Friends' ) ) {
