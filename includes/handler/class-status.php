@@ -132,16 +132,20 @@ class Status extends Handler {
 
 		if ( Mastodon_API::ANNOUNCE_CPT === $post->post_type ) {
 			$meta = get_post_meta( $post->ID, 'ema_app_id', true );
-			if ( $meta ) {
-				$app = Mastodon_App::get_current_app();
-				if ( ! $app || $app->get_client_id() !== $meta ) {
-					return null;
-				}
+			$app = Mastodon_App::get_current_app();
+			if ( $meta && ( ! $app || $app->get_client_id() !== $meta ) ) {
+				return null;
 			}
 
 			// translators: %s: settings page URL.
-			$post->post_content = trim( $post->post_content ) . '<br>' . PHP_EOL . '<br>' . PHP_EOL . sprintf( __( 'This message has been added by the EMA plugin. You can disable these messages <a href=%s>in the settings</a>.', 'enable-mastodon-apps' ), '"' . esc_url( admin_url( 'options-general.php?page=enable-mastodon-apps&tab=settings' ) ) . '"' );
-
+			$post->post_content = trim( $post->post_content ) .
+				'<br>' . PHP_EOL . '<br>' . PHP_EOL .
+				// translators: %s: settings page URL.
+				sprintf( __( 'This message has been added by the EMA plugin. You can disable these messages <a href=%s>in the settings</a>.', 'enable-mastodon-apps' ), '"' . esc_url( admin_url( 'options-general.php?page=enable-mastodon-apps&tab=settings' ) ) . '"' );
+			if ( $app ) {
+				// translators: %s: settings page URL.
+				$post->post_content .= ' ' . sprintf( __( 'Change the <a href=%s>settings for this app here</a>.', 'enable-mastodon-apps' ), '"' . esc_url( admin_url( 'options-general.php?page=enable-mastodon-apps&app=' . $app->get_client_id() ) ) . '"' );
+			}
 		}
 
 		if ( isset( $data['comment'] ) && $data['comment'] instanceof \WP_Comment ) {

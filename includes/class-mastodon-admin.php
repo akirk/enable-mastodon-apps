@@ -19,6 +19,7 @@ class Mastodon_Admin {
 		add_action( 'admin_menu', array( $this, 'admin_menu' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'admin_enqueue_scripts' ) );
 		add_action( 'current_screen', array( $this, 'register_help' ) );
+		add_filter( 'plugin_action_links_' . ENABLE_MASTODON_APPS_PLUGIN_BASENAME, array( $this, 'plugin_action_links' ) );
 	}
 
 	public function admin_menu() {
@@ -107,7 +108,10 @@ class Mastodon_Admin {
 		);
 	}
 
-
+	public function plugin_action_links( $links ) {
+		$links[] = '<a href="' . esc_url( admin_url( 'options-general.php?page=enable-mastodon-apps' ) ) . '">' . esc_html__( 'Settings', 'enable-mastodon-apps' ) . '</a>';
+		return $links;
+	}
 
 	public function process_admin() {
 		if ( ! current_user_can( 'edit_private_posts' ) ) {
@@ -213,16 +217,22 @@ class Mastodon_Admin {
 		if ( isset( $_POST['mastodon_api_posting_cpt'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
 			delete_option( 'mastodon_api_posting_cpt' );
 
-			$supported_post_types = (array) \get_option( 'activitypub_support_post_types', array( 'post' ) );
-			$supported_post_types[] = $default_ema_post_type;
-			\update_option( 'activitypub_support_post_types', $supported_post_types );
+			if ( defined( 'ACTIVITYPUB_PLUGIN_VERSION' ) ) {
+				$supported_post_types = (array) \get_option( 'activitypub_support_post_types', array( 'post' ) );
+				if ( ! in_array( $default_ema_post_type, $supported_post_types, true ) ) {
+					$supported_post_types[] = $default_ema_post_type;
+					\update_option( 'activitypub_support_post_types', $supported_post_types );
+				}
+			}
 		} else {
 			update_option( 'mastodon_api_posting_cpt', 'post', false );
 
-			$supported_post_types = (array) \get_option( 'activitypub_support_post_types', array( 'post' ) );
-			if ( in_array( $default_ema_post_type, $supported_post_types, true ) ) {
-				$supported_post_types = array_diff( $supported_post_types, array( $default_ema_post_type ) );
-				\update_option( 'activitypub_support_post_types', $supported_post_types );
+			if ( defined( 'ACTIVITYPUB_PLUGIN_VERSION' ) ) {
+				$supported_post_types = (array) \get_option( 'activitypub_support_post_types', array( 'post' ) );
+				if ( in_array( $default_ema_post_type, $supported_post_types, true ) ) {
+					$supported_post_types = array_diff( $supported_post_types, array( $default_ema_post_type ) );
+					\update_option( 'activitypub_support_post_types', $supported_post_types );
+				}
 			}
 		}
 
@@ -795,36 +805,79 @@ class Mastodon_Admin {
 		}
 
 		if ( ! get_option( 'mastodon_api_disable_ema_announcements' ) ) {
-			$readme = file_get_contents( ENABLE_MASTODON_APPS_PLUGIN_DIR . 'README.md' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-			$changelog = substr( $readme, strpos( $readme, '## Changelog' ) );
-			$first_section = strpos( $changelog, '###' );
-			$changelog = substr( $changelog, $first_section, strpos( $changelog, '###', $first_section + 1 ) - $first_section );
-
-			$changelog = preg_replace( '/\[#(\d+)\]/', '<a href="https://github.com/akirk/enable-mastodon-apps/pull/\1">#\1</a>', $changelog );
-			list( $headline, $changes ) = explode( PHP_EOL, $changelog, 2 );
-
-			// translators: %s: version number.
-			$title = sprintf( __( "What's new in EMA %s?", 'enable-mastodon-apps' ), trim( $headline, ' #' ) );
-
-			$posts = get_posts(
-				array(
-					'post_type'      => Mastodon_API::ANNOUNCE_CPT,
-					'posts_per_page' => 1,
-					'post_status'    => 'publish',
-					'title'          => $title,
-				)
-			);
-			if ( ! $posts ) {
-				$changes = wp_kses( $changes, array( 'a' => array( 'href' => true ) ) );
+			if ( ! $old_version ) {
+				$title = __( 'Welcome to Enable Mastodon Apps!', 'enable-mastodon-apps' );
+				$content = __( 'This is a message from the Enable Mastodon Apps plugin that you have installed on your WordPress.', 'enable-mastodon-apps' );
+				$content .= PHP_EOL . '<br>';
+				$content .= __( 'The plugin allows you to see all posts on your site inside this app.', 'enable-mastodon-apps' );
+				if ( ! defined( 'ACTIVITYPUB_PLUGIN_VERSION' ) ) {
+					// When standalone, we want to post to your WordPress.
+					update_option( 'mastodon_api_posting_cpt', 'post', false );
+					$content .= __( 'If you submit a status, it will be posted to your site.', 'enable-mastodon-apps' );
+					$content .= ' ' . __( "Be aware that this means that it will also be shown in your site's feed.", 'enable-mastodon-apps' );
+				} else {
+					$default_ema_post_type = apply_filters( 'mastodon_api_default_post_type', \Enable_Mastodon_Apps\Mastodon_API::POST_CPT );
+					$supported_post_types = (array) \get_option( 'activitypub_support_post_types', array( 'post' ) );
+					if ( ! in_array( $default_ema_post_type, $supported_post_types, true ) ) {
+						$supported_post_types[] = $default_ema_post_type;
+						\update_option( 'activitypub_support_post_types', $supported_post_types );
+					}
+					$content .= __( 'If you submit a status, it will be posted so that it is hidden from your site (by using a custom post type).', 'enable-mastodon-apps' );
+					$content .= ' ';
+					$content .= __( 'By means of the ActivityPub plugin that you also have installed, it will still be federated to your followers.', 'enable-mastodon-apps' );
+				}
+				$content .= ' ';
+				$content .= __( 'This can be changed individually per app (see the link below).', 'enable-mastodon-apps' );
+				$content .= PHP_EOL . '<br>';
+				$content .= __( 'How it works: By providing the same API that Mastodon offers, it brings two worlds together that were not really designed for this interoperability. Thus, while it typically functions well, you might still experience some unexpected behavior.', 'enable-mastodon-apps' );
+				$content .= ' ';
+				// translators: %s is a clickable URL.
+				$content .= make_clickable( sprintf( __( 'Please visit %s to get help in such a case.', 'enable-mastodon-apps' ), 'https://github.com/akirk/enable-mastodon-apps/issues' ) );
+				$content .= PHP_EOL . '<br>';
+				// translators: %s is a URL.
+				$content .= sprintf( __( 'If you enjoy using this plugin, please let us know at the <a href=%s>EMA WordPress.org plugin page</a>.', 'enable-mastodon-apps' ), '"https://wordpress.org/plugins/enable-mastodon-apps/"' );
 
 				wp_insert_post(
 					array(
 						'post_type'    => Mastodon_API::ANNOUNCE_CPT,
 						'post_title'   => $title,
 						'post_status'  => 'publish',
-						'post_content' => $changes,
+						'post_content' => $content,
+
 					)
 				);
+			} else {
+				$readme = file_get_contents( ENABLE_MASTODON_APPS_PLUGIN_DIR . 'README.md' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+				$changelog = substr( $readme, strpos( $readme, '## Changelog' ) );
+				$first_section = strpos( $changelog, '###' );
+				$changelog = substr( $changelog, $first_section, strpos( $changelog, '###', $first_section + 1 ) - $first_section );
+
+				$changelog = preg_replace( '/\[#(\d+)\]/', '<a href="https://github.com/akirk/enable-mastodon-apps/pull/\1">#\1</a>', $changelog );
+				list( $headline, $changes ) = explode( PHP_EOL, $changelog, 2 );
+
+				// translators: %s: version number.
+				$title = sprintf( __( "What's new in EMA %s?", 'enable-mastodon-apps' ), trim( $headline, ' #' ) );
+
+				$posts = get_posts(
+					array(
+						'post_type'      => Mastodon_API::ANNOUNCE_CPT,
+						'posts_per_page' => 1,
+						'post_status'    => 'publish',
+						'title'          => $title,
+					)
+				);
+				if ( ! $posts ) {
+					$changes = wp_kses( $changes, array( 'a' => array( 'href' => true ) ) );
+
+					wp_insert_post(
+						array(
+							'post_type'    => Mastodon_API::ANNOUNCE_CPT,
+							'post_title'   => $title,
+							'post_status'  => 'publish',
+							'post_content' => $changes,
+						)
+					);
+				}
 			}
 		}
 
