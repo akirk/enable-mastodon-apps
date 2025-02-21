@@ -139,9 +139,8 @@ class Status extends Handler {
 				}
 			}
 
-			$post->post_content .= nl2br( PHP_EOL );
 			// translators: %s: settings page URL.
-			$post->post_content .= sprintf( __( 'This message has been added by the EMA plugin. You can disable these messages <a href=%s>in the settings</a>.', 'enable-mastodon-apps' ), '"' . esc_url( admin_url( 'options-general.php?page=enable-mastodon-apps&tab=settings' ) ) . '"' );
+			$post->post_content = trim( $post->post_content ) . '<br>' . PHP_EOL . '<br>' . PHP_EOL . sprintf( __( 'This message has been added by the EMA plugin. You can disable these messages <a href=%s>in the settings</a>.', 'enable-mastodon-apps' ), '"' . esc_url( admin_url( 'options-general.php?page=enable-mastodon-apps&tab=settings' ) ) . '"' );
 
 		}
 

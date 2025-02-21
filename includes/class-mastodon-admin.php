@@ -217,13 +217,25 @@ class Mastodon_Admin {
 			$supported_post_types[] = $default_ema_post_type;
 			\update_option( 'activitypub_support_post_types', $supported_post_types );
 		} else {
-			update_option( 'mastodon_api_posting_cpt', 'post' );
+			update_option( 'mastodon_api_posting_cpt', 'post', false );
 
 			$supported_post_types = (array) \get_option( 'activitypub_support_post_types', array( 'post' ) );
 			if ( in_array( $default_ema_post_type, $supported_post_types, true ) ) {
 				$supported_post_types = array_diff( $supported_post_types, array( $default_ema_post_type ) );
 				\update_option( 'activitypub_support_post_types', $supported_post_types );
 			}
+		}
+
+		if ( isset( $_POST['mastodon_api_disable_ema_announcements'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+			delete_option( 'mastodon_api_disable_ema_announcements' );
+		} else {
+			update_option( 'mastodon_api_disable_ema_announcements', true, false );
+		}
+
+		if ( isset( $_POST['mastodon_api_disable_ema_app_settings_changes'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+			delete_option( 'mastodon_api_disable_ema_app_settings_changes' );
+		} else {
+			update_option( 'mastodon_api_disable_ema_app_settings_changes', true, false );
 		}
 
 		if ( isset( $_POST['mastodon_api_enable_debug'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
@@ -685,25 +697,73 @@ class Mastodon_Admin {
 			$app->set_view_post_types( array_keys( $view_post_types ) );
 		}
 
-		wp_insert_post(
-			array(
-				'post_type'    => Mastodon_API::ANNOUNCE_CPT,
-				'post_title'   => __( 'Only Visible to You', 'enable-mastodon-apps' ),
-				'post_content' =>
-					sprintf(
-						// translators: %s: app name.
-						__( 'The settings for %s were changed as follows:', 'enable-mastodon-apps' ),
-						$app->get_client_name()
-					) . PHP_EOL .
-					'Post Formats: ' . implode( ', ', $post_formats ) . PHP_EOL .
-					'Create Post Type: ' . $create_post_type . PHP_EOL .
-					'Post Types: ' . implode( ', ', array_keys( $view_post_types ) ),
-				'post_status'  => 'publish',
-				'meta_input'   => array(
-					'ema_app_id' => $app->get_client_id(),
-				),
-			)
-		);
+		$disable_blocks = false;
+		if ( isset( $_POST['disable_blocks'] ) ) {
+			$disable_blocks = true;
+			$app->set_disable_blocks( true );
+		} else {
+			$app->set_disable_blocks( false );
+		}
+
+		if ( ! get_option( 'mastodon_api_disable_ema_app_settings_changes' ) ) {
+			$content = __( 'The current settings for this app are:', 'enable-mastodon-apps' );
+			$t = PHP_EOL . __( 'Post Formats', 'enable-mastodon-apps' ) . ': ';
+			foreach ( get_post_format_strings() as $slug => $name ) {
+				if ( ! in_array( $slug, $post_formats, true ) ) {
+					continue;
+				}
+				$content .= $t . $name;
+				$t = ', ';
+			}
+			$content .= PHP_EOL . _x( 'Create new posts as', 'select post type', 'enable-mastodon-apps' ) . ': ';
+			$content .= get_post_type_object( $create_post_type )->labels->singular_name;
+			$t = PHP_EOL . __( 'Show these post types', 'enable-mastodon-apps' ) . ': ';
+			foreach ( $view_post_types as $post_type => $show ) {
+				if ( ! $show || in_array( $post_type, array( Mastodon_API::ANNOUNCE_CPT, Mastodon_API::POST_CPT ), true ) ) {
+					continue;
+				}
+				$content .= $t . get_post_type_object( $post_type )->labels->singular_name;
+				$t = ', ';
+			}
+			if ( $disable_blocks ) {
+				$content .= PHP_EOL . __( 'Automatic conversion to blocks is disabled', 'enable-mastodon-apps' );
+			}
+			$title = sprintf(
+				// translators: %s: app name.
+				__( 'Settings for %s changed', 'enable-mastodon-apps' ),
+				$app->get_client_name()
+			);
+
+			$previous_posts = get_posts(
+				array(
+					'post_type'   => Mastodon_API::ANNOUNCE_CPT,
+					'post_status' => 'publish',
+					'post_title'  => $title,
+					'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+						array(
+							'key'   => 'ema_app_id',
+							'value' => $app->get_client_id(),
+						),
+					),
+				)
+			);
+
+			foreach ( $previous_posts as $previous_post ) {
+				wp_delete_post( $previous_post->ID );
+			}
+
+			wp_insert_post(
+				array(
+					'post_type'    => Mastodon_API::ANNOUNCE_CPT,
+					'post_title'   => $title,
+					'post_content' => nl2br( trim( $content ) ),
+					'post_status'  => 'publish',
+					'meta_input'   => array(
+						'ema_app_id' => $app->get_client_id(),
+					),
+				)
+			);
+		}
 	}
 
 	public function admin_app_page( Mastodon_App $app ) {
