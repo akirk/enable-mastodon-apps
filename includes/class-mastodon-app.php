@@ -88,6 +88,10 @@ class Mastodon_App {
 			return array();
 		}
 
+		if ( array_keys( get_post_format_slugs() ) === $query_args['post_formats'] ) {
+			return array();
+		}
+
 		return $query_args['post_formats'];
 	}
 
