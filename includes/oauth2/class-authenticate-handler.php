@@ -11,7 +11,6 @@ namespace Enable_Mastodon_Apps\OAuth2;
 
 use Enable_Mastodon_Apps\Mastodon_App;
 use OAuth2\Request;
-use OAuth2\Response;
 
 /**
  * This class implements the Authentication handler.
@@ -208,6 +207,10 @@ class Authenticate_Handler {
 	}
 
 	private function get_cancel_url( Request $request ) {
+		if ( substr( $request->query( 'redirect_uri' ), 0, 25 ) === 'urn:ietf:wg:oauth:2.0:oob' ) {
+			return home_url( '/' );
+		}
+
 		return add_query_arg(
 			array(
 				'error'             => 'access_denied',
