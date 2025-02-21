@@ -674,6 +674,7 @@ class Mastodon_Admin {
 
 		}
 		$app->set_post_formats( $post_formats );
+		$post_formats = $app->get_post_formats();
 
 		$post_types = array_flip(
 			array_map(
@@ -724,6 +725,9 @@ class Mastodon_Admin {
 				}
 				$content .= $t . $name;
 				$t = ', ';
+			}
+			if ( ', ' !== $t ) {
+				$content = $t . __( 'All' ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
 			}
 			$content .= PHP_EOL . _x( 'Create new posts as', 'select post type', 'enable-mastodon-apps' ) . ': ';
 			$content .= get_post_type_object( $create_post_type )->labels->singular_name;
