@@ -143,10 +143,11 @@ class Status extends Handler {
 			$post->post_content = trim( $post->post_content ) .
 				'<br>' . PHP_EOL . '<br>' . PHP_EOL .
 				// translators: %s: settings page URL.
-				sprintf( __( 'This message has been added by the EMA plugin. You can disable these messages <a href=%s>in the settings</a>.', 'enable-mastodon-apps' ), '"' . esc_url( admin_url( 'options-general.php?page=enable-mastodon-apps&tab=settings' ) ) . '"' ) .
+				sprintf( __( 'This message has been added by the EMA plugin. You can disable these messages <a href=%s>in the settings</a>.', 'enable-mastodon-apps' ), '"' . esc_url( admin_url( 'options-general.php?page=enable-mastodon-apps&tab=settings' ) ) . '"' );
+			if ( $app ) {
 				// translators: %s: settings page URL.
-				' ' . sprintf( __( 'Change the <a href=%s>settings for this app here</a>.', 'enable-mastodon-apps' ), '"' . esc_url( admin_url( 'options-general.php?page=enable-mastodon-apps-settings&tab=registered-apps' ) ) . '"' );
-
+				$post->post_content .= ' ' . sprintf( __( 'Change the <a href=%s>settings for this app here</a>.', 'enable-mastodon-apps' ), '"' . esc_url( admin_url( 'options-general.php?page=enable-mastodon-apps-settings&app=' . $app->get_client_id() ) ) . '"' );
+			}
 		}
 
 		if ( isset( $data['comment'] ) && $data['comment'] instanceof \WP_Comment ) {
