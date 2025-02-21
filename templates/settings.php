@@ -75,7 +75,7 @@
 				<tr>
 					<th scope="row"><?php esc_html_e( 'Status Messages', 'enable-mastodon-apps' ); ?></th>
 					<td>
-						<p class="description"><?php esc_html_e( 'Allow this plugin to inform you, by adding a status to your feed:', 'enable-mastodon-apps' ); ?></p>
+						<p class="description"><?php esc_html_e( 'Allow this plugin to inform you by adding a status to your feed:', 'enable-mastodon-apps' ); ?></p>
 						<fieldset>
 							<label for="mastodon_api_disable_ema_announcements">
 								<input name="mastodon_api_disable_ema_announcements" type="checkbox" id="mastodon_api_disable_ema_announcements" value="1" <?php checked( ! get_option( 'mastodon_api_disable_ema_announcements' ) ); ?> />
