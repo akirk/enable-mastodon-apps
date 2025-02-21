@@ -19,6 +19,7 @@ class Mastodon_Admin {
 		add_action( 'admin_menu', array( $this, 'admin_menu' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'admin_enqueue_scripts' ) );
 		add_action( 'current_screen', array( $this, 'register_help' ) );
+		add_filter( 'plugin_action_links_' . ENABLE_MASTODON_APPS_PLUGIN_BASENAME, array( $this, 'plugin_action_links' ) );
 	}
 
 	public function admin_menu() {
@@ -107,7 +108,10 @@ class Mastodon_Admin {
 		);
 	}
 
-
+	public function plugin_action_links( $links ) {
+		$links[] = '<a href="' . esc_url( admin_url( 'options-general.php?page=enable-mastodon-apps' ) ) . '">' . esc_html__( 'Settings', 'enable-mastodon-apps' ) . '</a>';
+		return $links;
+	}
 
 	public function process_admin() {
 		if ( ! current_user_can( 'edit_private_posts' ) ) {
@@ -810,11 +814,11 @@ class Mastodon_Admin {
 				// translators: %s is a clickable URL.
 				$content .= make_clickable( sprintf( __( 'Please visit %s to get help in such a case.', 'enable-mastodon-apps' ), 'https://github.com/akirk/enable-mastodon-apps/issues' ) );
 				$content .= PHP_EOL . '<br>';
-
+				$content .= __( 'The plugin allows you to see all posts on your site inside this app.', 'enable-mastodon-apps' );
 				if ( ! defined( 'ACTIVITYPUB_PLUGIN_VERSION' ) ) {
 					// When standalone, we want to post to your WordPress.
 					update_option( 'mastodon_api_posting_cpt', 'post', false );
-					$content .= __( 'You can see all posts on your site, and a new status will be posted to your site.', 'enable-mastodon-apps' );
+					$content .= __( 'If you submit a status, it will be posted to your site.', 'enable-mastodon-apps' );
 					$content .= ' ' . __( "Be aware that this means that it will also be shown in your site's feed.", 'enable-mastodon-apps' );
 				} else {
 					$default_ema_post_type = apply_filters( 'mastodon_api_default_post_type', \Enable_Mastodon_Apps\Mastodon_API::POST_CPT );
@@ -823,12 +827,12 @@ class Mastodon_Admin {
 						$supported_post_types[] = $default_ema_post_type;
 						\update_option( 'activitypub_support_post_types', $supported_post_types );
 					}
-					$content .= __( 'You can see all posts on your site, a new status will be posted so that it is hidden from your site.', 'enable-mastodon-apps' );
+					$content .= __( 'If you submit a status, it will be posted so that it is hidden from your site (by using a custom post type).', 'enable-mastodon-apps' );
 					$content .= ' ';
-					$content .= __( 'Because you have the ActivityPub plugin installed, it will federate those posts to your followers.', 'enable-mastodon-apps' );
+					$content .= __( 'By means of the ActivityPub plugin that you also have installed, it will still be federated to your followers.', 'enable-mastodon-apps' );
 				}
 				$content .= ' ';
-				$content .= __( 'This can be changed individually per app (see below).', 'enable-mastodon-apps' );
+				$content .= __( 'This can be changed individually per app (see the link below).', 'enable-mastodon-apps' );
 				$content .= PHP_EOL . '<br>';
 				// translators: %s is a URL.
 				$content .= sprintf( __( 'If you enjoy using this plugin, please let us know at the <a href=%s>EMA WordPress.org plugin page</a>.', 'enable-mastodon-apps' ), '"https://wordpress.org/plugins/enable-mastodon-apps/"' );
