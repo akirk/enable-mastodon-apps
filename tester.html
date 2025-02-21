@@ -23,13 +23,18 @@
 			color: #999;
 		}
 
-		div.api-endpoint {
+		li.api-endpoint {
 			cursor: pointer;
 			color: blue;
 			text-decoration: underline;
+			padding-left: .5em;
 		}
 
-		#api-endpoints>div {
+		#api-endpoints ul {
+			list-style: none;
+			padding-left: 0;
+		}
+		#api-endpoints li {
 			font-weight: bold;
 			margin-bottom: 10px;
 		}
@@ -127,6 +132,9 @@
 			padding: .3em;
 			border-radius: 2px;
 			border: 1px solid #aaa;
+		}
+		input#api-custom-endpoint {
+			width: 40em;
 		}
 		button#send-api-custom-endpoint {
 			font-size: .9em;
@@ -227,17 +235,15 @@
 			<tt id="access-token-meta"></tt>
 			<br />
 
-			<input type="reset" id="reset"> <input type="reset" id="delete-local" value="Clear all data">
+			<input type="reset" id="reset"> <input type="reset" id="delete-local2" value="Clear all data">
 		</div>
 	</details>
 
 	<div id="api-endpoints">
 		<h2>Endpoints</h2>
-		<p>Clicking these will send a request to the API and display the response in the box below.</p>
-		<div class="api-endpoint">/api/v1/accounts/verify_credentials</div>
-		<div class="api-endpoint">/api/v1/accounts/relationships</div>
-		<div class="api-endpoint">/api/v1/timelines/home</div>
-		<div class="api-endpoint">/api/v1/notifications</div>
+		<p>Clicking these will send a request to the API and display the response in the box below. Shift-click to remove an item.</p>
+		<ul>
+		</ul>
 		<div><input type="text" id="api-custom-endpoint" value="/api/v1/accounts/1/statuses"> <button id="send-api-custom-endpoint">Send</button></div>
 		<h2>Endpoints with parameters</h2>
 		<div>
@@ -404,7 +410,8 @@
 			document.getElementById('api-endpoints').style.display = 'block';
 			document.getElementById('authorization-status').style.display = 'block';
 			document.getElementById('detailsblock').style.display = 'block';
-			document.getElementById('authorization-status').textContent = 'Authorized.';
+			document.getElementById('authorization-status').textContent = 'Authorized with ' + localStorage.getItem('baseURL');
+
 			document.getElementById('authorize').textContent = 'Re-Authorize';
 		}
 
@@ -505,6 +512,10 @@
 			location.reload();
 		});
 
+		document.getElementById('delete-local2').addEventListener('click', function () {
+			localStorage.clear();
+			location.reload();
+		});
 
 		document.getElementById('reset').addEventListener('click', function () {
 			document.getElementById('client-data').style.display = 'block';
@@ -533,6 +544,22 @@
 				urlParams.delete('error');
 				history.replaceState(null, null, window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : ''));
 			}
+
+			const customEndpoints = JSON.parse( localStorage.getItem( 'customEndpoints' ) ) || [];
+			if ( ! customEndpoints.length ) {
+				customEndpoints.push( '/api/v1/accounts/verify_credentials' );
+				customEndpoints.push( '/api/v1/accounts/relationships?id[]=alex@alex.kirk.at' );
+				customEndpoints.push( '/api/v1/timelines/home' );
+				customEndpoints.push( '/api/v1/notifications' );
+				localStorage.setItem( 'customEndpoints', JSON.stringify( customEndpoints ) );
+			};
+			const apiEndpoints = document.getElementById('api-endpoints').querySelector('ul');
+			customEndpoints.forEach( function( endpoint ) {
+				const li = document.createElement('li');
+				li.className = 'api-endpoint';
+				li.textContent = endpoint;
+				apiEndpoints.appendChild( li );
+			} );
 
 			const requestLog = document.getElementById('request-log');
 			const initialRequestLog = localStorage.getItem('initialRequestLog');
@@ -622,18 +649,83 @@
 			);
 		}
 
+		document.addEventListener('keyup', function (event) {
+			if ( event.key === 'Enter' ) {
+				if ( event.target.id === 'api-custom-endpoint' ) {
+					document.getElementById('send-api-custom-endpoint').click();
+					return;
+				}
+
+				if ( event.target.tagName === 'INPUT' ) {
+					const endpoint = event.target.closest('details').querySelector('.api-endpoint');
+					if ( endpoint ) {
+						endpoint.click();
+					}
+				}
+			}
+		} );
+
+		document.addEventListener('mousemove', function (event) {
+			if (event.target.classList.contains('api-endpoint') ) {
+				 if ( event.shiftKey ) {
+					event.target.style.textDecoration = 'line-through';
+					event.target.style.color = 'red';
+				 } else {
+					event.target.style.textDecoration = null;
+					event.target.style.color = null;
+				 }
+			}
+		});
+		document.addEventListener('mouseout', function (event) {
+			if (event.target.classList.contains('api-endpoint') ) {
+					event.target.style.textDecoration = null;
+					event.target.style.color = null;
+			}
+		});
+
 		document.addEventListener('click', function (event) {
 			let endpoint = false;
 			let method = false;
 			let submitValues = false;
 			if (event.target.classList.contains('api-endpoint')) {
+				if ( event.shiftKey ) {
+					event.target.remove();
+					const customEndpoints = JSON.parse( localStorage.getItem( 'customEndpoints' ) ) || [];
+					const index = customEndpoints.indexOf( event.target.textContent );
+					if ( index > -1 ) {
+						customEndpoints.splice( index, 1 );
+						localStorage.setItem( 'customEndpoints', JSON.stringify( customEndpoints ) );
+					}
+					return;
+				}
 				endpoint = event.target.dataset.endpoint || event.target.textContent;
+				document.getElementById('api-custom-endpoint').value = endpoint;
 				method = event.target.dataset.method || 'GET';
 				if ( event.target.tagName === 'BUTTON' ) {
 					submitValues = true;
 				}
 			} else if (event.target.id === 'send-api-custom-endpoint') {
 				endpoint = document.getElementById('api-custom-endpoint').value;
+				if ( '/' !== endpoint.substr( 0, 1 ) ) {
+					endpoint = '/' + endpoint;
+				}
+				let endpointExists = false;
+				document.querySelectorAll('#api-endpoints li.api-endpoint' ).forEach( function( li ) {
+					if ( li.textContent === endpoint ) {
+						endpointExists = true;
+					}
+				} );
+				if ( ! endpointExists ) {
+					const li = document.createElement('li');
+					li.className = 'api-endpoint';
+					li.textContent = endpoint;
+					document.getElementById('api-endpoints').querySelector('ul').appendChild(li);
+					const customEndpoints = JSON.parse( localStorage.getItem( 'customEndpoints' ) ) || [];
+					if ( ! customEndpoints.includes( endpoint ) ) {
+						customEndpoints.push( endpoint );
+						localStorage.setItem( 'customEndpoints', JSON.stringify( customEndpoints ) );
+					}
+				}
 				method = 'GET';
 			}
 
