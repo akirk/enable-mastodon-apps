@@ -44,6 +44,9 @@ class Handler {
 			}
 		}
 
+		$args['orderby'] = 'ID';
+		$args['order']   = 'DESC';
+
 		if ( $app ) {
 			$args = $app->modify_wp_query_args( $args );
 		}
