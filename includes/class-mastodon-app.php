@@ -92,7 +92,7 @@ class Mastodon_App {
 	}
 
 	public function get_admin_page() {
-		return add_query_arg( 'app', $this->term->slug, admin_url( 'admin.php?page=enable-mastodon-apps' ) );
+		return add_query_arg( 'app', $this->term->slug, admin_url( 'options-general.php?page=enable-mastodon-apps' ) );
 	}
 
 	public function get_create_post_type() {

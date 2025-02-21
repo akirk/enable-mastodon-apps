@@ -1,5 +1,5 @@
 {
-  "landingPage": "/wp-admin/admin.php?page=enable-mastodon-apps",
+  "landingPage": "/wp-admin/options-general.php?page=enable-mastodon-apps",
   "steps": [
     {
       "step": "login",

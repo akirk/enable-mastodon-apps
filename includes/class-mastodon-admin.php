@@ -805,7 +805,7 @@ class Mastodon_Admin {
 				$title = __( 'Welcome to Enable Mastodon Apps', 'enable-mastodon-apps' );
 				$content = __( 'This message comes from the Enable Mastodon Apps plugin that you have installed on your WordPress.', 'enable-mastodon-apps' );
 				$content .= ' ';
-				$content .= __( "The plugin provides the same API that Mastodon servers offer. Since you're reading this inside a Mastodon app it means that this worked! While it typically functions well, you might still experience some unexpected behavior.", 'enable-mastodon-apps' );
+				$content .= __( 'The plugin works by providing the same API that Mastodon servers offer, which brings two worlds together that were not really designed for this interoperability. Thus, while it typically functions well, you might still experience some unexpected behavior.', 'enable-mastodon-apps' );
 				$content .= ' ';
 				// translators: %s is a clickable URL.
 				$content .= make_clickable( sprintf( __( 'Please visit %s to get help in such a case.', 'enable-mastodon-apps' ), 'https://github.com/akirk/enable-mastodon-apps/issues' ) );
