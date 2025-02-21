@@ -121,7 +121,7 @@ class Mastodon_API_TestCase extends \WP_UnitTestCase {
 
 		set_post_format( $this->friend_post, 'status' );
 
-		add_action(
+		add_filter(
 			'mastodon_api_new_app_post_formats',
 			function () {
 				return array( 'status' );
