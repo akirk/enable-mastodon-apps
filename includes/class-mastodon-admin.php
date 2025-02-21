@@ -804,6 +804,13 @@ class Mastodon_Admin {
 			if ( ! $old_version ) {
 				$title = __( 'Welcome to Enable Mastodon Apps', 'enable-mastodon-apps' );
 				$content = __( 'This message comes from the Enable Mastodon Apps plugin that you have installed on your WordPress.', 'enable-mastodon-apps' );
+				$content .= ' ';
+				$content = __( 'This works because it implements the same API that a Mastodon server provides.', 'enable-mastodon-apps' );
+				$content .= ' ';
+				$content = __( 'This works already well in many areas, but you might still run into unexpected behavior.', 'enable-mastodon-apps' );
+				$content .= ' ';
+				// translators: %s is a clickable URL.
+				$content = make_clickable( sprintf( __( 'Please visit %s to get help in such a case.', 'enable-mastodon-apps' ), 'https://github.com/akirk/enable-mastodon-apps/issues' ) );
 				$content .= PHP_EOL . '<br>';
 
 				if ( ! defined( 'ACTIVITYPUB_PLUGIN_VERSION' ) ) {
@@ -818,9 +825,15 @@ class Mastodon_Admin {
 						\update_option( 'activitypub_support_post_types', $supported_post_types );
 					}
 					$content .= __( 'You can see all posts on your site, a new status will be posted so that it is hidden from your site.', 'enable-mastodon-apps' );
+					$content .= ' ';
+					$content = __( 'Because you have the ActivityPub plugin installed, it will federate those posts to your followers.', 'enable-mastodon-apps' );
 				}
 				$content .= ' ';
-				$content .= __( 'This can be changed per individual app (see below).', 'enable-mastodon-apps' );
+				$content .= __( 'This can be changed individually per app (see below).', 'enable-mastodon-apps' );
+				$content .= PHP_EOL . '<br>';
+				// translators: %s is a URL.
+				$content .= sprintf( __( 'If you enjoy using this plugin, please let us know at the <a href=%s>EMA WordPress.org plugin page</a>.', 'enable-mastodon-apps' ), '"https://wordpress.org/plugins/enable-mastodon-apps/"' );
+
 				wp_insert_post(
 					array(
 						'post_type'    => Mastodon_API::ANNOUNCE_CPT,
