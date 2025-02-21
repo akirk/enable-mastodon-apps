@@ -39,13 +39,16 @@ class Response extends \OAuth2\Response {
 		if ( substr( $url, 0, 32 ) === 'urn://ietf:wg:oauth:2.0:oob:auto' ) {
 			$this->ask_to_close = true;
 		}
-		$result = array();
+
 		$p = strpos( $url, '?' );
 		if ( false === $p ) {
-			throw new \Exception( 'Invalid URN' );
+			throw new \Exception( 'For OOB, a code needs to be included as a parameter to the URN.' );
 		}
 
 		parse_str( substr( $url, $p + 1 ), $result );
+		if ( ! isset( $result['code'] ) ) {
+			throw new \Exception( 'For OOB, a code needs to be included as a parameter to the URN.' );
+		}
 		$this->output_code = $result['code'];
 	}
 
