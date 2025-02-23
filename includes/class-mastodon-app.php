@@ -85,7 +85,11 @@ class Mastodon_App {
 	public function get_post_formats() {
 		$query_args = $this->get_query_args();
 		if ( ! isset( $query_args['post_formats'] ) || ! is_array( $query_args['post_formats'] ) ) {
-			return get_option( 'mastodon_api_default_post_formats', array() );
+			return array();
+		}
+
+		if ( array_keys( get_post_format_slugs() ) === $query_args['post_formats'] ) {
+			return array();
 		}
 
 		return $query_args['post_formats'];
@@ -667,7 +671,6 @@ class Mastodon_App {
 			'website'
 		);
 
-		$post_formats = get_option( 'mastodon_api_default_post_formats', array() );
 		/**
 		 * Post formats to be enabled for new apps.
 		 *
@@ -683,7 +686,7 @@ class Mastodon_App {
 		 * } );
 		 * ```
 		 */
-		$post_formats = apply_filters( 'mastodon_api_new_app_post_formats', $post_formats, $app_metadata );
+		$post_formats = apply_filters( 'mastodon_api_new_app_post_formats', array(), $app_metadata );
 		$app_metadata['query_args'] = array( 'post_formats' => $post_formats );
 
 		$app_metadata['create_post_type'] = get_option( 'mastodon_api_posting_cpt', apply_filters( 'mastodon_api_default_post_type', \Enable_Mastodon_Apps\Mastodon_API::POST_CPT ) );

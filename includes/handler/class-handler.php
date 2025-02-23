@@ -127,7 +127,12 @@ class Handler {
 			$statuses[ $status->id ] = $status;
 		}
 
-		krsort( $statuses );
+		usort(
+			$statuses,
+			function ( $a, $b ) {
+				return $b->created_at->getTimestamp() - $a->created_at->getTimestamp();
+			}
+		);
 
 		$response = new \WP_REST_Response( array_values( $statuses ) );
 		if ( ! empty( $statuses ) ) {

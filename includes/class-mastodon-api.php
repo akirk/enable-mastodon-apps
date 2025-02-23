@@ -73,7 +73,6 @@ class Mastodon_API {
 		add_filter( 'rest_pre_echo_response', array( $this, 'reformat_error_response' ), 10, 3 );
 		add_filter( 'template_include', array( $this, 'log_404s' ) );
 		add_filter( 'rest_json_encode_options', array( $this, 'rest_json_encode_options' ), 10, 2 );
-		add_action( 'default_option_mastodon_api_default_post_formats', array( $this, 'default_option_mastodon_api_default_post_formats' ) );
 		add_filter( 'rest_request_before_callbacks', array( $this, 'rest_request_before_callbacks' ), 10, 3 );
 		add_filter( 'rest_authentication_errors', array( $this, 'rest_authentication_errors' ) );
 		add_filter( 'mastodon_api_mapback_user_id', array( $this, 'mapback_user_id' ) );
@@ -1821,20 +1820,6 @@ class Mastodon_API {
 		}
 
 		return true;
-	}
-
-	/**
-	 * Set the default post format.
-	 *
-	 * @param mixed $post_formats The default value to return if the option does not exist
-	 *                        in the database.
-	 *
-	 * @return     array   The potentially modified default value.
-	 */
-	public function default_option_mastodon_api_default_post_formats( $post_formats ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
-		return array(
-			'standard',
-		);
 	}
 
 	/**

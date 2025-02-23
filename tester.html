@@ -287,6 +287,10 @@
 
 	<script>
 		function logRequest(data) {
+			document.querySelectorAll('div.iframe-holder').forEach( function( div ) {
+				div.remove();
+			} );
+
 			const div = document.createElement('div');
 			const timestamp = document.createElement('tt');
 			timestamp.className = 'timestamp';

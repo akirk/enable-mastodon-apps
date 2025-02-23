@@ -20,8 +20,8 @@ class NotificationsEndpoint_Test extends Mastodon_API_TestCase {
 				'role' => 'read',
 			)
 		);
-		add_action(
-			'default_option_mastodon_api_default_post_formats',
+		add_filter(
+			'mastodon_api_new_app_post_formats',
 			function () {
 				return array( 'standard' );
 			}

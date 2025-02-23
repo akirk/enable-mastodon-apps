@@ -28,6 +28,7 @@ $confirm     = esc_html(
 		$app->get_client_name()
 	)
 );
+$app_post_formats = $app->get_post_formats();
 ?>
 <div class="enable-mastodon-apps-settings enable-mastodon-apps-registered-apps-page <?php echo $args['enable_debug'] ? 'enable-debug' : 'disable-debug'; ?>">
 	<form method="post">
@@ -116,7 +117,7 @@ $confirm     = esc_html(
 					<td>
 						<fieldset>
 						<?php foreach ( get_post_format_strings() as $format => $label ) : ?>
-							<label><input type="checkbox" name="post_formats[]" value="<?php echo esc_attr( $format ); ?>"<?php checked( in_array( $format, $app->get_post_formats(), true ) ); ?> /> <?php echo esc_html( $label ); ?></label>
+							<label><input type="checkbox" name="post_formats[]" value="<?php echo esc_attr( $format ); ?>"<?php checked( in_array( $format, $app_post_formats, true ) || empty( $app_post_formats ) ); ?> /> <?php echo esc_html( $label ); ?></label>
 						<?php endforeach; ?>
 						</fieldset>
 						<p class="description">
