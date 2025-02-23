@@ -233,6 +233,90 @@ class Mastodon_App {
 		update_term_meta( $this->term->term_id, 'last_used', time() );
 	}
 
+	/**
+	 * Posts current settings as an announcement just for this app.
+	 *
+	 * @param      string $title  The title.
+	 * @param      string $intro  The intro text.
+	 *
+	 * @return     int|null  The post ID.
+	 */
+	public function post_current_settings( string $title = '', string $intro = '' ) {
+		if ( get_option( 'mastodon_api_disable_ema_app_settings_changes' ) ) {
+			return null;
+		}
+
+		if ( ! $title ) {
+			$title = sprintf(
+				// translators: %s: app name.
+				__( 'Settings for %s changed', 'enable-mastodon-apps' ),
+				$this->get_client_name()
+			);
+		}
+
+		if ( ! $intro ) {
+			$intro = __( 'The current settings for this app are:', 'enable-mastodon-apps' );
+		}
+		$content = $intro;
+
+		$post_formats = $this->get_post_formats();
+		$t = PHP_EOL . __( 'Post Formats', 'enable-mastodon-apps' ) . ': ';
+		foreach ( get_post_format_strings() as $slug => $name ) {
+			if ( ! in_array( $slug, $post_formats, true ) ) {
+				continue;
+			}
+			$content .= $t . $name;
+			$t = ', ';
+		}
+		if ( ', ' !== $t ) {
+			$content .= $t . __( 'All' ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
+		}
+
+		$content .= PHP_EOL . _x( 'Create new posts as', 'select post type', 'enable-mastodon-apps' ) . ': ';
+		$content .= get_post_type_object( $this->get_create_post_type() )->labels->singular_name;
+		$t = PHP_EOL . __( 'Show these post types', 'enable-mastodon-apps' ) . ': ';
+		foreach ( $this->get_view_post_types() as $post_type ) {
+			if ( in_array( $post_type, array( Mastodon_API::ANNOUNCE_CPT, Mastodon_API::POST_CPT ), true ) ) {
+				continue;
+			}
+			$content .= $t . get_post_type_object( $post_type )->labels->name;
+			$t = ', ';
+		}
+
+		if ( $this->get_disable_blocks() ) {
+			$content .= PHP_EOL . __( 'Automatic conversion to blocks is disabled', 'enable-mastodon-apps' );
+		}
+
+		$previous_posts = get_posts(
+			array(
+				'post_type'   => Mastodon_API::ANNOUNCE_CPT,
+				'post_status' => 'publish',
+				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => 'ema_app_id',
+						'value' => $this->get_client_id(),
+					),
+				),
+			)
+		);
+
+		foreach ( $previous_posts as $previous_post ) {
+			wp_delete_post( $previous_post->ID );
+		}
+
+		return wp_insert_post(
+			array(
+				'post_type'    => Mastodon_API::ANNOUNCE_CPT,
+				'post_title'   => $title,
+				'post_content' => nl2br( trim( $content ) ),
+				'post_status'  => 'publish',
+				'meta_input'   => array(
+					'ema_app_id' => $this->get_client_id(),
+				),
+			)
+		);
+	}
+
 	public static function set_current_app( $client_id, $request ) {
 		self::$current_app = self::get_by_client_id( $client_id );
 		self::$current_app->was_used( $request );
@@ -724,6 +808,15 @@ class Mastodon_App {
 			return $term;
 		}
 
-		return new self( $term );
+		$app = new self( $term );
+		$app->post_current_settings(
+			sprintf(
+				// translators: %s: app name.
+				__( 'App %s created', 'enable-mastodon-apps' ),
+				$client_name
+			),
+			__( 'This app was created with the following settings:', 'enable-mastodon-apps' )
+		);
+		return $app;
 	}
 }
