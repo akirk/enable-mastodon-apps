@@ -674,6 +674,7 @@ class Mastodon_Admin {
 
 		}
 		$app->set_post_formats( $post_formats );
+		$post_formats = $app->get_post_formats();
 
 		$post_types = array_flip(
 			array_map(
