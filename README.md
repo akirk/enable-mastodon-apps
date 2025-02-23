@@ -6,7 +6,7 @@
 - Tested up to: 6.6
 - Requires PHP: 7.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 1.1.0
+- Stable tag: 1.2.0
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -100,6 +100,16 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 
 ## Changelog
 
+### 1.2.0
+- Fixed Boost, Like and Comment notifications ([#216])
+- Announce Initial and Changed App Settings ([#207], [#214])
+- Added a Welcome message to your feed and explain the EMA plugin ([#210])
+- Added missing types to notifications endpoint ([#215])
+- Don't set any post formats as default ([#211])
+- Updated Mastodon API Tester ([#209])
+- Added a setting to disable status updates to be added to the feed ([#208])
+- Added support for the OAuth2 Out of Band flow ([#206])
+
 ### 1.1.0
 - Add an Announcement CPT so that we can inform about the changed app settings ([#204])
 - Add support for viewing bookmarks and favourites ([#203])
@@ -170,6 +180,15 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 - Improves to Attachments ([#132], [#136])
 - Fix OAuth rewrite path ([#130])
 
+[#216]: https://github.com/akirk/enable-mastodon-apps/pull/216
+[#214]: https://github.com/akirk/enable-mastodon-apps/pull/214
+[#215]: https://github.com/akirk/enable-mastodon-apps/pull/215
+[#211]: https://github.com/akirk/enable-mastodon-apps/pull/211
+[#210]: https://github.com/akirk/enable-mastodon-apps/pull/210
+[#209]: https://github.com/akirk/enable-mastodon-apps/pull/209
+[#208]: https://github.com/akirk/enable-mastodon-apps/pull/208
+[#207]: https://github.com/akirk/enable-mastodon-apps/pull/207
+[#206]: https://github.com/akirk/enable-mastodon-apps/pull/206
 [#204]: https://github.com/akirk/enable-mastodon-apps/pull/204
 [#203]: https://github.com/akirk/enable-mastodon-apps/pull/203
 [#202]: https://github.com/akirk/enable-mastodon-apps/pull/202
