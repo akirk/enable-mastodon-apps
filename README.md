@@ -6,7 +6,7 @@
 - Tested up to: 6.6
 - Requires PHP: 7.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 1.2.0
+- Stable tag: 1.2.1
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -100,7 +100,7 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 
 ## Changelog
 
-### 1.2.0
+### 1.2.1
 - Fixed Boost, Like and Comment notifications ([#216])
 - Announce Initial and Changed App Settings ([#207], [#214])
 - Added a Welcome message to your feed and explain the EMA plugin ([#210])

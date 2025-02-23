@@ -1,4 +1,4 @@
-### 1.2.0
+### 1.2.1
 - Fixed Boost, Like and Comment notifications ([#216])
 - Announce Initial and Changed App Settings ([#207], [#214])
 - Added a Welcome message to your feed and explain the EMA plugin ([#210])
