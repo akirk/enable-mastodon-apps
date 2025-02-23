@@ -9,8 +9,8 @@
 
 namespace Enable_Mastodon_Apps\Handler;
 
-use Enable_Mastodon_Apps\Entity\Entity;
 use Enable_Mastodon_Apps\Handler\Handler;
+use Enable_Mastodon_Apps\Comment_CPT;
 use Enable_Mastodon_Apps\Mastodon_API;
 use Enable_Mastodon_Apps\Mastodon_App;
 use Enable_Mastodon_Apps\Entity\Status as Status_Entity;
@@ -205,12 +205,12 @@ class Status extends Handler {
 	 * @param array      $args Current statuses arguments.
 	 * @param int|null   $min_id Optional minimum status ID.
 	 * @param int|null   $max_id Optional maximum status ID.
-	 * @return array
+	 * @return WP_REST_Response The statuses as a REST response.
 	 */
-	public function api_statuses( ?array $statuses, array $args, ?int $min_id = null, ?int $max_id = null ): \WP_REST_Response {
+	public function api_statuses( ?array $statuses, array $args, ?int $min_id = null, ?int $max_id = null ): WP_REST_Response {
 		if ( $statuses ) {
-			if ( ! $statuses instanceof \WP_REST_Response ) {
-				$statuses = new \WP_REST_Response( array_values( $statuses ) );
+			if ( ! $statuses instanceof WP_REST_Response ) {
+				$statuses = new WP_REST_Response( array_values( $statuses ) );
 			}
 			return $statuses;
 		}
@@ -224,7 +224,7 @@ class Status extends Handler {
 
 	public function api_statuses_ensure_numeric_id( $statuses ) {
 		$response = null;
-		if ( $statuses instanceof \WP_REST_Response ) {
+		if ( $statuses instanceof WP_REST_Response ) {
 			$response = $statuses;
 			$statuses = $response->data;
 		}

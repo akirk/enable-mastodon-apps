@@ -47,7 +47,7 @@ class Notification extends Handler {
 		$notifications              = $this->fetch_notifications( $request );
 		foreach ( $notifications as $notification ) {
 			if ( $notification['status'] ) {
-				wp_set_object_terms( $notification['status']['id'], $notification_dismissed_tag, 'post_tag', true );
+				wp_set_object_terms( $notification['status']->id, $notification_dismissed_tag, 'post_tag', true );
 			}
 		}
 	}
@@ -67,7 +67,7 @@ class Notification extends Handler {
 				continue;
 			}
 			if ( $notification['status'] ) {
-				wp_set_object_terms( $notification['status']['id'], $notification_dismissed_tag, 'post_tag', true );
+				wp_set_object_terms( $notification['status']->id, $notification_dismissed_tag, 'post_tag', true );
 			}
 		}
 	}
@@ -90,7 +90,7 @@ class Notification extends Handler {
 			return $notification;
 		}
 
-		return new WP_Error( 'notification_not_found', __( 'Notification not found.', 'enable-mastodon-apps' ) );
+		return new \WP_Error( 'notification_not_found', __( 'Notification not found.', 'enable-mastodon-apps' ) );
 	}
 
 	/**
@@ -158,11 +158,24 @@ class Notification extends Handler {
 				$args['tag__not_in'] = array( $notification_dismissed_tag->term_id );
 			}
 			foreach ( get_posts( $args ) as $post ) {
+				$comment_id = Comment_CPT::post_id_to_comment_id( $post->ID );
 				$account = apply_filters( 'mastodon_api_account', null, $post->post_author, null, $post );
-				$status  = apply_filters( 'mastodon_api_status', null, $post->ID, array() );
+				switch ( get_comment_type( $comment_id ) ) {
+					case 'like':
+						$type = 'like';
+						$status  = apply_filters( 'mastodon_api_status', null, $post->post_parent, array() );
+						break;
+					case 'repost':
+						$type = 'reblog';
+						$status  = apply_filters( 'mastodon_api_status', null, $post->post_parent, array() );
+						break;
+					default:
+						$type = 'mention';
+						$status  = apply_filters( 'mastodon_api_status', null, $post->ID, array() );
+				}
 				if ( $account && $status ) {
 					$notifications[] = $this->get_notification_array(
-						'mention',
+						$type,
 						mysql2date( 'Y-m-d\TH:i:s.000P', $post->post_date, false ),
 						$account,
 						$status
@@ -187,6 +200,9 @@ class Notification extends Handler {
 		$ret = array();
 		$c   = $limit;
 		foreach ( $notifications as $notification ) {
+			if ( ! $notification ) {
+				continue;
+			}
 			if ( $max_id ) {
 				if ( strval( $notification['id'] ) >= strval( $max_id ) ) {
 					continue;

@@ -73,14 +73,14 @@ class Comment_CPT {
 	}
 
 	public function mastodon_api_in_reply_to_id( $post_id ) {
-		$comment_id = $this->post_id_to_comment_id( $post_id );
+		$comment_id = self::post_id_to_comment_id( $post_id );
 		if ( $comment_id ) {
 			return $comment_id;
 		}
 		return $post_id;
 	}
 
-	public function post_id_to_comment_id( $post_id ) {
+	public static function post_id_to_comment_id( $post_id ) {
 		if ( get_post_type( $post_id ) !== self::CPT ) {
 			return null;
 		}
@@ -152,7 +152,7 @@ class Comment_CPT {
 		if ( doing_action( 'delete_comment' ) ) {
 			return;
 		}
-		$comment_id = $this->post_id_to_comment_id( $post_id );
+		$comment_id = self::post_id_to_comment_id( $post_id );
 		if ( ! $comment_id ) {
 			return;
 		}
