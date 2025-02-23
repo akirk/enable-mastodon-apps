@@ -27,7 +27,7 @@ class Account extends Handler {
 	public function register_hooks() {
 		add_filter( 'mastodon_api_account', array( $this, 'api_account' ), 10, 2 );
 		add_filter( 'mastodon_api_account', array( $this, 'api_account_ema' ), 10, 4 );
-		add_filter( 'mastodon_api_account', array( $this, 'api_account_ensure_numeric_id' ), 100, 2 );
+		add_filter( 'mastodon_api_account', array( get_called_class(), 'api_account_ensure_numeric_id' ), 100, 2 );
 	}
 
 	public function api_account_ema( $account, $user_id, $request = null, $post = null ) {
@@ -95,7 +95,7 @@ class Account extends Handler {
 		return $account;
 	}
 
-	public function api_account_ensure_numeric_id( $user_data, $user_id ) {
+	public static function api_account_ensure_numeric_id( $user_data, $user_id ) {
 		if ( ! is_object( $user_data ) ) {
 			return $user_data;
 		}

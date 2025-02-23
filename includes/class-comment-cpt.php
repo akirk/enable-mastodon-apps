@@ -236,6 +236,32 @@ class Comment_CPT {
 			return $account;
 		}
 
-		return apply_filters( 'mastodon_api_account', null, $comment->comment_author_url, $request, null );
+		$account = apply_filters( 'mastodon_api_account', null, $comment->comment_author_url, $request, null );
+		if ( $account ) {
+			return $account;
+		}
+
+		$account = new Entity\Account();
+		$account->id             = $comment->comment_author_url;
+		$account->username       = $comment->comment_author;
+		$account->display_name   = $comment->comment_author;
+		$account->avatar         = get_avatar_url( $comment->comment_author_email );
+		$account->avatar_static  = get_avatar_url( $comment->comment_author_email );
+		$account->acct           = $comment->comment_author_url;
+		$account->note           = '';
+		$account->created_at     = new \DateTime( $comment->comment_date );
+		$account->statuses_count = 0;
+		$account->last_status_at = new \DateTime( $comment->comment_date );
+		$account->url            = $comment->comment_author_url;
+
+		$account->source = array(
+			'privacy'   => 'public',
+			'sensitive' => false,
+			'language'  => 'en',
+			'note'      => 'Comment',
+			'fields'    => array(),
+		);
+
+		return Handler\Account::api_account_ensure_numeric_id( $account, $comment->comment_author_url );
 	}
 }

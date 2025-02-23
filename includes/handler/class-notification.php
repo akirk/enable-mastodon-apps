@@ -159,10 +159,9 @@ class Notification extends Handler {
 			}
 			foreach ( get_posts( $args ) as $post ) {
 				$comment_id = Comment_CPT::post_id_to_comment_id( $post->ID );
-				$account = apply_filters( 'mastodon_api_account', null, $post->post_author, null, $post );
 				switch ( get_comment_type( $comment_id ) ) {
 					case 'like':
-						$type = 'like';
+						$type = 'favourite';
 						$status  = apply_filters( 'mastodon_api_status', null, $post->post_parent, array() );
 						break;
 					case 'repost':
@@ -173,17 +172,19 @@ class Notification extends Handler {
 						$type = 'mention';
 						$status  = apply_filters( 'mastodon_api_status', null, $post->ID, array() );
 				}
-				if ( $account && $status ) {
-					$notifications[] = $this->get_notification_array(
-						$type,
-						mysql2date( 'Y-m-d\TH:i:s.000P', $post->post_date, false ),
-						$account,
-						$status
-					);
+				$account = apply_filters( 'mastodon_api_account', null, $post->post_author, null, $post );
+				if ( $status ) {
+					$status->account = $account;
 				}
+
+				$notifications[] = $this->get_notification_array(
+					$type,
+					mysql2date( 'Y-m-d\TH:i:s.000P', $post->post_date, false ),
+					$account,
+					$status
+				);
 			}
 		}
-
 		$min_id      = $request->get_param( 'min_id' );
 		$max_id      = $request->get_param( 'max_id' );
 		$since_id    = $request->get_param( 'since_id' );
@@ -244,7 +245,7 @@ class Notification extends Handler {
 	 *
 	 * @return array
 	 */
-	protected function get_notification_array( string $type, $date, \Enable_Mastodon_Apps\Entity\Account $account, \Enable_Mastodon_Apps\Entity\Status $status ): array {
+	protected function get_notification_array( string $type, $date, ?\Enable_Mastodon_Apps\Entity\Account $account = null, ?\Enable_Mastodon_Apps\Entity\Status $status = null ): array {
 		$notification = array(
 			'id'         => preg_replace( '/[^0-9]/', '', $date ),
 			'created_at' => $date,
