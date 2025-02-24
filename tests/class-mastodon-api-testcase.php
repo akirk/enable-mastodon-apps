@@ -27,6 +27,8 @@ class Mastodon_API_TestCase extends \WP_UnitTestCase {
 		global $wp_rest_server;
 		$wp_rest_server = new \Spy_REST_Server();
 		do_action( 'rest_api_init', $wp_rest_server );
+		add_filter( 'pre_option_mastodon_api_disable_ema_app_settings_changes', '__return_true' );
+		add_filter( 'pre_option_mastodon_api_disable_ema_announcements', '__return_true' );
 
 		$this->administrator = $this->factory->user->create(
 			array(

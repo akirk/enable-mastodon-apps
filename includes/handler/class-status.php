@@ -130,7 +130,7 @@ class Status extends Handler {
 
 		$post = get_post( $object_id );
 
-		if ( Mastodon_API::ANNOUNCE_CPT === $post->post_type ) {
+		if ( $post && Mastodon_API::ANNOUNCE_CPT === $post->post_type ) {
 			$meta = get_post_meta( $post->ID, 'ema_app_id', true );
 			$app = Mastodon_App::get_current_app();
 			if ( $meta && ( ! $app || $app->get_client_id() !== $meta ) ) {
