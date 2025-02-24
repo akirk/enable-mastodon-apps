@@ -326,18 +326,19 @@ class Mastodon_App {
 				),
 			)
 		);
-
-		wp_set_object_terms(
-			$post_id,
-			array_map(
-				function ( $slug ) {
-					return 'post-format-' . $slug;
-				},
-				get_post_format_slugs()
-			),
-			'post_format'
-		);
-
+		if ( $post_id ) {
+			// Assign all post formats so that it will be shown regardless of the app's (potentially later changed) post format settings.
+			wp_set_object_terms(
+				$post_id,
+				array_map(
+					function ( $slug ) {
+						return 'post-format-' . $slug;
+					},
+					get_post_format_slugs()
+				),
+				'post_format'
+			);
+		}
 		return $post_id;
 	}
 
