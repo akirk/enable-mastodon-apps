@@ -746,6 +746,7 @@ class Mastodon_Admin {
 		}
 
 		if ( ! get_option( 'mastodon_api_disable_ema_announcements' ) ) {
+			$post_id = false;
 			if ( ! $old_version ) {
 				$title = __( 'Welcome to Enable Mastodon Apps!', 'enable-mastodon-apps' );
 				$content = __( 'This is a message from the Enable Mastodon Apps plugin that you have installed on your WordPress.', 'enable-mastodon-apps' );
@@ -778,7 +779,7 @@ class Mastodon_Admin {
 				// translators: %s is a URL.
 				$content .= sprintf( __( 'If you enjoy using this plugin, please let us know at the <a href=%s>EMA WordPress.org plugin page</a>.', 'enable-mastodon-apps' ), '"https://wordpress.org/plugins/enable-mastodon-apps/"' );
 
-				wp_insert_post(
+				$post_id = wp_insert_post(
 					array(
 						'post_type'    => Mastodon_API::ANNOUNCE_CPT,
 						'post_title'   => $title,
@@ -787,6 +788,7 @@ class Mastodon_Admin {
 
 					)
 				);
+
 			} else {
 				$readme = file_get_contents( ENABLE_MASTODON_APPS_PLUGIN_DIR . 'README.md' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 				$changelog = substr( $readme, strpos( $readme, '## Changelog' ) );
@@ -810,7 +812,7 @@ class Mastodon_Admin {
 				if ( ! $posts ) {
 					$changes = wp_kses( $changes, array( 'a' => array( 'href' => true ) ) );
 
-					wp_insert_post(
+					$post_id = wp_insert_post(
 						array(
 							'post_type'    => Mastodon_API::ANNOUNCE_CPT,
 							'post_title'   => $title,
@@ -819,6 +821,19 @@ class Mastodon_Admin {
 						)
 					);
 				}
+			}
+			if ( $post_id ) {
+				// Assign all post formats so that it will be shown regardless of the app's (potentially later changed) post format settings.
+				wp_set_object_terms(
+					$post_id,
+					array_map(
+						function ( $slug ) {
+							return 'post-format-' . $slug;
+						},
+						get_post_format_slugs()
+					),
+					'post_format'
+				);
 			}
 		}
 
