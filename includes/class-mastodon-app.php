@@ -234,31 +234,13 @@ class Mastodon_App {
 	}
 
 	/**
-	 * Posts current settings as an announcement just for this app.
+	 * Get the text to display to the user about the current settings.
 	 *
-	 * @param      string $title  The title.
-	 * @param      string $intro  The intro text.
+	 * @param      string $content  The content.
 	 *
-	 * @return     int|null  The post ID.
+	 * @return     string  The current settings.
 	 */
-	public function post_current_settings( string $title = '', string $intro = '' ) {
-		if ( get_option( 'mastodon_api_disable_ema_app_settings_changes' ) ) {
-			return null;
-		}
-
-		if ( ! $title ) {
-			$title = sprintf(
-				// translators: %s: app name.
-				__( 'Settings for %s changed', 'enable-mastodon-apps' ),
-				$this->get_client_name()
-			);
-		}
-
-		if ( ! $intro ) {
-			$intro = __( 'The current settings for this app are:', 'enable-mastodon-apps' );
-		}
-		$content = $intro;
-
+	public function get_current_settings_text( string $content = '' ) {
 		$post_formats = $this->get_post_formats();
 		$t = PHP_EOL . __( 'Post Formats', 'enable-mastodon-apps' ) . ': ';
 		foreach ( get_post_format_strings() as $slug => $name ) {
@@ -287,6 +269,35 @@ class Mastodon_App {
 			$content .= PHP_EOL . __( 'Automatic conversion to blocks is disabled', 'enable-mastodon-apps' );
 		}
 
+		return trim( $content );
+	}
+
+	/**
+	 * Posts current settings as an announcement just for this app.
+	 *
+	 * @param      string $title  The title.
+	 * @param      string $intro  The intro text.
+	 *
+	 * @return     int|null  The post ID.
+	 */
+	public function post_current_settings( string $title = '', string $intro = '' ) {
+		if ( get_option( 'mastodon_api_disable_ema_app_settings_changes' ) ) {
+			return null;
+		}
+
+		if ( ! $title ) {
+			$title = sprintf(
+				// translators: %s: app name.
+				__( 'Settings for %s changed', 'enable-mastodon-apps' ),
+				$this->get_client_name()
+			);
+		}
+
+		if ( ! $intro ) {
+			$intro = __( 'The current settings for this app are:', 'enable-mastodon-apps' );
+		}
+		$content = $this->get_current_settings_text( $intro );
+
 		$previous_posts = get_posts(
 			array(
 				'post_type'   => Mastodon_API::ANNOUNCE_CPT,
@@ -304,7 +315,7 @@ class Mastodon_App {
 			wp_delete_post( $previous_post->ID );
 		}
 
-		return wp_insert_post(
+		$post_id = wp_insert_post(
 			array(
 				'post_type'    => Mastodon_API::ANNOUNCE_CPT,
 				'post_title'   => $title,
@@ -315,6 +326,20 @@ class Mastodon_App {
 				),
 			)
 		);
+		if ( $post_id ) {
+			// Assign all post formats so that it will be shown regardless of the app's (potentially later changed) post format settings.
+			wp_set_object_terms(
+				$post_id,
+				array_map(
+					function ( $slug ) {
+						return 'post-format-' . $slug;
+					},
+					get_post_format_slugs()
+				),
+				'post_format'
+			);
+		}
+		return $post_id;
 	}
 
 	public static function set_current_app( $client_id, $request ) {

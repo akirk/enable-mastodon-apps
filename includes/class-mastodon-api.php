@@ -2962,24 +2962,10 @@ class Mastodon_API {
 			'<a href="' . home_url() . '">' . get_bloginfo( 'name' ) . '</a>'
 		);
 
-		$post_formats = $app->get_post_formats();
-		$content[]    = sprintf(
-			// Translators: %s is the post formats.
-			_n( 'Posts with the post format <strong>%s</strong> will appear in this app.', 'Posts with the post formats <strong>%s</strong> will appear in this app.', count( $app->get_post_formats() ), 'enable-mastodon-apps' ),
-			implode( ', ', $post_formats )
-		);
+		$content[] = $app->get_current_settings_text( __( 'Settings for this app:', 'enable-mastodon-apps' ) );
 
-		$content[] = sprintf(
-			// Translators: %s is the post format.
-			__( 'If you create a new note in this app, it will be created with the <strong>%s</strong> post format.', 'enable-mastodon-apps' ),
-			reset( $post_formats )
-		);
-
-		if ( 'standard' === reset( $post_formats ) ) {
-			$content[] = __( 'If you want to create a post in WordPress with a title, add a new line after the title. The first line will then appear as the title of the post.', 'enable-mastodon-apps' );
-		} else {
-			$content[] = __( 'Because a new post is not created in the standard post format, it will be published without title. To change this, select the <strong>standard</strong> post format in the Enable Mastodon Apps settings.', 'enable-mastodon-apps' );
-		}
+		// translators: %s: settings page URL.
+		$content[] = sprintf( __( 'Change the <a href=%s>settings for this app here</a>.', 'enable-mastodon-apps' ), '"' . esc_url( admin_url( 'options-general.php?page=enable-mastodon-apps&app=' . $app->get_client_id() ) ) . '"' );
 
 		$ret[] = array(
 			'id'           => 1,
