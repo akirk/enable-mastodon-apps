@@ -692,6 +692,13 @@ class Mastodon_Admin {
 			}
 		}
 
+		if ( isset( $_POST['create_post_format'] ) ) {
+			$create_post_format = sanitize_text_field( wp_unslash( $_POST['create_post_format'] ) );
+			if ( isset( $post_types[ $create_post_format ] ) ) {
+				$app->set_create_post_format( $create_post_format );
+			}
+		}
+
 		if ( isset( $_POST['view_post_types'] ) && is_array( $_POST['view_post_types'] ) ) {
 			$view_post_types = array(
 				Mastodon_API::ANNOUNCE_CPT => true,

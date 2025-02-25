@@ -141,7 +141,7 @@ $app_post_formats = $app->get_post_formats();
 							<?php endforeach; ?>
 						</select>
 						<label>
-							<?php echo esc_html( _x( 'in the post format', 'select post type', 'enable-mastodon-apps' ) ); ?>
+							<?php echo esc_html( _x( 'in the post format', 'select post format', 'enable-mastodon-apps' ) ); ?>
 							<select name="create_post_format">
 								<?php foreach ( get_post_format_strings() as $format => $label ) : ?>
 									<option value="<?php echo esc_attr( $format ); ?>" <?php selected( $format, $app->get_create_post_format() ); ?>><?php echo esc_html( $label ); ?></option>
