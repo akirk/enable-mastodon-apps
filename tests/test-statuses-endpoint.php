@@ -165,6 +165,7 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 	 */
 	public function test_submit_status( $status, $new_format, $new_post_type, $disable_blocks, $expected_title, $expected_content ) {
 		$this->app->set_post_formats( $new_format );
+		$this->app->set_create_post_format( $new_format );
 		$this->app->set_create_post_type( $new_post_type );
 		$this->app->set_disable_blocks( $disable_blocks );
 
