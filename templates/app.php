@@ -140,6 +140,15 @@ $app_post_formats = $app->get_post_formats();
 								<option value="<?php echo esc_attr( $_post_type->name ); ?>" <?php selected( $_post_type->name, $app->get_create_post_type() ); ?>><?php echo esc_html( $_post_type->labels->singular_name ); ?></option>
 							<?php endforeach; ?>
 						</select>
+						<label>
+							<?php echo esc_html( _x( 'in the post format', 'select post type', 'enable-mastodon-apps' ) ); ?>
+							<select name="create_post_format">
+								<?php foreach ( get_post_format_strings() as $format => $label ) : ?>
+									<option value="<?php echo esc_attr( $format ); ?>" <?php selected( $format, $app->get_create_post_format() ); ?>><?php echo esc_html( $label ); ?></option>
+								<?php endforeach; ?>
+							</select>
+						</label>
+
 						<p class="description">
 							<span><?php esc_html_e( 'When posting through the app, this post type will be created.', 'enable-mastodon-apps' ); ?></span>
 							<br>

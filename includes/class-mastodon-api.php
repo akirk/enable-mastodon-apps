@@ -1997,17 +1997,9 @@ class Mastodon_API {
 		$media_ids    = $request->get_param( 'media_ids' );
 		$scheduled_at = $request->get_param( 'scheduled_at' );
 
-		$app              = Mastodon_App::get_current_app();
-		$app_post_formats = array();
-		if ( $app ) {
-			$app_post_formats = $app->get_post_formats();
-		}
-		if ( empty( $app_post_formats ) ) {
-			$app_post_formats = array( 'status' );
-		}
-		$post_format = apply_filters( 'mastodon_api_new_post_format', $app_post_formats[0] );
+		$app = Mastodon_App::get_current_app();
 
-		$status = apply_filters( 'mastodon_api_submit_status', null, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at, $request );
+		$status = apply_filters( 'mastodon_api_submit_status', null, $status_text, $in_reply_to_id, $media_ids, $app->get_create_post_format(), $visibility, $scheduled_at, $request );
 
 		return $this->validate_entity( $status, Entity\Status::class );
 	}

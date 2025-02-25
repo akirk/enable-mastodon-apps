@@ -107,6 +107,14 @@ class Mastodon_App {
 		return $create_post_type;
 	}
 
+	public function get_create_post_format() {
+		$create_post_format = get_term_meta( $this->term->term_id, 'create_post_format', true );
+		if ( ! $create_post_format ) {
+			$create_post_format = reset( $this->get_post_formats() );
+		}
+		return $create_post_format;
+	}
+
 	public function get_view_post_types() {
 		$view_post_types = get_term_meta( $this->term->term_id, 'view_post_types', true );
 		if ( ! $view_post_types ) {
