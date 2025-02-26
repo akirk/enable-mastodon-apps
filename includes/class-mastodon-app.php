@@ -263,9 +263,12 @@ class Mastodon_App {
 			ARRAY_FILTER_USE_KEY
 		);
 
-		$content .= PHP_EOL . __( 'Post Formats', 'enable-mastodon-apps' ) . ': ' . implode( ', ', $post_format_strings );
 		if ( empty( $post_format_strings ) ) {
-			$content .= __( 'All' ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
+			// translators: %s is a list of post formats.
+			$content .= PHP_EOL . sprintf( _n( 'Post Format: %s', 'Post Formats: %s', count( get_post_format_strings() ), 'enable-mastodon-apps' ), __( 'All' ) ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
+		} else {
+			// translators: %s is a list of post formats.
+			$content .= PHP_EOL . sprintf( _n( 'Post Format: %s', 'Post Formats: %s', count( $post_format_strings ), 'enable-mastodon-apps' ), implode( ', ', $post_format_strings ) );
 		}
 
 		if ( empty( $post_format_strings ) ) {
