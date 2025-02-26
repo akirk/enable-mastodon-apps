@@ -247,9 +247,7 @@ $app_post_formats = $app->get_post_formats();
 					for ( const option of options ) {
 						if ( option.value === '' ) {
 							option.textContent = option.textContent.replace( /\(.*\)/, '(' + postFormats[0].nextSibling.textContent.trim() + ')' );
-						}
-						if ( option.value === event.target.value ) {
-
+						} else if ( option.value === event.target.value ) {
 							option.disabled = ! event.target.checked;
 						}
 					}
