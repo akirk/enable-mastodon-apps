@@ -29,6 +29,10 @@ $confirm     = esc_html(
 	)
 );
 $app_post_formats = $app->get_post_formats();
+$selected_post_format = $app->get_create_post_format();
+if ( ! $selected_post_format ) {
+	$selected_post_format = 'standard';
+}
 ?>
 <div class="enable-mastodon-apps-settings enable-mastodon-apps-registered-apps-page <?php echo $args['enable_debug'] ? 'enable-debug' : 'disable-debug'; ?>">
 	<form method="post">
@@ -143,7 +147,7 @@ $app_post_formats = $app->get_post_formats();
 						<label>
 							<?php echo esc_html( _x( 'in the post format', 'select post format', 'enable-mastodon-apps' ) ); ?>
 							<select name="create_post_format">
-								<option value="" <?php selected( ! $app->get_create_post_format( true ) ); ?>><?php esc_html_e( 'First selected above', 'enable-mastodon-apps' ); ?> (<?php echo esc_html( get_post_format_strings()[ $app->get_create_post_format() ] ); ?>)</option>
+								<option value="" <?php selected( ! $app->get_create_post_format( true ) ); ?>><?php esc_html_e( 'First selected above', 'enable-mastodon-apps' ); ?> (<?php echo esc_html( get_post_format_strings()[ $selected_post_format ] ); ?>)</option>
 
 								<?php foreach ( get_post_format_strings() as $format => $label ) : ?>
 									<option value="<?php echo esc_attr( $format ); ?>" <?php selected( $format, $app->get_create_post_format( true ) ); ?><?php disabled( ! in_array( $format, $app_post_formats, true ) ); ?>><?php echo esc_html( $label ); ?></option>
