@@ -29,7 +29,7 @@
 					</td>
 				</tr>
 				<tr>
-					<th scope="row"><?php esc_html_e( 'Posting', 'enable-mastodon-apps' ); ?></th>
+					<th scope="row" rowspan="2"><?php esc_html_e( 'Posting', 'enable-mastodon-apps' ); ?></th>
 					<td>
 						<fieldset>
 							<label for="mastodon_api_posting_cpt">
@@ -70,6 +70,24 @@
 								?>
 							</span>
 						</p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<fieldset>
+							<label for="mastodon_api_default_create_post_format">
+								<?php esc_html_e( 'For new apps, pre-select this post format:', 'enable-mastodon-apps' ); ?>
+							</label>
+							<select name="mastodon_api_default_create_post_format" id="mastodon_api_default_create_post_format">
+								<option value="all" <?php selected( ! get_option( 'mastodon_api_default_create_post_format' ) ); ?>><?php esc_html_e( 'None', 'enable-mastodon-apps' ); ?></option>
+								<?php foreach ( get_post_format_strings() as $format => $label ) : ?>
+									<option value="<?php echo esc_attr( $format ); ?>" <?php selected( $format, get_option( 'mastodon_api_default_create_post_format' ) ); ?>><?php echo esc_html( $label ); ?></option>
+								<?php endforeach; ?>
+							</select>
+							<p class="description">
+								<?php esc_html_e( 'If no post format is selected, posts in all post formats will be displayed.', 'enable-mastodon-apps' ); ?>
+							</p>
+						</fieldset>
 					</td>
 				</tr>
 				<tr>

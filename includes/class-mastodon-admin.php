@@ -192,10 +192,23 @@ class Mastodon_Admin {
 	}
 
 	public function process_admin_settings_page() {
-		if ( isset( $_POST['mastodon_api_enable_logins'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( sanitize_key( $_POST['_wpnonce'] ), 'enable-mastodon-apps' ) ) {
+			return;
+		}
+
+		if ( isset( $_POST['mastodon_api_enable_logins'] ) ) {
 			delete_option( 'mastodon_api_disable_logins' );
 		} else {
 			update_option( 'mastodon_api_disable_logins', true );
+		}
+
+		if ( isset( $_POST['mastodon_api_default_create_post_format'] ) ) {
+			$post_format = sanitize_text_field( wp_unslash( $_POST['mastodon_api_default_create_post_format'] ) );
+			if ( in_array( $post_format, get_post_format_slugs(), true ) ) {
+				update_option( 'mastodon_api_default_create_post_format', $post_format, false );
+			} else {
+				delete_option( 'mastodon_api_default_create_post_format' );
+			}
 		}
 
 		/**
@@ -214,7 +227,7 @@ class Mastodon_Admin {
 		 */
 		$default_ema_post_type = apply_filters( 'mastodon_api_default_post_type', \Enable_Mastodon_Apps\Mastodon_API::POST_CPT );
 
-		if ( isset( $_POST['mastodon_api_posting_cpt'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		if ( isset( $_POST['mastodon_api_posting_cpt'] ) ) {
 			delete_option( 'mastodon_api_posting_cpt' );
 
 			if ( defined( 'ACTIVITYPUB_PLUGIN_VERSION' ) ) {
@@ -236,19 +249,19 @@ class Mastodon_Admin {
 			}
 		}
 
-		if ( isset( $_POST['mastodon_api_disable_ema_announcements'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		if ( isset( $_POST['mastodon_api_disable_ema_announcements'] ) ) {
 			delete_option( 'mastodon_api_disable_ema_announcements' );
 		} else {
 			update_option( 'mastodon_api_disable_ema_announcements', true, false );
 		}
 
-		if ( isset( $_POST['mastodon_api_disable_ema_app_settings_changes'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		if ( isset( $_POST['mastodon_api_disable_ema_app_settings_changes'] ) ) {
 			delete_option( 'mastodon_api_disable_ema_app_settings_changes' );
 		} else {
 			update_option( 'mastodon_api_disable_ema_app_settings_changes', true, false );
 		}
 
-		if ( isset( $_POST['mastodon_api_enable_debug'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		if ( isset( $_POST['mastodon_api_enable_debug'] ) ) {
 			update_option( 'mastodon_api_enable_debug', true );
 		} else {
 			delete_option( 'mastodon_api_enable_debug' );
@@ -266,12 +279,16 @@ class Mastodon_Admin {
 	}
 
 	public function process_admin_debug_page() {
-		if ( isset( $_POST['mastodon_api_debug_mode'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( sanitize_key( $_POST['_wpnonce'] ), 'enable-mastodon-apps' ) ) {
+			return;
+		}
+
+		if ( isset( $_POST['mastodon_api_debug_mode'] ) ) {
 			update_option( 'mastodon_api_debug_mode', time() + 5 * MINUTE_IN_SECONDS );
 		} else {
 			delete_option( 'mastodon_api_debug_mode' );
 		}
-		if ( isset( $_POST['mastodon_api_auto_app_reregister'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		if ( isset( $_POST['mastodon_api_auto_app_reregister'] ) ) {
 			update_option( 'mastodon_api_auto_app_reregister', true );
 		} else {
 			delete_option( 'mastodon_api_auto_app_reregister' );
@@ -287,9 +304,11 @@ class Mastodon_Admin {
 	}
 
 	public function process_admin_registered_apps_page() {
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing
+		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( sanitize_key( $_POST['_wpnonce'] ), 'enable-mastodon-apps' ) ) {
+			return;
+		}
+
 		if ( isset( $_POST['delete-code'] ) ) {
-			 // phpcs:ignore WordPress.Security.NonceVerification.Missing
 			$deleted = $this->oauth->get_code_storage()->expireAuthorizationCode( sanitize_text_field( wp_unslash( $_POST['delete-code'] ) ) );
 			add_settings_error(
 				'enable-mastodon-apps',
@@ -304,10 +323,8 @@ class Mastodon_Admin {
 			return;
 		}
 
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		if ( isset( $_POST['delete-token'] ) ) {
-			// phpcs:ignore WordPress.Security.NonceVerification.Missing
-			$deleted = $this->oauth->get_token_storage()->unsetAccessToken( sanitize_text_field( wp_unslash( $_POST['delete-token'] ) ) );
+				$deleted = $this->oauth->get_token_storage()->unsetAccessToken( sanitize_text_field( wp_unslash( $_POST['delete-token'] ) ) );
 			add_settings_error(
 				'enable-mastodon-apps',
 				'deleted-tokens',
@@ -321,10 +338,8 @@ class Mastodon_Admin {
 			return;
 		}
 
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		if ( isset( $_POST['delete-app'] ) ) {
-			// phpcs:ignore WordPress.Security.NonceVerification.Missing
-			$deleted = Mastodon_App::get_by_client_id( sanitize_text_field( wp_unslash( $_POST['delete-app'] ) ) )->delete();
+				$deleted = Mastodon_App::get_by_client_id( sanitize_text_field( wp_unslash( $_POST['delete-app'] ) ) )->delete();
 			add_settings_error(
 				'enable-mastodon-apps',
 				'deleted-apps',
@@ -338,10 +353,8 @@ class Mastodon_Admin {
 			return;
 		}
 
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		if ( isset( $_POST['clear-app-logs'] ) ) {
-			// phpcs:ignore WordPress.Security.NonceVerification.Missing
-			$deleted = Mastodon_App::get_by_client_id( sanitize_text_field( wp_unslash( $_POST['clear-app-logs'] ) ) )->delete_last_requests();
+				$deleted = Mastodon_App::get_by_client_id( sanitize_text_field( wp_unslash( $_POST['clear-app-logs'] ) ) )->delete_last_requests();
 			if ( $deleted ) {
 				add_settings_error(
 					'enable-mastodon-apps',
@@ -359,7 +372,6 @@ class Mastodon_Admin {
 			}
 			return;
 		}
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		if ( isset( $_POST['clear-all-app-logs'] ) ) {
 			$total_deleted = 0;
 			foreach ( Mastodon_App::get_all() as $app ) {
@@ -390,7 +402,6 @@ class Mastodon_Admin {
 			return;
 		}
 
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		if ( isset( $_POST['delete-outdated'] ) ) {
 			$apps    = Mastodon_App::get_all();
 			$deleted = OAuth2\Access_Token_Storage::cleanupOldTokens();
@@ -456,7 +467,6 @@ class Mastodon_Admin {
 			return;
 		}
 
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		if ( isset( $_POST['delete-never-used'] ) ) {
 			$deleted = 0;
 			foreach ( Mastodon_App::get_all() as $app ) {
@@ -499,7 +509,6 @@ class Mastodon_Admin {
 			return;
 		}
 
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		if ( isset( $_POST['delete-apps-without-tokens'] ) ) {
 			$app_tokens = array();
 			foreach ( OAuth2\Access_Token_Storage::getAll() as $token => $data ) {
