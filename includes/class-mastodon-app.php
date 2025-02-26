@@ -107,6 +107,15 @@ class Mastodon_App {
 		return $create_post_type;
 	}
 
+	public function get_create_post_format( $raw = false ) {
+		$create_post_format = get_term_meta( $this->term->term_id, 'create_post_format', true );
+		if ( ! $create_post_format && ! $raw ) {
+			$post_formats = $this->get_post_formats();
+			$create_post_format = reset( $post_formats );
+		}
+		return $create_post_format;
+	}
+
 	public function get_view_post_types() {
 		$view_post_types = get_term_meta( $this->term->term_id, 'view_post_types', true );
 		if ( ! $view_post_types ) {
@@ -142,6 +151,10 @@ class Mastodon_App {
 
 	public function set_create_post_type( $create_post_type ) {
 		return update_term_meta( $this->term->term_id, 'create_post_type', $create_post_type );
+	}
+
+	public function set_create_post_format( $create_post_format ) {
+		return update_term_meta( $this->term->term_id, 'create_post_format', $create_post_format );
 	}
 
 	public function set_view_post_types( $view_post_types ) {
@@ -256,6 +269,13 @@ class Mastodon_App {
 
 		$content .= PHP_EOL . _x( 'Create new posts as', 'select post type', 'enable-mastodon-apps' ) . ': ';
 		$content .= get_post_type_object( $this->get_create_post_type() )->labels->singular_name;
+		$content .= PHP_EOL . _x( 'in the post format', 'select post type', 'enable-mastodon-apps' ) . ': ';
+		foreach ( get_post_format_strings() as $slug => $name ) {
+			if ( $slug === $this->get_create_post_format() ) {
+				$content .= $name;
+				break;
+			}
+		}
 		$t = PHP_EOL . __( 'Show these post types', 'enable-mastodon-apps' ) . ': ';
 		foreach ( $this->get_view_post_types() as $post_type ) {
 			if ( in_array( $post_type, array( Mastodon_API::ANNOUNCE_CPT, Mastodon_API::POST_CPT ), true ) ) {

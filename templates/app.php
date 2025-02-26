@@ -29,6 +29,10 @@ $confirm     = esc_html(
 	)
 );
 $app_post_formats = $app->get_post_formats();
+$selected_post_format = $app->get_create_post_format();
+if ( ! $selected_post_format ) {
+	$selected_post_format = 'standard';
+}
 ?>
 <div class="enable-mastodon-apps-settings enable-mastodon-apps-registered-apps-page <?php echo $args['enable_debug'] ? 'enable-debug' : 'disable-debug'; ?>">
 	<form method="post">
@@ -140,6 +144,17 @@ $app_post_formats = $app->get_post_formats();
 								<option value="<?php echo esc_attr( $_post_type->name ); ?>" <?php selected( $_post_type->name, $app->get_create_post_type() ); ?>><?php echo esc_html( $_post_type->labels->singular_name ); ?></option>
 							<?php endforeach; ?>
 						</select>
+						<label>
+							<?php echo esc_html( _x( 'in the post format', 'select post format', 'enable-mastodon-apps' ) ); ?>
+							<select name="create_post_format">
+								<option value="" <?php selected( ! $app->get_create_post_format( true ) ); ?>><?php esc_html_e( 'First selected above', 'enable-mastodon-apps' ); ?> (<?php echo esc_html( get_post_format_strings()[ $selected_post_format ] ); ?>)</option>
+
+								<?php foreach ( get_post_format_strings() as $format => $label ) : ?>
+									<option value="<?php echo esc_attr( $format ); ?>" <?php selected( $format, $app->get_create_post_format( true ) ); ?><?php disabled( ! empty( $app_post_formats ) && ! in_array( $format, $app_post_formats, true ) ); ?>><?php echo esc_html( $label ); ?></option>
+								<?php endforeach; ?>
+							</select>
+						</label>
+
 						<p class="description">
 							<span><?php esc_html_e( 'When posting through the app, this post type will be created.', 'enable-mastodon-apps' ); ?></span>
 							<br>
@@ -217,17 +232,7 @@ $app_post_formats = $app->get_post_formats();
 				)
 			);
 			?>
-			</button>
-		<script>
-			document.getElementById( 'toggle_all_post_formats' ).onclick = function ( event ) {
-				document.querySelectorAll( '.post-formats input[type="checkbox"]' ).forEach( function ( element ) {
-					element.checked = ! element.checked;
-				} );
-
-				event.preventDefault();
-				return false;
-			}
-		</script>
+		</button>
 
 		<h3><?php esc_html_e( 'Access Tokens', 'enable-mastodon-apps' ); ?></h3>
 
@@ -282,3 +287,35 @@ $app_post_formats = $app->get_post_formats();
 
 </form>
 </div>
+<script type="text/javascript">
+document.addEventListener( 'click', function ( event ) {
+	function updatePostFormatDropdown( el ) {
+		const postFormats = document.querySelectorAll( '.post-formats input[type="checkbox"]:checked' );
+		const postFormatSelect = document.querySelector( 'select[name="create_post_format"]' );
+		const options = postFormatSelect.querySelectorAll( 'option' );
+
+		for ( const option of options ) {
+			if ( option.value === '' ) {
+				option.textContent = option.textContent.replace( /\(.*\)/, '(' + postFormats[0].nextSibling.textContent.trim() + ')' );
+			}
+			if ( option.value === el.value ) {
+				option.disabled = ! el.checked;
+				if ( ! el.checked && postFormatSelect.value === el.value ) {
+					postFormatSelect.value = '';
+				}
+			}
+		}
+	}
+
+	if ( event.target.matches( '.post-formats input[type="checkbox"]' ) ) {
+		return updatePostFormatDropdown( event.target );
+	}
+	if ( event.target.id === 'toggle_all_post_formats' ) {
+		document.querySelectorAll( '.post-formats input[type="checkbox"]' ).forEach( function ( element ) {
+			element.checked = ! element.checked;
+			updatePostFormatDropdown( element );
+		} );
+		return;
+	}
+});
+</script>

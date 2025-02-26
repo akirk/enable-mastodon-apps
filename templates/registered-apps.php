@@ -42,8 +42,10 @@ $rest_nonce = wp_create_nonce( 'wp_rest' );
 			<thead>
 				<th><?php esc_html_e( 'Name', 'enable-mastodon-apps' ); ?></th>
 				<th class="debug-hide"><?php esc_html_e( 'Redirect URI', 'enable-mastodon-apps' ); ?></th>
-				<th><?php esc_html_e( 'Scope', 'enable-mastodon-apps' ); ?></th>
-				<th class="debug-hide"><?php esc_html_e( 'Post Formats', 'enable-mastodon-apps' ); ?></th>
+				<th><?php echo esc_html_x( 'Create new posts as', 'select post type', 'enable-mastodon-apps' ); ?></th>
+				<th><?php echo esc_html_x( 'in the post format', 'select post format', 'enable-mastodon-apps' ); ?></th>
+				<th><?php esc_html_e( 'Post Formats', 'enable-mastodon-apps' ); ?></th>
+				<th class="debug-hide"><?php esc_html_e( 'Scope', 'enable-mastodon-apps' ); ?></th>
 				<th><?php esc_html_e( 'Last Used', 'enable-mastodon-apps' ); ?></th>
 				<th><?php esc_html_e( 'Created', 'enable-mastodon-apps' ); ?></th>
 				<th></th>
@@ -68,16 +70,49 @@ $rest_nonce = wp_create_nonce( 'wp_rest' );
 							?>
 						</td>
 						<td class="debug-hide"><?php echo wp_kses( implode( '<br/>', is_array( $app->get_redirect_uris() ) ? $app->get_redirect_uris() : explode( ',', $app->get_redirect_uris() ) ), array( 'br' => array() ) ); ?></td>
-						<td><?php echo esc_html( $app->get_scopes() ); ?></td>
-						<td class="debug-hide">
+						<td>
 							<?php
-							foreach ( get_post_format_strings() as $format => $label ) {
-								if ( in_array( $format, $app->get_post_formats() ) ) {
-									echo esc_html( $label ) . '<br>';
+							$_post_type = get_post_type_object( $app->get_create_post_type() );
+							echo esc_html( $_post_type->labels->singular_name );
+							?>
+						</td>
+						<td>
+							<?php
+							if ( ! $app->get_create_post_format() ) {
+								echo esc_html_x( 'Standard', 'Post format' ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
+
+							} else {
+								foreach ( get_post_format_strings() as $slug => $name ) {
+									if ( $slug === $app->get_create_post_format() ) {
+										echo esc_html( $name );
+										break;
+									}
 								}
 							}
 							?>
 						</td>
+						<td>
+							<?php
+
+							$post_formats = $app->get_post_formats();
+							if ( empty( $post_formats ) ) {
+								echo esc_html( __( 'All' ) ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
+							} else {
+								echo esc_html(
+									implode(
+										', ',
+										array_map(
+											function ( $slug ) {
+												return get_post_format_strings()[ $slug ];
+											},
+											$post_formats
+										)
+									)
+								);
+							}
+							?>
+						</td>
+						<td class="debug-hide"><?php echo esc_html( $app->get_scopes() ); ?></td>
 						<?php td_timestamp( $app->get_last_used() ); ?>
 						<?php td_timestamp( $app->get_creation_date() ); ?>
 						<td><a href="<?php echo esc_url( $app->get_admin_page() ); ?>"><?php esc_html_e( 'Details', 'enable-mastodon-apps' ); ?></a></td>
