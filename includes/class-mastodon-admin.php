@@ -694,8 +694,10 @@ class Mastodon_Admin {
 
 		if ( isset( $_POST['create_post_format'] ) ) {
 			$create_post_format = sanitize_text_field( wp_unslash( $_POST['create_post_format'] ) );
-			if ( isset( $post_types[ $create_post_format ] ) ) {
+			if ( in_array( $create_post_format, $post_formats ) ) {
 				$app->set_create_post_format( $create_post_format );
+			} else {
+				$app->set_create_post_format( '' );
 			}
 		}
 

@@ -107,9 +107,9 @@ class Mastodon_App {
 		return $create_post_type;
 	}
 
-	public function get_create_post_format() {
+	public function get_create_post_format( $raw = false ) {
 		$create_post_format = get_term_meta( $this->term->term_id, 'create_post_format', true );
-		if ( ! $create_post_format ) {
+		if ( ! $create_post_format && ! $raw ) {
 			$post_formats = $this->get_post_formats();
 			$create_post_format = reset( $post_formats );
 		}

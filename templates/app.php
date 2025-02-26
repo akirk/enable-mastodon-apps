@@ -143,8 +143,10 @@ $app_post_formats = $app->get_post_formats();
 						<label>
 							<?php echo esc_html( _x( 'in the post format', 'select post format', 'enable-mastodon-apps' ) ); ?>
 							<select name="create_post_format">
+								<option value="" <?php selected( ! $app->get_create_post_format( true ) ); ?>><?php esc_html_e( 'First selected above', 'enable-mastodon-apps' ); ?> (<?php echo esc_html( get_post_format_strings()[ $app->get_create_post_format() ] ); ?>)</option>
+
 								<?php foreach ( get_post_format_strings() as $format => $label ) : ?>
-									<option value="<?php echo esc_attr( $format ); ?>" <?php selected( $format, $app->get_create_post_format() ); ?>><?php echo esc_html( $label ); ?></option>
+									<option value="<?php echo esc_attr( $format ); ?>" <?php selected( $format, $app->get_create_post_format( true ) ); ?><?php disabled( ! in_array( $format, $app_post_formats, true ) ); ?>><?php echo esc_html( $label ); ?></option>
 								<?php endforeach; ?>
 							</select>
 						</label>
@@ -227,7 +229,7 @@ $app_post_formats = $app->get_post_formats();
 			);
 			?>
 			</button>
-		<script>
+		<script type="text/javascript">
 			document.getElementById( 'toggle_all_post_formats' ).onclick = function ( event ) {
 				document.querySelectorAll( '.post-formats input[type="checkbox"]' ).forEach( function ( element ) {
 					element.checked = ! element.checked;
@@ -236,6 +238,23 @@ $app_post_formats = $app->get_post_formats();
 				event.preventDefault();
 				return false;
 			}
+
+			document.body.onclick = function ( event ) {
+				if ( event.target.matches( '.post-formats input[type="checkbox"]' ) ) {
+					const postFormats = document.querySelectorAll( '.post-formats input[type="checkbox"]:checked' );
+					const postFormatSelect = document.querySelector( 'select[name="create_post_format"]' );
+					const options = postFormatSelect.querySelectorAll( 'option' );
+					for ( const option of options ) {
+						if ( option.value === '' ) {
+							option.textContent = option.textContent.replace( /\(.*\)/, '(' + postFormats[0].nextSibling.textContent.trim() + ')' );
+						}
+						if ( option.value === event.target.value ) {
+
+							option.disabled = ! event.target.checked;
+						}
+					}
+				}
+			};
 		</script>
 
 		<h3><?php esc_html_e( 'Access Tokens', 'enable-mastodon-apps' ); ?></h3>
