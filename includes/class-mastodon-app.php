@@ -255,30 +255,38 @@ class Mastodon_App {
 	 */
 	public function get_current_settings_text( string $content = '' ) {
 		$post_formats = $this->get_post_formats();
-		$t = PHP_EOL . __( 'Post Formats', 'enable-mastodon-apps' ) . ': ';
-		foreach ( get_post_format_strings() as $slug => $name ) {
-			if ( ! in_array( $slug, $post_formats, true ) ) {
-				continue;
-			}
-			$content .= $t . $name;
-			$t = ', ';
+		$post_format_strings = array_filter(
+			get_post_format_strings(),
+			function ( $slug ) use ( $post_formats ) {
+				return in_array( $slug, $post_formats, true );
+			},
+			ARRAY_FILTER_USE_KEY
+		);
+
+		if ( empty( $post_format_strings ) ) {
+			// translators: %s is a list of post formats.
+			$content .= PHP_EOL . sprintf( _n( 'Post Format: %s', 'Post Formats: %s', count( get_post_format_strings() ), 'enable-mastodon-apps' ), __( 'All' ) ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
+		} else {
+			// translators: %s is a list of post formats.
+			$content .= PHP_EOL . sprintf( _n( 'Post Format: %s', 'Post Formats: %s', count( $post_format_strings ), 'enable-mastodon-apps' ), implode( ', ', $post_format_strings ) );
 		}
-		if ( ', ' !== $t ) {
-			$content .= $t . __( 'All' ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
+
+		if ( empty( $post_format_strings ) ) {
+			$post_format_strings = get_post_format_strings();
 		}
 
 		$content .= PHP_EOL . _x( 'Create new posts as', 'select post type', 'enable-mastodon-apps' ) . ': ';
 		$content .= get_post_type_object( $this->get_create_post_type() )->labels->singular_name;
-		$content .= PHP_EOL . _x( 'in the post format', 'select post type', 'enable-mastodon-apps' ) . ': ';
-		foreach ( get_post_format_strings() as $slug => $name ) {
-			if ( $slug === $this->get_create_post_format() ) {
-				$content .= $name;
-				break;
-			}
+		$content .= ' ' . _x( 'in the post format', 'select post type', 'enable-mastodon-apps' ) . ': ';
+		if ( $this->get_create_post_format() && isset( $post_format_strings[ $this->get_create_post_format() ] ) ) {
+			$content .= $post_format_strings[ $this->get_create_post_format() ];
+		} else {
+			$content .= reset( $post_format_strings );
 		}
+
 		$t = PHP_EOL . __( 'Show these post types', 'enable-mastodon-apps' ) . ': ';
 		foreach ( $this->get_view_post_types() as $post_type ) {
-			if ( in_array( $post_type, array( Mastodon_API::ANNOUNCE_CPT, Mastodon_API::POST_CPT ), true ) ) {
+			if ( in_array( $post_type, array( Comment_CPT::CPT ), true ) ) {
 				continue;
 			}
 			$content .= $t . get_post_type_object( $post_type )->labels->name;
@@ -800,6 +808,10 @@ class Mastodon_App {
 			'website'
 		);
 
+		$post_formats = array();
+		if ( get_option( 'mastodon_api_default_create_post_format' ) ) {
+			$post_formats[] = get_option( 'mastodon_api_default_create_post_format' );
+		}
 		/**
 		 * Post formats to be enabled for new apps.
 		 *
@@ -815,13 +827,18 @@ class Mastodon_App {
 		 * } );
 		 * ```
 		 */
-		$post_formats = apply_filters( 'mastodon_api_new_app_post_formats', array(), $app_metadata );
+		$post_formats = apply_filters( 'mastodon_api_new_app_post_formats', $post_formats, $app_metadata );
+
 		$app_metadata['query_args'] = array( 'post_formats' => $post_formats );
 
 		$app_metadata['create_post_type'] = get_option( 'mastodon_api_posting_cpt', apply_filters( 'mastodon_api_default_post_type', \Enable_Mastodon_Apps\Mastodon_API::POST_CPT ) );
 		$view_post_types = array( 'post', 'comment' );
 		if ( ! in_array( $app_metadata['create_post_type'], $view_post_types ) ) {
 			$view_post_types[] = $app_metadata['create_post_type'];
+		}
+
+		if ( get_option( 'mastodon_api_default_create_post_format' ) && in_array( get_option( 'mastodon_api_default_create_post_format' ), $post_formats ) ) {
+			$app_metadata['create_post_format'] = get_option( 'mastodon_api_default_create_post_format' );
 		}
 
 		/**
