@@ -56,54 +56,81 @@ class Mastodon_Admin {
 				'id'      => 'enable-mastodon-apps-help',
 				'title'   => __( 'Settings' ), // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
 				'content' =>
-					'<p><strong>' . esc_html__( 'Hide posts through Mastodon apps from appearing on the WordPress frontend', 'enable-mastodon-apps' ) . '</strong><br>' .
-					'<span>' . esc_html__( 'Setting this depends on your use case:', 'enable-mastodon-apps' ) . '</span>' .
+					'<ul><li><strong>' . esc_html__( 'Hide posts through Mastodon apps from appearing on the WordPress frontend', 'enable-mastodon-apps' ) . '</strong>' .
+
 					'<ul>' .
-					'<li>' . esc_html__( 'If you want to use Mastodon apps to read just the posts on your site (for example in a blog with many authors, and you are interested in what the other authors post), and post to the site directly, uncheck the box.', 'enable-mastodon-apps' ) . '</li>' .
-					'<li>' .
+					'<li><span>' .
+					__( 'Check this if you want keep your use of Mastodon separate from your activity on your site.', 'enable-mastodon-apps' ) . '</span> <span>' .
+					__( 'Posting through a Mastodon app would still save the post in your WordPress but invisibly to visitors and subscribers of your WordPress.', 'enable-mastodon-apps' ) . '</span> <span>' .
 					wp_kses(
 						sprintf(
-							// translators: Links to the plugins.
-							__( 'If you want to use Mastodon apps to post to Mastodon (when combining with the <a href="%1$s">Friends plugin</a> and <a href="%2$s">ActivityPub plugin</a>) but want to avoid posting it visibly to your site (which for example would be sent to your subscribers), leave it checked.', 'enable-mastodon-apps' ),
-							'https://wordpress.org/plugins/friends/" target="_blank',
+							// translators: Links to the plugin.
+							__( 'Remember that for posting to Mastodon, you\'ll need the <a href="%s">ActivityPub plugin</a>.', 'enable-mastodon-apps' ),
 							'https://wordpress.org/plugins/activitypub/" target="_blank'
 						),
 						array(
-						'a' => array(
-						'href'   => true,
-						'target' => true,
-						),
+							'a' => array(
+								'href'   => true,
+								'target' => true,
+							),
 						)
-					) .
-					'</li>' .
-					'<li>' .
+					) . '</span> <span>' .
 					wp_kses(
 						sprintf(
-							// translators: Links to the plugins.
-							__( 'If you do want to expose such posts also on your site (for example in a <a href="%s">POSSE</a> use case), uncheck the box.', 'enable-mastodon-apps' ),
-							'https://indieweb.org/POSSE" target="_blank'
+							// translators: Links to the plugin.
+							__( 'If you also want to follow people and interact with them, please also install the <a href="%s">Friends plugin</a>.', 'enable-mastodon-apps' ),
+							'https://wordpress.org/plugins/friends/" target="_blank'
 						),
 						array(
-						'a' => array(
-						'href'   => true,
-						'target' => true,
-						),
+							'a' => array(
+								'href'   => true,
+								'target' => true,
+							),
 						)
 					) .
-					'</li>' .
+					'</span></li>' .
+					// translators: %s: a post type name.
+					'<li>' . wp_kses( sprintf( __( 'With this setting, newly registered apps will be configured to save new posts as %s.', 'enable-mastodon-apps' ), '<tt>' . $ema_post_cpt->labels->singular_name . '</tt>' ), array( 'tt' => true ) ) . '</span> <span>' .
+					// translators: %s: a post type name.
+					wp_kses( sprintf( __( 'You can see and edit these posts in the sidebar menu of WP Admin under %s.', 'enable-mastodon-apps' ), '<a href="' . self_admin_url( 'edit.php?post_type=' . $ema_post_cpt->name ) . '">' . $ema_post_cpt->labels->name . '</a>' ), array( 'a' => array( 'href' => true ) ) ) . '</span> <span>' .
+					esc_html__( 'This setting can be changed individually per app in its individual settings page.', 'enable-mastodon-apps' ) . '</span></li>' .
 					'</ul>' .
-					'<span>' .
+					'<li><strong>' . esc_html__( 'Show posts through Mastodon apps on the WordPress frontend', 'enable-mastodon-apps' ) . '</strong>' .
+					'<ul>' .
+					'<li>' . esc_html__( 'Check this if you want to use Mastodon apps to post to the site directly.', 'enable-mastodon-apps' ) . '</span> <span>' .
+					// translators: %s: a post format name.
+					wp_kses( sprintf( __( 'Your posts will appear in your RSS feed and be sent to your subscribers unless you specify a post format, for example %s.', 'enable-mastodon-apps' ), '<tt>' . _x( 'Status', 'Post format' ) . '</tt>' ), array( 'tt' => true ) ) . '</span> <span>' . // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
+					esc_html__( 'That way, those posts will only appear in the specific RSS feed, and are typically not sent to subcribers.', 'enable-mastodon-apps' ) . '</span> <span>' .
 					wp_kses(
 						sprintf(
-							// translators: %1$s and %2$s: a post type.
-							__( 'When checked, new posts made through Mastodon apps will have the post type %1$s, otherwise %2$s when unchecked.', 'enable-mastodon-apps' ),
-							'<strong>' . $ema_post_cpt->labels->singular_name . '</strong>',
-							'<strong>' . $post_cpt->labels->singular_name . '</strong>'
+							// translators: Links to the plugin.
+							__( 'Like above, if you combine it with the <a href="%s">ActivityPub plugin</a>, people on Mastodon will be able to read your posts.', 'enable-mastodon-apps' ),
+							'https://wordpress.org/plugins/activitypub/" target="_blank'
 						),
-						array( 'strong' => true )
+						array(
+							'a' => array(
+								'href'   => true,
+								'target' => true,
+							),
+						)
+					) . '</span> <span>' .
+					wp_kses(
+						sprintf(
+							// translators: Links to the plugin.
+							__( 'Also, with the <a href="%s">Friends plugin</a>, you will be able to follow people and interact with them', 'enable-mastodon-apps' ),
+							'https://wordpress.org/plugins/friends/" target="_blank'
+						),
+						array(
+							'a' => array(
+								'href'   => true,
+								'target' => true,
+							),
+						)
 					) .
-					'</span>' .
-					'</p>',
+					// translators: %s: a post type name.
+					'<li>' . wp_kses( sprintf( __( 'With this setting, newly registered apps will be configured to save new posts as %s.', 'enable-mastodon-apps' ), '<tt>' . $post_cpt->labels->singular_name . '</tt>' ), array( 'tt' => true ) ) .
+					'</span> <span>' . esc_html__( 'This setting can be changed individually per app in its individual settings page.', 'enable-mastodon-apps' ) . '</span></li>' .
+					'</ul>',
 			)
 		);
 	}
@@ -227,7 +254,7 @@ class Mastodon_Admin {
 		 */
 		$default_ema_post_type = apply_filters( 'mastodon_api_default_post_type', \Enable_Mastodon_Apps\Mastodon_API::POST_CPT );
 
-		if ( isset( $_POST['mastodon_api_posting_cpt'] ) ) {
+		if ( isset( $_POST['mastodon_api_posting_cpt'] ) && intval( $_POST['mastodon_api_posting_cpt'] ) === 1 ) {
 			delete_option( 'mastodon_api_posting_cpt' );
 
 			if ( defined( 'ACTIVITYPUB_PLUGIN_VERSION' ) ) {
@@ -237,7 +264,7 @@ class Mastodon_Admin {
 					\update_option( 'activitypub_support_post_types', $supported_post_types );
 				}
 			}
-		} else {
+		} elseif ( isset( $_POST['mastodon_api_posting_cpt'] ) && intval( $_POST['mastodon_api_posting_cpt'] ) === 0 ) {
 			update_option( 'mastodon_api_posting_cpt', 'post', false );
 
 			if ( defined( 'ACTIVITYPUB_PLUGIN_VERSION' ) ) {
@@ -537,7 +564,7 @@ class Mastodon_Admin {
 			);
 			return;
 		}
-		// phpcs:disable WordPress.Security.NonceVerification.Missing
+
 		if ( isset( $_POST['app_post_formats'] ) && is_array( $_POST['app_post_formats'] ) ) {
 			// phpcs:disable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 			foreach ( wp_unslash( $_POST['app_post_formats'] ) as $client_id => $post_formats ) {
@@ -610,6 +637,9 @@ class Mastodon_Admin {
 	}
 
 	public function process_admin_app_page( Mastodon_App $app ) {
+		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( sanitize_key( $_POST['_wpnonce'] ), 'enable-mastodon-apps' ) ) {
+			return;
+		}
 
 		if ( isset( $_POST['delete-app'] ) && $_POST['delete-app'] === $app->get_client_id() ) {
 			$name    = $app->get_client_name();
