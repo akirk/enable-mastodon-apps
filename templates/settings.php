@@ -32,9 +32,13 @@
 					<th scope="row" rowspan="2"><?php esc_html_e( 'Posting', 'enable-mastodon-apps' ); ?></th>
 					<td>
 						<fieldset>
-							<label for="mastodon_api_posting_cpt">
-								<input name="mastodon_api_posting_cpt" type="checkbox" id="mastodon_api_posting_cpt" value="1" <?php checked( ! get_option( 'mastodon_api_posting_cpt' ) ); ?> />
+							<label for="mastodon_api_no_posting_cpt">
+								<input name="mastodon_api_posting_cpt" type="radio" id="mastodon_api_no_posting_cpt" value="1" <?php checked( ! get_option( 'mastodon_api_posting_cpt' ) ); ?> />
 								<span><?php esc_html_e( 'Hide posts through Mastodon apps from appearing on the WordPress frontend', 'enable-mastodon-apps' ); ?></span>
+							</label>
+							<label for="mastodon_api_posting_cpt">
+								<input name="mastodon_api_posting_cpt" type="radio" id="mastodon_api_posting_cpt" value="0" <?php checked( 'post' === get_option( 'mastodon_api_posting_cpt' ) ); ?> />
+								<span><?php esc_html_e( 'Show posts through Mastodon apps on the WordPress frontend', 'enable-mastodon-apps' ); ?></span>
 							</label>
 						</fieldset>
 						<p class="description">
