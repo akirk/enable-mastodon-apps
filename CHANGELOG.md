@@ -1,3 +1,10 @@
+### 1.3.0
+- Fix small errors on app page ([#224])
+- Show internal CPTs if debug is turned on ([#223])
+- Add setting for a default post format ([#221])
+- Improve New Post Setting and explicit set a New post format ([#220], [#222])
+- Assign all post formats to EMA announcements ([#218])
+
 ### 1.2.1
 - Fixed Boost, Like and Comment notifications ([#216])
 - Announce Initial and Changed App Settings ([#207], [#214])
@@ -162,6 +169,12 @@
 - Post replies as comments ([#3])
 - Fix a fatal when saving the default post format
 
+[#224]: https://github.com/akirk/enable-mastodon-apps/pull/224
+[#223]: https://github.com/akirk/enable-mastodon-apps/pull/223
+[#222]: https://github.com/akirk/enable-mastodon-apps/pull/222
+[#221]: https://github.com/akirk/enable-mastodon-apps/pull/221
+[#220]: https://github.com/akirk/enable-mastodon-apps/pull/220
+[#218]: https://github.com/akirk/enable-mastodon-apps/pull/218
 [#216]: https://github.com/akirk/enable-mastodon-apps/pull/216
 [#214]: https://github.com/akirk/enable-mastodon-apps/pull/214
 [#215]: https://github.com/akirk/enable-mastodon-apps/pull/215
