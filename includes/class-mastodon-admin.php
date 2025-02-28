@@ -156,7 +156,7 @@ class Mastodon_Admin {
 		$tab = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : 'welcome';
 		if ( isset( $_POST['app'] ) ) {
 			$app = Mastodon_App::get_by_client_id( sanitize_text_field( wp_unslash( $_POST['app'] ) ) );
-			if ( $app ) {
+			if ( $app && ! is_wp_error( $app ) ) {
 				return $this->process_admin_app_page( $app );
 			}
 			$tab = 'registered-apps';
@@ -182,7 +182,7 @@ class Mastodon_Admin {
 		$tab = isset( $_GET['tab'] ) ? sanitize_text_field( wp_unslash( $_GET['tab'] ) ) : 'welcome';
 		if ( isset( $_GET['app'] ) ) {
 			$app = Mastodon_App::get_by_client_id( sanitize_text_field( wp_unslash( $_GET['app'] ) ) );
-			if ( $app ) {
+			if ( $app && ! is_wp_error( $app ) ) {
 				return $this->admin_app_page( $app );
 			}
 			$tab = 'registered-apps';

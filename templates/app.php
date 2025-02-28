@@ -295,9 +295,6 @@ document.addEventListener( 'click', function ( event ) {
 		const options = postFormatSelect.querySelectorAll( 'option' );
 
 		for ( const option of options ) {
-			if ( option.value === '' ) {
-				option.textContent = option.textContent.replace( /\(.*\)/, '(' + postFormats[0].nextSibling.textContent.trim() + ')' );
-			}
 			if ( option.value === el.value ) {
 				option.disabled = ! el.checked;
 				if ( ! el.checked && postFormatSelect.value === el.value ) {
@@ -305,12 +302,15 @@ document.addEventListener( 'click', function ( event ) {
 				}
 			}
 		}
+		const selectedPostFormat = postFormats.length ? postFormats[0] : document.querySelector( '.post-formats input[type="checkbox"]' );
+		options[0].textContent = options[0].textContent.replace( /\(.*\)/, '(' + selectedPostFormat.nextSibling.textContent.trim() + ')' );
 	}
 
 	if ( event.target.matches( '.post-formats input[type="checkbox"]' ) ) {
 		return updatePostFormatDropdown( event.target );
 	}
 	if ( event.target.id === 'toggle_all_post_formats' ) {
+		event.preventDefault();
 		document.querySelectorAll( '.post-formats input[type="checkbox"]' ).forEach( function ( element ) {
 			element.checked = ! element.checked;
 			updatePostFormatDropdown( element );
