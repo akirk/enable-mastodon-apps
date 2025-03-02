@@ -290,6 +290,10 @@ class Status extends Entity {
 			return new \DateTime( 'now' );
 		}
 
+		if ( 'url' === $k && ! isset( $this->$k ) ) {
+			return $this->uri;
+		}
+
 		return parent::__get( $k );
 	}
 

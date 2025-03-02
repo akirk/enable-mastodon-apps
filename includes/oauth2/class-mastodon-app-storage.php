@@ -94,7 +94,8 @@ class Mastodon_App_Storage implements ClientCredentialsInterface {
 		$client = $this->get( $client_id );
 		if ( is_wp_error( $client ) && get_option( 'mastodon_api_auto_app_reregister' ) ) {
 			$term = wp_insert_term( $client_id, Mastodon_App::TAXONOMY );
-			$redirect_uri = isset( $_REQUEST['redirect_uri'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['redirect_uri'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification
+			// Use wp_kses to avoid filtering out url-escaped characters.
+			$redirect_uri = isset( $_REQUEST['redirect_uri'] ) ? wp_kses( wp_unslash( $_REQUEST['redirect_uri'] ), array() ) : ''; // phpcs:ignore WordPress.Security.NonceVerification
 			$scope = isset( $_REQUEST['scope'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['scope'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification
 
 			$app_metadata = array(

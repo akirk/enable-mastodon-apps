@@ -2226,7 +2226,9 @@ class Mastodon_API {
 		}
 
 		$context_post_id = self::maybe_get_remapped_reblog_id( $context_post_id );
-		$url             = get_permalink( $context_post_id );
+		$context_post_id = self::maybe_get_remapped_comment_id( $context_post_id );
+
+		$url = get_permalink( $context_post_id );
 
 		$context = array(
 			'ancestors'   => array(),

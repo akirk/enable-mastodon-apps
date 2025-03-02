@@ -38,7 +38,7 @@ class Status extends Handler {
 		add_filter( 'mastodon_api_submit_status', array( $this, 'api_submit_post' ), 15, 7 );
 		add_filter( 'mastodon_api_edit_status', array( $this, 'api_edit_comment' ), 10, 8 );
 		add_filter( 'mastodon_api_edit_status', array( $this, 'api_edit_post' ), 15, 8 );
-		add_filter( 'mastodon_api_status_context', array( $this, 'api_status_context' ), 10, 3 );
+		add_filter( 'mastodon_api_status_context', array( $this, 'api_status_context' ), 10, 2 );
 	}
 
 	/**
@@ -577,41 +577,39 @@ class Status extends Handler {
 	}
 
 	public function api_status_context( $context, $context_post_id ) {
-		foreach ( get_post_ancestors( $context_post_id ) as $post_id ) {
-			$args = array();
+		$found = array();
+		$posts = array( $context_post_id );
+		$post_date = new \DateTime( get_post( $context_post_id )->post_date_gmt, new \DateTimeZone( 'UTC' ) );
 
-			/**
-			 * Modify the status data.
-			 *
-			 * @param array|null $account The status data.
-			 * @param int $post_id The object ID to get the status from.
-			 * @param array $data Additional status data.
-			 * @return array|null The modified status data.
-			 */
-			$status = apply_filters(
-				'mastodon_api_status',
-				null,
-				$post_id,
-				$args
-			);
-			if ( $status ) {
-				$context['ancestors'][ $status->id ] = $status;
-			}
+		foreach ( get_post_ancestors( $context_post_id ) as $post_id ) {
+			$posts[] = $post_id;
+			$found[ $post_id ] = get_post( $post_id );
 		}
 
-		$children = get_children(
+		$app = Mastodon_App::get_current_app();
+		if ( $app ) {
+			$post_types = $app->get_view_post_types();
+		} else {
+			$post_types = array();
+		}
+
+		$post_types[] = \Enable_Mastodon_Apps\Comment_CPT::CPT;
+
+		$children = get_posts(
 			array(
-				'post_parent' => $context_post_id,
-				'post_type'   => 'any',
+				'post_parent__in' => $posts,
+				'post_type'       => $post_types,
 			)
 		);
-		foreach ( $children as $post ) {
-			$post = get_post( $post->post_parent );
-			if ( $context_post_id === $context_post_id ) {
+		foreach ( $children as $child ) {
+			$found[ $child->ID ] = $child;
+		}
+
+		foreach ( array_keys( $found ) as $post_id ) {
+			if ( intval( $post_id ) === intval( $context_post_id ) ) {
 				continue;
 			}
-			$post_id = $post->ID;
-			$args    = array();
+			$args = array();
 			/**
 			 * Modify the status data.
 			 *
@@ -626,8 +624,13 @@ class Status extends Handler {
 				$post_id,
 				$args
 			);
+
 			if ( $status ) {
-				$context['descendants'][ $status->id ] = $status;
+				$type = 'descendants';
+				if ( $status->created_at < $post_date ) {
+					$type = 'ancestors';
+				}
+				$context[ $type ][ $status->id ] = $status;
 			}
 		}
 

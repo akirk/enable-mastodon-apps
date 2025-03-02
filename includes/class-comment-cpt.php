@@ -49,9 +49,9 @@ class Comment_CPT {
 	public function register_custom_post_type() {
 		$args = array(
 			'labels'       => array(
-				'name'          => 'Comment',
-				'singular_name' => 'Comment',
-				'menu_name'     => 'Comments',
+				'name'          => __( 'Comments' ), // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
+				'singular_name' => __( 'Comment' ), // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
+				'menu_name'     => __( 'Comments' ), // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
 			),
 			'public'       => false,
 			'show_ui'      => false,
