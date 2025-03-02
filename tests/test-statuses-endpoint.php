@@ -76,7 +76,7 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 
 	public function submit_status_data_provider() {
 		return array(
-			'basic_status'              => array(
+			'basic_status'                    => array(
 				'status'           => 'test',
 				'new_format'       => 'status',
 				'new_post_type'    => 'post',
@@ -84,7 +84,7 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 				'expected_title'   => '',
 				'expected_content' => 'test',
 			),
-			'basic_status_blocks'       => array(
+			'basic_status_blocks'             => array(
 				'status'           => 'test',
 				'new_format'       => 'status',
 				'new_post_type'    => 'post',
@@ -92,31 +92,31 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 				'expected_title'   => '',
 				'expected_content' => "<!-- wp:paragraph -->\n<p>test</p>\n<!-- /wp:paragraph -->",
 			),
-			'basic_standard'            => array(
+			'basic_standard'                  => array(
 				'status'           => 'test',
 				'new_format'       => 'standard',
 				'new_post_type'    => 'post',
 				'disable_blocks'   => true,
-				'expected_title'   => 'test',
-				'expected_content' => '',
+				'expected_title'   => '',
+				'expected_content' => 'test',
 			),
-			'basic_standard_blocks'     => array(
+			'basic_standard_blocks'           => array(
 				'status'           => 'test',
 				'new_format'       => 'standard',
 				'new_post_type'    => 'post',
 				'disable_blocks'   => false,
-				'expected_title'   => 'test',
-				'expected_content' => '',
+				'expected_title'   => '',
+				'expected_content' => "<!-- wp:paragraph -->\n<p>test</p>\n<!-- /wp:paragraph -->",
 			),
-			'basic_cpt'                 => array(
+			'basic_cpt'                       => array(
 				'status'           => 'test',
 				'new_format'       => 'standard',
 				'new_post_type'    => 'my_custom_post_type',
 				'disable_blocks'   => true,
-				'expected_title'   => 'test',
-				'expected_content' => '',
+				'expected_title'   => '',
+				'expected_content' => 'test',
 			),
-			'multiline_status'          => array(
+			'multiline_status'                => array(
 				'status'           => 'headline' . PHP_EOL . 'post_content',
 				'new_format'       => 'status',
 				'new_post_type'    => 'post',
@@ -124,7 +124,7 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 				'expected_title'   => '',
 				'expected_content' => 'headline' . PHP_EOL . 'post_content',
 			),
-			'multiline_status_blocks'   => array(
+			'multiline_status_blocks'         => array(
 				'status'           => 'headline' . PHP_EOL . 'post_content',
 				'new_format'       => 'status',
 				'new_post_type'    => 'post',
@@ -132,16 +132,32 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 				'expected_title'   => '',
 				'expected_content' => "<!-- wp:paragraph -->\n<p>headline</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:paragraph -->\n<p>post_content</p>\n<!-- /wp:paragraph -->",
 			),
-			'multiline_standard'        => array(
-				'status'           => 'headline' . PHP_EOL . 'post_content',
+			'multiline_html_standard'         => array(
+				'status'           => '<p>headline</p><p>post_content</p>',
 				'new_format'       => 'standard',
 				'new_post_type'    => 'post',
 				'disable_blocks'   => true,
 				'expected_title'   => 'headline',
-				'expected_content' => 'post_content',
+				'expected_content' => '<p>post_content</p>',
 			),
-			'multiline_standard_blocks' => array(
-				'status'           => 'headline' . PHP_EOL . 'post_content',
+			'multiline_html_standard_blocks'  => array(
+				'status'           => '<p>headline</p><p>post_content</p>',
+				'new_format'       => 'standard',
+				'new_post_type'    => 'post',
+				'disable_blocks'   => false,
+				'expected_title'   => 'headline',
+				'expected_content' => "<!-- wp:paragraph -->\n<p>post_content</p>\n<!-- /wp:paragraph -->",
+			),
+			'multiline_html_standard2'        => array(
+				'status'           => '<p>headline</p>' . PHP_EOL . '<p>post_content</p>',
+				'new_format'       => 'standard',
+				'new_post_type'    => 'post',
+				'disable_blocks'   => true,
+				'expected_title'   => 'headline',
+				'expected_content' => '<p>post_content</p>',
+			),
+			'multiline_html_standard2_blocks' => array(
+				'status'           => '<p>headline</p>' . PHP_EOL . '<p>post_content</p>',
 				'new_format'       => 'standard',
 				'new_post_type'    => 'post',
 				'disable_blocks'   => false,
