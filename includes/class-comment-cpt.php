@@ -17,6 +17,8 @@
 
 namespace Enable_Mastodon_Apps;
 
+use Enable_Mastodon_Apps\Entity\Status as Status_Entity;
+
 /**
  * Comment Custom Post Type
  *
@@ -42,6 +44,7 @@ class Comment_CPT {
 		add_action( 'transition_comment_status', array( $this, 'update_comment_post_status' ), 10, 3 );
 		add_action( 'edit_comment', array( $this, 'update_comment_post' ), 10, 2 );
 		add_filter( 'mastodon_api_get_posts_query_args', array( $this, 'api_get_posts_query_args' ) );
+		add_filter( 'mastodon_api_status', array( $this, 'api_status' ), 9, 3 );
 		add_filter( 'mastodon_api_account', array( $this, 'api_account' ), 10, 4 );
 		add_filter( 'mastodon_api_in_reply_to_id', array( $this, 'mastodon_api_in_reply_to_id' ), 15 );
 	}
@@ -49,9 +52,9 @@ class Comment_CPT {
 	public function register_custom_post_type() {
 		$args = array(
 			'labels'       => array(
-				'name'          => 'Comment',
-				'singular_name' => 'Comment',
-				'menu_name'     => 'Comments',
+				'name'          => __( 'Comments' ), // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
+				'singular_name' => __( 'Comment' ), // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
+				'menu_name'     => __( 'Comments' ), // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
 			),
 			'public'       => false,
 			'show_ui'      => false,
@@ -213,6 +216,49 @@ class Comment_CPT {
 	public static function api_get_posts_query_args( $args ) {
 		$args['post_type'][] = self::CPT;
 		return $args;
+	}
+
+	/**
+	 * Get a status array.
+	 *
+	 * @param Status_Entity $status Current status array.
+	 * @param int           $object_id The object ID to get the status from.
+	 * @return Status_Entity The status entity
+	 */
+	public function api_status( ?Status_Entity $status, int $object_id ): ?Status_Entity {
+		if ( $status instanceof Status_Entity ) {
+			return $status;
+		}
+
+		$comment_id = self::post_id_to_comment_id( $object_id );
+		if ( ! $comment_id ) {
+			return $status;
+		}
+
+		$comment = get_comment( $comment_id );
+		if ( ! $comment ) {
+			return $status;
+		}
+
+		$account = apply_filters( 'mastodon_api_account', null, $comment->user_id, null, $comment );
+		if ( ! $account ) {
+			return $status;
+		}
+
+		$status             = new Status_Entity();
+		$status->id         = strval( $object_id );
+		$status->created_at = new \DateTime( $comment->comment_date_gmt, new \DateTimeZone( 'UTC' ) );
+		$status->visibility = 'public';
+		$status->uri        = get_comment_link( $comment );
+		$status->content    = $comment->comment_content;
+		$status->account    = $account;
+		if ( $comment->comment_parent ) {
+			$status->in_reply_to_id = strval( self::comment_id_to_post_id( $comment->comment_parent ) );
+		} else {
+			$status->in_reply_to_id = strval( $comment->comment_post_ID );
+		}
+
+		return $status;
 	}
 
 	public function api_account( $account, $user_id, $request = null, $post = null ) {

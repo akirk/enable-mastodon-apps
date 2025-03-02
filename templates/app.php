@@ -12,11 +12,17 @@ use Enable_Mastodon_Apps\Mastodon_App;
 );
 
 $rest_nonce  = wp_create_nonce( 'wp_rest' );
+$_post_types = array();
+foreach ( array(
+	\Enable_Mastodon_Apps\Mastodon_Api::ANNOUNCE_CPT,
+	\Enable_Mastodon_Apps\Mastodon_Api::POST_CPT,
+	\Enable_Mastodon_Apps\Comment_CPT::CPT,
+) as $extra_post_type ) {
+	$_post_types[ $extra_post_type ] = get_post_type_object( $extra_post_type );
+}
+
 $_post_types = array_merge(
-	array(
-		\Enable_Mastodon_Apps\Mastodon_Api::ANNOUNCE_CPT => get_post_type_object( \Enable_Mastodon_Apps\Mastodon_Api::ANNOUNCE_CPT ),
-		\Enable_Mastodon_Apps\Mastodon_Api::POST_CPT     => get_post_type_object( \Enable_Mastodon_Apps\Mastodon_Api::POST_CPT ),
-	),
+	$_post_types,
 	\get_post_types( array( 'show_ui' => true ), 'objects' ),
 );
 

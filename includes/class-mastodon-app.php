@@ -286,9 +286,6 @@ class Mastodon_App {
 
 		$t = PHP_EOL . __( 'Show these post types', 'enable-mastodon-apps' ) . ': ';
 		foreach ( $this->get_view_post_types() as $post_type ) {
-			if ( in_array( $post_type, array( Comment_CPT::CPT ), true ) ) {
-				continue;
-			}
 			$content .= $t . get_post_type_object( $post_type )->labels->name;
 			$t = ', ';
 		}

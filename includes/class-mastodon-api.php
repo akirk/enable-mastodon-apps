@@ -2214,7 +2214,6 @@ class Mastodon_API {
 		}
 
 		$source_id = self::maybe_get_remapped_reblog_id( $source_id );
-		$source_id = self::maybe_get_remapped_comment_id( $source_id );
 
 		return apply_filters( 'mastodon_api_status_source', null, $source_id );
 	}
@@ -2226,7 +2225,8 @@ class Mastodon_API {
 		}
 
 		$context_post_id = self::maybe_get_remapped_reblog_id( $context_post_id );
-		$url             = get_permalink( $context_post_id );
+
+		$url = get_permalink( $context_post_id );
 
 		$context = array(
 			'ancestors'   => array(),
@@ -2786,47 +2786,6 @@ class Mastodon_API {
 		}
 		return $remapped_post_id;
 	}
-
-	public static function maybe_get_remapped_comment_id( $remapped_post_id ) {
-		$comment_id = get_post_meta( $remapped_post_id, 'mastodon_comment_id', true );
-		if ( $comment_id ) {
-			return $comment_id;
-		}
-		return $remapped_post_id;
-	}
-
-	public static function remap_comment_id( $comment_id ) {
-		$remapped_comment_id = get_comment_meta( $comment_id, 'mastodon_comment_id', true );
-		if ( ! $remapped_comment_id ) {
-			$comment = get_comment( $comment_id );
-			if ( ! $comment ) {
-				return $comment_id;
-			}
-			if ( $comment->comment_parent ) {
-				$post_parent = self::remap_comment_id( $comment->comment_parent );
-			} else {
-				$post_parent = self::remap_reblog_id( $comment->comment_post_ID );
-			}
-			$remapped_comment_id = wp_insert_post(
-				array(
-					'post_type'     => self::CPT,
-					'post_author'   => 0,
-					'post_status'   => 'publish',
-					'post_title'    => 'Comment ' . $comment_id,
-					'post_date'     => $comment->comment_date,
-					'post_date_gmt' => $comment->comment_date_gmt,
-					'post_parent'   => $post_parent,
-					'meta_input'    => array(
-						'mastodon_comment_id' => $comment_id,
-					),
-				)
-			);
-
-			update_comment_meta( $comment_id, 'mastodon_comment_id', $remapped_comment_id );
-		}
-		return $remapped_comment_id;
-	}
-
 
 	public static function remap_user_id( $user_id ) {
 		$user_id        = apply_filters( 'mastodon_api_canonical_user_id', $user_id );

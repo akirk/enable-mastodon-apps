@@ -715,18 +715,23 @@ class Mastodon_Admin {
 		$app->set_post_formats( $post_formats );
 		$post_formats = $app->get_post_formats();
 
-		$post_types = array_flip(
-			array_map(
-				function ( $post_type ) {
-					return $post_type->name;
-				},
-				get_post_types( array(), 'objects' )
-			)
+		$_post_types = array();
+		foreach ( array(
+			\Enable_Mastodon_Apps\Mastodon_Api::ANNOUNCE_CPT,
+			\Enable_Mastodon_Apps\Mastodon_Api::POST_CPT,
+			\Enable_Mastodon_Apps\Comment_CPT::CPT,
+		) as $extra_post_type ) {
+			$_post_types[ $extra_post_type ] = get_post_type_object( $extra_post_type );
+		}
+
+		$_post_types = array_merge(
+			$_post_types,
+			\get_post_types( array( 'show_ui' => true ), 'objects' ),
 		);
 
 		if ( isset( $_POST['create_post_type'] ) ) {
 			$create_post_type = sanitize_text_field( wp_unslash( $_POST['create_post_type'] ) );
-			if ( isset( $post_types[ $create_post_type ] ) ) {
+			if ( isset( $_post_types[ $create_post_type ] ) ) {
 				$app->set_create_post_type( $create_post_type );
 			}
 		}
@@ -746,7 +751,7 @@ class Mastodon_Admin {
 				Mastodon_API::POST_CPT     => true,
 			);
 			foreach ( wp_unslash( $_POST['view_post_types'] ) as $post_type ) {
-				if ( isset( $post_types[ $post_type ] ) ) {
+				if ( isset( $_post_types[ $post_type ] ) ) {
 					$view_post_types[ $post_type ] = true;
 				}
 			}
