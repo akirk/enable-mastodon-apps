@@ -29,7 +29,7 @@ class Status extends Handler {
 	}
 
 	public function register_hooks() {
-		add_filter( 'mastodon_api_status', array( $this, 'api_status' ), 10, 3 );
+		add_filter( 'mastodon_api_status', array( $this, 'api_status' ), 10, 2 );
 		add_filter( 'mastodon_api_status', array( $this, 'api_status_ensure_numeric_id' ), 100 );
 		add_filter( 'mastodon_api_account_statuses_args', array( $this, 'mastodon_api_account_statuses_args' ), 10, 2 );
 		add_filter( 'mastodon_api_statuses', array( $this, 'api_statuses' ), 10, 4 );
@@ -120,10 +120,9 @@ class Status extends Handler {
 	 *
 	 * @param Status_Entity $status Current status array.
 	 * @param int           $object_id The object ID to get the status from.
-	 * @param array         $data Additional status data.
 	 * @return Status_Entity The status entity
 	 */
-	public function api_status( ?Status_Entity $status, int $object_id, array $data = array() ): ?Status_Entity {
+	public function api_status( ?Status_Entity $status, int $object_id ): ?Status_Entity {
 		if ( $status instanceof Status_Entity ) {
 			return $status;
 		}
@@ -148,25 +147,7 @@ class Status extends Handler {
 			}
 		}
 
-		if ( isset( $data['comment'] ) && $data['comment'] instanceof \WP_Comment ) {
-			$comment = $data['comment'];
-			$account = apply_filters( 'mastodon_api_account', null, $comment->user_id, null, $comment );
-			if ( ! ( $account instanceof \Enable_Mastodon_Apps\Entity\Account ) ) {
-				return $status;
-			}
-			$status             = new Status_Entity();
-			$status->id         = strval( Mastodon_API::remap_comment_id( $comment->comment_ID ) );
-			$status->created_at = new \DateTime( $comment->comment_date_gmt, new \DateTimeZone( 'UTC' ) );
-			$status->visibility = 'public';
-			$status->uri        = get_comment_link( $comment );
-			$status->content    = $comment->comment_content;
-			$status->account    = $account;
-			if ( $comment->comment_parent ) {
-				$status->in_reply_to_id = strval( Mastodon_API::remap_comment_id( $comment->comment_parent ) );
-			} else {
-				$status->in_reply_to_id = strval( $comment->comment_post_ID );
-			}
-		} elseif ( $post instanceof \WP_Post ) {
+		if ( $post instanceof \WP_Post ) {
 			// Documented in class-mastodon-api.php.
 			$account = apply_filters( 'mastodon_api_account', null, $post->post_author, null, $post );
 
@@ -577,14 +558,14 @@ class Status extends Handler {
 	}
 
 	public function api_status_context( $context, $context_post_id ) {
+		$post = get_post( $context_post_id );
+		if ( ! $post ) {
+			return $context;
+		}
+
 		$found = array();
 		$posts = array( $context_post_id );
-		$post_date = new \DateTime( get_post( $context_post_id )->post_date_gmt, new \DateTimeZone( 'UTC' ) );
-
-		foreach ( get_post_ancestors( $context_post_id ) as $post_id ) {
-			$posts[] = $post_id;
-			$found[ $post_id ] = get_post( $post_id );
-		}
+		$post_date = new \DateTime( $post->post_date_gmt, new \DateTimeZone( 'UTC' ) );
 
 		$app = Mastodon_App::get_current_app();
 		if ( $app ) {
@@ -595,14 +576,35 @@ class Status extends Handler {
 
 		$post_types[] = \Enable_Mastodon_Apps\Comment_CPT::CPT;
 
-		$children = get_posts(
-			array(
-				'post_parent__in' => $posts,
-				'post_type'       => $post_types,
-			)
-		);
-		foreach ( $children as $child ) {
-			$found[ $child->ID ] = $child;
+		$checked = array();
+		$to_check = array( $context_post_id );
+		while ( ! empty( $to_check ) ) {
+			$check = array_shift( $to_check );
+			if ( isset( $checked[ $check ] ) ) {
+				continue;
+			}
+			$checked[ $check ] = true;
+			$ancestors = get_post_ancestors( $check );
+			foreach ( $ancestors as $ancestor ) {
+				if ( isset( $checked[ $ancestor ] ) ) {
+					continue;
+				}
+				$checked[ $ancestor ] = true;
+				$found[ $ancestor ] = get_post( $ancestor );
+				$to_check[] = $ancestor->ID;
+			}
+			$to_check = array_merge( $to_check, $ancestors );
+			$posts = array_merge( $posts, $ancestors );
+			$children = get_posts(
+				array(
+					'post_parent' => $check,
+					'post_type'   => $post_types,
+				)
+			);
+			foreach ( $children as $child ) {
+				$to_check[] = $child->ID;
+				$found[ $child->ID ] = $child;
+			}
 		}
 
 		foreach ( array_keys( $found ) as $post_id ) {
