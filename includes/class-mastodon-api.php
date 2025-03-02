@@ -264,6 +264,7 @@ class Mastodon_API {
 			'mastodon_api_parametrized_routes',
 			array(
 				'api/v1/accounts/([^/]+)/featured_tags'  => 'api/v1/accounts/$matches[1]/featured_tags',
+				'api/v1/accounts/([^/]+)/following'      => 'api/v1/accounts/$matches[1]/following',
 				'api/v1/accounts/([^/]+)/followers'      => 'api/v1/accounts/$matches[1]/followers',
 				'api/v1/accounts/([^/]+)/follow'         => 'api/v1/accounts/$matches[1]/follow',
 				'api/v1/accounts/([^/]+)/unfollow'       => 'api/v1/accounts/$matches[1]/unfollow',
@@ -1279,6 +1280,23 @@ class Mastodon_API {
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => '__return_empty_array',
 				'permission_callback' => array( $this, 'public_api_permission' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/accounts/(?P<user_id>[^/]+)/following',
+			array(
+				'methods'             => array( 'GET', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_account_following' ),
+				'permission_callback' => array( $this, 'public_api_permission' ),
+				'args'                => array(
+					'limit' => array(
+						'type'        => 'integer',
+						'description' => 'Maximum number of results to return',
+						'default'     => 40,
+					),
+				),
 			)
 		);
 
@@ -2446,6 +2464,50 @@ class Mastodon_API {
 		}
 
 		return $this->validate_entity( $status, Entity\Status::class );
+	}
+
+	/**
+	 * Get the account following.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|\WP_Error
+	 */
+	public function api_account_following( WP_REST_Request $request ) {
+		$user_id = $this->get_user_id_from_request( $request );
+
+		/**
+		 * Modify the account following.
+		 *
+		 * @param array           $following The account following.
+		 * @param string          $user_id   The user ID.
+		 * @param WP_REST_Request $request   The request object.
+		 * @return array The modified account following.
+		 *
+		 * Example:
+		 * ```php
+		 * apply_filters( 'mastodon_api_account_following', function ( $following, $user_id, $request ) {
+		 *    $account     = new Entity\Account();
+		 *    $account->id = $user_id
+		 *
+		 *    $following[] = $account;
+		 *
+		 *    return $following;
+		 * } );
+		 */
+		$following = \apply_filters( 'mastodon_api_account_following', array(), $user_id, $request );
+
+		if ( is_wp_error( $following ) ) {
+			return $following;
+		}
+
+		$following = array_filter(
+			$following,
+			function ( $follow ) {
+				return $follow instanceof Entity\Account;
+			}
+		);
+
+		return new WP_REST_Response( $following );
 	}
 
 	/**
