@@ -271,8 +271,16 @@ class Status extends Handler {
 	}
 
 	public function convert_to_blocks( $post_content ) {
-		$post_content = explode( PHP_EOL, $post_content );
+		$post_content = preg_split( '/(<br>|<br \/>|<\/p>|' . PHP_EOL . ')/i', $post_content );
 		$post_content = array_map( 'trim', $post_content );
+		$post_content = array_map(
+			function ( $el ) {
+				$el = preg_replace( '/^<p>/i', '', $el );
+				$el = preg_replace( '/<\/p>$/i', '', $el );
+				return $el;
+			},
+			$post_content
+		);
 		$post_content = array_filter( $post_content );
 		if ( empty( $post_content ) ) {
 			return '';
@@ -295,9 +303,11 @@ class Status extends Handler {
 		$post_data['post_title']   = '';
 
 		if ( 'standard' === $post_format ) {
-			$post_content_parts = explode( PHP_EOL, $post_data['post_content'] . PHP_EOL, 2 );
-			$post_data['post_title']   = wp_strip_all_tags( $post_content_parts[0] );
-			$post_data['post_content'] = trim( $post_content_parts[1] );
+			$post_content_parts = preg_split( '/(<br>|<br \/>|<\/p>|' . PHP_EOL . ')/i', $status_text, 2 );
+			if ( count( $post_content_parts ) === 2 ) {
+				$post_data['post_title']   = wp_strip_all_tags( $post_content_parts[0] );
+				$post_data['post_content'] = trim( $post_content_parts[1] );
+			}
 		}
 
 		if ( ! $app->get_disable_blocks() ) {

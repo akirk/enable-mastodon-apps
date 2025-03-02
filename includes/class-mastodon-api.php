@@ -2392,9 +2392,6 @@ class Mastodon_API {
 		}
 
 		$post = get_post( $post_id );
-		if ( intval( $post->post_author ) === get_current_user_id() ) {
-			wp_trash_post( $post_id );
-		}
 
 		/**
 		 * Modify the status data.
@@ -2405,6 +2402,12 @@ class Mastodon_API {
 		 * @return array|null The modified status data.
 		 */
 		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
+
+		if ( intval( $post->post_author ) === get_current_user_id() ) {
+			wp_trash_post( $post_id );
+		} else {
+			$status = new \WP_Error( 'mastodon_api_delete_post', 'Insufficient permissions', array( 'status' => 401 ) );
+		}
 
 		return $status;
 	}
