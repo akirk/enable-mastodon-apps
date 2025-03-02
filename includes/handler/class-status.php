@@ -283,7 +283,7 @@ class Status extends Handler {
 		$post_data['post_type']    = $app->get_create_post_type();
 		$post_data['post_title']   = '';
 
-		if ( 'standard' === $post_format ) {
+		if ( ! $post_format || 'standard' === $post_format ) {
 			$post_content_parts = preg_split( '/(<br>|<br \/>|<\/p>|' . PHP_EOL . ')/i', $status_text, 2 );
 			if ( count( $post_content_parts ) === 2 ) {
 				$post_data['post_title']   = wp_strip_all_tags( $post_content_parts[0] );
@@ -347,7 +347,7 @@ class Status extends Handler {
 			return $post_id;
 		}
 
-		if ( 'standard' !== $post_format ) {
+		if ( $post_format && 'standard' !== $post_format ) {
 			set_post_format( $post_id, $post_format );
 		}
 
