@@ -276,6 +276,8 @@ class Mastodon_API {
 				'api/v1/statuses/([0-9]+)/unfavourite'   => 'api/v1/statuses/$matches[1]/unfavourite',
 				'api/v1/statuses/([0-9]+)/reblog'        => 'api/v1/statuses/$matches[1]/reblog',
 				'api/v1/statuses/([0-9]+)/unreblog'      => 'api/v1/statuses/$matches[1]/unreblog',
+				'api/v1/conversations/([0-9]+)/read'     => 'api/v1/conversations/$matches[1]/read',
+				'api/v1/conversations/([0-9]+)'          => 'api/v1/conversations/$matches[1]',
 				'api/v1/notifications/([^/]+)/dismiss'   => 'api/v1/notifications/$matches[1]/dismiss',
 				'api/v1/notifications/([^/|$]+)/?$'      => 'api/v1/notifications/$matches[1]',
 				'api/v1/notifications'                   => 'api/v1/notifications',
@@ -475,6 +477,26 @@ class Mastodon_API {
 				),
 			)
 		);
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/conversations/(?P<id>[0-9]+)/read',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'api_conversation_mark_read' ),
+				'permission_callback' => $this->required_scope( 'write:conversations' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/conversations/(?P<id>[0-9]+)',
+			array(
+				'methods'             => 'DELETE',
+				'callback'            => array( $this, 'api_conversation_delete' ),
+				'permission_callback' => $this->required_scope( 'write:conversations' ),
+			)
+		);
+
 		register_rest_route(
 			self::PREFIX,
 			'api/v1/conversations',
@@ -3253,5 +3275,38 @@ class Mastodon_API {
 		$statuses = apply_filters( 'mastodon_api_conversations', null, get_current_user_id(), $request->get_param( 'limit' ), $request->get_param( 'min_id' ), $request->get_param( 'max_id' ) );
 
 		return $this->filter_non_entities( $statuses, Entity\Conversation::class );
+	}
+
+	public function api_conversation_mark_read( WP_REST_Request $request ) {
+		$id = $request->get_param( 'id' );
+		/**
+		 * Modify the account conversations mark read.
+		 *
+		 * @param array $conversations The account conversations.
+		 * @param int $user_id The user ID.
+		 * @param WP_REST_Request $request The request object.
+		 */
+		do_action( 'mastodon_api_conversation_mark_read', $id, $request );
+
+		return apply_filters( 'mastodon_api_conversation', null, $id );
+	}
+
+	public function api_conversation_delete( WP_REST_Request $request ) {
+		$id = $request->get_param( 'id' );
+		/**
+		 * Modify the account conversations delete.
+		 *
+		 * @param array $conversations The account conversations.
+		 * @param int $user_id The user ID.
+		 * @param WP_REST_Request $request The request object.
+		 */
+		do_action( 'mastodon_api_conversation_delete', $id, $request );
+
+		$conversation = apply_filters( 'mastodon_api_conversation', null, $id );
+		if ( is_wp_error( $conversation ) ) {
+			return $conversation;
+		}
+
+		return array();
 	}
 }
