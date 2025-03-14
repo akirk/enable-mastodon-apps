@@ -480,7 +480,7 @@ class Mastodon_API {
 			'api/v1/conversations',
 			array(
 				'methods'             => 'GET',
-				'callback'            => '__return_empty_array',
+				'callback'            => array( $this, 'api_conversations' ),
 				'permission_callback' => $this->required_scope( 'read:statuses' ),
 				'args'                => array(
 					'limit' => array(
@@ -3238,5 +3238,20 @@ class Mastodon_API {
 		$statuses = apply_filters( 'mastodon_api_statuses', null, $args, $request->get_param( 'min_id' ), $request->get_param( 'max_id' ) );
 
 		return $this->filter_non_entities( $statuses, Entity\Status::class );
+	}
+
+	public function api_conversations( WP_REST_Request $request ) {
+		/**
+		 * Filter the account conversations.
+		 *
+		 * @param array|null $conversations Current statuses.
+		 * @param int $user_id The user ID.
+		 * @param int|null $limit Optional limit.
+		 * @param int|null $min_id Optional minimum status ID.
+		 * @param int|null $max_id Optional maximum status ID.
+		 */
+		$statuses = apply_filters( 'mastodon_api_conversations', null, get_current_user_id(), $request->get_param( 'limit' ), $request->get_param( 'min_id' ), $request->get_param( 'max_id' ) );
+
+		return $this->filter_non_entities( $statuses, Entity\Conversation::class );
 	}
 }

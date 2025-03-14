@@ -158,7 +158,7 @@ class Status extends Handler {
 			$status->id         = strval( $post->ID );
 			$status->created_at = new \DateTime( $post->post_date_gmt, new \DateTimeZone( 'UTC' ) );
 			$status->visibility = 'public';
-			$status->uri        = get_permalink( $post->ID );
+			$status->uri        = get_the_guid( $post->ID );
 			$status->content    = $post->post_content;
 			if ( ! empty( $post->post_title ) && trim( $post->post_title ) ) {
 				$status->content = '<strong>' . esc_html( $post->post_title ) . '</strong>' . PHP_EOL . $status->content;
@@ -251,7 +251,7 @@ class Status extends Handler {
 		return $status;
 	}
 
-	public function convert_to_blocks( $post_content ) {
+	public static function convert_to_blocks( $post_content ) {
 		$post_content = preg_split( '/(<br>|<br \/>|<\/p>|' . PHP_EOL . ')/i', $post_content );
 		$post_content = array_map( 'trim', $post_content );
 		$post_content = array_map(
@@ -292,7 +292,7 @@ class Status extends Handler {
 		}
 
 		if ( ! $app->get_disable_blocks() ) {
-			$post_data['post_content'] = $this->convert_to_blocks( $post_data['post_content'] );
+			$post_data['post_content'] = self::convert_to_blocks( $post_data['post_content'] );
 		}
 
 		if ( $in_reply_to_id ) {
@@ -585,6 +585,8 @@ class Status extends Handler {
 		}
 
 		$post_types[] = \Enable_Mastodon_Apps\Comment_CPT::CPT;
+		$post_types = apply_filters( 'api_status_context_post_types', $post_types, $context_post_id );
+		$post_statuses = apply_filters( 'api_status_context_post_statuses', 'any', $context_post_id );
 
 		$checked = array();
 		$to_check = array( $context_post_id );
@@ -599,16 +601,14 @@ class Status extends Handler {
 				if ( isset( $checked[ $ancestor ] ) ) {
 					continue;
 				}
-				$checked[ $ancestor ] = true;
 				$found[ $ancestor ] = get_post( $ancestor );
-				$to_check[] = $ancestor->ID;
+				$to_check[] = $ancestor;
 			}
-			$to_check = array_merge( $to_check, $ancestors );
-			$posts = array_merge( $posts, $ancestors );
 			$children = get_posts(
 				array(
 					'post_parent' => $check,
 					'post_type'   => $post_types,
+					'post_status' => $post_statuses,
 				)
 			);
 			foreach ( $children as $child ) {
