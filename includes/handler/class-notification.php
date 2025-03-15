@@ -142,13 +142,12 @@ class Notification extends Handler {
 			$args = apply_filters(
 				'mastodon_api_get_notifications_query_args',
 				array(
-					'post_type'      => Comment_CPT::CPT,
 					'author__not_in' => array( get_current_user_id() ),
 				),
 				'mention',
 				$request
 			);
-			if ( empty( $args ) ) {
+			if ( ! isset( $args['post_type'] ) ) {
 				return array();
 			}
 			$args['posts_per_page'] = $limit + 2;
@@ -158,8 +157,8 @@ class Notification extends Handler {
 				$args['tag__not_in'] = array( $notification_dismissed_tag->term_id );
 			}
 			foreach ( get_posts( $args ) as $post ) {
-				$comment_id = Comment_CPT::post_id_to_comment_id( $post->ID );
-				switch ( get_comment_type( $comment_id ) ) {
+				$type = apply_filters( 'mastodon_api_notification_type', 'mention', $post );
+				switch ( $type ) {
 					case 'like':
 						$type = 'favourite';
 						$status  = apply_filters( 'mastodon_api_status', null, $post->post_parent, array() );

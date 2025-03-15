@@ -47,6 +47,8 @@ class Comment_CPT {
 		add_filter( 'mastodon_api_status', array( $this, 'api_status' ), 9, 3 );
 		add_filter( 'mastodon_api_account', array( $this, 'api_account' ), 10, 4 );
 		add_filter( 'mastodon_api_in_reply_to_id', array( $this, 'mastodon_api_in_reply_to_id' ), 15 );
+		add_filter( 'mastodon_api_notification_type', array( $this, 'mastodon_api_notification_type' ), 10, 2 );
+		add_filter( 'mastodon_api_get_notifications_query_args', array( $this, 'mastodon_api_notification_type' ), 10, 2 );
 	}
 
 	public function register_custom_post_type() {
@@ -240,7 +242,11 @@ class Comment_CPT {
 			return $status;
 		}
 
-		$account = apply_filters( 'mastodon_api_account', null, $comment->user_id, null, $comment );
+		if ( $comment->user_id ) {
+			$account = apply_filters( 'mastodon_api_account', null, $comment->user_id, null, $comment );
+		} else {
+			$account = apply_filters( 'mastodon_api_account', null, $comment->comment_author_url, null, $comment );
+		}
 		if ( ! $account ) {
 			return $status;
 		}
@@ -253,10 +259,12 @@ class Comment_CPT {
 		$status->content    = $comment->comment_content;
 		$status->account    = $account;
 		if ( $comment->comment_parent ) {
-			$status->in_reply_to_id = strval( self::comment_id_to_post_id( $comment->comment_parent ) );
+			$parent_post_id = self::comment_id_to_post_id( $comment->comment_parent );
+			$status->in_reply_to_id = strval( $parent_post_id );
 		} else {
 			$status->in_reply_to_id = strval( $comment->comment_post_ID );
 		}
+		$status->in_reply_to_account_id = apply_filters( 'mastodon_api_account_id', null, $status->in_reply_to_id );
 
 		return $status;
 	}
@@ -309,5 +317,26 @@ class Comment_CPT {
 		);
 
 		return Handler\Account::api_account_ensure_numeric_id( $account, $comment->comment_author_url );
+	}
+
+	public function mastodon_api_notification_type( $type, $post ) {
+		if ( self::CPT === $post->post_type ) {
+			$comment_id = self::post_id_to_comment_id( $post->ID );
+			return get_comment_type( $comment_id );
+		}
+		return $type;
+	}
+
+	public function mastodon_api_get_notifications_query_args( $args, $type ) {
+		if ( 'mention' === $type ) {
+			if ( ! isset( $args['post_type'] ) ) {
+				$args['post_type'] = array();
+			} elseif ( ! is_array( $args['post_type'] ) ) {
+				$args['post_type'] = array( $args['post_type'] );
+			}
+			$args['post_type'][] = self::CPT;
+		}
+
+		return $args;
 	}
 }
