@@ -101,11 +101,11 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 ## Changelog
 
 ### 1.4.0
-- Implement Direct Messages (#233)
-- Add following endpoint (#228)
-- Submit Post as Standard if create post format is empty (#227)
-- Fix comments context API response (#225)
-- Fix title in standard posts when HTML is submitted (#226)
+- Implement Direct Messages ([#233])
+- Add following endpoint ([#228])
+- Submit Post as Standard if create post format is empty ([#227])
+- Fix comments context API response ([#225])
+- Fix title in standard posts when HTML is submitted ([#226])
 
 ### 1.3.0
 - Fix small errors on app page ([#224])

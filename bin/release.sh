@@ -68,13 +68,13 @@ if $(git tag | grep -Eq ^$ENABLE_MASTODON_APPS_VERSION\$); then
 
 	links=""
 	for link in $(grep -Eo "#[0-9]+" new-changelog.md | sort | uniq); do
-		links="$links\n[$link]: https://github.com/akirk/friends/pull/${link:1}"
+		links="$links\n[$link]: https://github.com/akirk/enable-mastodon-apps/pull/${link:1}"
 	done
 
 	echo >> new-changelog.md
 
-	cat new-changelog.md > CHANGELOG.new
-	cat CHANGELOG.md | sed -e "s/#\([0-9]\+\)/[\1]/g" >> CHANGELOG.new
+	cat new-changelog.md | sed -e "s/\(#[0-9]\+\)/[\1]/g" > CHANGELOG.new
+	cat CHANGELOG.md >> CHANGELOG.new
 	echo -e "$links" >> CHANGELOG.new
 	mv CHANGELOG.new CHANGELOG.md
 
