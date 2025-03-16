@@ -24,6 +24,125 @@ fi
 echo -ne "\033[32m✔\033[0m "
 echo "On git branch main"
 
+
+if $(git tag | grep -Eq ^$ENABLE_MASTODON_APPS_VERSION\$); then
+	echo -ne "\033[31m✘\033[0m "
+	echo "Tag $ENABLE_MASTODON_APPS_VERSION already exists"
+
+	echo -n "Which version number shall this version get? "
+	read NEW_VERSION
+
+	if ! echo $NEW_VERSION | grep -Eq "^[0-9]+\.[0-9]+\.[0-9]+$"; then
+		echo -ne "\033[31m✘\033[0m "
+		echo "Invalid version number $NEW_VERSION"
+		exit 1
+	fi
+
+	if [ -n new-changelog.md ]; then
+		prs=$(git log $ENABLE_MASTODON_APPS_VERSION..main --pretty=format:"- %s")
+		echo "### $NEW_VERSION" > new-changelog.md
+		echo -e "$prs" >> new-changelog.md
+	fi
+
+	if [ -n "$VISUAL" ]; then
+		CMD="${VISUAL%% *}"
+		ARGS="${VISUAL#* }"
+		$CMD $ARGS new-changelog.md
+	else
+		$EDITOR new-changelog.md
+	fi
+
+	if [ $? -eq 1 ]; then
+		echo -ne "\033[31m✘\033[0m "
+		echo "Failed to open $VISUAL"
+
+		echo "This is the generated changelog:"
+		cat new-changelog.md
+		echo -n "Do you want to continue? [y/N] "
+		read
+
+		if [ "$REPLY" != "y" ]; then
+			exit 1
+		fi
+	fi
+
+	links=""
+	for link in $(grep -Eo "#[0-9]+" new-changelog.md | sort | uniq); do
+		links="$links\n[$link]: https://github.com/akirk/friends/pull/${link:1}"
+	done
+
+	echo >> new-changelog.md
+
+	cat new-changelog.md > CHANGELOG.new
+	cat CHANGELOG.md | sed -e "s/#\([0-9]\+\)/[\1]/g" >> CHANGELOG.new
+	echo -e "$links" >> CHANGELOG.new
+	mv CHANGELOG.new CHANGELOG.md
+
+	echo -ne "\033[32m✔\033[0m "
+	echo "Changelog updated in CHANGELOG.md"
+
+	sed -i -e '/## Changelog/{n
+r new-changelog.md
+}' README.md
+
+	rm -f README.md-e
+	echo -e "$links" >> README.md
+
+	echo -ne "\033[32m✔\033[0m "
+	echo "Changelog updated in README.md"
+
+	sed -i -e "s/$ENABLE_MASTODON_APPS_VERSION/$NEW_VERSION/" enable-mastodon-apps.php
+	rm -f enable-mastodon-apps.php-e
+
+	echo -ne "\033[32m✔\033[0m "
+	echo "Version updated in enable-mastodon-apps.php"
+
+	sed -i -e "s/Stable tag: $ENABLE_MASTODON_APPS_VERSION/Stable tag: $NEW_VERSION/" README.md
+	rm -f README.md-e
+
+	echo -ne "\033[32m✔\033[0m "
+	echo "Stable tag updated in README.md"
+
+	echo -n "❯ git diff CHANGELOG.md README.md enable-mastodon-apps.php"
+	read
+	git diff CHANGELOG.md README.md enable-mastodon-apps.php
+
+	echo -n "Are you happy with the changes? [y/N] "
+	read
+
+	if [ "$REPLY" != "y" ]; then
+		echo "You can revert the changes with"
+		echo
+		echo "❯ git checkout CHANGELOG.md README.md enable-mastodon-apps.php"
+		echo
+
+		read
+		git checkout CHANGELOG.md README.md enable-mastodon-apps.php
+
+		echo Keeping the new
+		exit 1
+	fi
+	rm -f new-changelog.md
+
+
+	echo -n "❯ git add CHANGELOG.md README.md enable-mastodon-apps.php"
+	read
+	git add CHANGELOG.md README.md enable-mastodon-apps.php
+
+	echo -n "❯ git commit -m \"Version bump + Changelog\""
+	read
+	git commit -m "Version bump + Changelog"
+
+	echo -n "❯ git push"
+	read
+	git push
+
+	echo "Restart the script to continue"
+	exit 1
+fi
+echo -ne "\033[32m✔\033[0m "
+echo "Tag $ENABLE_MASTODON_APPS_VERSION doesn't exist yet"
+
 svn update > /dev/null
 if [ $? -eq 1 ]; then
 	echo -ne "\033[31m✘\033[0m "
@@ -34,15 +153,6 @@ if [ $? -eq 1 ]; then
 fi
 echo -ne "\033[32m✔\033[0m "
 echo "svn up to date"
-
-git tag | egrep -q ^$ENABLE_MASTODON_APPS_VERSION\$
-if [ $? -eq 0 ]; then
-	echo -ne "\033[31m✘\033[0m "
-	echo "Tag $ENABLE_MASTODON_APPS_VERSION already exists"
-	return
-fi
-echo -ne "\033[32m✔\033[0m "
-echo "Tag $ENABLE_MASTODON_APPS_VERSION doesn't exist yet"
 
 grep -q "Stable tag: $ENABLE_MASTODON_APPS_VERSION" README.md
 if [ $? -eq 1 ]; then
