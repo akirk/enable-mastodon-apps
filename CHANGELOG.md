@@ -1,3 +1,6 @@
+### 1.4.1
+- Allow filtering whether the user is a member of the blog ([#234])
+
 ### 1.4.0
 - Implement Direct Messages ([#233])
 - Add following endpoint ([#228])
@@ -267,3 +270,5 @@
 [#227]: https://github.com/akirk/friends/pull/227
 [#228]: https://github.com/akirk/friends/pull/228
 [#233]: https://github.com/akirk/friends/pull/233
+
+[#234]: https://github.com/akirk/enable-mastodon-apps/pull/234

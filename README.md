@@ -6,7 +6,7 @@
 - Tested up to: 6.6
 - Requires PHP: 7.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 1.4.0
+- Stable tag: 1.4.1
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -99,6 +99,9 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 2. The Mastodon Apps settings page.
 
 ## Changelog
+
+### 1.4.1
+- Allow filtering whether the user is a member of the blog ([#234])
 
 ### 1.4.0
 - Implement Direct Messages ([#233])
@@ -259,3 +262,5 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 [#227]: https://github.com/akirk/friends/pull/227
 [#228]: https://github.com/akirk/friends/pull/228
 [#233]: https://github.com/akirk/friends/pull/233
+
+[#234]: https://github.com/akirk/enable-mastodon-apps/pull/234
