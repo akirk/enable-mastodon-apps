@@ -78,6 +78,7 @@ class Mastodon_API {
 		add_filter( 'mastodon_api_mapback_user_id', array( $this, 'mapback_user_id' ) );
 		add_filter( 'mastodon_api_in_reply_to_id', array( self::class, 'maybe_get_remapped_reblog_id' ), 15 );
 		add_filter( 'activitypub_support_post_types', array( $this, 'activitypub_support_post_types' ) );
+		add_filter( 'mastodon_api_valid_user', array( $this, 'is_user_member_of_blog' ), 10, 2 );
 	}
 
 	/**
@@ -1999,6 +2000,14 @@ class Mastodon_API {
 		return $entities;
 	}
 
+	public function is_user_member_of_blog( $is_valid_user, $user_id ) {
+		if ( is_user_member_of_blog( $user_id ) ) {
+			return true;
+		}
+
+		return $is_valid_user;
+	}
+
 	public function api_submit_post( $request ) {
 		if ( ! current_user_can( 'edit_posts' ) ) {
 			return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Insufficient permissions', array( 'status' => 401 ) );
@@ -2801,7 +2810,7 @@ class Mastodon_API {
 	public function api_account( $request ) {
 		$user_id = $this->get_user_id_from_request( $request );
 
-		if ( ! is_user_member_of_blog( $user_id ) ) {
+		if ( ! apply_filters( 'mastodon_api_valid_user', false, $user_id ) ) {
 			return new \WP_Error( 'mastodon_api_account', 'Record not found', array( 'status' => 404 ) );
 		}
 
