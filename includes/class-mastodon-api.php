@@ -192,7 +192,8 @@ class Mastodon_API {
 				'menu_name'     => __( 'Mastodon Posts', 'enable-mastodon-apps' ),
 			),
 			'description'  => __( 'Posted through a Mastodon app.', 'enable-mastodon-apps' ),
-			'public'       => ! get_option( 'mastodon_api_posting_cpt' ) || ( defined( 'WP_DEBUG' ) && WP_DEBUG ) || get_option( 'mastodon_api_enable_debug' ),
+			'public'       => ! get_option( 'mastodon_api_posting_cpt' ),
+			'show_ui'      => ! get_option( 'mastodon_api_posting_cpt' ) || (bool) get_option( 'mastodon_api_enable_debug' ),
 			'show_in_rest' => false,
 			'rewrite'      => false,
 			'menu_icon'    => 'dashicons-megaphone',
@@ -207,7 +208,8 @@ class Mastodon_API {
 				'menu_name'     => __( 'EMA Announcements', 'enable-mastodon-apps' ),
 			),
 			'description'  => __( 'Announcement by the Enable Mastodon Apps plugin.', 'enable-mastodon-apps' ),
-			'public'       => ( defined( 'WP_DEBUG' ) && WP_DEBUG ) || get_option( 'mastodon_api_enable_debug' ),
+			'public'       => false,
+			'show_ui'      => (bool) get_option( 'mastodon_api_enable_debug' ),
 			'show_in_rest' => false,
 			'rewrite'      => false,
 			'menu_icon'    => 'dashicons-megaphone',
@@ -257,7 +259,6 @@ class Mastodon_API {
 				'api/v1/trends/statuses',
 				'api/v1/push/subscription',
 				'api/v1/streaming',
-				'api/v1/search',
 				'api/v2/media',
 			)
 		);
@@ -289,7 +290,7 @@ class Mastodon_API {
 				'api/v1/accounts/(.+)'                   => 'api/v1/accounts/$matches[1]',
 				'api/v1/timelines/(home|public)'         => 'api/v1/timelines/$matches[1]',
 				'api/v1/timelines/tag/([^/|$]+)'         => 'api/v1/timelines/tag/$matches[1]',
-				'api/v2/search'                          => 'api/v1/search',
+				'api/v[12]/search'                       => 'api/v2/search',
 			)
 		);
 
@@ -1221,7 +1222,7 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
-			'api/v1/search',
+			'api/v2/search',
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_search' ),
