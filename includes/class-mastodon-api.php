@@ -257,7 +257,6 @@ class Mastodon_API {
 				'api/v1/trends/statuses',
 				'api/v1/push/subscription',
 				'api/v1/streaming',
-				'api/v1/search',
 				'api/v2/media',
 			)
 		);
@@ -289,7 +288,7 @@ class Mastodon_API {
 				'api/v1/accounts/(.+)'                   => 'api/v1/accounts/$matches[1]',
 				'api/v1/timelines/(home|public)'         => 'api/v1/timelines/$matches[1]',
 				'api/v1/timelines/tag/([^/|$]+)'         => 'api/v1/timelines/tag/$matches[1]',
-				'api/v2/search'                          => 'api/v1/search',
+				'api/v[12]/search'                       => 'api/v2/search',
 			)
 		);
 
@@ -1221,7 +1220,7 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
-			'api/v1/search',
+			'api/v2/search',
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_search' ),
