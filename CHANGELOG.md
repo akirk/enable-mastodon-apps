@@ -1,3 +1,7 @@
+### 1.4.2
+- Update search endpoints ([#238])
+- Fix the EMA announcements appearing publically when debug on ([#237])
+
 ### 1.4.1
 - Allow filtering whether the user is a member of the blog ([#234])
 
@@ -272,3 +276,6 @@
 [#233]: https://github.com/akirk/friends/pull/233
 
 [#234]: https://github.com/akirk/enable-mastodon-apps/pull/234
+
+[#237]: https://github.com/akirk/enable-mastodon-apps/pull/237
+[#238]: https://github.com/akirk/enable-mastodon-apps/pull/238

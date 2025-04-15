@@ -3,10 +3,10 @@
 - Contributors: akirk, pfefferle, drivingralle, kittmedia, obenland
 - Tags: mastodon, activitypub, friends, fediverse
 - Requires at least: 5.0
-- Tested up to: 6.6
+- Tested up to: 6.8
 - Requires PHP: 7.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 1.4.1
+- Stable tag: 1.4.2
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -99,6 +99,10 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 2. The Mastodon Apps settings page.
 
 ## Changelog
+
+### 1.4.2
+- Update search endpoints ([#238])
+- Fix the EMA announcements appearing publically when debug on ([#237])
 
 ### 1.4.1
 - Allow filtering whether the user is a member of the blog ([#234])
@@ -264,3 +268,6 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 [#233]: https://github.com/akirk/friends/pull/233
 
 [#234]: https://github.com/akirk/enable-mastodon-apps/pull/234
+
+[#237]: https://github.com/akirk/enable-mastodon-apps/pull/237
+[#238]: https://github.com/akirk/enable-mastodon-apps/pull/238
