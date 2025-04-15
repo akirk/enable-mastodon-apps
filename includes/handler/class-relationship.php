@@ -47,14 +47,6 @@ class Relationship extends Handler {
 		$relationship     = new Relationship_Entity();
 		$relationship->id = $user_id;
 
-		/**
-		 * Modify account relationship.
-		 *
-		 * @param Relationship_Entity $relationship The account relationship.
-		 * @param string              $user_id      The user ID.
-		 * @param \WP_REST_Request    $request      The request object.
-		 * @return Relationship_Entity The modified account relationship.
-		 */
 		return apply_filters( 'mastodon_entity_relationship', $relationship, $user_id, $request );
 	}
 

@@ -74,6 +74,7 @@ class Search extends Handler {
 			foreach ( $users as $user ) {
 				$ret['accounts'][] = apply_filters( 'mastodon_api_account', null, $user->ID, null, null );
 			}
+			$ret['accounts'] = array_filter( $ret['accounts'] );
 		}
 		if ( ! $type || 'statuses' === $type ) {
 			$args = $this->get_posts_query_args( array(), $request );
