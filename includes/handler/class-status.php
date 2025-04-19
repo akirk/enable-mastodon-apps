@@ -278,7 +278,7 @@ class Status extends Handler {
 		}
 		$app = Mastodon_App::get_current_app();
 
-		$post_data['post_content'] = $status_text;
+		$post_data['post_content'] = make_clickable( $status_text );
 		$post_data['post_status']  = 'public' === $visibility ? 'publish' : 'private';
 		$post_data['post_type']    = $app->get_create_post_type();
 		$post_data['post_title']   = '';
