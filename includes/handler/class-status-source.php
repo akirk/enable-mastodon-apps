@@ -25,7 +25,7 @@ class Status_Source extends Status {
 	}
 
 	public function register_hooks() {
-		add_filter( 'mastodon_api_status_source', array( $this, 'api_status_source' ), 10, 3 );
+		add_filter( 'mastodon_api_status_source', array( $this, 'api_status_source' ), 15, 3 );
 	}
 
 	/**
@@ -37,18 +37,6 @@ class Status_Source extends Status {
 	 */
 	public function api_status_source( ?Status_Source_Entity $status_source, int $object_id ): ?Status_Source_Entity {
 		if ( $status_source instanceof Status_Source_Entity ) {
-			return $status_source;
-		}
-
-		$remapped_comment_id = get_comment_meta( $object_id, 'mastodon_comment_id', true );
-		if ( $remapped_comment_id ) {
-			$comment = get_comment( $object_id );
-			if ( isset( $comment ) && $comment instanceof \WP_Comment ) {
-				$status_source       = new Status_Source_Entity();
-				$status_source->id   = strval( Mastodon_API::remap_comment_id( $comment->comment_ID ) );
-				$status_source->text = trim( wp_strip_all_tags( $comment->comment_content ) );
-			}
-
 			return $status_source;
 		}
 
