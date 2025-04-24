@@ -18,6 +18,7 @@
 namespace Enable_Mastodon_Apps;
 
 use Enable_Mastodon_Apps\Entity\Status as Status_Entity;
+use Enable_Mastodon_Apps\Entity\Status_Source as Status_Source_Entity;
 
 /**
  * Comment Custom Post Type
@@ -45,6 +46,7 @@ class Comment_CPT {
 		add_action( 'edit_comment', array( $this, 'update_comment_post' ), 10, 2 );
 		add_filter( 'mastodon_api_get_posts_query_args', array( $this, 'api_get_posts_query_args' ) );
 		add_filter( 'mastodon_api_status', array( $this, 'api_status' ), 9, 3 );
+		add_filter( 'mastodon_api_status_source', array( $this, 'api_status_source' ), 10, 3 );
 		add_filter( 'mastodon_api_account', array( $this, 'api_account' ), 10, 4 );
 		add_filter( 'mastodon_api_in_reply_to_id', array( $this, 'mastodon_api_in_reply_to_id' ), 15 );
 		add_filter( 'mastodon_api_notification_type', array( $this, 'mastodon_api_notification_type' ), 10, 2 );
@@ -225,19 +227,24 @@ class Comment_CPT {
 	 *
 	 * @param Status_Entity $status Current status array.
 	 * @param int           $object_id The object ID to get the status from.
+	 * @param array         $data Additional status data.
 	 * @return Status_Entity The status entity
 	 */
-	public function api_status( ?Status_Entity $status, int $object_id ): ?Status_Entity {
+	public function api_status( ?Status_Entity $status, int $object_id, array $data = array() ): ?Status_Entity {
 		if ( $status instanceof Status_Entity ) {
 			return $status;
 		}
 
-		$comment_id = self::post_id_to_comment_id( $object_id );
-		if ( ! $comment_id ) {
-			return $status;
-		}
+		if ( ! isset( $data['comment'] ) ) {
+			$comment_id = self::post_id_to_comment_id( $object_id );
+			if ( ! $comment_id ) {
+				return $status;
+			}
 
-		$comment = get_comment( $comment_id );
+			$comment = get_comment( $comment_id );
+		} else {
+			$comment = $data['comment'];
+		}
 		if ( ! $comment ) {
 			return $status;
 		}
@@ -267,6 +274,34 @@ class Comment_CPT {
 		$status->in_reply_to_account_id = apply_filters( 'mastodon_api_account_id', null, $status->in_reply_to_id );
 
 		return $status;
+	}
+
+
+	/**
+	 * Get a status source array.
+	 *
+	 * @param Status_Source_Entity $status_source Current status source array.
+	 * @param int                  $object_id The object ID to get the status from.
+	 * @return Status_Source_Entity The status source entity
+	 */
+	public function api_status_source( ?Status_Source_Entity $status_source, int $object_id ): ?Status_Source_Entity {
+		if ( $status_source instanceof Status_Source_Entity ) {
+			return $status_source;
+		}
+
+		$comment_id = self::post_id_to_comment_id( $object_id );
+		if ( ! $comment_id ) {
+			return $status_source;
+		}
+
+		$comment = get_comment( $comment_id );
+		if ( isset( $comment ) && $comment instanceof \WP_Comment ) {
+			$status_source       = new Status_Source_Entity();
+			$status_source->id   = strval( $object_id );
+			$status_source->text = trim( wp_strip_all_tags( $comment->comment_content ) );
+		}
+
+		return $status_source;
 	}
 
 	public function api_account( $account, $user_id, $request = null, $post = null ) {

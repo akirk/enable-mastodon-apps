@@ -21,18 +21,6 @@ class ActivityPub_Test extends Mastodon_API_TestCase {
 		}
 		parent::set_up();
 
-		$this->post = wp_insert_post(
-			array(
-				'post_author'  => $this->administrator,
-				'post_content' => 'Test post',
-				'post_title'   => '',
-				'post_status'  => 'publish',
-				'post_type'    => Mastodon_API::POST_CPT,
-				'post_date'    => '2023-01-03 00:00:00',
-			)
-		);
-		set_post_format( $this->post, 'status' );
-
 		add_filter( 'pre_http_request', array( $this, 'mock_http_requests' ), 10, 3 );
 	}
 
@@ -117,7 +105,7 @@ class ActivityPub_Test extends Mastodon_API_TestCase {
 				),
 			)
 		);
-		$reply_text = 'reply';
+		$reply_text = 'reply!';
 
 		$this->assertCount( 1, get_comments( array( 'post_id' => $this->post ) ) );
 
@@ -133,7 +121,7 @@ class ActivityPub_Test extends Mastodon_API_TestCase {
 				break;
 			}
 		}
-		$this->assertCount( 4, $data );
+		$this->assertCount( 3, $data );
 
 		$comments = get_comments( array( 'post_id' => $this->post ) );
 		$this->assertCount( 1, $comments );
@@ -169,7 +157,7 @@ class ActivityPub_Test extends Mastodon_API_TestCase {
 		);
 		$this->assertNotEmpty( $outbox );
 		$json = json_decode( $outbox[0]->post_content );
-		$this->assertEquals( $json->url, home_url( '?c=' . $comment->comment_ID ) );
+		$this->assertEquals( $json->object->url, home_url( '?c=' . $comment->comment_ID ) );
 		do_action( 'activitypub_process_outbox' );
 
 		$this->assertEquals( 'federate', substr( get_comment_meta( $comment->comment_ID, 'activitypub_status', true ), 0, 8 ) );
@@ -179,6 +167,6 @@ class ActivityPub_Test extends Mastodon_API_TestCase {
 		$this->assertEquals( 200, $response->get_status() );
 
 		$data = json_decode( wp_json_encode( $response->get_data() ), true );
-		$this->assertCount( 5, $data );
+		$this->assertCount( 4, $data );
 	}
 }

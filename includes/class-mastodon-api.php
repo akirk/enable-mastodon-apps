@@ -147,6 +147,9 @@ class Mastodon_API {
 		if ( 0 === strpos( $request->get_route(), '/' . self::PREFIX ) ) {
 			$options |= JSON_UNESCAPED_SLASHES;
 			$options |= JSON_UNESCAPED_UNICODE;
+			if ( get_option( 'mastodon_api_enable_debug' ) ) {
+				$options |= JSON_PRETTY_PRINT;
+			}
 		}
 		return $options;
 	}
