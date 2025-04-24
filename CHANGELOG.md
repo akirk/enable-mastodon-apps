@@ -1,3 +1,8 @@
+### 1.4.3
+- Fix double creation of reply posts ([#245])
+- Enable OPTIONS and api/apps endpoint even with rest_login_required ([#242])
+- Convert urls to links when posting ([#243])
+
 ### 1.4.2
 - Update search endpoints ([#238])
 - Fix the EMA announcements appearing publically when debug on ([#237])
@@ -279,3 +284,7 @@
 
 [#237]: https://github.com/akirk/enable-mastodon-apps/pull/237
 [#238]: https://github.com/akirk/enable-mastodon-apps/pull/238
+
+[#242]: https://github.com/akirk/enable-mastodon-apps/pull/242
+[#243]: https://github.com/akirk/enable-mastodon-apps/pull/243
+[#245]: https://github.com/akirk/enable-mastodon-apps/pull/245

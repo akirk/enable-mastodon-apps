@@ -6,7 +6,7 @@
 - Tested up to: 6.8
 - Requires PHP: 7.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 1.4.2
+- Stable tag: 1.4.3
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -99,6 +99,11 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 2. The Mastodon Apps settings page.
 
 ## Changelog
+
+### 1.4.3
+- Fix double creation of reply posts ([#245])
+- Enable OPTIONS and api/apps endpoint even with rest_login_required ([#242])
+- Convert urls to links when posting ([#243])
 
 ### 1.4.2
 - Update search endpoints ([#238])
@@ -271,3 +276,7 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 
 [#237]: https://github.com/akirk/enable-mastodon-apps/pull/237
 [#238]: https://github.com/akirk/enable-mastodon-apps/pull/238
+
+[#242]: https://github.com/akirk/enable-mastodon-apps/pull/242
+[#243]: https://github.com/akirk/enable-mastodon-apps/pull/243
+[#245]: https://github.com/akirk/enable-mastodon-apps/pull/245
