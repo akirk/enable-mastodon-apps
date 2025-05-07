@@ -39,6 +39,13 @@ class Status extends Handler {
 		add_filter( 'mastodon_api_edit_status', array( $this, 'api_edit_comment' ), 10, 8 );
 		add_filter( 'mastodon_api_edit_status', array( $this, 'api_edit_post' ), 15, 8 );
 		add_filter( 'mastodon_api_status_context', array( $this, 'api_status_context' ), 10, 2 );
+		add_filter( 'mastodon_api_conversation', array( $this, 'api_conversation' ), 10, 2 );
+		add_filter( 'mastodon_api_conversations', array( $this, 'api_conversations' ), 10, 3 );
+		add_filter( 'mastodon_api_conversation_mark_read', array( $this, 'api_conversation_mark_read' ), 10 );
+		add_filter( 'mastodon_api_conversation_delete', array( $this, 'delete_conversation' ), 10 );
+		add_filter( 'mastodon_api_status_context_post_types', array( $this, 'conversation_post_type' ), 10, 2 );
+		add_filter( 'mastodon_api_status_context_post_statuses', array( $this, 'conversation_post_status' ), 10, 2 );
+		add_filter( 'mastodon_api_get_notifications_query_args', array( $this, 'conversation_query_args' ), 20, 2 );
 	}
 
 	/**
@@ -158,6 +165,9 @@ class Status extends Handler {
 			$status->id         = strval( $post->ID );
 			$status->created_at = new \DateTime( $post->post_date_gmt, new \DateTimeZone( 'UTC' ) );
 			$status->visibility = 'public';
+			if ( strpos( $post->post_type, 'ema-dm-' ) === 0 ) {
+				$status->visibility = 'direct';
+			}
 			$status->uri        = get_the_guid( $post->ID );
 			$status->content    = $post->post_content;
 			if ( ! empty( $post->post_title ) && trim( $post->post_title ) ) {
@@ -279,9 +289,24 @@ class Status extends Handler {
 		$app = Mastodon_App::get_current_app();
 
 		$post_data['post_content'] = make_clickable( $status_text );
-		$post_data['post_status']  = 'public' === $visibility ? 'publish' : 'private';
 		$post_data['post_type']    = $app->get_create_post_type();
-		$post_data['post_title']   = '';
+
+		switch ( $visibility ) {
+			case 'public':
+				$post_data['post_status'] = 'publish';
+				break;
+
+			case 'direct':
+				$post_data['post_status'] = 'ema_unread';
+				$post_data['post_type'] = Mastodon_API::get_dm_cpt();
+				break;
+
+			default:
+				$post_data['post_status'] = 'private';
+				break;
+		}
+
+		$post_data['post_title'] = '';
 
 		if ( ! $post_format || 'standard' === $post_format ) {
 			$post_content_parts = preg_split( '/(<br>|<br \/>|<\/p>|' . PHP_EOL . ')/i', $status_text, 2 );
@@ -336,8 +361,26 @@ class Status extends Handler {
 	}
 
 	public function api_submit_post( $status, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at ) {
-		if ( $status instanceof \WP_Error || $status instanceof Status_Entity ) {
+		if (
+			$status instanceof \WP_Error // An error was thrown in an earlier hook.
+			|| $status instanceof Status_Entity // A status was already saved in an earlier hook.
+		) {
 			return $status;
+		}
+
+		$mentions = array();
+		if ( 'direct' === $visibility ) {
+			preg_match_all( '/@(?:[a-zA-Z0-9_@.-]+)/', $status_text, $matches );
+			foreach ( $matches[0] as $match ) {
+				$user = get_user_by( 'login', ltrim( $match, '@' ) );
+				if ( $user ) {
+					$mentions[] = $user->ID;
+				}
+			}
+
+			if ( empty( $mentions ) ) {
+				return new \WP_Error( 'mastodon_' . __FUNCTION__, 'No mentions found', array( 'status' => 400 ) );
+			}
 		}
 
 		$post_data = $this->prepare_post_data( null, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at );
@@ -347,7 +390,35 @@ class Status extends Handler {
 			return $post_id;
 		}
 
-		if ( $post_format && 'standard' !== $post_format ) {
+		if ( 'direct' === $visibility ) {
+			$dm_post_ids = array( $post_data['post_type'] => $post_id );
+
+			if ( $post_data['post_parent'] ) {
+				$dm_ids = get_post_meta( $post_data['post_parent'], 'ema_dm_ids', true );
+			}
+
+			foreach ( $mentions as $mention_user_id ) {
+				$post_data['post_type'] = Mastodon_API::get_dm_cpt( $mention_user_id );
+				if ( isset( $dm_ids[ $post_data['post_type'] ] ) ) {
+					$post_data['post_parent'] = $dm_ids[ $post_data['post_type'] ];
+				} else {
+					unset( $post_data['post_parent'] );
+				}
+				$dm_id = wp_insert_post( $post_data );
+				if ( is_wp_error( $dm_id ) ) {
+					return $dm_id;
+				}
+
+				$dm_post_ids[ $post_data['post_type'] ] = $dm_id;
+			}
+
+			foreach ( $dm_post_ids as $dm_post_id ) {
+				if ( $post_format && 'standard' !== $post_format ) {
+					set_post_format( $dm_post_id, $post_format );
+				}
+				update_post_meta( $dm_post_id, 'ema_dm_ids', $dm_post_ids );
+			}
+		} elseif ( $post_format && 'standard' !== $post_format ) {
 			set_post_format( $post_id, $post_format );
 		}
 
@@ -445,7 +516,12 @@ class Status extends Handler {
 	}
 
 	public function api_submit_comment( $status, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at ) {
-		if ( $status instanceof \WP_Error || $status instanceof Status_Entity || ! $in_reply_to_id ) {
+		if (
+			$status instanceof \WP_Error // An error was thrown in an earlier hook.
+			|| $status instanceof Status_Entity // A status was already saved in an earlier hook.
+			|| ! $in_reply_to_id // A non-reply should be a post.
+			|| 'direct' === $visibility // But a reply that's a DM should also be a post.
+		) {
 			return $status;
 		}
 		$comment_data = array();
@@ -514,7 +590,6 @@ class Status extends Handler {
 
 		$comment_data = array();
 		$comment_data['comment_content']  = $status_text;
-		$comment_data['comment_post_ID']  = $parent_post_id;
 
 		$parent_comment = get_comment( $in_reply_to_id );
 		if ( $parent_comment ) {
@@ -574,7 +649,6 @@ class Status extends Handler {
 		}
 
 		$found = array();
-		$posts = array( $context_post_id );
 		$post_date = new \DateTime( $post->post_date_gmt, new \DateTimeZone( 'UTC' ) );
 
 		$app = Mastodon_App::get_current_app();
@@ -585,8 +659,8 @@ class Status extends Handler {
 		}
 
 		$post_types[] = \Enable_Mastodon_Apps\Comment_CPT::CPT;
-		$post_types = apply_filters( 'api_status_context_post_types', $post_types, $context_post_id );
-		$post_statuses = apply_filters( 'api_status_context_post_statuses', 'any', $context_post_id );
+		$post_types = apply_filters( 'mastodon_api_status_context_post_types', $post_types, $context_post_id );
+		$post_statuses = apply_filters( 'mastodon_api_status_context_post_statuses', 'any', $context_post_id );
 
 		$checked = array();
 		$to_check = array( $context_post_id );
@@ -642,6 +716,9 @@ class Status extends Handler {
 				if ( $status->created_at < $post_date ) {
 					$type = 'ancestors';
 				}
+				if ( ! isset( $context[ $type ] ) ) {
+					$context[ $type ] = array();
+				}
 				$context[ $type ][ $status->id ] = $status;
 			}
 		}
@@ -653,5 +730,123 @@ class Status extends Handler {
 		$context['ancestors']   = array_values( $context['ancestors'] );
 		$context['descendants'] = array_values( $context['descendants'] );
 		return $context;
+	}
+
+	public function api_conversation( $conversation, $post_id ) {
+		$message = get_post( $post_id );
+		if ( ! $message ) {
+			return new \WP_Error( 'mastodon_api_conversation', 'Record not found', array( 'status' => 404 ) );
+		}
+
+		$last_status = get_posts(
+			array(
+				'post_type'   => Mastodon_API::get_dm_cpt(),
+				'post_parent' => $message->ID,
+				'post_status' => array( 'ema_read', 'ema_unread' ),
+				'orderby'     => 'date',
+				'order'       => 'DESC',
+				'numberposts' => 1,
+			)
+		);
+		if ( ! $last_status ) {
+			$last_status = $message;
+		} else {
+			$last_status = $last_status[0];
+		}
+
+		$unread = 'ema_unread' === $message->post_status;
+		if ( ! $unread ) {
+			$unread_posts = get_children(
+				array(
+					'post_parent' => $message->ID,
+					'post_type'   => Mastodon_API::get_dm_cpt(),
+					'post_status' => array( 'ema_unread' ),
+				)
+			);
+			if ( $unread_posts ) {
+				$unread = true;
+			}
+		}
+		$conversation = new \Enable_Mastodon_Apps\Entity\Conversation();
+		$conversation->id = $message->ID;
+		$conversation->unread = $unread;
+		$conversation->last_status = apply_filters( 'mastodon_api_status', null, $last_status->ID );
+		$conversation->accounts = array();
+		$conversation->accounts[] = apply_filters( 'mastodon_api_account', null, $message->post_author );
+
+		return $conversation;
+	}
+
+	public function api_conversations( $conversations, $user_id, $limit = 20 ) {
+		$messages = new \WP_Query();
+		$messages->set( 'post_type', Mastodon_API::get_dm_cpt() );
+		$messages->set( 'post_parent', '0' );
+		$messages->set( 'post_status', array( 'ema_read', 'ema_unread' ) );
+		$messages->set( 'posts_per_page', $limit );
+		$messages->set( 'order', 'DESC' );
+
+		foreach ( $messages->get_posts() as $message ) {
+			$conversation = $this->api_conversation( null, $message->ID );
+			if ( $conversation && ! is_wp_error( $conversation ) ) {
+				$conversations[] = $conversation;
+			}
+		}
+
+		return $conversations;
+	}
+
+	public function conversation_post_type( $post_types, $context_post_id ) {
+		$post_type = get_post_type( $context_post_id );
+		if ( ! $post_type ) {
+			return $post_types;
+		}
+		if ( strpos( $post_type, 'ema-dm-' ) === 0 ) {
+			return array(
+				Mastodon_API::get_dm_cpt(),
+			);
+		}
+
+		return $post_types;
+	}
+
+	public function conversation_post_status( $post_types, $context_post_id ) {
+		$post_type = get_post_type( $context_post_id );
+		if ( ! $post_type ) {
+			return $post_types;
+		}
+		if ( strpos( $post_type, 'ema-dm-' ) === 0 ) {
+			return array(
+				'ema_read',
+				'ema_unread',
+			);
+		}
+
+		return $post_types;
+	}
+
+	public function conversation_query_args( $args, $type ) {
+		if ( 'mention' !== $type ) {
+			return $args;
+		}
+		if ( ! isset( $args['post_type'] ) ) {
+			$args['post_type'] = array();
+		} elseif ( ! is_array( $args['post_type'] ) ) {
+			$args['post_type'] = array( $args['post_type'] );
+		}
+		$args['post_type'][] = Mastodon_Api::get_dm_cpt();
+
+		if ( ! isset( $args['post_status'] ) ) {
+			$args['post_status'] = array();
+		} elseif ( ! is_array( $args['post_status'] ) ) {
+			$args['post_status'] = array( $args['post_status'] );
+		}
+		if ( ! in_array( 'ema_unread', $args['post_status'] ) ) {
+			$args['post_status'][] = 'ema_unread';
+		}
+		if ( ! in_array( 'ema_read', $args['post_status'] ) ) {
+			$args['post_status'][] = 'ema_read';
+		}
+
+		return $args;
 	}
 }
