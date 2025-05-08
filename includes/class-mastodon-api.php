@@ -24,7 +24,7 @@ use function PHPUnit\Framework\returnCallback;
  * @author Alex Kirk
  */
 class Mastodon_API {
-	const ACTIVITYPUB_USERNAME_REGEXP = '(?:([A-Za-z0-9_-]+)@((?:[A-Za-z0-9_-]+\.)+[A-Za-z]+))';
+	const ACTIVITYPUB_USERNAME_REGEXP = '(?:([A-Za-z0-9_.-]+)@((?:[A-Za-z0-9_-]+\.)+[A-Za-z]+))';
 	const VERSION                     = ENABLE_MASTODON_APPS_VERSION;
 	/**
 	 * The OAuth handler.
