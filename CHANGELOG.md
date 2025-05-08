@@ -1,3 +1,7 @@
+### 1.4.4
+- Add support for internal DMs ([#253])
+- Improve Debugger ([#256])
+
 ### 1.4.3
 - Fix double creation of reply posts ([#245])
 - Enable OPTIONS and api/apps endpoint even with rest_login_required ([#242])
@@ -288,3 +292,6 @@
 [#242]: https://github.com/akirk/enable-mastodon-apps/pull/242
 [#243]: https://github.com/akirk/enable-mastodon-apps/pull/243
 [#245]: https://github.com/akirk/enable-mastodon-apps/pull/245
+
+[#253]: https://github.com/akirk/enable-mastodon-apps/pull/253
+[#256]: https://github.com/akirk/enable-mastodon-apps/pull/256
