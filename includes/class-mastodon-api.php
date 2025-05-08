@@ -24,7 +24,7 @@ use function PHPUnit\Framework\returnCallback;
  * @author Alex Kirk
  */
 class Mastodon_API {
-	const ACTIVITYPUB_USERNAME_REGEXP = '(?:([A-Za-z0-9_-]+)@((?:[A-Za-z0-9_-]+\.)+[A-Za-z]+))';
+	const ACTIVITYPUB_USERNAME_REGEXP = '(?:([A-Za-z0-9_.-]+)@((?:[A-Za-z0-9_-]+\.)+[A-Za-z]+))';
 	const VERSION                     = ENABLE_MASTODON_APPS_VERSION;
 	/**
 	 * The OAuth handler.
@@ -55,6 +55,7 @@ class Mastodon_API {
 
 		// Register Handlers.
 		new Handler\Account();
+		new Handler\Conversation();
 		new Handler\Instance();
 		new Handler\Media_Attachment();
 		new Handler\Notification();
@@ -183,6 +184,40 @@ class Mastodon_API {
 		register_term_meta( self::REMAP_TAXONOMY, 'meta', array( 'type' => 'string' ) );
 	}
 
+	public static function get_dm_cpt( $user_id = 0 ) {
+		$show_ui = false;
+		if ( ! $user_id ) {
+			$user_id = get_current_user_id();
+			$show_ui = true;
+		}
+		global $wp_post_types;
+
+		$cpt = 'ema-dm-' . $user_id;
+		if ( ! is_array( $wp_post_types ) || ! isset( $wp_post_types[ $cpt ] ) ) {
+			$args = array(
+				'labels'       => array(
+					'name'          => __( 'EMA DMs', 'enable-mastodon-apps' ),
+					'singular_name' => __( 'EMA DM', 'enable-mastodon-apps' ),
+					'menu_name'     => __( 'EMA DMs', 'enable-mastodon-apps' ),
+				),
+				'description'  => __( 'DM by the Enable Mastodon Apps plugin.', 'enable-mastodon-apps' ),
+				'public'       => false,
+				'show_ui'      => $show_ui,
+				'show_in_rest' => false,
+				'rewrite'      => false,
+				'menu_icon'    => 'dashicons-privacy',
+				'supports'     => array( 'post-formats', 'author', 'revisions' ),
+				'capabilities' => array(
+					'create_posts' => false,
+				),
+			);
+			register_post_type( $cpt, $args );
+		}
+
+		return $cpt;
+	}
+
+
 	public function register_custom_post_types() {
 		$args = array(
 			'labels'       => array(
@@ -229,12 +264,40 @@ class Mastodon_API {
 			'supports'     => array( 'post-formats' ),
 		);
 		register_post_type( self::ANNOUNCE_CPT, $args );
+
+		$dm_cpt = self::get_dm_cpt();
+		register_post_status(
+			'ema_unread',
+			array(
+				'label'                     => _x( 'Unread', 'message', 'enable-mastodon-apps' ),
+				'public'                    => ! false,
+				'exclude_from_search'       => true,
+				'show_in_admin_all_list'    => false,
+				'show_in_admin_status_list' => is_admin() && isset( $_GET['post_type'] ) && $dm_cpt === $_GET['post_type'], // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+				// translators: %s: number of unread messages.
+				'label_count'               => _n_noop( 'Unread (%s)', 'Unread (%s)', 'enable-mastodon-apps' ),
+			)
+		);
+
+		register_post_status(
+			'ema_read',
+			array(
+				'label'                     => _x( 'Read', 'message', 'enable-mastodon-apps' ),
+				'public'                    => false,
+				'exclude_from_search'       => true,
+				'show_in_admin_all_list'    => false,
+				'show_in_admin_status_list' => is_admin() && isset( $_GET['post_type'] ) && $dm_cpt === $_GET['post_type'], // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+				// translators: %s: number of read messages.
+				'label_count'               => _n_noop( 'Read (%s)', 'Read (%s)', 'enable-mastodon-apps' ),
+			)
+		);
 	}
 
 	public function activitypub_support_post_types( $post_types ) {
 		$post_types[] = self::POST_CPT;
 		return $post_types;
 	}
+
 	public function rewrite_rules() {
 		$existing_rules = get_option( 'rewrite_rules' );
 		$needs_flush    = false;
@@ -2059,15 +2122,6 @@ class Mastodon_API {
 			return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Validation failed: Text can\'t be blank', array( 'status' => 422 ) );
 		}
 
-		/**
-		 * Allow modifying the status text before it gets posted.
-		 *
-		 * @param string $status The user submitted status text.
-		 * @param WP_REST_Request $request The REST request object.
-		 * @return string The potentially modified status text.
-		 */
-		$status_text = apply_filters( 'mastodon_api_submit_status_text', $status_text, $request );
-
 		$visibility = $request->get_param( 'visibility' );
 		if ( empty( $visibility ) ) {
 			$visibility = 'public';
@@ -2440,15 +2494,6 @@ class Mastodon_API {
 			return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Validation failed: Text can\'t be blank', array( 'status' => 422 ) );
 		}
 
-		/**
-		 * Allow modifying the status text before it gets posted.
-		 *
-		 * @param string $status The user submitted status text.
-		 * @param WP_REST_Request $request The REST request object.
-		 * @return string The potentially modified status text.
-		 */
-		$status_text = apply_filters( 'mastodon_api_submit_status_text', $status_text, $request );
-
 		$visibility = $request->get_param( 'visibility' );
 		if ( empty( $visibility ) ) {
 			$visibility = 'public';
@@ -2482,14 +2527,22 @@ class Mastodon_API {
 		}
 
 		$post = get_post( $post_id );
+		if ( ! $post ) {
+			$fake_delete = false;
+			if ( $fake_delete ) {
+				$status = new Entity\Status();
+				$status->id = $post_id;
+				$status->created_at = new \DateTime();
+				$status->uri = home_url( '?p=' . $post_id );
+				$status->content = '';
+				$status->account = apply_filters( 'mastodon_api_account', null, get_current_user_id(), $request, null );
+				return $status;
+			}
 
+			return new \WP_Error( 'mastodon_api_delete_post', 'Record not found', array( 'status' => 404 ) );
+		}
 		/**
-		 * Modify the status data.
-		 *
-		 * @param array|null $account The status data.
-		 * @param int $post_id The object ID to get the status from.
-		 * @param array $data Additional status data.
-		 * @return array|null The modified status data.
+		 * Save status before we delete it.
 		 */
 		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
 

@@ -50,7 +50,7 @@ class Comment_CPT {
 		add_filter( 'mastodon_api_account', array( $this, 'api_account' ), 10, 4 );
 		add_filter( 'mastodon_api_in_reply_to_id', array( $this, 'mastodon_api_in_reply_to_id' ), 15 );
 		add_filter( 'mastodon_api_notification_type', array( $this, 'mastodon_api_notification_type' ), 10, 2 );
-		add_filter( 'mastodon_api_get_notifications_query_args', array( $this, 'mastodon_api_notification_type' ), 10, 2 );
+		add_filter( 'mastodon_api_get_notifications_query_args', array( $this, 'mastodon_api_get_notifications_query_args' ), 10, 2 );
 	}
 
 	public function register_custom_post_type() {

@@ -47,8 +47,8 @@ class Search extends Handler {
 
 		$q = trim( $request->get_param( 'q' ) );
 		$q = esc_attr( $q );
-		// Don't allow empty search queries.
-		if ( '' === $q ) {
+		// Only start searching when there are 3 or more characters.
+		if ( strlen( $q ) < 3 ) {
 			return $ret;
 		}
 

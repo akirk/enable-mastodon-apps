@@ -158,6 +158,9 @@ class Status extends Handler {
 			$status->id         = strval( $post->ID );
 			$status->created_at = new \DateTime( $post->post_date_gmt, new \DateTimeZone( 'UTC' ) );
 			$status->visibility = 'public';
+			if ( strpos( $post->post_type, 'ema-dm-' ) === 0 ) {
+				$status->visibility = 'direct';
+			}
 			$status->uri        = get_the_guid( $post->ID );
 			$status->content    = $post->post_content;
 			if ( ! empty( $post->post_title ) && trim( $post->post_title ) ) {
@@ -278,10 +281,35 @@ class Status extends Handler {
 		}
 		$app = Mastodon_App::get_current_app();
 
+		/**
+		 * Allow modifying the status text before it gets posted.
+		 *
+		 * @param string $status The user submitted status text.
+		 * @param int|null $in_reply_to_id The ID of the post to reply to.
+		 * @param string $visibility The visibility of the post.
+		 * @return string The potentially modified status text.
+		 */
+		$status_text = apply_filters( 'mastodon_api_submit_status_text', $status_text, $in_reply_to_id, $visibility );
+
 		$post_data['post_content'] = make_clickable( $status_text );
-		$post_data['post_status']  = 'public' === $visibility ? 'publish' : 'private';
 		$post_data['post_type']    = $app->get_create_post_type();
-		$post_data['post_title']   = '';
+
+		switch ( $visibility ) {
+			case 'public':
+				$post_data['post_status'] = 'publish';
+				break;
+
+			case 'direct':
+				$post_data['post_status'] = 'ema_unread';
+				$post_data['post_type'] = Mastodon_API::get_dm_cpt();
+				break;
+
+			default:
+				$post_data['post_status'] = 'private';
+				break;
+		}
+
+		$post_data['post_title'] = '';
 
 		if ( ! $post_format || 'standard' === $post_format ) {
 			$post_content_parts = preg_split( '/(<br>|<br \/>|<\/p>|' . PHP_EOL . ')/i', $status_text, 2 );
@@ -336,8 +364,26 @@ class Status extends Handler {
 	}
 
 	public function api_submit_post( $status, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at ) {
-		if ( $status instanceof \WP_Error || $status instanceof Status_Entity ) {
+		if (
+			$status instanceof \WP_Error // An error was thrown in an earlier hook.
+			|| $status instanceof Status_Entity // A status was already saved in an earlier hook.
+		) {
 			return $status;
+		}
+
+		$mentions = array();
+		if ( 'direct' === $visibility ) {
+			preg_match_all( '/@(?:[a-zA-Z0-9_@.-]+)/', $status_text, $matches );
+			foreach ( $matches[0] as $match ) {
+				$user = get_user_by( 'login', ltrim( $match, '@' ) );
+				if ( $user ) {
+					$mentions[] = $user->ID;
+				}
+			}
+
+			if ( empty( $mentions ) ) {
+				return new \WP_Error( 'mastodon_' . __FUNCTION__, 'No mentions found', array( 'status' => 400 ) );
+			}
 		}
 
 		$post_data = $this->prepare_post_data( null, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at );
@@ -347,7 +393,35 @@ class Status extends Handler {
 			return $post_id;
 		}
 
-		if ( $post_format && 'standard' !== $post_format ) {
+		if ( 'direct' === $visibility ) {
+			$dm_post_ids = array( $post_data['post_type'] => $post_id );
+
+			if ( $post_data['post_parent'] ) {
+				$dm_ids = get_post_meta( $post_data['post_parent'], 'ema_dm_ids', true );
+			}
+
+			foreach ( $mentions as $mention_user_id ) {
+				$post_data['post_type'] = Mastodon_API::get_dm_cpt( $mention_user_id );
+				if ( isset( $dm_ids[ $post_data['post_type'] ] ) ) {
+					$post_data['post_parent'] = $dm_ids[ $post_data['post_type'] ];
+				} else {
+					unset( $post_data['post_parent'] );
+				}
+				$dm_id = wp_insert_post( $post_data );
+				if ( is_wp_error( $dm_id ) ) {
+					return $dm_id;
+				}
+
+				$dm_post_ids[ $post_data['post_type'] ] = $dm_id;
+			}
+
+			foreach ( $dm_post_ids as $dm_post_id ) {
+				if ( $post_format && 'standard' !== $post_format ) {
+					set_post_format( $dm_post_id, $post_format );
+				}
+				update_post_meta( $dm_post_id, 'ema_dm_ids', $dm_post_ids );
+			}
+		} elseif ( $post_format && 'standard' !== $post_format ) {
 			set_post_format( $post_id, $post_format );
 		}
 
@@ -445,7 +519,12 @@ class Status extends Handler {
 	}
 
 	public function api_submit_comment( $status, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at ) {
-		if ( $status instanceof \WP_Error || $status instanceof Status_Entity || ! $in_reply_to_id ) {
+		if (
+			$status instanceof \WP_Error // An error was thrown in an earlier hook.
+			|| $status instanceof Status_Entity // A status was already saved in an earlier hook.
+			|| ! $in_reply_to_id // A non-reply should be a post.
+			|| 'direct' === $visibility // But a reply that's a DM should also be a post.
+		) {
 			return $status;
 		}
 		$comment_data = array();
@@ -514,7 +593,6 @@ class Status extends Handler {
 
 		$comment_data = array();
 		$comment_data['comment_content']  = $status_text;
-		$comment_data['comment_post_ID']  = $parent_post_id;
 
 		$parent_comment = get_comment( $in_reply_to_id );
 		if ( $parent_comment ) {
@@ -574,7 +652,6 @@ class Status extends Handler {
 		}
 
 		$found = array();
-		$posts = array( $context_post_id );
 		$post_date = new \DateTime( $post->post_date_gmt, new \DateTimeZone( 'UTC' ) );
 
 		$app = Mastodon_App::get_current_app();
@@ -585,8 +662,8 @@ class Status extends Handler {
 		}
 
 		$post_types[] = \Enable_Mastodon_Apps\Comment_CPT::CPT;
-		$post_types = apply_filters( 'api_status_context_post_types', $post_types, $context_post_id );
-		$post_statuses = apply_filters( 'api_status_context_post_statuses', 'any', $context_post_id );
+		$post_types = apply_filters( 'mastodon_api_status_context_post_types', $post_types, $context_post_id );
+		$post_statuses = apply_filters( 'mastodon_api_status_context_post_statuses', 'any', $context_post_id );
 
 		$checked = array();
 		$to_check = array( $context_post_id );
@@ -641,6 +718,9 @@ class Status extends Handler {
 				$type = 'descendants';
 				if ( $status->created_at < $post_date ) {
 					$type = 'ancestors';
+				}
+				if ( ! isset( $context[ $type ] ) ) {
+					$context[ $type ] = array();
 				}
 				$context[ $type ][ $status->id ] = $status;
 			}
