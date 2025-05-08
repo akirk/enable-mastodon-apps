@@ -44,7 +44,7 @@ if ( ! $selected_post_format ) {
 	<form method="post">
 		<?php wp_nonce_field( 'enable-mastodon-apps' ); ?>
 		<input type="hidden" name="app" value="<?php echo esc_attr( $app->get_client_id() ); ?>" />
-		<h2><?php echo esc_html( $args['app']->get_client_name() ); ?></h2>
+		<h2><?php echo esc_html( $app->get_client_name() ); ?></h2>
 
 		<?php
 		if ( $args['enable_debug'] ) {
@@ -67,6 +67,7 @@ if ( ! $selected_post_format ) {
 				);
 
 				foreach ( $last_requests as $request ) {
+					$request['app'] = $app;
 					output_request_log( $request, $rest_nonce );
 				}
 			}

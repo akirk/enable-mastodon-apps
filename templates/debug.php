@@ -78,7 +78,7 @@ $rest_nonce = wp_create_nonce( 'wp_rest' );
 			}
 		}
 		if ( $all_last_requests ) {
-			ksort( $all_last_requests );
+			krsort( $all_last_requests );
 			?>
 			<tt>
 			<?php

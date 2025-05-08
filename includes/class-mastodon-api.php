@@ -135,12 +135,22 @@ class Mastodon_API {
 		if ( ! isset( $result['code'] ) && isset( $result['error'] ) && is_string( $result['error'] ) ) {
 			$result['code']    = sanitize_title_with_dashes( $result['error'] );
 			$result['message'] = $result['error'];
-		}
 
-		return array(
+		}
+		$result = array(
 			'error'             => empty( $result['code'] ) ? __( 'unknown_error', 'enable-mastodon-apps' ) : $result['code'],
 			'error_description' => empty( $result['message'] ) ? __( 'Unknown error', 'enable-mastodon-apps' ) : $result['message'],
 		);
+
+		Mastodon_App::log(
+			$request,
+			array(
+				'errors' => array( $result['error'] => $result['error_description'] ),
+				'status' => http_response_code(),
+			)
+		);
+
+		return $result;
 	}
 
 	public function rest_json_encode_options( $options, $request ) {
@@ -1725,6 +1735,17 @@ class Mastodon_API {
 			}
 		}
 
+		if ( $token && isset( $token['client_id'] ) ) {
+			Mastodon_App::set_current_app( $token['client_id'], $request );
+		} elseif ( get_option( 'mastodon_api_debug_mode' ) > time() ) {
+			Mastodon_App::log(
+				$request,
+				array(
+					'user_agent' => $_SERVER['HTTP_USER_AGENT'], // phpcs:ignore
+				)
+			);
+		}
+
 		if ( ! $has_scope && ! $also_public ) {
 			return new \WP_Error( 'insufficient-permissions', 'Insufficient permissions', array( 'status' => 401 ) );
 		}
@@ -1744,8 +1765,7 @@ class Mastodon_API {
 		$token = $this->oauth->get_token();
 		if ( ! $token ) {
 			if ( get_option( 'mastodon_api_debug_mode' ) > time() ) {
-				$app = Mastodon_App::get_debug_app();
-				$app->was_used(
+				Mastodon_App::log(
 					$request,
 					array(
 						'user_agent' => $_SERVER['HTTP_USER_AGENT'], // phpcs:ignore
@@ -1778,11 +1798,7 @@ class Mastodon_API {
 		if ( ! empty( $_SERVER['HTTP_AUTHORIZATION'] ) ) {
 			$this->oauth->get_token();
 		}
-		$app = Mastodon_App::get_current_app();
-		if ( ! $app ) {
-			$app = Mastodon_App::get_debug_app();
-		}
-		$app->was_used(
+		Mastodon_App::log(
 			$request,
 			array(
 				'user_agent' => $_SERVER['HTTP_USER_AGENT'], // phpcs:ignore
@@ -1912,8 +1928,7 @@ class Mastodon_API {
 			$request->set_body_params( $_POST ); // phpcs:ignore
 			$request->set_headers( getallheaders() );
 
-			$app = Mastodon_App::get_debug_app();
-			$app->was_used(
+			Mastodon_App::log(
 				$request,
 				array(
 					'user_agent' => $_SERVER['HTTP_USER_AGENT'], // phpcs:ignore
@@ -1980,6 +1995,10 @@ class Mastodon_API {
 	 * @return object|WP_Error Entity or WP_Error object
 	 */
 	private function validate_entity( $entity, $type ) {
+		if ( is_wp_error( $entity ) ) {
+			return $entity;
+		}
+
 		if ( ! $entity instanceof $type ) {
 			return new \WP_Error( 'invalid-entity', 'Invalid entity, not one of ' . $type, array( 'status' => 404 ) );
 		}
@@ -2862,7 +2881,6 @@ class Mastodon_API {
 		$account = \apply_filters( 'mastodon_api_account', null, $user_id, $request, null );
 		if ( is_null( $account ) ) {
 			return new \WP_Error( 'mastodon_api_account', 'Record not found', array( 'status' => 404 ) );
-
 		}
 
 		return $this->validate_entity( $account, Entity\Account::class );

@@ -10,7 +10,7 @@ function output_request_log( $request, $rest_nonce ) {
 		),
 		$request['path']
 	);
-	$meta = array_diff_key( $request, array_flip( array( 'timestamp', 'path', 'method' ) ) );
+	$meta = array_diff_key( $request, array_flip( array( 'timestamp', 'path', 'method', 'app' ) ) );
 	if ( empty( $meta ) ) {
 		echo '<div style="margin-left: 1.5em">';
 	} else {
@@ -29,9 +29,10 @@ function output_request_log( $request, $rest_nonce ) {
 		echo '</summary>';
 		echo '<pre style="padding-left: 1em; border-left: 3px solid #999; margin: 0">';
 		foreach ( $meta as $key => $value ) {
-			echo esc_html( $key ), ' ', esc_html( var_export( $value, true ) ), '<br/>'; // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_var_export
+			echo esc_html( $key ), ' = ', esc_html( wp_json_encode( $value, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES ) ), '<br/>';
 		}
 		echo '</pre>';
+		do_action( 'enable_mastodon_apps_debug_request_log', $request );
 		echo '</details>';
 	} else {
 		echo '</div>';
