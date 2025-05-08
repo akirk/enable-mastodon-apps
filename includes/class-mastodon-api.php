@@ -2122,15 +2122,6 @@ class Mastodon_API {
 			return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Validation failed: Text can\'t be blank', array( 'status' => 422 ) );
 		}
 
-		/**
-		 * Allow modifying the status text before it gets posted.
-		 *
-		 * @param string $status The user submitted status text.
-		 * @param WP_REST_Request $request The REST request object.
-		 * @return string The potentially modified status text.
-		 */
-		$status_text = apply_filters( 'mastodon_api_submit_status_text', $status_text, $request );
-
 		$visibility = $request->get_param( 'visibility' );
 		if ( empty( $visibility ) ) {
 			$visibility = 'public';
@@ -2502,15 +2493,6 @@ class Mastodon_API {
 		if ( empty( $status_text ) ) {
 			return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Validation failed: Text can\'t be blank', array( 'status' => 422 ) );
 		}
-
-		/**
-		 * Allow modifying the status text before it gets posted.
-		 *
-		 * @param string $status The user submitted status text.
-		 * @param WP_REST_Request $request The REST request object.
-		 * @return string The potentially modified status text.
-		 */
-		$status_text = apply_filters( 'mastodon_api_submit_status_text', $status_text, $request );
 
 		$visibility = $request->get_param( 'visibility' );
 		if ( empty( $visibility ) ) {

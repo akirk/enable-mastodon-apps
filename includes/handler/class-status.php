@@ -281,6 +281,16 @@ class Status extends Handler {
 		}
 		$app = Mastodon_App::get_current_app();
 
+		/**
+		 * Allow modifying the status text before it gets posted.
+		 *
+		 * @param string $status The user submitted status text.
+		 * @param int|null $in_reply_to_id The ID of the post to reply to.
+		 * @param string $visibility The visibility of the post.
+		 * @return string The potentially modified status text.
+		 */
+		$status_text = apply_filters( 'mastodon_api_submit_status_text', $status_text, $in_reply_to_id, $visibility );
+
 		$post_data['post_content'] = make_clickable( $status_text );
 		$post_data['post_type']    = $app->get_create_post_type();
 
