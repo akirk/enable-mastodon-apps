@@ -55,6 +55,7 @@ class Mastodon_API {
 
 		// Register Handlers.
 		new Handler\Account();
+		new Handler\Conversation();
 		new Handler\Instance();
 		new Handler\Media_Attachment();
 		new Handler\Notification();
@@ -184,8 +185,10 @@ class Mastodon_API {
 	}
 
 	public static function get_dm_cpt( $user_id = 0 ) {
+		$show_ui = false;
 		if ( ! $user_id ) {
 			$user_id = get_current_user_id();
+			$show_ui = true;
 		}
 		global $wp_post_types;
 
@@ -196,10 +199,11 @@ class Mastodon_API {
 					'name'          => __( 'EMA DMs', 'enable-mastodon-apps' ),
 					'singular_name' => __( 'EMA DM', 'enable-mastodon-apps' ),
 					'menu_name'     => __( 'EMA DMs', 'enable-mastodon-apps' ),
+					'add_new'       => '',
 				),
 				'description'  => __( 'DM by the Enable Mastodon Apps plugin.', 'enable-mastodon-apps' ),
 				'public'       => false,
-				'show_ui'      => false,
+				'show_ui'      => $show_ui,
 				'show_in_rest' => false,
 				'rewrite'      => false,
 				'menu_icon'    => 'dashicons-privacy',
@@ -259,15 +263,16 @@ class Mastodon_API {
 		);
 		register_post_type( self::ANNOUNCE_CPT, $args );
 
+		$dm_cpt = self::get_dm_cpt();
 		register_post_status(
 			'ema_unread',
 			array(
 				'label'                     => _x( 'Unread', 'message', 'enable-mastodon-apps' ),
-				'public'                    => false,
+				'public'                    => ! false,
 				'exclude_from_search'       => true,
 				'show_in_admin_all_list'    => false,
-				'show_in_admin_status_list' => false,
-				// translators: %s; number of unread messages.
+				'show_in_admin_status_list' => is_admin() && isset( $_GET['post_type'] ) && $dm_cpt === $_GET['post_type'], // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+				// translators: %s: number of unread messages.
 				'label_count'               => _n_noop( 'Unread (%s)', 'Unread (%s)', 'enable-mastodon-apps' ),
 			)
 		);
@@ -279,8 +284,8 @@ class Mastodon_API {
 				'public'                    => false,
 				'exclude_from_search'       => true,
 				'show_in_admin_all_list'    => false,
-				'show_in_admin_status_list' => false,
-				// translators: %s; number of read messages.
+				'show_in_admin_status_list' => is_admin() && isset( $_GET['post_type'] ) && $dm_cpt === $_GET['post_type'], // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+				// translators: %s: number of read messages.
 				'label_count'               => _n_noop( 'Read (%s)', 'Read (%s)', 'enable-mastodon-apps' ),
 			)
 		);
