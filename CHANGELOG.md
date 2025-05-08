@@ -1,3 +1,6 @@
+### 1.4.5
+- Flush Rewrite Rules later ([#257])
+
 ### 1.4.4
 - Add support for internal DMs ([#253])
 - Improve Debugger ([#256])
@@ -295,3 +298,5 @@
 
 [#253]: https://github.com/akirk/enable-mastodon-apps/pull/253
 [#256]: https://github.com/akirk/enable-mastodon-apps/pull/256
+
+[#257]: https://github.com/akirk/enable-mastodon-apps/pull/257
