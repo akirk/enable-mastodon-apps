@@ -26,8 +26,8 @@ class Account extends Entity {
 		'note'            => 'string',
 		'avatar'          => 'string',
 		'avatar_static'   => 'string',
-		'header'          => 'string',
-		'header_static'   => 'string',
+		'header'          => 'string?',
+		'header_static'   => 'string?',
 
 		'locked'          => 'bool',
 		'bot'             => 'bool',
