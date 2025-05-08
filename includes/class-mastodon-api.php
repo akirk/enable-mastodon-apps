@@ -67,7 +67,7 @@ class Mastodon_API {
 	}
 
 	public function register_hooks() {
-		add_action( 'wp_loaded', array( $this, 'rewrite_rules' ) );
+		add_action( 'plugins_loaded', array( $this, 'rewrite_rules' ) );
 		add_action( 'query_vars', array( $this, 'query_vars' ) );
 		add_action( 'rest_api_init', array( $this, 'add_rest_routes' ) );
 		add_filter( 'rest_post_dispatch', array( $this, 'send_http_links' ), 10, 3 );
