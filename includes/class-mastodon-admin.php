@@ -311,7 +311,7 @@ class Mastodon_Admin {
 		}
 
 		if ( isset( $_POST['mastodon_api_debug_mode'] ) ) {
-			update_option( 'mastodon_api_debug_mode', time() + 5 * MINUTE_IN_SECONDS );
+			update_option( 'mastodon_api_debug_mode', time() + apply_filters( 'enable_mastodon_apps_debug_time', 5 * MINUTE_IN_SECONDS ) );
 		} else {
 			delete_option( 'mastodon_api_debug_mode' );
 		}

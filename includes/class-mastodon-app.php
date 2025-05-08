@@ -213,37 +213,73 @@ class Mastodon_App {
 		return $requests;
 	}
 
-	public function was_used( $request, $additional_debug_data = array() ) {
-		static $logged;
-		if ( isset( $logged ) && $logged ) {
-			// Prevent multiple calls.
-			return true;
+	public static function log( $request, $additional_debug_data = array() ) {
+		$app = self::get_current_app();
+		if ( ! $app ) {
+			$app = self::get_debug_app();
 		}
-		$logged = true;
-		if ( get_option( 'mastodon_api_debug_mode' ) > time() ) {
-			add_metadata(
-				'term',
-				$this->term->term_id,
-				'request',
-				array_merge(
-					array(
-						'timestamp'    => microtime( true ),
-						'path'         => $_SERVER['REQUEST_URI'], // phpcs:ignore
-						'method'       => $_SERVER['REQUEST_METHOD'], // phpcs:ignore
-						'params'       => $request->get_params(),
-						'json'         => $request->get_json_params(),
-						'files'        => $request->get_file_params(),
-						'current_user' => get_current_user_id(),
-					),
-					$additional_debug_data
-				)
-			);
+		return $app->was_used( $request, $additional_debug_data );
+	}
+
+	public function was_used( $request, $additional_debug_data = array() ) {
+		static $logged = array();
+
+		$calls = array();
+		$line = false;
+		foreach ( debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 4 ) as $backtrace ) { // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_debug_backtrace
+			if ( 'Enable_Mastodon_Apps\\Mastodon_App' === $backtrace['class'] ) {
+				$line = basename( $backtrace['file'] ) . ':' . $backtrace['line'];
+				continue;
+			}
+			$calls = array( $line => $backtrace['function'] . '()' );
+			break;
+		}
+		if ( $line && empty( $calls ) ) {
+			$calls[ $line ] = '?';
 		}
 
-		if ( $this->get_last_used() > time() - MINUTE_IN_SECONDS ) {
+		$data = array_merge(
+			array(
+				'timestamp'    => microtime( true ),
+				'path'         => $_SERVER['REQUEST_URI'], // phpcs:ignore
+				'method'       => $_SERVER['REQUEST_METHOD'], // phpcs:ignore
+				'params'       => $request->get_params(),
+				'json'         => $request->get_json_params(),
+				'files'        => $request->get_file_params(),
+				'current_user' => get_current_user_id(),
+				'calls'        => $calls,
+			),
+			$additional_debug_data
+		);
+
+		if ( isset( $logged[ $this->get_client_id() ] ) && $logged[ $this->get_client_id() ] ) {
+			$previous_data = get_metadata_by_mid( 'term', $logged[ $this->get_client_id() ] );
+			if ( is_array( $previous_data->meta_value ) ) {
+				foreach ( $previous_data->meta_value as $key => $value ) {
+					if ( ! isset( $data[ $key ] ) ) {
+						$data[ $key ] = $value;
+						continue;
+					}
+					if ( 'errors' === $key || 'calls' === $key ) {
+						$data[ $key ] = array_merge( $data[ $key ], $value );
+					}
+				}
+			}
+			update_metadata_by_mid( 'term', $logged[ $this->get_client_id() ], $data );
 			return true;
 		}
-		update_term_meta( $this->term->term_id, 'last_used', time() );
+
+		if ( get_option( 'mastodon_api_debug_mode' ) > time() ) {
+			$logged[ $this->get_client_id() ] = add_metadata( 'term', $this->term->term_id, 'request', $data );
+		} else {
+			$logged[ $this->get_client_id() ] = false;
+		}
+
+		if ( $this->get_last_used() < time() - MINUTE_IN_SECONDS ) {
+			update_term_meta( $this->term->term_id, 'last_used', time() );
+		}
+
+		return $logged[ $this->get_client_id() ];
 	}
 
 	/**
@@ -652,7 +688,7 @@ class Mastodon_App {
 
 						foreach ( array_keys( $value ) as $key ) {
 							if ( 'path' === $key || 'user_agent' === $key ) {
-								$value[ $key ] = preg_replace( '#[^A-Za-z0-9?&%=[\]+.:@_/-]#', ' ', $value[ $key ] );
+								$value[ $key ] = preg_replace( '#[^A-Za-z0-9?&%=[\]+.:@_/()-]#', ' ', $value[ $key ] );
 								continue;
 							}
 							if ( 'status' === $key || 'current_user' === $key ) {
@@ -671,7 +707,8 @@ class Mastodon_App {
 									'files' === $key ||
 									'params' === $key ||
 									'json' === $key ||
-									'errors' === $key
+									'errors' === $key ||
+									'calls' === $key
 								) &&
 								! empty( $value[ $key ] )
 							) {
