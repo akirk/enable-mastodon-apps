@@ -199,7 +199,6 @@ class Mastodon_API {
 					'name'          => __( 'EMA DMs', 'enable-mastodon-apps' ),
 					'singular_name' => __( 'EMA DM', 'enable-mastodon-apps' ),
 					'menu_name'     => __( 'EMA DMs', 'enable-mastodon-apps' ),
-					'add_new'       => '',
 				),
 				'description'  => __( 'DM by the Enable Mastodon Apps plugin.', 'enable-mastodon-apps' ),
 				'public'       => false,
@@ -208,6 +207,9 @@ class Mastodon_API {
 				'rewrite'      => false,
 				'menu_icon'    => 'dashicons-privacy',
 				'supports'     => array( 'post-formats', 'author', 'revisions' ),
+				'capabilities' => array(
+					'create_posts' => false,
+				),
 			);
 			register_post_type( $cpt, $args );
 		}
