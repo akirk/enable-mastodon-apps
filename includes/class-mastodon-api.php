@@ -1995,6 +1995,10 @@ class Mastodon_API {
 	 * @return object|WP_Error Entity or WP_Error object
 	 */
 	private function validate_entity( $entity, $type ) {
+		if ( is_wp_error( $entity ) ) {
+			return $entity;
+		}
+
 		if ( ! $entity instanceof $type ) {
 			return new \WP_Error( 'invalid-entity', 'Invalid entity, not one of ' . $type, array( 'status' => 404 ) );
 		}
