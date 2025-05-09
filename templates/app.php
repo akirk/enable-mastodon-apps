@@ -133,7 +133,7 @@ if ( ! $selected_post_format ) {
 						</fieldset>
 						<p class="description">
 							<span><?php esc_html_e( 'The post formats that will be used for this app.', 'enable-mastodon-apps' ); ?></span>
-							<button id="toggle_all_post_formats" class="as-link"><?php esc_html_e( 'Toggle all', 'enable-mastodon-apps' ); ?></button>
+							<button id="toggle_all_post_formats" class="as-link" type="button"><?php esc_html_e( 'Toggle all', 'enable-mastodon-apps' ); ?></button>
 						</p>
 					</td>
 				</tr>
@@ -229,7 +229,7 @@ if ( ! $selected_post_format ) {
 		</table>
 
 		<button class="button button-primary"><?php esc_html_e( 'Save', 'enable-mastodon-apps' ); ?></button>
-		<button name="delete-app" data-confirm="<?php echo esc_attr( $confirm ); ?>" value="<?php echo esc_attr( $app->get_client_id() ); ?>" class="button button-destructive">
+		<button name="delete-app" data-confirm="<?php echo esc_attr( $confirm ); ?>" value="<?php echo esc_attr( $app->get_client_id() ); ?>" class="button button-destructive" type="button">
 			<?php
 			echo esc_html(
 				sprintf(
