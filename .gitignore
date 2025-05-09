@@ -2,4 +2,4 @@
 composer.lock
 vendor
 .DS_Store
-new-release.md
+new-changelog.md

@@ -58,10 +58,10 @@ if $(git tag | grep -Eq ^$ENABLE_MASTODON_APPS_VERSION\$); then
 
 		echo "This is the generated changelog:"
 		cat new-changelog.md
-		echo -n "Do you want to continue? [y/N] "
+		echo -n "Do you want to continue? [Y/n] "
 		read
 
-		if [ "$REPLY" != "y" ]; then
+		if [ "$REPLY" == "n" ]; then
 			exit 1
 		fi
 	fi
