@@ -169,7 +169,10 @@ class Conversation extends Status {
 		return $title;
 	}
 
-	public function dm_row_actions() {
-		return array();
+	public function dm_row_actions( $actions, $post ) {
+		if ( is_admin() && get_post_type( $post ) === 'ema-dm-' . get_current_user_id() ) {
+			return array();
+		}
+		return $actions;
 	}
 }
