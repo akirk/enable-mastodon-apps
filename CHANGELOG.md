@@ -1,3 +1,8 @@
+### 1.4.6
+- Fix registering rewrite rules ([#261])
+- Fix missing type=button on toggle all link ([#259])
+- Bring back post row actions ([#260])
+
 ### 1.4.5
 - Flush Rewrite Rules later ([#257])
 
@@ -300,3 +305,7 @@
 [#256]: https://github.com/akirk/enable-mastodon-apps/pull/256
 
 [#257]: https://github.com/akirk/enable-mastodon-apps/pull/257
+
+[#259]: https://github.com/akirk/enable-mastodon-apps/pull/259
+[#260]: https://github.com/akirk/enable-mastodon-apps/pull/260
+[#261]: https://github.com/akirk/enable-mastodon-apps/pull/261

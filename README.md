@@ -6,7 +6,7 @@
 - Tested up to: 6.8
 - Requires PHP: 7.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 1.4.5
+- Stable tag: 1.4.6
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -99,6 +99,11 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 2. The Mastodon Apps settings page.
 
 ## Changelog
+
+### 1.4.6
+- Fix registering rewrite rules ([#261])
+- Fix missing type=button on toggle all link ([#259])
+- Bring back post row actions ([#260])
 
 ### 1.4.5
 - Flush Rewrite Rules later ([#257])
@@ -292,3 +297,7 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 [#256]: https://github.com/akirk/enable-mastodon-apps/pull/256
 
 [#257]: https://github.com/akirk/enable-mastodon-apps/pull/257
+
+[#259]: https://github.com/akirk/enable-mastodon-apps/pull/259
+[#260]: https://github.com/akirk/enable-mastodon-apps/pull/260
+[#261]: https://github.com/akirk/enable-mastodon-apps/pull/261
