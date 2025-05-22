@@ -245,7 +245,7 @@ class Mastodon_API {
 			'show_in_rest' => false,
 			'rewrite'      => false,
 			'menu_icon'    => 'dashicons-megaphone',
-			'supports'     => array( 'post-formats', 'comments', 'revisions', 'author' ),
+			'supports'     => array( 'editor', 'post-formats', 'comments', 'revisions', 'author' ),
 		);
 		register_post_type( self::POST_CPT, $args );
 
