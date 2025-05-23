@@ -229,7 +229,7 @@ if ( ! $selected_post_format ) {
 		</table>
 
 		<button class="button button-primary"><?php esc_html_e( 'Save', 'enable-mastodon-apps' ); ?></button>
-		<button name="delete-app" data-confirm="<?php echo esc_attr( $confirm ); ?>" value="<?php echo esc_attr( $app->get_client_id() ); ?>" class="button button-destructive" type="button">
+		<button name="delete-app" data-confirm="<?php echo esc_attr( $confirm ); ?>" value="<?php echo esc_attr( $app->get_client_id() ); ?>" class="button button-destructive">
 			<?php
 			echo esc_html(
 				sprintf(
