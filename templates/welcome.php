@@ -21,7 +21,7 @@
 					sprintf(
 						// translators: %s: URL to Mastodon app directory.
 						__( 'Check the <a href=%s>Mastodon app directory</a> to find one that you like.', 'enable-mastodon-apps' ),
-						'"https://joinmastodon.org/apps" target="_blank"'
+						'"https://joinmastodon.org/apps#:~:text=Browse%20third-party%20apps" target="_blank"'
 					),
 					array(
 						'a' => array(

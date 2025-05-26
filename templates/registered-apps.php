@@ -196,8 +196,8 @@ $rest_nonce = wp_create_nonce( 'wp_rest' );
 				echo wp_kses(
 					sprintf(
 						// translators: %s is the link to the Mastodon apps directory.
-						__( 'You can find compatible apps in <a href="%s">the Mastodon app directory</a>.', 'enable-mastodon-apps' ),
-						'https://joinmastodon.org/apps" target="_blank'
+						__( 'You can find compatible apps in <a href=%s>the Mastodon app directory</a>.', 'enable-mastodon-apps' ),
+						'"https://joinmastodon.org/apps#:~:text=Browse%20third-party%20apps" target="_blank"'
 					),
 					array(
 						'a' => array(
