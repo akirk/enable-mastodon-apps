@@ -188,7 +188,7 @@ $rest_nonce = wp_create_nonce( 'wp_rest' );
 			<?php endif; ?>
 		<?php endif; ?>
 	<?php else : ?>
-		<div class="box">
+		<div class="box help-box" style="max-width: 800px">
 			<p>
 				<span><?php esc_html_e( 'No apps have been registered yet.', 'enable-mastodon-apps' ); ?></span>
 				<span>

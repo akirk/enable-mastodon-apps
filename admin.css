@@ -182,7 +182,8 @@ summary {
 	font-weight: bold;
 }
 
-.settings_page_enable-mastodon-apps .enable-mastodon-apps-welcome-page input {
+.settings_page_enable-mastodon-apps .enable-mastodon-apps-welcome-page input,
+.settings_page_enable-mastodon-apps .enable-mastodon-apps-registered-apps-page .help-box input {
 	font-size: 20px;
 	width: 95%;
 }
