@@ -211,8 +211,13 @@ $rest_nonce = wp_create_nonce( 'wp_rest' );
 				<span><?php esc_html_e( 'Make sure you scroll down to the "Browse third-party apps" section for more choice.', 'enable-mastodon-apps' ); ?></span>
 			</p>
 			<p>
-				<span><?php esc_html_e( 'Enter this URL as your Mastodon instance:', 'enable-mastodon-apps' ); ?></span>
+				<span><?php esc_html_e( 'When you first start a Mastodon app, it will ask you for your instance URL:', 'enable-mastodon-apps' ); ?></span>
 				<input type="text" class="regular-text copyable" id="enable-mastodon-apps-instance" value="<?php echo esc_attr( $args['instance_url'] ); ?>" readonly="readonly">
+			</p>
+			<p>
+				<span><?php esc_html_e( 'The Mastodon app will then redirect you to the login page of your own WordPress site.', 'enable-mastodon-apps' ); ?></span>
+				<span><?php esc_html_e( 'Double-check the URL of the login form so that you don\'t enter your details on another site.', 'enable-mastodon-apps' ); ?></span>
+				<span><?php esc_html_e( 'You\'ll need to log in there and then authorize the app.', 'enable-mastodon-apps' ); ?></span>
 			</p>
 		</div>
 	<?php endif; ?>
