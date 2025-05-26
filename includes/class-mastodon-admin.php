@@ -628,6 +628,7 @@ class Mastodon_Admin {
 			__DIR__ . '/../templates/registered-apps.php',
 			true,
 			array(
+				'instance_url' => preg_replace( '#^https?://([a-z0-9.-:]+)/?$#i', '$1', home_url() ),
 				'enable_debug' => $this->enable_debug,
 				'codes'        => $codes,
 				'tokens'       => $tokens,
