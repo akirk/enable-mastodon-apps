@@ -393,8 +393,6 @@ class Mastodon_API {
 	}
 
 	public function generate_rewrite_rules( $wp_rewrite ) {
-		$existing_rules = $wp_rewrite->rules;
-
 		$generic      = apply_filters(
 			'mastodon_api_generic_routes',
 			array(
@@ -467,19 +465,11 @@ class Mastodon_API {
 		);
 
 		foreach ( $generic as $rule ) {
-			if ( empty( $existing_rules[ '^' . $rule ] ) ) {
-				// Add a specific rewrite rule so that we can also catch requests without our prefix.
-				$needs_flush = true;
-			}
-			$wp_rewrite->add_rule( '^' . $rule, 'index.php?rest_route=/' . self::PREFIX . '/' . $rule, 'top' );
+			$wp_rewrite->rules[ '^' . $rule ] = 'index.php?rest_route=/' . self::PREFIX . '/' . $rule;
 		}
 
 		foreach ( $parametrized as $rule => $rewrite ) {
-			if ( empty( $existing_rules[ '^' . $rule ] ) ) {
-				// Add a specific rewrite rule so that we can also catch requests without our prefix.
-				$needs_flush = true;
-			}
-			$wp_rewrite->add_rule( '^' . $rule, 'index.php?rest_route=/' . self::PREFIX . '/' . $rewrite, 'top' );
+			$wp_rewrite->rules[ '^' . $rule ] = 'index.php?rest_route=/' . self::PREFIX . '/' . $rewrite;
 		}
 	}
 
