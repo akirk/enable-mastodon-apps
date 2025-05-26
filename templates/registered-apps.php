@@ -184,33 +184,33 @@ $rest_nonce = wp_create_nonce( 'wp_rest' );
 			<button name="delete-never-used" class="button"><?php esc_html_e( 'Delete never used apps and tokens', 'enable-mastodon-apps' ); ?></button>
 			<button name="delete-apps-without-tokens" class="button"><?php esc_html_e( 'Delete apps without tokens', 'enable-mastodon-apps' ); ?></button>
 			<button name="clear-all-app-logs" class="button button-destructive"><?php esc_html_e( 'Clear all logs', 'enable-mastodon-apps' ); ?></button>
-		<?php else : ?>
-			<p>
-				<span>
-				<?php
-				echo wp_kses(
-					sprintf(
-						// translators: %s is the link to the Mastodon apps directory.
-						__( 'You can find compatible apps in <a href="%s">the Mastodon app directory</a>.', 'enable-mastodon-apps' ),
-						'https://joinmastodon.org/apps" target="_blank'
-					),
-					array(
-						'a' => array(
-							'href'   => array(),
-							'target' => array(),
-						),
-					)
-				);
-				?>
-				</span>
-				<span><?php esc_html_e( 'Make sure you scroll down to the "Browse third-party apps" section for more choice.', 'enable-mastodon-apps' ); ?></span>
-			</p>
-			<p>
-				<span><?php esc_html_e( 'Enter this URL as your Mastodon instance:', 'enable-mastodon-apps' ); ?></span>
-				<input type="text" class="regular-text copyable" id="enable-mastodon-apps-instance" value="<?php echo esc_attr( $args['instance_url'] ); ?>" readonly="readonly">
-
-			</p>
 		<?php endif; ?>
+	<?php endif; ?>
+	<?php if ( empty( $args['apps'] ) ) : ?>
+		<p>
+			<span>
+			<?php
+			echo wp_kses(
+				sprintf(
+					// translators: %s is the link to the Mastodon apps directory.
+					__( 'You can find compatible apps in <a href="%s">the Mastodon app directory</a>.', 'enable-mastodon-apps' ),
+					'https://joinmastodon.org/apps" target="_blank'
+				),
+				array(
+					'a' => array(
+						'href'   => array(),
+						'target' => array(),
+					),
+				)
+			);
+			?>
+			</span>
+			<span><?php esc_html_e( 'Make sure you scroll down to the "Browse third-party apps" section for more choice.', 'enable-mastodon-apps' ); ?></span>
+		</p>
+		<p>
+			<span><?php esc_html_e( 'Enter this URL as your Mastodon instance:', 'enable-mastodon-apps' ); ?></span>
+			<input type="text" class="regular-text copyable" id="enable-mastodon-apps-instance" value="<?php echo esc_attr( $args['instance_url'] ); ?>" readonly="readonly">
+		</p>
 	<?php endif; ?>
 	</form>
 </div>
