@@ -366,14 +366,17 @@ class Mastodon_API {
 				'api/v[12]/search'                       => 'api/v2/search',
 			)
 		);
+		$new_rules = array();
 
 		foreach ( $generic as $rule ) {
-			$wp_rewrite->rules[ '^' . $rule ] = 'index.php?rest_route=/' . self::PREFIX . '/' . $rule;
+			$new_rules[ '^' . $rule ] = 'index.php?rest_route=/' . self::PREFIX . '/' . $rule;
 		}
 
 		foreach ( $parametrized as $rule => $rewrite ) {
-			$wp_rewrite->rules[ '^' . $rule ] = 'index.php?rest_route=/' . self::PREFIX . '/' . $rewrite;
+			$new_rules[ '^' . $rule ] = 'index.php?rest_route=/' . self::PREFIX . '/' . $rewrite;
 		}
+
+		$wp_rewrite->rules = $new_rules + $wp_rewrite->rules;
 	}
 
 	public function add_rest_routes() {
