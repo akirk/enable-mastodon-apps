@@ -78,6 +78,7 @@ class Mastodon_API {
 		add_filter( 'rest_authentication_errors', array( $this, 'rest_authentication_errors' ), 20 );
 		add_filter( 'mastodon_api_mapback_user_id', array( $this, 'mapback_user_id' ) );
 		add_filter( 'mastodon_api_in_reply_to_id', array( self::class, 'maybe_get_remapped_reblog_id' ), 15 );
+		add_filter( 'mastodon_api_in_reply_to_id', array( self::class, 'maybe_get_remapped_url' ), 20 );
 		add_filter( 'activitypub_support_post_types', array( $this, 'activitypub_support_post_types' ) );
 		add_filter( 'mastodon_api_valid_user', array( $this, 'is_user_member_of_blog' ), 10, 2 );
 	}
