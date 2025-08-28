@@ -10,6 +10,7 @@
 namespace Enable_Mastodon_Apps\Handler;
 
 use Enable_Mastodon_Apps\Mastodon_App;
+use Enable_Mastodon_Apps\Entity\Status as Status_Entity;
 
 /**
  * This is the generic handler to provide needed helper functions.
@@ -141,5 +142,31 @@ class Handler {
 			$response->add_link( 'prev', remove_query_arg( 'max_id', add_query_arg( 'min_id', reset( $statuses )->id, home_url( $req_uri ) ) ) );
 		}
 		return $response;
+	}
+
+	public function api_status_ensure_numeric_id( $status ) {
+		if ( ! $status instanceof Status_Entity ) {
+			return $status;
+		}
+
+		if ( isset( $status->id ) && ! is_numeric( $status->id ) ) {
+			$status->id = \Enable_Mastodon_Apps\Mastodon_API::remap_url( $status->id );
+		}
+
+		if ( isset( $status->account->id ) && ! is_numeric( $status->account->id ) ) {
+			$status->account->id = \Enable_Mastodon_Apps\Mastodon_API::remap_user_id( $status->account->id );
+		}
+
+		if ( isset( $status->reblog->account->id ) && ! is_numeric( $status->reblog->account->id ) ) {
+			$status->reblog->account->id = \Enable_Mastodon_Apps\Mastodon_API::remap_user_id( $status->reblog->account->id );
+		}
+
+		foreach ( $status->media_attachments as $media_attachment ) {
+			if ( isset( $media_attachment->id ) && ! is_numeric( $media_attachment->id ) ) {
+				$media_attachment->id = \Enable_Mastodon_Apps\Mastodon_API::remap_url( $media_attachment->id );
+			}
+		}
+
+		return $status;
 	}
 }

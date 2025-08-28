@@ -27,6 +27,7 @@ class Search extends Handler {
 
 	public function register_hooks() {
 		add_filter( 'mastodon_api_search', array( $this, 'search' ), 10, 2 );
+		add_filter( 'mastodon_api_search', array( $this, 'api_search_status_ensure_numeric_id' ), 100 );
 	}
 
 	/**
@@ -128,6 +129,16 @@ class Search extends Handler {
 		}
 
 		$ret = array_merge( $search, $ret );
+		return $ret;
+	}
+
+
+	public function api_search_status_ensure_numeric_id( $ret ) {
+		if ( ! empty( $ret['statuses'] ) && is_array( $ret['statuses'] ) ) {
+			foreach ( $ret['statuses'] as $key => $status ) {
+				$ret['statuses'][ $key ] = $this->api_status_ensure_numeric_id( $status );
+			}
+		}
 		return $ret;
 	}
 }
