@@ -201,7 +201,7 @@ class Mastodon_App {
 
 	public function get_last_requests() {
 		$requests = array();
-		foreach ( get_term_meta( $this->term->term_id, 'request' ) as $request ) {
+		foreach ( get_term_meta( $this->term->term_id, 'request', false ) as $request ) {
 			if ( empty( $request ) || empty( $request['path'] ) ) {
 				delete_metadata( 'term', $this->term->term_id, 'request', $request );
 				continue;

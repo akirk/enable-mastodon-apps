@@ -77,6 +77,7 @@ Here is a list of endpoints and their implementation status:
 - [x] `POST /api/v1/statuses/:id/reblog` [Boost a status](https://docs.joinmastodon.org/methods/statuses/#boost)
 - [x] `POST /api/v1/statuses/:id/unreblog` [Undo the boost a status](https://docs.joinmastodon.org/methods/statuses/#unreblog)
 - [x] `GET /api/v1/statuses/:id` [View a single status](https://docs.joinmastodon.org/methods/statuses/#get)
+- [x] `GET /api/v1/statuses` [View multiple statuses](https://docs.joinmastodon.org/methods/statuses/#index)
 - [x] `GET /api/v1/notifications/` (partial, just mentions) [Get all notifications](https://docs.joinmastodon.org/methods/notifications/#get)
 - [x] `GET /api/v1/notifications/:id` [Get a single notification](https://docs.joinmastodon.org/methods/notifications/#get-one)
 - [x] `POST /api/v1/notifications/clear` [Dismiss all notification](https://docs.joinmastodon.org/methods/notifications/#clear)

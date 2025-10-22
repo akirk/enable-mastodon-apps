@@ -225,4 +225,82 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 
 		$this->assertTrue( $new_count > $count );
 	}
+
+	public function test_get_multiple_statuses() {
+		// Test with valid status IDs
+		$request = $this->api_request( 'GET', '/api/v1/statuses' );
+		$request->set_param( 'id', array( strval( $this->friend_post ), strval( $this->post ) ) );
+		$response = $this->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertIsArray( $data );
+		$this->assertCount( 2, $data );
+
+		// Verify each status has the expected structure
+		foreach ( $data as $status ) {
+			$this->assertInstanceOf( '\Enable_Mastodon_Apps\Entity\Status', $status );
+			$this->assertIsString( $status->id );
+			$this->assertInstanceOf( '\Enable_Mastodon_Apps\Entity\Account', $status->account );
+			$this->assertIsString( $status->content );
+			$this->assertInstanceOf( '\DateTime', $status->created_at );
+		}
+	}
+
+	public function test_get_multiple_statuses_empty() {
+		// Test with no IDs
+		$request = $this->api_request( 'GET', '/api/v1/statuses' );
+		$response = $this->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertIsArray( $data );
+		$this->assertEmpty( $data );
+	}
+
+	public function test_get_multiple_statuses_invalid_ids() {
+		// Test with non-existent IDs
+		$request = $this->api_request( 'GET', '/api/v1/statuses' );
+		$request->set_param( 'id', array( '99999', '99998' ) );
+		$response = $this->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertIsArray( $data );
+		$this->assertEmpty( $data );
+	}
+
+	public function test_get_multiple_statuses_mixed_validity() {
+		// Test with mix of valid and invalid IDs
+		$request = $this->api_request( 'GET', '/api/v1/statuses' );
+		$request->set_param( 'id', array( strval( $this->friend_post ), '99999', strval( $this->post ) ) );
+		$response = $this->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertIsArray( $data );
+		$this->assertCount( 2, $data ); // Should only return the valid ones
+	}
+
+	public function test_get_multiple_statuses_private_permission() {
+		// Test with private status - should be filtered out for unauthenticated requests
+		$request = $this->api_request( 'GET', '/api/v1/statuses' );
+		$request->set_param( 'id', array( strval( $this->private_post ), strval( $this->friend_post ) ) );
+		$response = $this->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertIsArray( $data );
+		$this->assertCount( 1, $data ); // Should only return the public one
+
+		// Test with authenticated request - should include private post
+		$request = $this->api_request( 'GET', '/api/v1/statuses' );
+		$request->set_param( 'id', array( strval( $this->private_post ), strval( $this->friend_post ) ) );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertIsArray( $data );
+		$this->assertCount( 2, $data ); // Should return both posts when authenticated
+	}
 }

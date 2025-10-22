@@ -10,7 +10,6 @@
 namespace Enable_Mastodon_Apps\Handler;
 
 use Enable_Mastodon_Apps\Handler\Handler;
-use Enable_Mastodon_Apps\Comment_CPT;
 use Enable_Mastodon_Apps\Mastodon_API;
 use Enable_Mastodon_Apps\Mastodon_App;
 use Enable_Mastodon_Apps\Entity\Status as Status_Entity;
@@ -226,32 +225,6 @@ class Status extends Handler {
 		}
 
 		return $statuses;
-	}
-
-	public function api_status_ensure_numeric_id( $status ) {
-		if ( ! $status instanceof Status_Entity ) {
-			return $status;
-		}
-
-		if ( isset( $status->id ) && ! is_numeric( $status->id ) ) {
-			$status->id = \Enable_Mastodon_Apps\Mastodon_API::remap_url( $status->id );
-		}
-
-		if ( isset( $status->account->id ) && ! is_numeric( $status->account->id ) ) {
-			$status->account->id = \Enable_Mastodon_Apps\Mastodon_API::remap_user_id( $status->account->id );
-		}
-
-		if ( isset( $status->reblog->account->id ) && ! is_numeric( $status->reblog->account->id ) ) {
-			$status->reblog->account->id = \Enable_Mastodon_Apps\Mastodon_API::remap_user_id( $status->reblog->account->id );
-		}
-
-		foreach ( $status->media_attachments as $media_attachment ) {
-			if ( isset( $media_attachment->id ) && ! is_numeric( $media_attachment->id ) ) {
-				$media_attachment->id = \Enable_Mastodon_Apps\Mastodon_API::remap_url( $media_attachment->id );
-			}
-		}
-
-		return $status;
 	}
 
 	public static function convert_to_blocks( $post_content ) {
