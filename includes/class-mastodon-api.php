@@ -1971,12 +1971,24 @@ class Mastodon_API {
 
 	public function logged_in_for_private_permission( $request ) {
 		$post_id = $request->get_param( 'post_id' );
-		if ( ! $post_id ) {
-			return true;
-		}
+		$post_ids = $request->get_param( 'id' );
 
-		if ( get_post_status( $post_id ) !== 'publish' ) {
-			return $this->logged_in_permission( $request );
+		if ( $post_id ) {
+			if ( self::CPT === get_post_type( $post_id ) ) {
+				$post_id = self::maybe_get_remapped_reblog_id( $post_id );
+			}
+
+			$post_status = get_post_status( $post_id );
+			if ( $post_status && 'publish' !== $post_status ) {
+				return $this->logged_in_permission( $request );
+			}
+		} elseif ( is_array( $post_ids ) && ! empty( $post_ids ) ) {
+			$this->allow_cors( $request );
+			$token = $this->oauth->get_token();
+			if ( $token ) {
+				wp_set_current_user( $token['user_id'] );
+			}
+			return true;
 		}
 
 		return true;
