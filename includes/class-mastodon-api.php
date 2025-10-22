@@ -1031,6 +1031,26 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
+			'api/v1/statuses',
+			array(
+				'methods'             => array( 'GET', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_get_statuses' ),
+				'permission_callback' => $this->required_scope( 'read:statuses', true ),
+				'args'                => array(
+					'id' => array(
+						'type'              => 'array',
+						'description'       => 'Array of status IDs',
+						'items'             => array(
+							'type' => 'string',
+						),
+						'sanitize_callback' => array( $this, 'sanitize_status_ids' ),
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
 			'api/v1/statuses/(?P<post_id>[0-9]+)/source',
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
@@ -1779,6 +1799,20 @@ class Mastodon_API {
 		return strval( $id );
 	}
 
+	/**
+	 * Sanitize status IDs array.
+	 *
+	 * @param array $ids Array of status IDs.
+	 * @return array Sanitized array of status IDs.
+	 */
+	public function sanitize_status_ids( $ids ) {
+		if ( ! is_array( $ids ) ) {
+			return array();
+		}
+
+		return array_map( array( $this, 'id_as_strval' ), $ids );
+	}
+
 	public function ensure_required_scope( $request, $scopes, $also_public ) {
 		if ( $also_public ) {
 			if ( ! $this->logged_in_for_private_permission( $request ) ) {
@@ -2395,7 +2429,7 @@ class Mastodon_API {
 		/**
 		 * Modify the status data.
 		 *
-		 * @param array|null $account The status data.
+		 * @param array|null $status The status data.
 		 * @param int $post_id The object ID to get the status from.
 		 * @param array $data Additional status data.
 		 * @return array|null The modified status data.
@@ -2420,7 +2454,7 @@ class Mastodon_API {
 		/**
 		 * Modify the status data.
 		 *
-		 * @param array|null $account The status data.
+		 * @param array|null $status The status data.
 		 * @param int $post_id The object ID to get the status from.
 		 * @param array $data Additional status data.
 		 * @return array|null The modified status data.
@@ -2447,7 +2481,7 @@ class Mastodon_API {
 		/**
 		 * Modify the status data.
 		 *
-		 * @param array|null $account The status data.
+		 * @param array|null $status The status data.
 		 * @param int $post_id The object ID to get the status from.
 		 * @param array $data Additional status data.
 		 * @return array|null The modified status data.
@@ -2473,7 +2507,7 @@ class Mastodon_API {
 		/**
 		 * Modify the status data.
 		 *
-		 * @param array|null $account The status data.
+		 * @param array|null $status The status data.
 		 * @param int $post_id The object ID to get the status from.
 		 * @param array $data Additional status data.
 		 * @return array|null The modified status data.
@@ -2577,7 +2611,7 @@ class Mastodon_API {
 		/**
 		 * Modify the status data.
 		 *
-		 * @param array|null $account The status data.
+		 * @param array|null $status The status data.
 		 * @param int $post_id The object ID to get the status from.
 		 * @param array $data Additional status data.
 		 * @return array|null The modified status data.
@@ -2589,6 +2623,66 @@ class Mastodon_API {
 		}
 
 		return $this->validate_entity( $status, Entity\Status::class );
+	}
+
+	/**
+	 * Get multiple statuses by their IDs.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return array|WP_Error Array of Status entities or error response.
+	 */
+	public function api_get_statuses( $request ) {
+		$ids = $request->get_param( 'id' );
+
+		if ( empty( $ids ) || ! is_array( $ids ) ) {
+			return array();
+		}
+
+		$statuses = array();
+
+		foreach ( $ids as $requested_id ) {
+			$post_id = $requested_id;
+			if ( ! $post_id ) {
+				continue;
+			}
+
+			// Check if post exists and user has permission to view it.
+			if ( get_post_status( $post_id ) !== 'publish' && ! current_user_can( 'edit_post', $post_id ) ) {
+				continue;
+			}
+
+			if ( self::CPT === get_post_type( $post_id ) ) {
+				$post_id = self::maybe_get_remapped_reblog_id( $post_id );
+			}
+
+			$post = get_post( $post_id );
+
+			if ( ! $post ) {
+				continue;
+			}
+
+			/**
+			 * Modify the status data.
+			 *
+			 * @param array|null $status The status data.
+			 * @param int $post_id The object ID to get the status from.
+			 * @param array $data Additional status data.
+			 * @return array|null The modified status data.
+			 */
+			$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
+
+			if ( $status && $status instanceof Entity\Status ) {
+				// When requesting a reblog post by its ID, maybe_get_remapped_reblog_id() returns
+				// the original post, so the filter returns the original with reblog nested inside.
+				// If the requested ID matches the reblog ID, extract and return just the reblog.
+				if ( $status->id !== $requested_id && isset( $status->reblog ) && $status->reblog->id === $requested_id ) {
+					$status = $status->reblog;
+				}
+				$statuses[] = $status;
+			}
+		}
+
+		return $statuses;
 	}
 
 	/**
