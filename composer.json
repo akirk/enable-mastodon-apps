@@ -3,7 +3,7 @@
 	"description": "A WordPress plugin that implements the Mastodon API to enable access through Mastodon apps",
 	"license": "GPL-2.0-or-later",
 	"require-dev": {
-		"phpcompatibility/php-compatibility": "dev-develop as 9.99.99",
+		"phpcompatibility/php-compatibility": "^9.3",
 		"phpcompatibility/phpcompatibility-wp": "*",
 		"wp-coding-standards/wpcs": "*",
 		"yoast/phpunit-polyfills": "*",
