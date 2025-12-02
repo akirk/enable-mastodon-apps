@@ -32,6 +32,7 @@ class Notification extends Handler {
 
 		add_filter( 'mastodon_api_notification_get', array( $this, 'notification_get' ), 20, 2 );
 		add_filter( 'mastodon_api_notifications_get', array( $this, 'notifications_get' ), 20, 2 );
+		add_filter( 'mastodon_api_notifications_get', array( $this, 'normalize_notification_ids' ), 100, 2 );
 	}
 
 	/**
@@ -102,7 +103,7 @@ class Notification extends Handler {
 	 * @return array
 	 */
 	public function notifications_get( array $notifications, object $request ): array {
-		return $this->fetch_notifications( $request );
+		return array_merge( $notifications, $this->fetch_notifications( $request ) );
 	}
 
 	/**
@@ -171,6 +172,14 @@ class Notification extends Handler {
 						$type = 'mention';
 						$status  = apply_filters( 'mastodon_api_status', null, $post->ID, array() );
 				}
+
+				if ( is_array( $types ) && ! in_array( $type, $types, true ) ) {
+					continue;
+				}
+				if ( is_array( $exclude_types ) && in_array( $type, $exclude_types, true ) ) {
+					continue;
+				}
+
 				$account = apply_filters( 'mastodon_api_account', null, $post->post_author, null, $post );
 				if ( $status ) {
 					$status->account = $account;
@@ -275,5 +284,40 @@ class Notification extends Handler {
 		}
 
 		return $notification;
+	}
+
+	/**
+	 * Normalize notification IDs to be sortable by date.
+	 *
+	 * This runs at priority 100 to ensure all notifications have been added.
+	 * It converts notification IDs to a date-based format for proper sorting.
+	 *
+	 * @param array  $notifications The notifications array.
+	 * @param object $request       The request object.
+	 *
+	 * @return array The notifications with normalized IDs.
+	 */
+	public function normalize_notification_ids( array $notifications, object $request ): array {
+		foreach ( $notifications as $notification ) {
+			if ( $notification instanceof \Enable_Mastodon_Apps\Entity\Notification ) {
+				$created_at = $notification->created_at;
+				$date_id    = preg_replace( '/[^0-9]/', '', $created_at );
+
+				if ( isset( $notification->status ) && $notification->status ) {
+					$date_id .= $notification->status->id;
+				}
+
+				$notification->id = $date_id;
+
+				// Ensure account ID is numeric.
+				if ( isset( $notification->account ) && $notification->account ) {
+					if ( empty( $notification->account->id ) || ! is_numeric( $notification->account->id ) ) {
+						$notification->account->id = \Enable_Mastodon_Apps\Mastodon_API::remap_user_id( $notification->account->id );
+					}
+				}
+			}
+		}
+
+		return $notifications;
 	}
 }
