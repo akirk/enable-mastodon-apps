@@ -19,8 +19,21 @@ namespace Enable_Mastodon_Apps\Integration;
  */
 class Pixelfed {
 	public function __construct() {
+		add_filter( 'mastodon_api_nodeinfo', array( $this, 'mastodon_api_pixelfed_nodeinfo_software_root' ), 99, 2 );
 		add_filter( 'mastodon_api_nodeinfo_software', array( $this, 'mastodon_api_pixelfed_nodeinfo_software' ) );
 		add_filter( 'mastodon_api_new_app_post_formats', array( $this, 'mastodon_api_pixelfed_post_formats' ), 10, 2 );
+	}
+
+	public function mastodon_api_pixelfed_nodeinfo_software_root( $ret, $nodeinfo_version ) {
+		if ( false !== strpos( $_SERVER['HTTP_USER_AGENT'], 'Pixelfed' ) ) { // phpcs:ignore
+			$pixelfed_server = [
+				"name" => "pixelfed",
+				"version" => "0.12.4"
+			];
+			$ret[ 'software' ] = $pixelfed_server;
+		}
+
+		return $ret;
 	}
 
 	public function mastodon_api_pixelfed_nodeinfo_software( $software ) {
