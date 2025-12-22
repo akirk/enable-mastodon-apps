@@ -27,7 +27,7 @@ class Pixelfed {
 		if ( false !== strpos( $_SERVER['HTTP_USER_AGENT'], 'Pixelfed' ) ) { // phpcs:ignore
 			return array(
 				'name'    => 'pixelfed',
-				'version' => '0.11.5',
+				'version' => '0.12.4',
 			);
 		}
 

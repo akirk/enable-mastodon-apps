@@ -53,6 +53,11 @@ class Response extends \OAuth2\Response {
 	}
 
 	public function send( $format = 'json' ) { // phpcs:ignore
+		// Add created_at for token responses (required by Pixelfed app).
+		if ( $this->getParameter( 'access_token' ) && ! $this->getParameter( 'created_at' ) ) {
+			$this->setParameter( 'created_at', time() );
+		}
+
 		if ( false === $this->output_code ) {
 			return parent::send( $format );
 		}
