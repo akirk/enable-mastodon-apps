@@ -25,6 +25,27 @@ class Token_Handler {
 	}
 
 	public function handle( Request $request, Response $response ) {
+		// For authorization_code grants, limit the requested scope to what was actually authorized.
+		// Some apps (like Pixelfed) request more scopes in the token request than they registered with.
+		if ( 'authorization_code' === $request->request( 'grant_type' ) ) {
+			$code = $request->request( 'code' );
+			if ( $code ) {
+				$code_storage = new Authorization_Code_Storage();
+				$auth_code    = $code_storage->getAuthorizationCode( $code );
+				if ( $auth_code && ! empty( $auth_code['scope'] ) ) {
+					$authorized_scopes = explode( ' ', $auth_code['scope'] );
+					$requested_scopes  = explode( ' ', $request->request( 'scope', '' ) );
+					$allowed_scopes    = array_intersect( $requested_scopes, $authorized_scopes );
+
+					if ( ! empty( $allowed_scopes ) ) {
+						$request->request['scope'] = implode( ' ', $allowed_scopes );
+					} else {
+						$request->request['scope'] = $auth_code['scope'];
+					}
+				}
+			}
+		}
+
 		return $this->server->handleTokenRequest( $request, $response );
 	}
 }
