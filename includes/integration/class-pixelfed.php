@@ -30,11 +30,12 @@ class Pixelfed {
 			return false;
 		}
 		$user_agent = sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) );
-		if (
-			false !== strpos( $user_agent, 'Pixelfed' )
-			|| 'okhttp/4.9.2' === $user_agent // Pixelfed for Android.
-		) {
-			return true;
+		if ( 'okhttp/4.9.2' === $user_agent ) {
+			return 'android';
+		}
+
+		if ( strpos( $user_agent, 'Pixelfed/1 CFNetwork/' ) !== false ) {
+			return 'ios';
 		}
 
 		return false;
@@ -50,8 +51,15 @@ class Pixelfed {
 	}
 
 	public function mastodon_api_pixelfed_nodeinfo_software( $software ) {
-		if ( ! $this->is_pixelfed_client() ) {
+		$pixelfed = $this->is_pixelfed_client();
+		if ( ! $pixelfed ) {
 			return $software;
+		}
+		if ( 'ios' === $pixelfed ) {
+			return array(
+				'name'    => 'pixelfed',
+				'version' => '0.12.4',
+			);
 		}
 		return array(
 			'name'    => 'pixelfed',
