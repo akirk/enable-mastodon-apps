@@ -120,6 +120,11 @@ class Handler {
 				}
 			}
 
+			$app = Mastodon_App::get_current_app();
+			if ( $app && $app->get_media_only() && empty( $status->media_attachments ) ) {
+				continue;
+			}
+
 			if ( ! $status->is_valid() ) {
 				error_log( wp_json_encode( compact( 'status', 'post' ) ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 				continue;

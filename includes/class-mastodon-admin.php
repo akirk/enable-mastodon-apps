@@ -768,6 +768,12 @@ class Mastodon_Admin {
 			$app->set_disable_blocks( false );
 		}
 
+		if ( isset( $_POST['media_only'] ) ) {
+			$app->set_media_only( true );
+		} else {
+			$app->set_media_only( false );
+		}
+
 		$app->post_current_settings();
 	}
 
