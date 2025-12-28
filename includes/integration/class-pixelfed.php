@@ -21,6 +21,7 @@ class Pixelfed {
 	public function __construct() {
 		add_filter( 'mastodon_api_nodeinfo_software', array( $this, 'mastodon_api_pixelfed_nodeinfo_software' ) );
 		add_filter( 'mastodon_api_new_app_post_formats', array( $this, 'mastodon_api_pixelfed_post_formats' ), 10, 2 );
+		add_action( 'mastodon_api_new_app', array( $this, 'set_pixelfed_app_options' ) );
 	}
 
 	public function mastodon_api_pixelfed_nodeinfo_software( $software ) {
@@ -40,5 +41,11 @@ class Pixelfed {
 		}
 
 		return $post_formats;
+	}
+
+	public function set_pixelfed_app_options( $app ) {
+		if ( false !== strpos( $app->get_client_name(), 'Pixelfed' ) ) {
+			$app->set_media_only( true );
+		}
 	}
 }

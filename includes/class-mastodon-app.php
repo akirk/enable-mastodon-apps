@@ -180,6 +180,23 @@ class Mastodon_App {
 		return update_term_meta( $this->term->term_id, 'options', $options );
 	}
 
+	public function get_media_only() {
+		$options = get_term_meta( $this->term->term_id, 'options', true );
+		if ( ! is_array( $options ) ) {
+			return false;
+		}
+		return boolval( $options['media_only'] ?? false );
+	}
+
+	public function set_media_only( $media_only ) {
+		$options = get_term_meta( $this->term->term_id, 'options', true );
+		if ( ! is_array( $options ) ) {
+			$options = array();
+		}
+		$options['media_only'] = $media_only;
+		return update_term_meta( $this->term->term_id, 'options', $options );
+	}
+
 	public function check_redirect_uri( $redirect_uri ) {
 		$redirect_uris = $this->get_redirect_uris();
 		if ( ! is_array( $redirect_uris ) ) {
@@ -328,6 +345,10 @@ class Mastodon_App {
 
 		if ( $this->get_disable_blocks() ) {
 			$content .= PHP_EOL . __( 'Automatic conversion to blocks is disabled', 'enable-mastodon-apps' );
+		}
+
+		if ( $this->get_media_only() ) {
+			$content .= PHP_EOL . __( 'Only show posts with media attachments', 'enable-mastodon-apps' );
 		}
 
 		return trim( $content );
@@ -661,7 +682,7 @@ class Mastodon_App {
 					}
 
 					foreach ( array_keys( $value ) as $key ) {
-						if ( 'blocks' === $key ) {
+						if ( 'blocks' === $key || 'media_only' === $key ) {
 							$value[ $key ] = boolval( $value[ $key ] );
 							continue;
 						}
@@ -905,6 +926,14 @@ class Mastodon_App {
 		}
 
 		$app = new self( $term );
+
+		/**
+		 * Fires after a new app is created.
+		 *
+		 * @param Mastodon_App $app The newly created app.
+		 */
+		do_action( 'mastodon_api_new_app', $app );
+
 		$app->post_current_settings(
 			sprintf(
 				// translators: %s: app name.

@@ -223,6 +223,10 @@ if ( ! $selected_post_format ) {
 						<p class="description">
 							<span><?php esc_html_e( 'If checked, post content will not be converted to blocks.', 'enable-mastodon-apps' ); ?></span>
 						</p>
+						<label><input type="checkbox" name="media_only" value="1" <?php checked( $app->get_media_only() ); ?> /> <?php esc_html_e( 'Only show posts with media attachments', 'enable-mastodon-apps' ); ?></label>
+						<p class="description">
+							<span><?php esc_html_e( 'If checked, posts without images or videos will be hidden from timelines.', 'enable-mastodon-apps' ); ?></span>
+						</p>
 					</td>
 				</tr>
 			</tbody>
