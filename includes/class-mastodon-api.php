@@ -67,7 +67,7 @@ class Mastodon_API {
 	}
 
 	public function register_hooks() {
-		add_action( 'wp_loaded', array( $this, 'rewrite_rules' ) );
+		add_action( 'generate_rewrite_rules', array( $this, 'generate_rewrite_rules' ) );
 		add_action( 'query_vars', array( $this, 'query_vars' ) );
 		add_action( 'rest_api_init', array( $this, 'add_rest_routes' ) );
 		add_filter( 'rest_post_dispatch', array( $this, 'send_http_links' ), 10, 3 );
@@ -299,10 +299,7 @@ class Mastodon_API {
 		return $post_types;
 	}
 
-	public function rewrite_rules() {
-		$existing_rules = get_option( 'rewrite_rules' );
-		$needs_flush    = false;
-
+	public function generate_rewrite_rules( $wp_rewrite ) {
 		$generic      = apply_filters(
 			'mastodon_api_generic_routes',
 			array(
@@ -370,26 +367,17 @@ class Mastodon_API {
 				'api/v[12]/search'                       => 'api/v2/search',
 			)
 		);
+		$new_rules = array();
 
 		foreach ( $generic as $rule ) {
-			if ( empty( $existing_rules[ '^' . $rule ] ) ) {
-				// Add a specific rewrite rule so that we can also catch requests without our prefix.
-				$needs_flush = true;
-			}
-			add_rewrite_rule( '^' . $rule, 'index.php?rest_route=/' . self::PREFIX . '/' . $rule, 'top' );
+			$new_rules[ '^' . $rule ] = 'index.php?rest_route=/' . self::PREFIX . '/' . $rule;
 		}
 
 		foreach ( $parametrized as $rule => $rewrite ) {
-			if ( empty( $existing_rules[ '^' . $rule ] ) ) {
-				// Add a specific rewrite rule so that we can also catch requests without our prefix.
-				$needs_flush = true;
-			}
-			add_rewrite_rule( '^' . $rule, 'index.php?rest_route=/' . self::PREFIX . '/' . $rewrite, 'top' );
+			$new_rules[ '^' . $rule ] = 'index.php?rest_route=/' . self::PREFIX . '/' . $rewrite;
 		}
 
-		if ( $needs_flush ) {
-			flush_rewrite_rules();
-		}
+		$wp_rewrite->rules = $new_rules + $wp_rewrite->rules;
 	}
 
 	public function add_rest_routes() {
