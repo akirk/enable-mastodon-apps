@@ -6,21 +6,21 @@ jobs:
     strategy:
       matrix:
         php: ["7.4"]
-        phpunit: ["6.3.1"]
+        phpunit: ["8.5.52"]
         wordpress: ["6.0", "trunk"]
 
         include:
           - php: "7.4"
-            phpunit: "8.1.6"
+            phpunit: "8.5.52"
             wordpress: "trunk"
           - php: "8.0"
-            phpunit: "8.5.16"
+            phpunit: "8.5.52"
             wordpress: "trunk"
           - php: "8.1"
-            phpunit: "9.5.27"
+            phpunit: "9.6.34"
             wordpress: "trunk"
           - php: "8.2"
-            phpunit: "9.5.27"
+            phpunit: "9.6.34"
             wordpress: "trunk"
 
     services:
