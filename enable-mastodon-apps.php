@@ -1,9 +1,10 @@
 <?php
 /**
  * Plugin name: Enable Mastodon Apps
- * Plugin author: Alex Kirk
  * Plugin URI: https://github.com/akirk/enable-mastodon-apps
  * Version: 1.4.6
+ * Author: Alex Kirk
+ * Author URI: https://alex.kirk.at/
  *
  * Description: Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
  *
