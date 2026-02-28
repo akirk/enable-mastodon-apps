@@ -53,6 +53,17 @@ class Response extends \OAuth2\Response {
 	}
 
 	public function send( $format = 'json' ) { // phpcs:ignore
+		// Add fields for token responses that some apps (like Pixelfed) require.
+		if ( $this->getParameter( 'access_token' ) ) {
+			if ( ! $this->getParameter( 'created_at' ) ) {
+				$this->setParameter( 'created_at', time() );
+			}
+			if ( ! $this->getParameter( 'refresh_token' ) ) {
+				// Provide a placeholder to prevent apps from crashing when storing undefined.
+				$this->setParameter( 'refresh_token', '' );
+			}
+		}
+
 		if ( false === $this->output_code ) {
 			return parent::send( $format );
 		}
