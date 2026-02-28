@@ -32,6 +32,7 @@ class Notification extends Handler {
 
 		add_filter( 'mastodon_api_notification_get', array( $this, 'notification_get' ), 20, 2 );
 		add_filter( 'mastodon_api_notifications_get', array( $this, 'notifications_get' ), 20, 2 );
+		add_filter( 'mastodon_api_notifications_get', array( $this, 'finalize_notifications' ), 100, 2 );
 	}
 
 	/**
@@ -102,11 +103,13 @@ class Notification extends Handler {
 	 * @return array
 	 */
 	public function notifications_get( array $notifications, object $request ): array {
-		return $this->fetch_notifications( $request );
+		return array_merge( $notifications, $this->fetch_notifications( $request ) );
 	}
 
 	/**
-	 * Helper to get all notifications.
+	 * Helper to get all notifications without pagination.
+	 *
+	 * Pagination is applied later in finalize_notifications() across all sources.
 	 *
 	 * @param object $request Request object from WP.
 	 *
@@ -171,6 +174,14 @@ class Notification extends Handler {
 						$type = 'mention';
 						$status  = apply_filters( 'mastodon_api_status', null, $post->ID, array() );
 				}
+
+				if ( is_array( $types ) && ! in_array( $type, $types, true ) ) {
+					continue;
+				}
+				if ( is_array( $exclude_types ) && in_array( $type, $exclude_types, true ) ) {
+					continue;
+				}
+
 				$account = apply_filters( 'mastodon_api_account', null, $post->post_author, null, $post );
 				if ( $status ) {
 					$status->account = $account;
@@ -184,54 +195,8 @@ class Notification extends Handler {
 				);
 			}
 		}
-		$min_id      = $request->get_param( 'min_id' );
-		$max_id      = $request->get_param( 'max_id' );
-		$since_id    = $request->get_param( 'since_id' );
-		$next_min_id = false;
 
-		$last_modified = $request->get_header( 'if-modified-since' );
-		if ( $last_modified ) {
-			$last_modified = gmdate( 'Y-m-d\TH:i:s.000P', strtotime( $last_modified ) );
-			if ( $last_modified > $max_id ) {
-				$max_id = $last_modified;
-			}
-		}
-
-		$ret = array();
-		$c   = $limit;
-		foreach ( $notifications as $notification ) {
-			if ( ! $notification ) {
-				continue;
-			}
-			if ( $max_id ) {
-				if ( strval( $notification['id'] ) >= strval( $max_id ) ) {
-					continue;
-				}
-				$max_id = null;
-			}
-			if ( false === $next_min_id ) {
-				$next_min_id = $notification['id'];
-			}
-			if ( $min_id && strval( $min_id ) >= strval( $notification['id'] ) ) {
-				break;
-			}
-			if ( $since_id && strval( $since_id ) > strval( $notification['id'] ) ) {
-				break;
-			}
-			if ( $c-- <= 0 ) {
-				break;
-			}
-			$ret[] = $notification;
-		}
-
-		if ( ! empty( $ret ) ) {
-			if ( $next_min_id ) {
-				header( 'Link: <' . add_query_arg( 'min_id', $next_min_id, home_url( '/api/v1/notifications' ) ) . '>; rel="prev"', false );
-			}
-			header( 'Link: <' . add_query_arg( 'max_id', $ret[ count( $ret ) - 1 ]['id'], home_url( '/api/v1/notifications' ) ) . '>; rel="next"', false );
-		}
-
-		return $ret;
+		return $notifications;
 	}
 
 	/**
@@ -275,5 +240,132 @@ class Notification extends Handler {
 		}
 
 		return $notification;
+	}
+
+	/**
+	 * Get a value from a notification, regardless of whether it's an array or an Entity.
+	 *
+	 * @param array|Notification_Entity $notification The notification.
+	 * @param string                    $key          The key to retrieve.
+	 *
+	 * @return mixed|null The value, or null if not found.
+	 */
+	private static function get_notification_value( $notification, string $key ) {
+		if ( $notification instanceof Notification_Entity ) {
+			return isset( $notification->$key ) ? $notification->$key : null;
+		}
+		if ( is_array( $notification ) ) {
+			return isset( $notification[ $key ] ) ? $notification[ $key ] : null;
+		}
+		return null;
+	}
+
+	/**
+	 * Finalize notifications: normalize IDs, sort, paginate, and set Link headers.
+	 *
+	 * This runs at priority 100 on the mastodon_api_notifications_get filter to ensure
+	 * all notification sources have contributed before we sort and paginate the combined set.
+	 *
+	 * @param array  $notifications The notifications array from all sources.
+	 * @param object $request       The request object.
+	 *
+	 * @return \WP_REST_Response The finalized, sorted, and paginated notifications.
+	 */
+	public function finalize_notifications( array $notifications, object $request ): \WP_REST_Response {
+		// Normalize entity-based notification IDs and account IDs.
+		foreach ( $notifications as $notification ) {
+			if ( $notification instanceof Notification_Entity ) {
+				$created_at = $notification->created_at;
+				$date_id    = preg_replace( '/[^0-9]/', '', $created_at );
+
+				if ( isset( $notification->status ) && $notification->status ) {
+					$date_id .= $notification->status->id;
+				}
+
+				$notification->id = $date_id;
+
+				if ( isset( $notification->account ) && $notification->account ) {
+					if ( empty( $notification->account->id ) || ! is_numeric( $notification->account->id ) ) {
+						$notification->account->id = \Enable_Mastodon_Apps\Mastodon_API::remap_user_id( $notification->account->id );
+					}
+				}
+			}
+		}
+
+		// Sort all notifications by ID descending (newest first).
+		usort(
+			$notifications,
+			function ( $a, $b ) {
+				$a_id = strval( self::get_notification_value( $a, 'id' ) );
+				$b_id = strval( self::get_notification_value( $b, 'id' ) );
+				return strcmp( $b_id, $a_id );
+			}
+		);
+
+		// Apply pagination across the full merged set.
+		$limit    = $request->get_param( 'limit' ) ? intval( $request->get_param( 'limit' ) ) : 40;
+		$limit    = min( $limit, 80 );
+		$min_id   = $request->get_param( 'min_id' );
+		$max_id   = $request->get_param( 'max_id' );
+		$since_id = $request->get_param( 'since_id' );
+
+		$last_modified = $request->get_header( 'if-modified-since' );
+		if ( $last_modified ) {
+			$last_modified = gmdate( 'Y-m-d\TH:i:s.000P', strtotime( $last_modified ) );
+			if ( ! $max_id || $last_modified > $max_id ) {
+				$max_id = $last_modified;
+			}
+		}
+
+		$ret         = array();
+		$c           = $limit;
+		$next_min_id = false;
+
+		foreach ( $notifications as $notification ) {
+			$id = strval( self::get_notification_value( $notification, 'id' ) );
+			if ( ! $id ) {
+				continue;
+			}
+
+			if ( $max_id ) {
+				if ( $id >= strval( $max_id ) ) {
+					continue;
+				}
+				$max_id = null;
+			}
+
+			if ( false === $next_min_id ) {
+				$next_min_id = $id;
+			}
+
+			if ( $min_id && strval( $min_id ) >= $id ) {
+				break;
+			}
+			if ( $since_id && strval( $since_id ) >= $id ) {
+				break;
+			}
+			if ( $c-- <= 0 ) {
+				break;
+			}
+
+			$ret[] = $notification;
+		}
+
+		// Return as WP_REST_Response with Link headers for pagination.
+		$response = new \WP_REST_Response( $ret );
+		if ( ! empty( $ret ) ) {
+			$first_id = strval( self::get_notification_value( $ret[0], 'id' ) );
+			$last_id  = strval( self::get_notification_value( $ret[ count( $ret ) - 1 ], 'id' ) );
+			$req_uri  = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '/api/v1/notifications';
+
+			if ( $first_id ) {
+				$response->add_link( 'prev', remove_query_arg( 'max_id', add_query_arg( 'min_id', $first_id, home_url( $req_uri ) ) ) );
+			}
+			if ( $last_id ) {
+				$response->add_link( 'next', remove_query_arg( 'min_id', add_query_arg( 'max_id', $last_id, home_url( $req_uri ) ) ) );
+			}
+		}
+
+		return $response;
 	}
 }
