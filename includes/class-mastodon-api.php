@@ -2964,7 +2964,7 @@ class Mastodon_API {
 	 *
 	 * @return array
 	 */
-	public function api_notifications_get( object $request ): array {
+	public function api_notifications_get( object $request ) {
 		return apply_filters( 'mastodon_api_notifications_get', array(), $request );
 	}
 

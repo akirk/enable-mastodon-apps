@@ -269,9 +269,9 @@ class Notification extends Handler {
 	 * @param array  $notifications The notifications array from all sources.
 	 * @param object $request       The request object.
 	 *
-	 * @return array The finalized, sorted, and paginated notifications.
+	 * @return \WP_REST_Response The finalized, sorted, and paginated notifications.
 	 */
-	public function finalize_notifications( array $notifications, object $request ): array {
+	public function finalize_notifications( array $notifications, object $request ): \WP_REST_Response {
 		// Normalize entity-based notification IDs and account IDs.
 		foreach ( $notifications as $notification ) {
 			if ( $notification instanceof Notification_Entity ) {
@@ -351,19 +351,21 @@ class Notification extends Handler {
 			$ret[] = $notification;
 		}
 
-		// Set Link headers for pagination.
+		// Return as WP_REST_Response with Link headers for pagination.
+		$response = new \WP_REST_Response( $ret );
 		if ( ! empty( $ret ) ) {
 			$first_id = strval( self::get_notification_value( $ret[0], 'id' ) );
 			$last_id  = strval( self::get_notification_value( $ret[ count( $ret ) - 1 ], 'id' ) );
+			$req_uri  = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '/api/v1/notifications';
 
 			if ( $first_id ) {
-				header( 'Link: <' . add_query_arg( 'min_id', $first_id, home_url( '/api/v1/notifications' ) ) . '>; rel="prev"', false );
+				$response->add_link( 'prev', remove_query_arg( 'max_id', add_query_arg( 'min_id', $first_id, home_url( $req_uri ) ) ) );
 			}
 			if ( $last_id ) {
-				header( 'Link: <' . add_query_arg( 'max_id', $last_id, home_url( '/api/v1/notifications' ) ) . '>; rel="next"', false );
+				$response->add_link( 'next', remove_query_arg( 'min_id', add_query_arg( 'max_id', $last_id, home_url( $req_uri ) ) ) );
 			}
 		}
 
-		return $ret;
+		return $response;
 	}
 }
