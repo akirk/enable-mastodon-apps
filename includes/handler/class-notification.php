@@ -341,7 +341,7 @@ class Notification extends Handler {
 			if ( $min_id && strval( $min_id ) >= $id ) {
 				break;
 			}
-			if ( $since_id && strval( $since_id ) > $id ) {
+			if ( $since_id && strval( $since_id ) >= $id ) {
 				break;
 			}
 			if ( $c-- <= 0 ) {
