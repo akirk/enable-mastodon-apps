@@ -22,7 +22,7 @@ class Notification extends Entity {
 		'type'       => 'string',
 		'created_at' => 'string',
 		'account'    => 'Account',
-		'status'     => 'Status',
+		'status'     => 'Status?',
 	);
 
 	/**
@@ -54,9 +54,9 @@ class Notification extends Entity {
 	public Account $account;
 
 	/**
-	 * The notification id.
+	 * The status connected to notification (not present for follow notifications).
 	 *
-	 * @var Status
+	 * @var Status|null
 	 */
-	public Status $status;
+	public ?Status $status = null;
 }
