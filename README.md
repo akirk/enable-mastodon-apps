@@ -6,7 +6,7 @@
 - Tested up to: 6.8
 - Requires PHP: 7.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 1.4.6
+- Stable tag: 1.5.0
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -100,6 +100,15 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 2. The Mastodon Apps settings page.
 
 ## Changelog
+
+### 1.5.0
+- Add option to limit posts with attachments ([#282])
+- Improve registered apps page ([#277])
+- Ensure numeric ids on statuses in searches ([#274])
+- Add the /api/v1/statuses endpoint ([#276])
+- Use a Github action to extract the wp hooks ([#271])
+- Remote type=button attribute ([#268])
+- Add the editor to Mastodon posts ([#266])
 
 ### 1.4.6
 - Fix registering rewrite rules ([#261])
@@ -302,3 +311,11 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 [#259]: https://github.com/akirk/enable-mastodon-apps/pull/259
 [#260]: https://github.com/akirk/enable-mastodon-apps/pull/260
 [#261]: https://github.com/akirk/enable-mastodon-apps/pull/261
+
+[#266]: https://github.com/akirk/enable-mastodon-apps/pull/266
+[#268]: https://github.com/akirk/enable-mastodon-apps/pull/268
+[#271]: https://github.com/akirk/enable-mastodon-apps/pull/271
+[#274]: https://github.com/akirk/enable-mastodon-apps/pull/274
+[#276]: https://github.com/akirk/enable-mastodon-apps/pull/276
+[#277]: https://github.com/akirk/enable-mastodon-apps/pull/277
+[#282]: https://github.com/akirk/enable-mastodon-apps/pull/282
