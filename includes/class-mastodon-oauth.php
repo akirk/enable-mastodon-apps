@@ -63,7 +63,7 @@ class Mastodon_OAuth {
 
 		add_filter( 'determine_current_user', array( $this, 'authenticate' ), 10 );
 		add_action( 'login_form_enable-mastodon-apps-authenticate', array( $this, 'authenticate_handler' ) );
-		add_filter( 'login_redirect', array( $this, 'override_login_redirect' ), PHP_INT_MAX, 2 );
+		add_filter( 'login_redirect', array( $this, 'override_login_redirect' ), 999, 2 );
 	}
 
 	public function rewrite_rules() {
