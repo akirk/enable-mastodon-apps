@@ -702,12 +702,12 @@ class Mastodon_API {
 				'methods'             => 'GET',
 				'callback'            => function () {
 					return array(
-						'for_not_following'   => 'accept',
-						'for_not_followers'   => 'accept',
-						'for_new_accounts'    => 'accept',
+						'for_not_following'    => 'accept',
+						'for_not_followers'    => 'accept',
+						'for_new_accounts'     => 'accept',
 						'for_private_mentions' => 'accept',
 						'for_limited_accounts' => 'accept',
-						'summary'             => array(
+						'summary'              => array(
 							'pending_requests_count'      => 0,
 							'pending_notifications_count' => 0,
 						),
