@@ -332,10 +332,12 @@ class Mastodon_API {
 				'api/v1/markers',
 				'api/v1/mutes',
 				'api/v1/notifications/clear',
+				'api/v2/notifications/policy',
 				'api/v1/preferences',
 				'api/v1/trends/statuses',
 				'api/v1/push/subscription',
 				'api/v1/streaming',
+				'api/v2/filters',
 				'api/v2/media',
 			)
 		);
@@ -619,6 +621,15 @@ class Mastodon_API {
 		);
 		register_rest_route(
 			self::PREFIX,
+			'api/v2/filters',
+			array(
+				'methods'             => 'GET',
+				'callback'            => '__return_empty_array',
+				'permission_callback' => $this->required_scope( 'read:filters' ),
+			)
+		);
+		register_rest_route(
+			self::PREFIX,
 			'api/v1/lists',
 			array(
 				'methods'             => 'GET',
@@ -684,6 +695,27 @@ class Mastodon_API {
 			)
 		);
 
+		register_rest_route(
+			self::PREFIX,
+			'api/v2/notifications/policy',
+			array(
+				'methods'             => 'GET',
+				'callback'            => function () {
+					return array(
+						'for_not_following'   => 'accept',
+						'for_not_followers'   => 'accept',
+						'for_new_accounts'    => 'accept',
+						'for_private_mentions' => 'accept',
+						'for_limited_accounts' => 'accept',
+						'summary'             => array(
+							'pending_requests_count'      => 0,
+							'pending_notifications_count' => 0,
+						),
+					);
+				},
+				'permission_callback' => $this->required_scope( 'read:notifications' ),
+			)
+		);
 		register_rest_route(
 			self::PREFIX,
 			'api/v1/notifications/clear',
