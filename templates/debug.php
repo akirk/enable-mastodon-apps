@@ -319,6 +319,7 @@ $rest_nonce = wp_create_nonce( 'wp_rest' );
 			<button name="delete-outdated" class="button"><?php esc_html_e( 'Delete outdated apps and tokens', 'enable-mastodon-apps' ); ?></button>
 			<button name="delete-never-used" class="button"><?php esc_html_e( 'Delete never used apps and tokens', 'enable-mastodon-apps' ); ?></button>
 			<button name="delete-apps-without-tokens" class="button"><?php esc_html_e( 'Delete apps without tokens', 'enable-mastodon-apps' ); ?></button>
+			<button name="delete-orphaned-mappings" class="button"><?php esc_html_e( 'Delete orphaned reblog mappings', 'enable-mastodon-apps' ); ?></button>
 			<button name="clear-all-app-logs" value="<?php echo esc_attr( $app->get_client_id() ); ?>" class="button button-link-delete"><?php esc_html_e( 'Clear all logs', 'enable-mastodon-apps' ); ?></button>
 
 	<?php endif; ?>

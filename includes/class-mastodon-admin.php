@@ -565,6 +565,21 @@ class Mastodon_Admin {
 			return;
 		}
 
+		if ( isset( $_POST['delete-orphaned-mappings'] ) ) {
+			$deleted = Mastodon_API::cleanup_orphaned_reblog_mappings();
+			add_settings_error(
+				'enable-mastodon-apps',
+				'deleted-mappings',
+				sprintf(
+				// translators: %d: number of deleted mapping posts.
+					_n( 'Deleted %d orphaned mapping post.', 'Deleted %d orphaned mapping posts.', $deleted, 'enable-mastodon-apps' ),
+					$deleted
+				),
+				'success'
+			);
+			return;
+		}
+
 		if ( isset( $_POST['app_post_formats'] ) && is_array( $_POST['app_post_formats'] ) ) {
 			// phpcs:disable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 			foreach ( wp_unslash( $_POST['app_post_formats'] ) as $client_id => $post_formats ) {
