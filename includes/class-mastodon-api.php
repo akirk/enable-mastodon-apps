@@ -81,6 +81,8 @@ class Mastodon_API {
 		add_filter( 'mastodon_api_in_reply_to_id', array( self::class, 'maybe_get_remapped_url' ), 20 );
 		add_filter( 'activitypub_support_post_types', array( $this, 'activitypub_support_post_types' ) );
 		add_filter( 'mastodon_api_valid_user', array( $this, 'is_user_member_of_blog' ), 10, 2 );
+		add_action( 'before_delete_post', array( $this, 'cleanup_reblog_mapping' ) );
+		add_action( 'wp_trash_post', array( $this, 'cleanup_reblog_mapping' ) );
 	}
 
 	/**
@@ -3119,6 +3121,53 @@ class Mastodon_API {
 			return $post_id;
 		}
 		return $remapped_post_id;
+	}
+
+	public function cleanup_reblog_mapping( $post_id ) {
+		$post = get_post( $post_id );
+		if ( ! $post ) {
+			return;
+		}
+
+		if ( self::CPT === $post->post_type ) {
+			// A mapping post is being deleted, clean up the meta on the original post.
+			$original_post_id = get_post_meta( $post_id, 'mastodon_reblog_id', true );
+			if ( $original_post_id ) {
+				delete_post_meta( $original_post_id, 'mastodon_reblog_id' );
+			}
+		} else {
+			// An original post is being deleted, clean up its mapping post.
+			$remapped_post_id = get_post_meta( $post_id, 'mastodon_reblog_id', true );
+			if ( $remapped_post_id ) {
+				delete_post_meta( $post_id, 'mastodon_reblog_id' );
+				wp_delete_post( $remapped_post_id, true );
+			}
+		}
+	}
+
+	public static function cleanup_orphaned_reblog_mappings() {
+		$mapping_posts = get_posts(
+			array(
+				'post_type'      => self::CPT,
+				'posts_per_page' => -1,
+				'post_status'    => 'any',
+				'fields'         => 'ids',
+			)
+		);
+
+		$deleted = 0;
+		foreach ( $mapping_posts as $mapping_post_id ) {
+			$original_post_id = get_post_meta( $mapping_post_id, 'mastodon_reblog_id', true );
+			if ( ! $original_post_id || ! get_post( $original_post_id ) ) {
+				wp_delete_post( $mapping_post_id, true );
+				if ( $original_post_id ) {
+					delete_post_meta( $original_post_id, 'mastodon_reblog_id' );
+				}
+				++$deleted;
+			}
+		}
+
+		return $deleted;
 	}
 
 	public static function remap_user_id( $user_id ) {
