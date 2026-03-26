@@ -6,7 +6,7 @@
 - Tested up to: 6.8
 - Requires PHP: 7.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 1.5.0
+- Stable tag: 1.5.1
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -100,6 +100,12 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 2. The Mastodon Apps settings page.
 
 ## Changelog
+
+### 1.5.1
+- Add cleanup logic for reblog mapping posts ([#290])
+- Add quote and quoted_update notification types ([#287])
+- Prevent login redirect plugins from breaking OAuth flow ([#289])
+- Add v2/filters and v2/notifications/policy endpoint stubs ([#288])
 
 ### 1.5.0
 - Add option to limit posts with attachments ([#282])
@@ -319,3 +325,8 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 [#276]: https://github.com/akirk/enable-mastodon-apps/pull/276
 [#277]: https://github.com/akirk/enable-mastodon-apps/pull/277
 [#282]: https://github.com/akirk/enable-mastodon-apps/pull/282
+
+[#287]: https://github.com/akirk/enable-mastodon-apps/pull/287
+[#288]: https://github.com/akirk/enable-mastodon-apps/pull/288
+[#289]: https://github.com/akirk/enable-mastodon-apps/pull/289
+[#290]: https://github.com/akirk/enable-mastodon-apps/pull/290

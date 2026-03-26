@@ -1,3 +1,9 @@
+### 1.5.1
+- Add cleanup logic for reblog mapping posts ([#290])
+- Add quote and quoted_update notification types ([#287])
+- Prevent login redirect plugins from breaking OAuth flow ([#289])
+- Add v2/filters and v2/notifications/policy endpoint stubs ([#288])
+
 ### 1.5.0
 - Add option to limit posts with attachments ([#282])
 - Improve registered apps page ([#277])
@@ -326,3 +332,8 @@
 [#276]: https://github.com/akirk/enable-mastodon-apps/pull/276
 [#277]: https://github.com/akirk/enable-mastodon-apps/pull/277
 [#282]: https://github.com/akirk/enable-mastodon-apps/pull/282
+
+[#287]: https://github.com/akirk/enable-mastodon-apps/pull/287
+[#288]: https://github.com/akirk/enable-mastodon-apps/pull/288
+[#289]: https://github.com/akirk/enable-mastodon-apps/pull/289
+[#290]: https://github.com/akirk/enable-mastodon-apps/pull/290

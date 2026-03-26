@@ -2,7 +2,7 @@
 /**
  * Plugin name: Enable Mastodon Apps
  * Plugin URI: https://github.com/akirk/enable-mastodon-apps
- * Version: 1.5.0
+ * Version: 1.5.1
  * Author: Alex Kirk
  * Author URI: https://alex.kirk.at/
  *
@@ -21,7 +21,7 @@ use OAuth2;
 defined( 'ABSPATH' ) || exit;
 define( 'ENABLE_MASTODON_APPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'ENABLE_MASTODON_APPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
-define( 'ENABLE_MASTODON_APPS_VERSION', '1.5.0' );
+define( 'ENABLE_MASTODON_APPS_VERSION', '1.5.1' );
 
 require __DIR__ . '/vendor/bshaffer/oauth2-server-php/src/OAuth2/Autoloader.php';
 OAuth2\Autoloader::register();
