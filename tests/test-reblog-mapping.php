@@ -88,7 +88,7 @@ class ReblogMapping_Tests extends \WP_UnitTestCase {
 
 		// Directly delete the original without triggering hooks, simulating pre-cleanup data.
 		global $wpdb;
-		$wpdb->delete( $wpdb->posts, array( 'ID' => $post1->ID ) );
+		$wpdb->delete( $wpdb->posts, array( 'ID' => $post1->ID ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- test-only: simulate orphaned data by bypassing hooks
 		clean_post_cache( $post1->ID );
 
 		$deleted = Mastodon_API::cleanup_orphaned_reblog_mappings();
