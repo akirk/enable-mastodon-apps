@@ -63,7 +63,7 @@ class Mastodon_OAuth {
 
 		add_filter( 'determine_current_user', array( $this, 'authenticate' ), 10 );
 		add_action( 'login_form_enable-mastodon-apps-authenticate', array( $this, 'authenticate_handler' ) );
-		add_filter( 'login_redirect', array( $this, 'override_login_redirect' ), PHP_INT_MAX, 3 );
+		add_filter( 'login_redirect', array( $this, 'override_login_redirect' ), PHP_INT_MAX, 2 );
 	}
 
 	public function rewrite_rules() {
@@ -200,12 +200,11 @@ class Mastodon_OAuth {
 	/**
 	 * Ensure login redirect plugins don't override our OAuth redirect.
 	 *
-	 * @param string   $redirect_to           The current redirect destination.
-	 * @param string   $requested_redirect_to The originally requested redirect destination.
-	 * @param \WP_User $user                  The logged-in user.
+	 * @param string $redirect_to           The current redirect destination.
+	 * @param string $requested_redirect_to The originally requested redirect destination.
 	 * @return string The redirect destination.
 	 */
-	public function override_login_redirect( $redirect_to, $requested_redirect_to, $user ) {
+	public function override_login_redirect( $redirect_to, $requested_redirect_to ) {
 		if ( false !== strpos( $requested_redirect_to, 'action=enable-mastodon-apps-authenticate' ) ) {
 			return $requested_redirect_to;
 		}
