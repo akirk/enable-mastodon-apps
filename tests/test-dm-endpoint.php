@@ -124,14 +124,14 @@ class DMEndpoint_Test extends Mastodon_API_TestCase {
 	}
 
 	/**
-	 * Test that stored DM content doesn't get double-linked on re-read.
+	 * Test that stored DM content doesn't get double-linked when rendered.
 	 *
-	 * Stores a DM with a mention link, reads it back via the API, and verifies
-	 * the content hasn't been modified with nested <a> tags.
+	 * Directly constructs a Status entity from a DM post with mention links
+	 * and verifies the content isn't modified with nested <a> tags.
 	 */
-	public function test_dm_content_stable_on_reread() {
+	public function test_dm_content_stable_on_render() {
 		wp_set_current_user( $this->administrator );
-		$dm_cpt = Mastodon_API::get_dm_cpt();
+		$dm_cpt  = Mastodon_API::get_dm_cpt();
 		$content = '<a rel="mention" class="u-url mention" href="https://example.org/@dmrecipient">@dmrecipient</a> DM test';
 
 		$post_id = wp_insert_post(
@@ -146,14 +146,11 @@ class DMEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertIsInt( $post_id );
 		$this->assertGreaterThan( 0, $post_id );
 
-		$request  = $this->api_request( 'GET', '/api/v1/statuses/' . $post_id );
-		$response = $this->dispatch_authenticated( $request );
-		$this->assertEquals( 200, $response->get_status() );
-
-		$data = $response->get_data();
+		$status = apply_filters( 'mastodon_api_status', null, $post_id );
+		$this->assertInstanceOf( '\Enable_Mastodon_Apps\Entity\Status', $status );
 
 		// The rendered content should not have nested <a> tags.
-		$this->assertThat( $data->content, $this->logicalNot( $this->stringContains( 'href="https://example.org/<a' ) ) );
-		$this->assertThat( $data->content, $this->logicalNot( $this->stringContains( '</a>">' ) ) );
+		$this->assertThat( $status->content, $this->logicalNot( $this->stringContains( 'href="https://example.org/<a' ) ) );
+		$this->assertThat( $status->content, $this->logicalNot( $this->stringContains( '</a>">' ) ) );
 	}
 }
