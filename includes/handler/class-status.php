@@ -346,9 +346,12 @@ class Status extends Handler {
 
 		$mentions = array();
 		if ( 'direct' === $visibility ) {
-			preg_match_all( '/@(?:[a-zA-Z0-9_@.-]+)/', $status_text, $matches );
+			preg_match_all( '/@(?:[a-zA-Z0-9_.-]+)(?:@[a-zA-Z0-9.-]+)?/', $status_text, $matches );
 			foreach ( $matches[0] as $match ) {
-				$user = get_user_by( 'login', ltrim( $match, '@' ) );
+				$acct = ltrim( $match, '@' );
+				// Strip the domain part for local user lookup.
+				$login = strtok( $acct, '@' );
+				$user = get_user_by( 'login', $login );
 				if ( $user ) {
 					$mentions[] = $user->ID;
 				}
@@ -369,7 +372,7 @@ class Status extends Handler {
 		if ( 'direct' === $visibility ) {
 			$dm_post_ids = array( $post_data['post_type'] => $post_id );
 
-			if ( $post_data['post_parent'] ) {
+			if ( ! empty( $post_data['post_parent'] ) ) {
 				$dm_ids = get_post_meta( $post_data['post_parent'], 'ema_dm_ids', true );
 			}
 

@@ -108,7 +108,7 @@ class DMEndpoint_Test extends Mastodon_API_TestCase {
 	}
 
 	/**
-	 * Test that DM mention extraction works with domain-qualified mentions.
+	 * Test that mention extraction handles domain-qualified mentions.
 	 */
 	public function test_dm_mention_with_domain() {
 		$request = $this->api_request( 'POST', '/api/v1/statuses' );
@@ -116,7 +116,7 @@ class DMEndpoint_Test extends Mastodon_API_TestCase {
 		$request->set_param( 'visibility', 'direct' );
 		$response = $this->dispatch_authenticated( $request );
 
-		// The local user should be found by login, ignoring the domain part.
+		// The local user should be found by login, stripping the domain part.
 		$this->assertEquals( 200, $response->get_status() );
 
 		$data = $response->get_data();
@@ -130,6 +130,7 @@ class DMEndpoint_Test extends Mastodon_API_TestCase {
 	 * the content hasn't been modified with nested <a> tags.
 	 */
 	public function test_dm_content_stable_on_reread() {
+		wp_set_current_user( $this->administrator );
 		$dm_cpt = Mastodon_API::get_dm_cpt();
 		$content = '<a rel="mention" class="u-url mention" href="https://example.org/@dmrecipient">@dmrecipient</a> DM test';
 
@@ -142,6 +143,8 @@ class DMEndpoint_Test extends Mastodon_API_TestCase {
 				'post_type'    => $dm_cpt,
 			)
 		);
+		$this->assertIsInt( $post_id );
+		$this->assertGreaterThan( 0, $post_id );
 
 		$request  = $this->api_request( 'GET', '/api/v1/statuses/' . $post_id );
 		$response = $this->dispatch_authenticated( $request );
