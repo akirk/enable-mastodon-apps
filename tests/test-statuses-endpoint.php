@@ -226,6 +226,32 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertTrue( $new_count > $count );
 	}
 
+	public function test_submit_status_reply_to_remote_post() {
+		$remote_url = 'https://remote.example/status/12345';
+		$numeric_id = Mastodon_API::remap_url( $remote_url );
+
+		$comment_count_before = ( new \WP_Comment_Query() )->query( array( 'count' => true ) );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'Reply to remote post' );
+		$request->set_param( 'in_reply_to_id', $numeric_id );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$comment_count_after = ( new \WP_Comment_Query() )->query( array( 'count' => true ) );
+		$this->assertEquals( $comment_count_before, $comment_count_after, 'No comment should be created for remote post replies' );
+
+		$data = $response->get_data();
+		$this->assertNotNull( $data, 'Response should not be null' );
+		$this->assertIsString( $data->id );
+
+		$post_id = intval( $data->id );
+		$post = get_post( $post_id );
+		$this->assertNotNull( $post, 'A new post should have been created for the remote reply' );
+		$this->assertStringContainsString( 'activitypub/reply', $post->post_content, 'Post should contain activitypub/reply block' );
+		$this->assertStringContainsString( $remote_url, $post->post_content, 'Post should contain the remote URL' );
+	}
+
 	public function test_get_multiple_statuses() {
 		// Test with valid status IDs
 		$request = $this->api_request( 'GET', '/api/v1/statuses' );
