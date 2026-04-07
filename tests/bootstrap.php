@@ -30,6 +30,16 @@ if ( file_exists( $phpunitpolyfills ) ) {
 	require_once $phpunitpolyfills;
 }
 
+// Register ap_outbox post type before Migration::init() (priority 1) to avoid doing_it_wrong notices.
+$_activitypub_plugin = dirname( dirname( __DIR__ ) ) . '/activitypub/activitypub.php';
+if ( ! file_exists( $_activitypub_plugin ) ) {
+	$_activitypub_plugin = dirname( dirname( __DIR__ ) ) . '/wordpress-activitypub/activitypub.php';
+}
+if ( file_exists( $_activitypub_plugin ) ) {
+	tests_add_filter( 'init', array( 'Activitypub\Post_Types', 'register_outbox_post_type' ), 0 );
+}
+unset( $_activitypub_plugin );
+
 /**
  * Manually load the plugin being tested.
  */

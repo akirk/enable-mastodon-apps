@@ -3012,6 +3012,31 @@ class Mastodon_API {
 	}
 
 	/**
+	 * Convert a notification ID back to a MySQL datetime string.
+	 *
+	 * Notification IDs are built by stripping non-digits from an ISO 8601 date,
+	 * e.g. "2023-01-04T00:00:00.000+00:00" → "202301040000000000000".
+	 * The first 14 digits encode YYYYMMDDHHmmss.
+	 *
+	 * @param string $id The notification ID.
+	 * @return string|null MySQL datetime string, or null if $id is too short.
+	 */
+	public static function notification_id_to_date( $id ) {
+		if ( strlen( $id ) < 14 ) {
+			return null;
+		}
+		return sprintf(
+			'%s-%s-%s %s:%s:%s',
+			substr( $id, 0, 4 ),
+			substr( $id, 4, 2 ),
+			substr( $id, 6, 2 ),
+			substr( $id, 8, 2 ),
+			substr( $id, 10, 2 ),
+			substr( $id, 12, 2 )
+		);
+	}
+
+	/**
 	 * Call out API request to get notifications as WP filter.
 	 *
 	 * @param object $request Request object from WP.
@@ -3019,7 +3044,13 @@ class Mastodon_API {
 	 * @return array
 	 */
 	public function api_notifications_get( object $request ) {
-		return apply_filters( 'mastodon_api_notifications_get', array(), $request );
+		$limit       = $request->get_param( 'limit' ) ? min( intval( $request->get_param( 'limit' ) ), 80 ) : 40;
+		$before_date = $request->get_param( 'max_id' ) ? self::notification_id_to_date( $request->get_param( 'max_id' ) ) : null;
+		$after_date  = $request->get_param( 'min_id' ) ? self::notification_id_to_date( $request->get_param( 'min_id' ) ) : null;
+		if ( ! $after_date ) {
+			$after_date = $request->get_param( 'since_id' ) ? self::notification_id_to_date( $request->get_param( 'since_id' ) ) : null;
+		}
+		return apply_filters( 'mastodon_api_notifications_get', array(), $request, $limit, $before_date, $after_date );
 	}
 
 	public function api_preferences( $request ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
