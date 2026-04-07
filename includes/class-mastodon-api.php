@@ -80,9 +80,25 @@ class Mastodon_API {
 		add_filter( 'mastodon_api_in_reply_to_id', array( self::class, 'maybe_get_remapped_reblog_id' ), 15 );
 		add_filter( 'mastodon_api_in_reply_to_id', array( self::class, 'maybe_get_remapped_url' ), 20 );
 		add_filter( 'activitypub_support_post_types', array( $this, 'activitypub_support_post_types' ) );
+		add_filter( 'activitypub_activity_object_array', array( self::class, 'activitypub_in_reply_to_object_array' ), 10, 3 );
 		add_filter( 'mastodon_api_valid_user', array( $this, 'is_user_member_of_blog' ), 10, 2 );
 		add_action( 'before_delete_post', array( $this, 'cleanup_reblog_mapping' ) );
 		add_action( 'wp_trash_post', array( $this, 'cleanup_reblog_mapping' ) );
+	}
+
+	public static function activitypub_in_reply_to_object_array( $object_array, $object_class, $id ) {
+		if ( isset( $object_array['inReplyTo'] ) ) {
+			return $object_array;
+		}
+		$post_id = \url_to_postid( $id );
+		if ( ! $post_id ) {
+			return $object_array;
+		}
+		$in_reply_to = \get_post_meta( $post_id, 'activitypub_in_reply_to', true );
+		if ( $in_reply_to ) {
+			$object_array['inReplyTo'] = $in_reply_to;
+		}
+		return $object_array;
 	}
 
 	/**

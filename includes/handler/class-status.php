@@ -297,7 +297,11 @@ class Status extends Handler {
 		}
 
 		if ( $in_reply_to_id ) {
-			$post_data['post_parent'] = $in_reply_to_id;
+			if ( is_numeric( $in_reply_to_id ) ) {
+				$post_data['post_parent'] = $in_reply_to_id;
+			} else {
+				$post_data['meta_input']['activitypub_in_reply_to'] = $in_reply_to_id;
+			}
 		}
 
 		if ( $scheduled_at ) {
@@ -515,6 +519,10 @@ class Status extends Handler {
 		$comment_data['comment_author']   = '';
 		$comment_data['user_id']          = get_current_user_id();
 		$comment_data['comment_approved'] = 1;
+
+		if ( ! $comment_data['comment_post_ID'] || ! get_post( $comment_data['comment_post_ID'] ) ) {
+			return $status;
+		}
 
 		if ( ! empty( $media_ids ) ) {
 			foreach ( $media_ids as $media_id ) {
