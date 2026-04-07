@@ -33,6 +33,7 @@ class Status extends Handler {
 		add_filter( 'mastodon_api_account_statuses_args', array( $this, 'mastodon_api_account_statuses_args' ), 10, 2 );
 		add_filter( 'mastodon_api_statuses', array( $this, 'api_statuses' ), 10, 4 );
 		add_filter( 'mastodon_api_statuses', array( $this, 'api_statuses_ensure_numeric_id' ), 100 );
+		add_filter( 'mastodon_api_tag_timeline', array( $this, 'api_statuses_ensure_numeric_id' ), 100 );
 		add_filter( 'mastodon_api_submit_status', array( $this, 'api_submit_comment' ), 10, 7 );
 		add_filter( 'mastodon_api_submit_status', array( $this, 'api_submit_post' ), 15, 7 );
 		add_filter( 'mastodon_api_edit_status', array( $this, 'api_edit_comment' ), 10, 8 );
