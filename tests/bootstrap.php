@@ -30,6 +30,9 @@ if ( file_exists( $phpunitpolyfills ) ) {
 	require_once $phpunitpolyfills;
 }
 
+// Register ap_outbox post type before Migration::init() (priority 1) to avoid doing_it_wrong notices.
+tests_add_filter( 'init', array( 'Activitypub\Post_Types', 'register_outbox_post_type' ), 0 );
+
 /**
  * Manually load the plugin being tested.
  */

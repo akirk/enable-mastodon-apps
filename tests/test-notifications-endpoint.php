@@ -42,7 +42,7 @@ class NotificationsEndpoint_Test extends Mastodon_API_TestCase {
 			function ( $existing ) {
 				return array_merge( $existing, $this->test_notifications );
 			},
-			5
+			50
 		);
 	}
 
