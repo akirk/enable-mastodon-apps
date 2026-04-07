@@ -248,8 +248,8 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$post_id = intval( $data->id );
 		$post = get_post( $post_id );
 		$this->assertNotNull( $post, 'A new post should have been created for the remote reply' );
-		$this->assertStringContainsString( 'activitypub/reply', $post->post_content, 'Post should contain activitypub/reply block' );
-		$this->assertStringContainsString( $remote_url, $post->post_content, 'Post should contain the remote URL' );
+		$this->assertStringNotContainsString( 'activitypub/reply', $post->post_content, 'Post content should not contain activitypub/reply block' );
+		$this->assertEquals( $remote_url, get_post_meta( $post_id, 'activitypub_in_reply_to', true ), 'Remote URL should be stored as activitypub_in_reply_to meta' );
 	}
 
 	public function test_get_multiple_statuses() {

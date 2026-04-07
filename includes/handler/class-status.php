@@ -300,7 +300,7 @@ class Status extends Handler {
 			if ( is_numeric( $in_reply_to_id ) ) {
 				$post_data['post_parent'] = $in_reply_to_id;
 			} else {
-				$post_data['post_content'] = '<!-- wp:activitypub/reply {"url":"' . esc_url_raw( $in_reply_to_id ) . '","embedPost":true} /-->' . PHP_EOL . $post_data['post_content'];
+				$post_data['meta_input']['activitypub_in_reply_to'] = $in_reply_to_id;
 			}
 		}
 
