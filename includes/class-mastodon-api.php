@@ -63,6 +63,7 @@ class Mastodon_API {
 		new Handler\Search();
 		new Handler\Status();
 		new Handler\Status_Source();
+		new Handler\Tag();
 		new Handler\Timeline();
 	}
 
@@ -386,6 +387,7 @@ class Mastodon_API {
 				'api/v1/statuses'                        => 'api/v1/statuses',
 				'api/v1/accounts/(.+)'                   => 'api/v1/accounts/$matches[1]',
 				'api/v1/timelines/(home|public)'         => 'api/v1/timelines/$matches[1]',
+				'api/v1/tags/([^/|$]+)'                  => 'api/v1/tags/$matches[1]',
 				'api/v1/timelines/tag/([^/|$]+)'         => 'api/v1/timelines/tag/$matches[1]',
 				'api/v[12]/search'                       => 'api/v2/search',
 			)
@@ -1317,10 +1319,22 @@ class Mastodon_API {
 					),
 					'limit'      => array(
 						'type'        => 'integer',
+						// The limit is currently ignored by the tags.pub integration
+						// because each item requires multiple HTTP round-trips to resolve.
 						'description' => 'Maximum number of results to return.',
-						'default'     => 20,
+						'default'     => 5,
 					),
 				),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/tags/(?P<tag_name>[^/]+)',
+			array(
+				'methods'             => array( 'GET', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_tag' ),
+				'permission_callback' => array( $this, 'public_api_permission' ),
 			)
 		);
 
@@ -2374,6 +2388,17 @@ class Mastodon_API {
 		 * ```
 		 */
 		return \apply_filters( 'mastodon_api_timelines', null, $request );
+	}
+
+	public function api_tag( $request ) {
+		/**
+		 * Modify the tag data returned for `/api/v1/tags/:name` requests.
+		 *
+		 * @param Entity\Tag|null $tag     The tag data.
+		 * @param WP_REST_Request $request The request object.
+		 * @return Entity\Tag The tag data.
+		 */
+		return \apply_filters( 'mastodon_api_tag', null, $request );
 	}
 
 	public function api_tag_timeline( $request ) {
