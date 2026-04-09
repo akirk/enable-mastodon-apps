@@ -62,6 +62,14 @@ class Handler {
 		return $args;
 	}
 
+	/**
+	 * Get posts and return them as a WP_REST_Response with pagination links.
+	 *
+	 * @param array    $args   The query arguments for get_posts().
+	 * @param int|null $min_id Optional minimum post ID for pagination.
+	 * @param int|null $max_id Optional maximum post ID for pagination.
+	 * @return \WP_REST_Response The statuses as a REST response.
+	 */
 	protected function get_posts( $args, $min_id = null, $max_id = null ): \WP_REST_Response {
 		$posts = array();
 
