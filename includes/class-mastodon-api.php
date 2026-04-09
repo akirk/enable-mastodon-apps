@@ -2692,11 +2692,29 @@ class Mastodon_API {
 			return new WP_REST_Response( array( 'error' => 'Record not found' ), 404 );
 		}
 
-		if ( get_post_status( $post_id ) !== 'publish' && ! current_user_can( 'edit_post', $post_id ) ) {
+		$post_id = self::maybe_get_remapped_reblog_id( $post_id );
+
+		// Check if this is a URL-remapped ID (e.g. a remote/federated post).
+		$remapped_url = self::maybe_get_remapped_url( $post_id );
+		if ( $remapped_url !== $post_id ) {
+			/**
+			 * Fetch a status by its remote URL.
+			 *
+			 * @param Entity\Status|null $status The status data.
+			 * @param string $url The remote URL of the status.
+			 * @return Entity\Status|null The status data.
+			 */
+			$status = apply_filters( 'mastodon_api_status_by_url', null, $remapped_url );
+			if ( $status ) {
+				// Run through mastodon_api_status to ensure numeric IDs.
+				$status = apply_filters( 'mastodon_api_status', $status, 0, array() );
+				return $this->validate_entity( $status, Entity\Status::class );
+			}
 			return new WP_REST_Response( array( 'error' => 'Record not found' ), 404 );
 		}
-		if ( self::CPT === get_post_type( $post_id ) ) {
-			$post_id = self::maybe_get_remapped_reblog_id( $post_id );
+
+		if ( get_post_status( $post_id ) !== 'publish' && ! current_user_can( 'edit_post', $post_id ) ) {
+			return new WP_REST_Response( array( 'error' => 'Record not found' ), 404 );
 		}
 
 		$post = get_post( $post_id );
