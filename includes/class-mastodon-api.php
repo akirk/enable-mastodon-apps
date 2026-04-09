@@ -2379,12 +2379,18 @@ class Mastodon_API {
 		/**
 		 * Modify the timelines data returned for `/api/timelines/(home)` requests.
 		 *
-		 * @param Entity\Status[] $statuses The statuses data.
-		 * @param WP_REST_Request $request  The request object.
-		 * @return Entity\Status[] The modified statuses data.
+		 * @param WP_REST_Response|null $statuses The statuses data.
+		 * @param WP_REST_Request       $request  The request object.
+		 * @return WP_REST_Response The modified statuses data.
 		 *
 		 * Example:
 		 * ```php
+		 * add_filter( 'mastodon_api_timelines', function( $statuses, $request ) {
+		 *     $status = new Entity\Status();
+		 *     $status->id = '1';
+		 *     $status->content = 'Hello from the timeline!';
+		 *     return new WP_REST_Response( array( $status ) );
+		 * }, 10, 2 );
 		 * ```
 		 */
 		return \apply_filters( 'mastodon_api_timelines', null, $request );
@@ -2405,12 +2411,22 @@ class Mastodon_API {
 		/**
 		 * Modify the timelines data returned for `/api/timelines/(tag)/` requests.
 		 *
-		 * @param Entity\Status[] $statuses The statuses data.
-		 * @param WP_REST_Request $request  The request object.
-		 * @return Entity\Status[] The modified statuses data.
+		 * @param WP_REST_Response|null $statuses The statuses data.
+		 * @param WP_REST_Request       $request  The request object.
+		 * @return WP_REST_Response The modified statuses data.
 		 *
 		 * Example:
 		 * ```php
+		 * add_filter( 'mastodon_api_tag_timeline', function( $statuses, $request ) {
+		 *     $tag = $request->get_param( 'hashtag' );
+		 *     $args = array( 'tag' => $tag );
+		 *     $posts = get_posts( $args );
+		 *     $statuses = array();
+		 *     foreach ( $posts as $post ) {
+		 *         $statuses[] = apply_filters( 'mastodon_api_status', null, $post->ID, array() );
+		 *     }
+		 *     return new WP_REST_Response( array_filter( $statuses ) );
+		 * }, 10, 2 );
 		 * ```
 		 */
 		return \apply_filters( 'mastodon_api_tag_timeline', null, $request );
@@ -2420,16 +2436,21 @@ class Mastodon_API {
 		/**
 		 * Modify the public timelines data returned for `/api/timelines/(public)` requests.
 		 *
-		 * @param Entity\Status[] $statuses The statuses data.
-		 * @param WP_REST_Request $request  The request object.
-		 * @return Entity\Status[] The modified statuses data.
+		 * @param WP_REST_Response|null $statuses The statuses data.
+		 * @param WP_REST_Request       $request  The request object.
+		 * @return WP_REST_Response The modified statuses data.
 		 *
 		 * Example:
 		 * ```php
 		 * add_filter( 'mastodon_api_public_timeline', function( $statuses, $request ) {
-		 *    array_unshift( $statuses, new Entity\Status( array( 'content' => 'Hello World' ) ) );
-		 *    return $statuses;
-		 * } );
+		 *     $args = array( 'post_status' => 'publish' );
+		 *     $posts = get_posts( $args );
+		 *     $statuses = array();
+		 *     foreach ( $posts as $post ) {
+		 *         $statuses[] = apply_filters( 'mastodon_api_status', null, $post->ID, array() );
+		 *     }
+		 *     return new WP_REST_Response( array_filter( $statuses ) );
+		 * }, 10, 2 );
 		 * ```
 		 */
 		return \apply_filters( 'mastodon_api_public_timeline', null, $request );
@@ -3131,10 +3152,11 @@ class Mastodon_API {
 		/**
 		 * Filter the account statuses.
 		 *
-		 * @param array|null $statuses Current statuses.
-		 * @param array $args Current statuses arguments.
-		 * @param int|null $min_id Optional minimum status ID.
-		 * @param int|null $max_id Optional maximum status ID.
+		 * @param WP_REST_Response|null $statuses Current statuses.
+		 * @param array                 $args     Current statuses arguments.
+		 * @param int|null              $min_id   Optional minimum status ID.
+		 * @param int|null              $max_id   Optional maximum status ID.
+		 * @return WP_REST_Response The statuses as a REST response.
 		 */
 		$statuses = apply_filters( 'mastodon_api_statuses', null, $args, $request->get_param( 'min_id' ), $request->get_param( 'max_id' ) );
 
@@ -3611,10 +3633,11 @@ class Mastodon_API {
 		/**
 		 * Filter the account statuses.
 		 *
-		 * @param array|null $statuses Current statuses.
-		 * @param array $args Current statuses arguments.
-		 * @param int|null $min_id Optional minimum status ID.
-		 * @param int|null $max_id Optional maximum status ID.
+		 * @param WP_REST_Response|null $statuses Current statuses.
+		 * @param array                 $args     Current statuses arguments.
+		 * @param int|null              $min_id   Optional minimum status ID.
+		 * @param int|null              $max_id   Optional maximum status ID.
+		 * @return WP_REST_Response The statuses as a REST response.
 		 */
 		$statuses = apply_filters( 'mastodon_api_statuses', null, $args, $request->get_param( 'min_id' ), $request->get_param( 'max_id' ) );
 
@@ -3641,10 +3664,11 @@ class Mastodon_API {
 		/**
 		 * Filter the account statuses.
 		 *
-		 * @param array|null $statuses Current statuses.
-		 * @param array $args Current statuses arguments.
-		 * @param int|null $min_id Optional minimum status ID.
-		 * @param int|null $max_id Optional maximum status ID.
+		 * @param WP_REST_Response|null $statuses Current statuses.
+		 * @param array                 $args     Current statuses arguments.
+		 * @param int|null              $min_id   Optional minimum status ID.
+		 * @param int|null              $max_id   Optional maximum status ID.
+		 * @return WP_REST_Response The statuses as a REST response.
 		 */
 		$statuses = apply_filters( 'mastodon_api_statuses', null, $args, $request->get_param( 'min_id' ), $request->get_param( 'max_id' ) );
 

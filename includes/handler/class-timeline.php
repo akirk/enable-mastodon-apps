@@ -34,10 +34,10 @@ class Timeline extends Handler {
 	/**
 	 * Handle timeline requests.
 	 *
-	 * @param Entity\Status[] $statuses An array of Status objects.
-	 * @param WP_REST_Request $request  The request object.
+	 * @param WP_REST_Response|null $statuses The statuses data.
+	 * @param WP_REST_Request       $request  The request object.
 	 *
-	 * @return Entity\Status[]|array An array of Status objects.
+	 * @return WP_REST_Response The statuses as a REST response.
 	 */
 	public function api_timelines( $statuses, $request ) {
 		$args = $this->get_posts_query_args( array(), $request );
@@ -61,10 +61,10 @@ class Timeline extends Handler {
 	/**
 	 * Handle tag timeline requests.
 	 *
-	 * @param Entity\Status[] $statuses An array of Status objects.
-	 * @param WP_REST_Request $request The request object.
+	 * @param WP_REST_Response|null $statuses The statuses data.
+	 * @param WP_REST_Request       $request  The request object.
 	 *
-	 * @return Entity\Status[]|array An array of Status objects.
+	 * @return WP_REST_Response The statuses as a REST response.
 	 */
 	public function api_tag_timeline( $statuses, $request ) {
 		$args        = $this->get_posts_query_args( array(), $request );
@@ -89,12 +89,12 @@ class Timeline extends Handler {
 	}
 
 	/**
-	 * Handle public simeline requests
+	 * Handle public timeline requests.
 	 *
-	 * @param Entity\Status[] $statuses An array of Status objects.
-	 * @param WP_REST_Request $request The request object.
+	 * @param WP_REST_Response|null $statuses The statuses data.
+	 * @param WP_REST_Request       $request  The request object.
 	 *
-	 * @return Entity\Status[]|array An array of Status objects.
+	 * @return WP_REST_Response The statuses as a REST response.
 	 */
 	public function api_public_timeline( $statuses, $request ) {
 		$args = $this->get_posts_query_args( array(), $request );
