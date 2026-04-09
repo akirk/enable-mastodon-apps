@@ -429,10 +429,10 @@ class Status extends Handler {
 		/**
 		 * Modify the status data.
 		 *
-		 * @param array|null $account The status data.
-		 * @param int $post_id The object ID to get the status from.
-		 * @param array $data Additional status data.
-		 * @return array|null The modified status data.
+		 * @param Entity\Status|null $status  The status data.
+		 * @param int                $post_id The object ID to get the status from.
+		 * @param array              $data    Additional status data.
+		 * @return Entity\Status|null The modified status data.
 		 */
 		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
 
@@ -486,10 +486,10 @@ class Status extends Handler {
 		/**
 		 * Modify the status data.
 		 *
-		 * @param array|null $account The status data.
-		 * @param int $post_id The object ID to get the status from.
-		 * @param array $data Additional status data.
-		 * @return array|null The modified status data.
+		 * @param Entity\Status|null $status  The status data.
+		 * @param int                $post_id The object ID to get the status from.
+		 * @param array              $data    Additional status data.
+		 * @return Entity\Status|null The modified status data.
 		 */
 		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
 
@@ -547,10 +547,10 @@ class Status extends Handler {
 		/**
 		 * Modify the status data.
 		 *
-		 * @param array|null $account The status data.
-		 * @param int $post_id The object ID to get the status from.
-		 * @param array $data Additional status data.
-		 * @return array|null The modified status data.
+		 * @param Entity\Status|null $status  The status data.
+		 * @param int                $post_id The object ID to get the status from.
+		 * @param array              $data    Additional status data.
+		 * @return Entity\Status|null The modified status data.
 		 */
 		$status = apply_filters(
 			'mastodon_api_status',
@@ -610,10 +610,10 @@ class Status extends Handler {
 		/**
 		 * Modify the status data.
 		 *
-		 * @param array|null $account The status data.
-		 * @param int $post_id The object ID to get the status from.
-		 * @param array $data Additional status data.
-		 * @return array|null The modified status data.
+		 * @param Entity\Status|null $status  The status data.
+		 * @param int                $post_id The object ID to get the status from.
+		 * @param array              $data    Additional status data.
+		 * @return Entity\Status|null The modified status data.
 		 */
 		$status = apply_filters(
 			'mastodon_api_status',
@@ -684,10 +684,10 @@ class Status extends Handler {
 			/**
 			 * Modify the status data.
 			 *
-			 * @param array|null $account The status data.
-			 * @param int $post_id The object ID to get the status from.
-			 * @param array $data Additional status data.
-			 * @return array|null The modified status data.
+			 * @param Entity\Status|null $status  The status data.
+			 * @param int                $post_id The object ID to get the status from.
+			 * @param array              $data    Additional status data.
+			 * @return Entity\Status|null The modified status data.
 			 */
 			$status = apply_filters(
 				'mastodon_api_status',
