@@ -2263,6 +2263,19 @@ class Mastodon_API {
 
 		$app = Mastodon_App::get_current_app();
 		$post_format = $app->get_create_post_format();
+		/**
+		 * Filter the submitted status.
+		 *
+		 * @param Entity\Status|null $status       The status data.
+		 * @param string             $status_text   The status text.
+		 * @param string|null        $in_reply_to_id The ID of the post to reply to.
+		 * @param array|null         $media_ids     The media IDs.
+		 * @param string             $post_format   The post format.
+		 * @param string             $visibility    The visibility.
+		 * @param string|null        $scheduled_at  The scheduled date.
+		 * @param WP_REST_Request    $request       The request object.
+		 * @return Entity\Status|null The status data.
+		 */
 		$status = apply_filters( 'mastodon_api_submit_status', null, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at, $request );
 
 		return $this->validate_entity( $status, Entity\Status::class );
@@ -2511,6 +2524,13 @@ class Mastodon_API {
 
 		$source_id = self::maybe_get_remapped_reblog_id( $source_id );
 
+		/**
+		 * Get the status source data.
+		 *
+		 * @param Entity\Status_Source|null $status_source The status source data.
+		 * @param int                       $source_id     The status ID.
+		 * @return Entity\Status_Source|null The status source data.
+		 */
 		return apply_filters( 'mastodon_api_status_source', null, $source_id );
 	}
 
@@ -2529,6 +2549,14 @@ class Mastodon_API {
 			'descendants' => array(),
 		);
 
+		/**
+		 * Get the status context (ancestors and descendants).
+		 *
+		 * @param array  $context         The context with 'ancestors' and 'descendants' arrays.
+		 * @param int    $context_post_id The post ID to get context for.
+		 * @param string $url             The permalink of the post.
+		 * @return array The context with 'ancestors' and 'descendants' arrays.
+		 */
 		return apply_filters( 'mastodon_api_status_context', $context, $context_post_id, $url );
 	}
 
@@ -2547,10 +2575,10 @@ class Mastodon_API {
 		/**
 		 * Modify the status data.
 		 *
-		 * @param array|null $status The status data.
-		 * @param int $post_id The object ID to get the status from.
-		 * @param array $data Additional status data.
-		 * @return array|null The modified status data.
+		 * @param Entity\Status|null $status  The status data.
+		 * @param int                $post_id The object ID to get the status from.
+		 * @param array              $data    Additional status data.
+		 * @return Entity\Status|null The modified status data.
 		 */
 		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
 
@@ -2572,10 +2600,10 @@ class Mastodon_API {
 		/**
 		 * Modify the status data.
 		 *
-		 * @param array|null $status The status data.
-		 * @param int $post_id The object ID to get the status from.
-		 * @param array $data Additional status data.
-		 * @return array|null The modified status data.
+		 * @param Entity\Status|null $status  The status data.
+		 * @param int                $post_id The object ID to get the status from.
+		 * @param array              $data    Additional status data.
+		 * @return Entity\Status|null The modified status data.
 		 */
 		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
 
@@ -2599,10 +2627,10 @@ class Mastodon_API {
 		/**
 		 * Modify the status data.
 		 *
-		 * @param array|null $status The status data.
-		 * @param int $post_id The object ID to get the status from.
-		 * @param array $data Additional status data.
-		 * @return array|null The modified status data.
+		 * @param Entity\Status|null $status  The status data.
+		 * @param int                $post_id The object ID to get the status from.
+		 * @param array              $data    Additional status data.
+		 * @return Entity\Status|null The modified status data.
 		 */
 		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
 
@@ -2625,10 +2653,10 @@ class Mastodon_API {
 		/**
 		 * Modify the status data.
 		 *
-		 * @param array|null $status The status data.
-		 * @param int $post_id The object ID to get the status from.
-		 * @param array $data Additional status data.
-		 * @return array|null The modified status data.
+		 * @param Entity\Status|null $status  The status data.
+		 * @param int                $post_id The object ID to get the status from.
+		 * @param array              $data    Additional status data.
+		 * @return Entity\Status|null The modified status data.
 		 */
 		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
 
@@ -2667,6 +2695,20 @@ class Mastodon_API {
 
 		$app = Mastodon_App::get_current_app();
 		$post_format = $app->get_create_post_format();
+		/**
+		 * Filter the edited status.
+		 *
+		 * @param Entity\Status|null $status         The status data.
+		 * @param int                $post_id        The post ID to edit.
+		 * @param string             $status_text    The status text.
+		 * @param string|null        $in_reply_to_id The ID of the post to reply to.
+		 * @param array|null         $media_ids      The media IDs.
+		 * @param string             $post_format    The post format.
+		 * @param string             $visibility     The visibility.
+		 * @param string|null        $scheduled_at   The scheduled date.
+		 * @param WP_REST_Request    $request        The request object.
+		 * @return Entity\Status|null The status data.
+		 */
 		$status = apply_filters( 'mastodon_api_edit_status', null, $post_id, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at, $request );
 
 		return $this->validate_entity( $status, Entity\Status::class );
@@ -2747,10 +2789,10 @@ class Mastodon_API {
 		/**
 		 * Modify the status data.
 		 *
-		 * @param array|null $status The status data.
-		 * @param int $post_id The object ID to get the status from.
-		 * @param array $data Additional status data.
-		 * @return array|null The modified status data.
+		 * @param Entity\Status|null $status  The status data.
+		 * @param int                $post_id The object ID to get the status from.
+		 * @param array              $data    Additional status data.
+		 * @return Entity\Status|null The modified status data.
 		 */
 		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
 
@@ -2833,21 +2875,22 @@ class Mastodon_API {
 		/**
 		 * Modify the account following.
 		 *
-		 * @param array           $following The account following.
-		 * @param string          $user_id   The user ID.
-		 * @param WP_REST_Request $request   The request object.
-		 * @return array The modified account following.
+		 * @param Entity\Account[] $following The account following.
+		 * @param string           $user_id   The user ID.
+		 * @param WP_REST_Request  $request   The request object.
+		 * @return Entity\Account[] The modified account following.
 		 *
 		 * Example:
 		 * ```php
-		 * apply_filters( 'mastodon_api_account_following', function ( $following, $user_id, $request ) {
+		 * add_filter( 'mastodon_api_account_following', function ( $following, $user_id, $request ) {
 		 *    $account     = new Entity\Account();
-		 *    $account->id = $user_id
+		 *    $account->id = $user_id;
 		 *
 		 *    $following[] = $account;
 		 *
 		 *    return $following;
-		 * } );
+		 * }, 10, 3 );
+		 * ```
 		 */
 		$following = \apply_filters( 'mastodon_api_account_following', array(), $user_id, $request );
 
@@ -2877,21 +2920,22 @@ class Mastodon_API {
 		/**
 		 * Modify the account followers.
 		 *
-		 * @param array           $followers The account followers.
-		 * @param string          $user_id   The user ID.
-		 * @param WP_REST_Request $request   The request object.
-		 * @return array The modified account followers.
+		 * @param Entity\Account[] $followers The account followers.
+		 * @param string           $user_id   The user ID.
+		 * @param WP_REST_Request  $request   The request object.
+		 * @return Entity\Account[] The modified account followers.
 		 *
 		 * Example:
 		 * ```php
-		 * apply_filters( 'mastodon_api_account_followers', function ( $followers, $user_id, $request ) {
+		 * add_filter( 'mastodon_api_account_followers', function ( $followers, $user_id, $request ) {
 		 *    $account     = new Entity\Account();
-		 *    $account->id = $user_id
+		 *    $account->id = $user_id;
 		 *
 		 *    $followers[] = $account;
 		 *
 		 *    return $followers;
-		 * } );
+		 * }, 10, 3 );
+		 * ```
 		 */
 		$followers = \apply_filters( 'mastodon_api_account_followers', array(), $user_id, $request );
 
@@ -2925,6 +2969,7 @@ class Mastodon_API {
 		 *
 		 * @param string          $user_id The user ID.
 		 * @param WP_REST_Request $request The request object.
+		 * @return string The user ID.
 		 */
 		$user_id = apply_filters( 'mastodon_api_account_follow', $user_id, $request );
 
@@ -2976,18 +3021,19 @@ class Mastodon_API {
 		/**
 		 * Modify the account relationships.
 		 *
-		 * @param array           $relationships The account relationships.
-		 * @param array           $user_ids      The user IDs.
-		 * @param WP_REST_Request $request       The request object.
-		 * @return array The modified account relationships.
+		 * @param Entity\Relationship[] $relationships The account relationships.
+		 * @param array                 $user_ids      The user IDs.
+		 * @param WP_REST_Request       $request       The request object.
+		 * @return Entity\Relationship[] The modified account relationships.
 		 *
 		 * Example:
 		 * ```php
-		 * apply_filters( 'mastodon_api_account_relationships', function ( $relationships, $user_ids, $request ) {
+		 * add_filter( 'mastodon_api_account_relationships', function ( $relationships, $user_ids, $request ) {
 		 *    $relationships[0]->following = true;
 		 *
 		 *    return $relationships;
-		 * } );
+		 * }, 10, 3 );
+		 * ```
 		 */
 		$relationships = apply_filters( 'mastodon_api_account_relationships', $relationships, $user_ids, $request );
 
@@ -3437,15 +3483,14 @@ class Mastodon_API {
 		/**
 		 * Modify the instance data returned for `/api/instance` requests.
 		 *
-		 * @param array $ret The instance data.
-		 *
-		 * @return array The modified instance data.
+		 * @param Entity\Instance|null $instance The instance data.
+		 * @return Entity\Instance The modified instance data.
 		 *
 		 * Example:
 		 * ```php
-		 * add_filter( 'mastodon_api_instance_v2', function( $instance_data ) {
-		 *      return new Entity\Instance();
-		 *  } );
+		 * add_filter( 'mastodon_api_instance_v1', function( $instance_data ) {
+		 *     return new Entity\Instance();
+		 * } );
 		 * ```
 		 */
 		$instance = apply_filters( 'mastodon_api_instance_v1', null );
@@ -3679,11 +3724,12 @@ class Mastodon_API {
 		/**
 		 * Filter the account conversations.
 		 *
-		 * @param array|null $conversations Current statuses.
-		 * @param int $user_id The user ID.
-		 * @param int|null $limit Optional limit.
-		 * @param int|null $min_id Optional minimum status ID.
-		 * @param int|null $max_id Optional maximum status ID.
+		 * @param Entity\Conversation[]|null $conversations The conversations.
+		 * @param int                        $user_id       The user ID.
+		 * @param int|null                   $limit         Optional limit.
+		 * @param int|null                   $min_id        Optional minimum status ID.
+		 * @param int|null                   $max_id        Optional maximum status ID.
+		 * @return Entity\Conversation[] The conversations.
 		 */
 		$statuses = apply_filters( 'mastodon_api_conversations', null, get_current_user_id(), $request->get_param( 'limit' ), $request->get_param( 'min_id' ), $request->get_param( 'max_id' ) );
 
@@ -3693,28 +3739,40 @@ class Mastodon_API {
 	public function api_conversation_mark_read( WP_REST_Request $request ) {
 		$id = $request->get_param( 'id' );
 		/**
-		 * Modify the account conversations mark read.
+		 * Mark a conversation as read.
 		 *
-		 * @param array $conversations The account conversations.
-		 * @param int $user_id The user ID.
+		 * @param int             $id      The conversation ID.
 		 * @param WP_REST_Request $request The request object.
 		 */
 		do_action( 'mastodon_api_conversation_mark_read', $id, $request );
 
+		/**
+		 * Get a single conversation by ID.
+		 *
+		 * @param Entity\Conversation|null $conversation The conversation data.
+		 * @param int                      $id           The conversation ID.
+		 * @return Entity\Conversation|\WP_Error The conversation data.
+		 */
 		return apply_filters( 'mastodon_api_conversation', null, $id );
 	}
 
 	public function api_conversation_delete( WP_REST_Request $request ) {
 		$id = $request->get_param( 'id' );
 		/**
-		 * Modify the account conversations delete.
+		 * Delete a conversation.
 		 *
-		 * @param array $conversations The account conversations.
-		 * @param int $user_id The user ID.
+		 * @param int             $id      The conversation ID.
 		 * @param WP_REST_Request $request The request object.
 		 */
 		do_action( 'mastodon_api_conversation_delete', $id, $request );
 
+		/**
+		 * Get a single conversation by ID.
+		 *
+		 * @param Entity\Conversation|null $conversation The conversation data.
+		 * @param int                      $id           The conversation ID.
+		 * @return Entity\Conversation|\WP_Error The conversation data.
+		 */
 		$conversation = apply_filters( 'mastodon_api_conversation', null, $id );
 		if ( is_wp_error( $conversation ) ) {
 			return $conversation;
