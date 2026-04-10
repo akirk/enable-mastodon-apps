@@ -6,7 +6,7 @@
 - Tested up to: 6.8
 - Requires PHP: 7.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 1.5.1
+- Stable tag: 1.6.0
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -100,6 +100,14 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 2. The Mastodon Apps settings page.
 
 ## Changelog
+
+### 1.6.0
+- Support fetching remote/federated posts via status endpoint ([#294])
+- Fix missing federation when replying to remote Fediverse posts ([#291])
+- Add /api/v1/tags/:name endpoint ([#293])
+- Fix notification pagination ([#292])
+- Fix more incorrect filter docblock types and add missing docblocks ([#296])
+- Fix incorrect return types in timeline and statuses filter documentation ([#295])
 
 ### 1.5.1
 - Add cleanup logic for reblog mapping posts ([#290])
@@ -330,3 +338,10 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 [#288]: https://github.com/akirk/enable-mastodon-apps/pull/288
 [#289]: https://github.com/akirk/enable-mastodon-apps/pull/289
 [#290]: https://github.com/akirk/enable-mastodon-apps/pull/290
+
+[#291]: https://github.com/akirk/enable-mastodon-apps/pull/291
+[#292]: https://github.com/akirk/enable-mastodon-apps/pull/292
+[#293]: https://github.com/akirk/enable-mastodon-apps/pull/293
+[#294]: https://github.com/akirk/enable-mastodon-apps/pull/294
+[#295]: https://github.com/akirk/enable-mastodon-apps/pull/295
+[#296]: https://github.com/akirk/enable-mastodon-apps/pull/296

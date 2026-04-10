@@ -1,3 +1,11 @@
+### 1.6.0
+- Support fetching remote/federated posts via status endpoint ([#294])
+- Fix missing federation when replying to remote Fediverse posts ([#291])
+- Add /api/v1/tags/:name endpoint ([#293])
+- Fix notification pagination ([#292])
+- Fix more incorrect filter docblock types and add missing docblocks ([#296])
+- Fix incorrect return types in timeline and statuses filter documentation ([#295])
+
 ### 1.5.1
 - Add cleanup logic for reblog mapping posts ([#290])
 - Add quote and quoted_update notification types ([#287])
@@ -337,3 +345,10 @@
 [#288]: https://github.com/akirk/enable-mastodon-apps/pull/288
 [#289]: https://github.com/akirk/enable-mastodon-apps/pull/289
 [#290]: https://github.com/akirk/enable-mastodon-apps/pull/290
+
+[#291]: https://github.com/akirk/enable-mastodon-apps/pull/291
+[#292]: https://github.com/akirk/enable-mastodon-apps/pull/292
+[#293]: https://github.com/akirk/enable-mastodon-apps/pull/293
+[#294]: https://github.com/akirk/enable-mastodon-apps/pull/294
+[#295]: https://github.com/akirk/enable-mastodon-apps/pull/295
+[#296]: https://github.com/akirk/enable-mastodon-apps/pull/296
