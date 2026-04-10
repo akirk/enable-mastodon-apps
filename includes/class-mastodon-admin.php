@@ -40,7 +40,7 @@ class Mastodon_Admin {
 		wp_enqueue_script( 'plugin-install' );
 		add_thickbox();
 		wp_enqueue_script( 'updates' );
-		wp_enqueue_style( 'enable-mastodon-apps-admin-styles', plugins_url( 'admin.css', __DIR__ ), array(), '1.0.0' );
+		wp_enqueue_style( 'enable-mastodon-apps-admin-styles', plugins_url( 'admin.css', __DIR__ ), array(), '1.0.3' );
 		wp_enqueue_script( 'enable-mastodon-apps-admin-js', plugins_url( 'admin.js', __DIR__ ), array( 'jquery' ), '1.0.0', false );
 	}
 
