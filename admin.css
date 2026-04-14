@@ -1,6 +1,8 @@
 .enable-mastodon-apps-settings {
 	max-width: 800px;
 	margin: 0 auto;
+	padding: 0 1em;
+	box-sizing: border-box;
 }
 
 .settings_page_enable-mastodon-apps .notice {
@@ -35,6 +37,7 @@
 .enable-mastodon-apps-settings-tabs-wrapper {
 	display: flex;
 	justify-content: center;
+	flex-wrap: wrap;
 }
 
 .enable-mastodon-apps-settings-tab.active {
@@ -224,6 +227,22 @@ summary {
 	word-wrap: break-word;
 }
 
+.settings_page_enable-mastodon-apps pre {
+	white-space: pre-wrap;
+	word-wrap: break-word;
+	overflow-wrap: break-word;
+}
+
+.settings_page_enable-mastodon-apps table.widefat {
+	overflow-x: auto;
+	display: block;
+}
+
+.enable-mastodon-apps-settings.enable-mastodon-apps-debug-page {
+	max-width: 100%;
+	overflow-x: hidden;
+}
+
 .settings_page_enable-mastodon-apps summary {
 	cursor: pointer;
 }
@@ -251,6 +270,7 @@ summary {
 
 .settings_page_enable-mastodon-apps table.widefat td:last-child {
 	white-space: nowrap;
+	min-width: fit-content;
 }
 
 .enable-mastodon-apps-settings.enable-mastodon-apps-registered-apps-page {
