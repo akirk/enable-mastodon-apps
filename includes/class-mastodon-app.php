@@ -729,10 +729,15 @@ class Mastodon_App {
 									'params' === $key ||
 									'json' === $key ||
 									'errors' === $key ||
-									'calls' === $key
+									'calls' === $key ||
+									'shape' === $key
 								) &&
 								! empty( $value[ $key ] )
 							) {
+								continue;
+							}
+							if ( 'count' === $key ) {
+								$value[ $key ] = intval( $value[ $key ] );
 								continue;
 							}
 							unset( $value[ $key ] );

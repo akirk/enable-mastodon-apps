@@ -72,6 +72,7 @@ class Mastodon_API {
 		add_action( 'query_vars', array( $this, 'query_vars' ) );
 		add_action( 'rest_api_init', array( $this, 'add_rest_routes' ) );
 		add_filter( 'rest_post_dispatch', array( $this, 'send_http_links' ), 10, 3 );
+		add_filter( 'rest_post_dispatch', array( $this, 'log_response' ), 99, 3 );
 		add_filter( 'rest_pre_echo_response', array( $this, 'reformat_error_response' ), 10, 3 );
 		add_filter( 'template_include', array( $this, 'log_404s' ) );
 		add_filter( 'rest_json_encode_options', array( $this, 'rest_json_encode_options' ), 10, 2 );
@@ -131,6 +132,79 @@ class Mastodon_API {
 		}
 
 		return $response;
+	}
+
+	/**
+	 * Log response data for debug mode.
+	 *
+	 * @param \WP_REST_Response $response The response.
+	 * @param \WP_REST_Server   $server   The REST server.
+	 * @param \WP_REST_Request  $request  The request.
+	 * @return \WP_REST_Response The unmodified response.
+	 */
+	public function log_response( \WP_REST_Response $response, \WP_REST_Server $server, \WP_REST_Request $request ) {
+		if ( 0 !== strpos( $request->get_route(), '/' . self::PREFIX ) ) {
+			return $response;
+		}
+		if ( get_option( 'mastodon_api_debug_mode' ) <= time() ) {
+			return $response;
+		}
+
+		$data  = $response->get_data();
+		$debug = array(
+			'status' => $response->get_status(),
+		);
+		if ( is_array( $data ) && ! isset( $data['error'] ) ) {
+			if ( wp_is_numeric_array( $data ) ) {
+				$debug['count'] = count( $data );
+				if ( ! empty( $data[0] ) ) {
+					$item = $data[0];
+					if ( $item instanceof Entity\Entity ) {
+						$item = $item->jsonSerialize();
+					}
+					if ( is_array( $item ) ) {
+						$debug['shape'] = self::get_array_shape( $item );
+					}
+				}
+			} else {
+				$debug['shape'] = self::get_array_shape( $data );
+			}
+		}
+		Mastodon_App::log( $request, $debug );
+
+		return $response;
+	}
+
+	/**
+	 * Get a summary of an array's structure for debug logging.
+	 *
+	 * @param array $arr The array to summarize.
+	 * @return array The shape summary.
+	 */
+	private static function get_array_shape( $arr ) {
+		$shape = array();
+		foreach ( $arr as $key => $value ) {
+			if ( is_null( $value ) ) {
+				$shape[ $key ] = 'N';
+			} elseif ( is_bool( $value ) ) {
+				$shape[ $key ] = 'b:' . ( $value ? '1' : '0' );
+			} elseif ( is_array( $value ) ) {
+				if ( wp_is_numeric_array( $value ) ) {
+					$shape[ $key ] = 'a:' . count( $value );
+				} else {
+					$shape[ $key ] = self::get_array_shape( $value );
+				}
+			} elseif ( is_string( $value ) ) {
+				$shape[ $key ] = 's:' . strlen( $value );
+			} elseif ( is_int( $value ) ) {
+				$shape[ $key ] = 'i:' . $value;
+			} elseif ( is_float( $value ) ) {
+				$shape[ $key ] = 'd:' . $value;
+			} else {
+				$shape[ $key ] = '?';
+			}
+		}
+		return $shape;
 	}
 
 	/**
@@ -3455,7 +3529,7 @@ class Mastodon_API {
 		$content[] = sprintf( __( 'Change the <a href=%s>settings for this app here</a>.', 'enable-mastodon-apps' ), '"' . esc_url( admin_url( 'options-general.php?page=enable-mastodon-apps&app=' . $app->get_client_id() ) ) . '"' );
 
 		$ret[] = array(
-			'id'           => 1,
+			'id'           => '1',
 			'content'      => '<h1><strong>' . __( 'Mastodon Apps', 'enable-mastodon-apps' ) . '</strong></h1><p>' . implode( '</p><p>' . PHP_EOL, $content ) . '</p>',
 			'published_at' => gmdate( 'Y-m-d\TH:i:s.000P', $app->get_creation_date() ),
 			'updated_at'   => gmdate( 'Y-m-d\TH:i:s.000P' ),

@@ -239,6 +239,9 @@ class Notification extends Handler {
 			$notification['id']    .= $status->id;
 		}
 
+		// Provide a unique group_key so clients don't try to group notifications.
+		$notification['group_key'] = 'ungrouped-' . $notification['id'];
+
 		return $notification;
 	}
 
