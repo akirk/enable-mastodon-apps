@@ -199,6 +199,40 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertEquals( $p->post_type, $new_post_type );
 	}
 
+	public function test_submit_single_line_standard_with_media() {
+		$this->app->set_post_formats( 'standard' );
+		$this->app->set_create_post_format( 'standard' );
+		$this->app->set_create_post_type( 'post' );
+		$this->app->set_disable_blocks( true );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'caption text' );
+		$request->set_param( 'media_ids', array( $this->friend_attachment_id ) );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$p = get_post( $response->get_data()->id );
+		$this->assertEquals( 'caption text', $p->post_title );
+		$this->assertStringNotContainsString( 'caption text', $p->post_content );
+		$this->assertStringContainsString( 'wp:image', $p->post_content );
+	}
+
+	public function test_submit_single_line_standard_without_media() {
+		$this->app->set_post_formats( 'standard' );
+		$this->app->set_create_post_format( 'standard' );
+		$this->app->set_create_post_type( 'post' );
+		$this->app->set_disable_blocks( true );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'just a short toot' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$p = get_post( $response->get_data()->id );
+		$this->assertEquals( '', $p->post_title );
+		$this->assertEquals( 'just a short toot', $p->post_content );
+	}
+
 	public function test_submit_status_reply() {
 		$query = new \WP_Comment_Query();
 		$count = $query->query(
