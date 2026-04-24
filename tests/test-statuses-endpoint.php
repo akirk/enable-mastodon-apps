@@ -207,12 +207,8 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 
 		$request = $this->api_request( 'POST', '/api/v1/statuses' );
 		$request->set_param( 'status', 'caption text' );
-		$request->set_param( 'media_ids', array( $this->friend_attachment_id ) );
+		$request->set_param( 'media_ids', array( (string) $this->friend_attachment_id ) );
 		$response = $this->dispatch_authenticated( $request );
-		if ( 200 !== $response->get_status() ) {
-			fwrite( STDERR, "\nDEBUG response status={$response->get_status()} data=" . var_export( $response->get_data(), true ) . "\n" );
-			fwrite( STDERR, "friend_attachment_id={$this->friend_attachment_id} post=" . var_export( get_post( $this->friend_attachment_id ), true ) . "\n" );
-		}
 		$this->assertEquals( 200, $response->get_status() );
 
 		$p = get_post( $response->get_data()->id );
