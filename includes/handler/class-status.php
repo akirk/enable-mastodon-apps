@@ -290,6 +290,9 @@ class Status extends Handler {
 			if ( count( $post_content_parts ) === 2 ) {
 				$post_data['post_title']   = wp_strip_all_tags( $post_content_parts[0] );
 				$post_data['post_content'] = trim( $post_content_parts[1] );
+			} elseif ( ! empty( $media_ids ) ) {
+				$post_data['post_title']   = wp_strip_all_tags( $status_text );
+				$post_data['post_content'] = '';
 			}
 		}
 
