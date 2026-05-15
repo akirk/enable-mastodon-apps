@@ -142,7 +142,15 @@ class Mastodon_App {
 		if ( ! is_array( $options ) ) {
 			return false;
 		}
-		return boolval( $options['blocks'] );
+		return boolval( $options['blocks'] ?? false );
+	}
+
+	public function get_first_line_as_excerpt() {
+		$options = get_term_meta( $this->term->term_id, 'options', true );
+		if ( ! is_array( $options ) ) {
+			return false;
+		}
+		return boolval( $options['first_line_as_excerpt'] ?? false );
 	}
 
 	public function set_client_secret( $client_secret ) {
@@ -177,6 +185,15 @@ class Mastodon_App {
 			$options = array();
 		}
 		$options['blocks'] = $disable_blocks;
+		return update_term_meta( $this->term->term_id, 'options', $options );
+	}
+
+	public function set_first_line_as_excerpt( $first_line_as_excerpt ) {
+		$options = get_term_meta( $this->term->term_id, 'options', true );
+		if ( ! is_array( $options ) ) {
+			$options = array();
+		}
+		$options['first_line_as_excerpt'] = $first_line_as_excerpt;
 		return update_term_meta( $this->term->term_id, 'options', $options );
 	}
 
@@ -345,6 +362,10 @@ class Mastodon_App {
 
 		if ( $this->get_disable_blocks() ) {
 			$content .= PHP_EOL . __( 'Automatic conversion to blocks is disabled', 'enable-mastodon-apps' );
+		}
+
+		if ( $this->get_first_line_as_excerpt() ) {
+			$content .= PHP_EOL . __( 'Use first content line as excerpt', 'enable-mastodon-apps' );
 		}
 
 		if ( $this->get_media_only() ) {
@@ -682,7 +703,7 @@ class Mastodon_App {
 					}
 
 					foreach ( array_keys( $value ) as $key ) {
-						if ( 'blocks' === $key || 'media_only' === $key ) {
+						if ( 'blocks' === $key || 'media_only' === $key || 'first_line_as_excerpt' === $key ) {
 							$value[ $key ] = boolval( $value[ $key ] );
 							continue;
 						}
