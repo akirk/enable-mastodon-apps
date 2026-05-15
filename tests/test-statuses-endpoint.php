@@ -233,6 +233,49 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertEquals( 'just a short toot', $p->post_content );
 	}
 
+	public function test_submit_standard_uses_first_content_line_as_excerpt() {
+		$this->app->set_post_formats( 'standard' );
+		$this->app->set_create_post_format( 'standard' );
+		$this->app->set_create_post_type( 'post' );
+		$this->app->set_disable_blocks( true );
+		$this->app->set_first_line_as_excerpt( true );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'headline' . PHP_EOL . 'summary' . PHP_EOL . 'post content' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$p = get_post( $response->get_data()->id );
+		$this->assertEquals( 'headline', $p->post_title );
+		$this->assertEquals( 'summary', $p->post_excerpt );
+		$this->assertEquals( 'summary' . PHP_EOL . 'post content', $p->post_content );
+	}
+
+	public function test_submit_status_post_data_filter() {
+		$this->app->set_post_formats( 'standard' );
+		$this->app->set_create_post_format( 'standard' );
+		$this->app->set_create_post_type( 'post' );
+		$this->app->set_disable_blocks( true );
+
+		$filter = function ( $post_data ) {
+			$post_data['post_excerpt'] = 'filtered excerpt';
+			return $post_data;
+		};
+
+		add_filter( 'mastodon_api_submit_post_data', $filter, 10, 9 );
+		try {
+			$request = $this->api_request( 'POST', '/api/v1/statuses' );
+			$request->set_param( 'status', 'headline' . PHP_EOL . 'post content' );
+			$response = $this->dispatch_authenticated( $request );
+			$this->assertEquals( 200, $response->get_status() );
+		} finally {
+			remove_filter( 'mastodon_api_submit_post_data', $filter, 10 );
+		}
+
+		$p = get_post( $response->get_data()->id );
+		$this->assertEquals( 'filtered excerpt', $p->post_excerpt );
+	}
+
 	public function test_submit_status_reply() {
 		$query = new \WP_Comment_Query();
 		$count = $query->query(

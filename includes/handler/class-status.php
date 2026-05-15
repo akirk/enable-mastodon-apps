@@ -27,6 +27,10 @@ class Status extends Handler {
 		$this->register_hooks();
 	}
 
+	protected static function get_line_split_pattern() {
+		return '/(<br>|<br \/>|<\/p>|' . PHP_EOL . ')/i';
+	}
+
 	public function register_hooks() {
 		add_filter( 'mastodon_api_status', array( $this, 'api_status' ), 10, 2 );
 		add_filter( 'mastodon_api_status', array( $this, 'api_status_ensure_numeric_id' ), 100 );
@@ -229,7 +233,7 @@ class Status extends Handler {
 	}
 
 	public static function convert_to_blocks( $post_content ) {
-		$post_content = preg_split( '/(<br>|<br \/>|<\/p>|' . PHP_EOL . ')/i', $post_content );
+		$post_content = preg_split( self::get_line_split_pattern(), $post_content );
 		$post_content = array_map( 'trim', $post_content );
 		$post_content = array_map(
 			function ( $el ) {
@@ -245,6 +249,15 @@ class Status extends Handler {
 		}
 		$post_content = '<!-- wp:paragraph -->' . PHP_EOL . '<p>' . implode( '</p>' . PHP_EOL . '<!-- /wp:paragraph -->' . PHP_EOL . PHP_EOL . '<!-- wp:paragraph -->' . PHP_EOL . '<p>', $post_content ) . '</p>' . PHP_EOL . '<!-- /wp:paragraph -->';
 		return $post_content;
+	}
+
+	public static function extract_first_line( $post_content ) {
+		$post_content_parts = preg_split( self::get_line_split_pattern(), $post_content, 2 );
+		if ( empty( $post_content_parts ) ) {
+			return '';
+		}
+
+		return trim( wp_strip_all_tags( $post_content_parts[0] ) );
 	}
 
 	public function prepare_post_data( $post_id, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at ) {
@@ -286,13 +299,17 @@ class Status extends Handler {
 		$post_data['post_title'] = '';
 
 		if ( ! $post_format || 'standard' === $post_format ) {
-			$post_content_parts = preg_split( '/(<br>|<br \/>|<\/p>|' . PHP_EOL . ')/i', $status_text, 2 );
+			$post_content_parts = preg_split( self::get_line_split_pattern(), $status_text, 2 );
 			if ( count( $post_content_parts ) === 2 ) {
 				$post_data['post_title']   = wp_strip_all_tags( $post_content_parts[0] );
 				$post_data['post_content'] = trim( $post_content_parts[1] );
 			} elseif ( ! empty( $media_ids ) ) {
 				$post_data['post_title']   = wp_strip_all_tags( $status_text );
 				$post_data['post_content'] = '';
+			}
+
+			if ( $app->get_first_line_as_excerpt() && ! empty( $post_data['post_content'] ) ) {
+				$post_data['post_excerpt'] = self::extract_first_line( $post_data['post_content'] );
 			}
 		}
 
@@ -340,6 +357,22 @@ class Status extends Handler {
 				}
 			}
 		}
+
+		/**
+		 * Allow modifying the post data before it gets inserted or updated.
+		 *
+		 * @param array        $post_data      The post data for wp_insert_post() or wp_update_post().
+		 * @param string       $status_text    The user submitted status text after filtering.
+		 * @param int|string|null $in_reply_to_id The ID of the status to reply to.
+		 * @param array        $media_ids      The media attachment IDs.
+		 * @param string       $post_format    The post format to create.
+		 * @param string       $visibility     The requested status visibility.
+		 * @param string|null  $scheduled_at   The scheduled post date.
+		 * @param int|null     $post_id        The post ID when updating.
+		 * @param Mastodon_App $app            The app creating or updating the post.
+		 * @return array The potentially modified post data.
+		 */
+		$post_data = apply_filters( 'mastodon_api_submit_post_data', $post_data, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at, $post_id, $app );
 
 		return $post_data;
 	}

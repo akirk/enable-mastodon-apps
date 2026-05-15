@@ -783,6 +783,12 @@ class Mastodon_Admin {
 			$app->set_disable_blocks( false );
 		}
 
+		if ( isset( $_POST['first_line_as_excerpt'] ) ) {
+			$app->set_first_line_as_excerpt( true );
+		} else {
+			$app->set_first_line_as_excerpt( false );
+		}
+
 		if ( isset( $_POST['media_only'] ) ) {
 			$app->set_media_only( true );
 		} else {
