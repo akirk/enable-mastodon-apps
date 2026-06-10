@@ -15,15 +15,19 @@ jobs:
           - php: "8.1"
             phpunit: "9.6.34"
             wordpress: "trunk"
+            activitypub-ref: "8.2.1"
           - php: "8.2"
             phpunit: "9.6.34"
             wordpress: "trunk"
+            activitypub-ref: "8.2.1"
           - php: "8.3"
             phpunit: "9.6.34"
             wordpress: "trunk"
+            activitypub-ref: "8.3.0"
           - php: "8.4"
             phpunit: "9.6.34"
             wordpress: "trunk"
+            activitypub-ref: "8.3.0"
 
     services:
       mariadb:
@@ -44,7 +48,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: Automattic/wordpress-activitypub
-          ref: 8.2.1
+          ref: ${{ matrix.activitypub-ref }}
           path: activitypub
 
       - name: Symlink ActivityPub plugin as sibling directory
