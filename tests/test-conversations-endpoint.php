@@ -13,6 +13,19 @@ namespace Enable_Mastodon_Apps;
  * @package
  */
 class ConversationsEndpoint_Test extends Mastodon_API_TestCase {
+	private $remote_account_filter;
+
+	public function tear_down() {
+		if ( $this->remote_account_filter ) {
+			remove_filter( 'mastodon_api_account', $this->remote_account_filter, 10 );
+		}
+
+		global $wp_post_statuses;
+		unset( $wp_post_statuses['friends_read'] );
+
+		parent::tear_down();
+	}
+
 	public function test_conversation_uses_remote_participant_and_latest_status() {
 		register_post_status( 'friends_read' );
 
@@ -38,17 +51,14 @@ class ConversationsEndpoint_Test extends Mastodon_API_TestCase {
 			'fields'    => array(),
 		);
 
-		add_filter(
-			'mastodon_api_account',
-			function ( $account, $user_id, $request = null, $post = null ) use ( $remote_account ) {
-				if ( 0 === intval( $user_id ) && $post instanceof \WP_Post && 0 === strpos( $post->post_type, 'ema-dm-' ) ) {
-					return $remote_account;
-				}
-				return $account;
-			},
-			10,
-			4
-		);
+		$this->remote_account_filter = function ( $account, $user_id, $request = null, $post = null ) use ( $remote_account ) {
+			if ( 0 === intval( $user_id ) && $post instanceof \WP_Post && 0 === strpos( $post->post_type, 'ema-dm-' ) ) {
+				return $remote_account;
+			}
+			return $account;
+		};
+
+		add_filter( 'mastodon_api_account', $this->remote_account_filter, 10, 4 );
 
 		$root = wp_insert_post(
 			array(
