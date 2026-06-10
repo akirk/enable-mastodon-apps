@@ -17,7 +17,7 @@ class ConversationsEndpoint_Test extends Mastodon_API_TestCase {
 		register_post_status( 'friends_read' );
 
 		$remote_account = new Entity\Account();
-		$remote_account->id = 'remote-diego';
+		$remote_account->id = '10000000059';
 		$remote_account->username = 'diego';
 		$remote_account->acct = 'diego@example.social';
 		$remote_account->url = 'https://example.social/@diego';
@@ -81,7 +81,7 @@ class ConversationsEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertCount( 1, $data );
 		$this->assertEquals( strval( $root ), $data[0]->id );
 		$this->assertCount( 1, $data[0]->accounts );
-		$this->assertEquals( 'remote-diego', $data[0]->accounts[0]->id );
+		$this->assertEquals( '10000000059', $data[0]->accounts[0]->id );
 		$this->assertEquals( strval( $reply ), $data[0]->last_status->id );
 		$this->assertEquals( strval( $this->administrator ), $data[0]->last_status->account->id );
 	}
