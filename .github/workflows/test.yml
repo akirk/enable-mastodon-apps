@@ -15,19 +15,19 @@ jobs:
           - php: "8.1"
             phpunit: "9.6.34"
             wordpress: "trunk"
-            activitypub-ref: "8.2.1"
+            activitypub-ref: "9.0.0"
           - php: "8.2"
             phpunit: "9.6.34"
             wordpress: "trunk"
-            activitypub-ref: "8.2.1"
+            activitypub-ref: "9.0.0"
           - php: "8.3"
             phpunit: "9.6.34"
             wordpress: "trunk"
-            activitypub-ref: "8.3.0"
+            activitypub-ref: "9.0.0"
           - php: "8.4"
             phpunit: "9.6.34"
             wordpress: "trunk"
-            activitypub-ref: "8.3.0"
+            activitypub-ref: "9.0.0"
 
     services:
       mariadb:
