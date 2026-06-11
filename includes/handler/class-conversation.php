@@ -24,6 +24,9 @@ use WP_REST_Response;
  * @package Enable_Mastodon_Apps
  */
 class Conversation extends Status {
+	const READ_STATUSES = array( 'ema_read', 'friends_read' );
+	const UNREAD_STATUSES = array( 'ema_unread', 'friends_unread' );
+
 	public function __construct() {
 		$this->register_hooks();
 	}
@@ -50,7 +53,7 @@ class Conversation extends Status {
 			array(
 				'post_type'   => Mastodon_API::get_dm_cpt(),
 				'post_parent' => $message->ID,
-				'post_status' => array( 'ema_read', 'ema_unread' ),
+				'post_status' => $this->get_post_statuses(),
 				'orderby'     => 'date',
 				'order'       => 'DESC',
 				'numberposts' => 1,
@@ -62,13 +65,13 @@ class Conversation extends Status {
 			$last_status = $last_status[0];
 		}
 
-		$unread = 'ema_unread' === $message->post_status;
+		$unread = in_array( $message->post_status, self::UNREAD_STATUSES, true );
 		if ( ! $unread ) {
 			$unread_posts = get_children(
 				array(
 					'post_parent' => $message->ID,
 					'post_type'   => Mastodon_API::get_dm_cpt(),
-					'post_status' => array( 'ema_unread' ),
+					'post_status' => self::UNREAD_STATUSES,
 				)
 			);
 			if ( $unread_posts ) {
@@ -79,8 +82,7 @@ class Conversation extends Status {
 		$conversation->id = $message->ID;
 		$conversation->unread = $unread;
 		$conversation->last_status = apply_filters( 'mastodon_api_status', null, $last_status->ID );
-		$conversation->accounts = array();
-		$conversation->accounts[] = apply_filters( 'mastodon_api_account', null, $message->post_author );
+		$conversation->accounts = $this->get_participant_accounts( $message );
 
 		return $conversation;
 	}
@@ -89,7 +91,7 @@ class Conversation extends Status {
 		$messages = new \WP_Query();
 		$messages->set( 'post_type', Mastodon_API::get_dm_cpt() );
 		$messages->set( 'post_parent', '0' );
-		$messages->set( 'post_status', array( 'ema_read', 'ema_unread' ) );
+		$messages->set( 'post_status', $this->get_post_statuses() );
 		$messages->set( 'posts_per_page', $limit );
 		$messages->set( 'order', 'DESC' );
 
@@ -101,6 +103,41 @@ class Conversation extends Status {
 		}
 
 		return $conversations;
+	}
+
+	private function get_post_statuses() {
+		return array_merge( self::READ_STATUSES, self::UNREAD_STATUSES );
+	}
+
+	private function get_participant_accounts( \WP_Post $message ) {
+		$accounts = array();
+		$posts = array_merge(
+			array( $message ),
+			get_children(
+				array(
+					'post_parent' => $message->ID,
+					'post_type'   => Mastodon_API::get_dm_cpt(),
+					'post_status' => $this->get_post_statuses(),
+					'orderby'     => 'date',
+					'order'       => 'ASC',
+				)
+			)
+		);
+
+		foreach ( $posts as $post ) {
+			if ( intval( $post->post_author ) === get_current_user_id() ) {
+				continue;
+			}
+
+			$account = apply_filters( 'mastodon_api_account', null, $post->post_author, null, $post );
+			if ( ! $account instanceof \Enable_Mastodon_Apps\Entity\Account ) {
+				continue;
+			}
+
+			$accounts[ $account->id ] = $account;
+		}
+
+		return array_values( $accounts );
 	}
 
 	public function conversation_post_type( $post_types, $context_post_id ) {
@@ -123,10 +160,7 @@ class Conversation extends Status {
 			return $post_types;
 		}
 		if ( strpos( $post_type, 'ema-dm-' ) === 0 ) {
-			return array(
-				'ema_read',
-				'ema_unread',
-			);
+			return $this->get_post_statuses();
 		}
 
 		return $post_types;
@@ -148,11 +182,10 @@ class Conversation extends Status {
 		} elseif ( ! is_array( $args['post_status'] ) ) {
 			$args['post_status'] = array( $args['post_status'] );
 		}
-		if ( ! in_array( 'ema_unread', $args['post_status'] ) ) {
-			$args['post_status'][] = 'ema_unread';
-		}
-		if ( ! in_array( 'ema_read', $args['post_status'] ) ) {
-			$args['post_status'][] = 'ema_read';
+		foreach ( $this->get_post_statuses() as $post_status ) {
+			if ( ! in_array( $post_status, $args['post_status'], true ) ) {
+				$args['post_status'][] = $post_status;
+			}
 		}
 
 		return $args;
