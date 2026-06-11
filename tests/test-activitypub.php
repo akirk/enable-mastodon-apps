@@ -159,7 +159,7 @@ class ActivityPub_Test extends Mastodon_API_TestCase {
 		$this->assertNotEmpty( $outbox );
 		$json = json_decode( $outbox[0]->post_content );
 		$this->assertEquals( $json->object->url, home_url( '?c=' . $comment->comment_ID ) );
-		do_action( 'activitypub_process_outbox' );
+		do_action( 'activitypub_process_outbox', $outbox[0]->ID );
 
 		$this->assertEquals( 'federate', substr( get_comment_meta( $comment->comment_ID, 'activitypub_status', true ), 0, 8 ) );
 
