@@ -105,6 +105,7 @@ class ActivityPub_Test extends Mastodon_API_TestCase {
 				),
 			)
 		);
+		update_post_meta( $this->post, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
 		$reply_text = 'reply!';
 
 		$this->assertCount( 1, get_comments( array( 'post_id' => $this->post ) ) );
