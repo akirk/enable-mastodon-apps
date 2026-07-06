@@ -60,6 +60,78 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertEquals( 200, $response->get_status() );
 	}
 
+	public function test_favourite_returns_requested_reblog_status() {
+		$this->app->set_favourite_reaction( '1f44d' );
+		$reblog_id = Mastodon_API::remap_reblog_id( $this->friend_post );
+		$reacted   = array();
+
+		$react = function ( $post_id, $reaction ) use ( &$reacted ) {
+			$reacted[] = compact( 'post_id', 'reaction' );
+		};
+		add_action( 'mastodon_api_react', $react, 10, 2 );
+
+		$add_reblog = function ( $status, $post_id ) use ( $reblog_id ) {
+			if ( intval( $post_id ) !== intval( $reblog_id ) ) {
+				return $status;
+			}
+
+			$original = apply_filters( 'mastodon_api_status', null, $this->friend_post, array() );
+			$status   = clone $original;
+
+			$status->id         = strval( $reblog_id );
+			$status->reblog     = clone $original;
+			$status->reblog->id = strval( $this->friend_post );
+			return $status;
+		};
+		add_filter( 'mastodon_api_status', $add_reblog, 20, 2 );
+
+		$request  = $this->api_request( 'POST', '/api/v1/statuses/' . $this->friend_post . '/favourite' );
+		$response = $this->dispatch_authenticated( $request );
+
+		remove_action( 'mastodon_api_react', $react, 10 );
+		remove_filter( 'mastodon_api_status', $add_reblog, 20 );
+
+		$this->assertEquals( 200, $response->get_status() );
+		$status = $response->get_data();
+		$this->assertEquals( strval( $this->friend_post ), $status->id );
+		$this->assertNull( $status->reblog );
+		$this->assertSame(
+			array(
+				array(
+					'post_id'  => strval( $reblog_id ),
+					'reaction' => '1f44d',
+				),
+			),
+			$reacted
+		);
+	}
+
+	public function test_bookmark_route_uses_mapped_reaction() {
+		$this->app->set_bookmark_reaction( '2b50' );
+		$reacted = array();
+
+		$react = function ( $post_id, $reaction ) use ( &$reacted ) {
+			$reacted[] = compact( 'post_id', 'reaction' );
+		};
+		add_action( 'mastodon_api_react', $react, 10, 2 );
+
+		$request  = $this->api_request( 'POST', '/api/v1/statuses/' . $this->friend_post . '/bookmark' );
+		$response = $this->dispatch_authenticated( $request );
+
+		remove_action( 'mastodon_api_react', $react, 10 );
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertSame(
+			array(
+				array(
+					'post_id'  => strval( $this->friend_post ),
+					'reaction' => '2b50',
+				),
+			),
+			$reacted
+		);
+	}
+
 	public function test_statuses_delete() {
 		$request = $this->api_request( 'DELETE', '/api/v1/statuses/' . $this->post );
 		$response = $this->dispatch_authenticated( $request );
