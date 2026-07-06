@@ -153,6 +153,24 @@ class Mastodon_App {
 		return boolval( $options['first_line_as_excerpt'] ?? false );
 	}
 
+	public function get_favourite_reaction() {
+		$options = get_term_meta( $this->term->term_id, 'options', true );
+		if ( ! is_array( $options ) || empty( $options['favourite_reaction'] ) ) {
+			return apply_filters( 'mastodon_api_default_favourite_reaction', apply_filters( 'friends_favourites_emoji', '2764' ), $this );
+		}
+
+		return $options['favourite_reaction'];
+	}
+
+	public function get_bookmark_reaction() {
+		$options = get_term_meta( $this->term->term_id, 'options', true );
+		if ( ! is_array( $options ) || empty( $options['bookmark_reaction'] ) ) {
+			return apply_filters( 'mastodon_api_default_bookmark_reaction', apply_filters( 'friends_bookmarks_emoji', '2b50' ), $this );
+		}
+
+		return $options['bookmark_reaction'];
+	}
+
 	public function set_client_secret( $client_secret ) {
 		return update_term_meta( $this->term->term_id, 'client_secret', $client_secret );
 	}
@@ -194,6 +212,24 @@ class Mastodon_App {
 			$options = array();
 		}
 		$options['first_line_as_excerpt'] = $first_line_as_excerpt;
+		return update_term_meta( $this->term->term_id, 'options', $options );
+	}
+
+	public function set_favourite_reaction( $reaction ) {
+		$options = get_term_meta( $this->term->term_id, 'options', true );
+		if ( ! is_array( $options ) ) {
+			$options = array();
+		}
+		$options['favourite_reaction'] = $reaction;
+		return update_term_meta( $this->term->term_id, 'options', $options );
+	}
+
+	public function set_bookmark_reaction( $reaction ) {
+		$options = get_term_meta( $this->term->term_id, 'options', true );
+		if ( ! is_array( $options ) ) {
+			$options = array();
+		}
+		$options['bookmark_reaction'] = $reaction;
 		return update_term_meta( $this->term->term_id, 'options', $options );
 	}
 
@@ -371,6 +407,9 @@ class Mastodon_App {
 		if ( $this->get_media_only() ) {
 			$content .= PHP_EOL . __( 'Only show posts with media attachments', 'enable-mastodon-apps' );
 		}
+
+		$content .= PHP_EOL . __( 'Favourite reaction', 'enable-mastodon-apps' ) . ': ' . $this->get_favourite_reaction();
+		$content .= PHP_EOL . __( 'Bookmark reaction', 'enable-mastodon-apps' ) . ': ' . $this->get_bookmark_reaction();
 
 		return trim( $content );
 	}
@@ -705,6 +744,10 @@ class Mastodon_App {
 					foreach ( array_keys( $value ) as $key ) {
 						if ( 'blocks' === $key || 'media_only' === $key || 'first_line_as_excerpt' === $key ) {
 							$value[ $key ] = boolval( $value[ $key ] );
+							continue;
+						}
+						if ( 'favourite_reaction' === $key || 'bookmark_reaction' === $key ) {
+							$value[ $key ] = strtolower( sanitize_key( $value[ $key ] ) );
 							continue;
 						}
 						unset( $value[ $key ] );

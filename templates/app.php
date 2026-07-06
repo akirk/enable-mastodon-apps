@@ -39,6 +39,10 @@ $selected_post_format = $app->get_create_post_format();
 if ( ! $selected_post_format ) {
 	$selected_post_format = 'standard';
 }
+$available_reactions = array();
+if ( class_exists( 'Friends\Reactions' ) ) {
+	$available_reactions = Friends\Reactions::get_available_emojis();
+}
 ?>
 <div class="enable-mastodon-apps-settings enable-mastodon-apps-registered-apps-page <?php echo $args['enable_debug'] ? 'enable-debug' : 'disable-debug'; ?>">
 	<form method="post">
@@ -217,22 +221,65 @@ if ( ! $selected_post_format ) {
 					</td>
 				</tr>
 				<tr>
-					<th scope="row"><?php esc_html_e( 'Options', 'enable-mastodon-apps' ); ?></th>
+					<th scope="row"><?php esc_html_e( 'Content formatting', 'enable-mastodon-apps' ); ?></th>
 					<td>
 						<label><input type="checkbox" name="disable_blocks" value="1" <?php checked( $app->get_disable_blocks() ); ?> /> <?php esc_html_e( 'Disable automatic conversion to blocks', 'enable-mastodon-apps' ); ?></label>
 						<p class="description">
 							<span><?php esc_html_e( 'If checked, post content will not be converted to blocks.', 'enable-mastodon-apps' ); ?></span>
 						</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'Excerpt', 'enable-mastodon-apps' ); ?></th>
+					<td>
 						<label><input type="checkbox" name="first_line_as_excerpt" value="1" <?php checked( $app->get_first_line_as_excerpt() ); ?> /> <?php esc_html_e( 'Use first content line as excerpt', 'enable-mastodon-apps' ); ?></label>
 						<p class="description">
 							<span><?php esc_html_e( 'If checked, the first line after the title will be used as the WordPress excerpt for standard posts.', 'enable-mastodon-apps' ); ?></span>
 						</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'Timeline filtering', 'enable-mastodon-apps' ); ?></th>
+					<td>
 						<label><input type="checkbox" name="media_only" value="1" <?php checked( $app->get_media_only() ); ?> /> <?php esc_html_e( 'Only show posts with media attachments', 'enable-mastodon-apps' ); ?></label>
 						<p class="description">
 							<span><?php esc_html_e( 'If checked, posts without images or videos will be hidden from timelines.', 'enable-mastodon-apps' ); ?></span>
 						</p>
 					</td>
 				</tr>
+				<?php if ( ! empty( $available_reactions ) ) : ?>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'Reactions', 'enable-mastodon-apps' ); ?></th>
+					<td>
+						<fieldset>
+							<label for="favourite_reaction"><?php esc_html_e( 'Favourite reaction', 'enable-mastodon-apps' ); ?></label>
+							<select id="favourite_reaction" name="favourite_reaction">
+								<?php foreach ( $available_reactions as $reaction_id => $reaction ) : ?>
+									<option value="<?php echo esc_attr( $reaction_id ); ?>" title="<?php echo esc_attr( $reaction->name ); ?>" <?php selected( $reaction_id, $app->get_favourite_reaction() ); ?>><?php echo esc_html( $reaction->char ); ?></option>
+								<?php endforeach; ?>
+								<?php if ( ! isset( $available_reactions[ $app->get_favourite_reaction() ] ) ) : ?>
+									<option value="<?php echo esc_attr( $app->get_favourite_reaction() ); ?>" selected><?php echo esc_html( $app->get_favourite_reaction() ); ?></option>
+								<?php endif; ?>
+							</select>
+							<p class="description">
+								<span><?php esc_html_e( 'Reaction to use when a Mastodon app favourites a status.', 'enable-mastodon-apps' ); ?></span>
+							</p>
+							<label for="bookmark_reaction"><?php esc_html_e( 'Bookmark reaction', 'enable-mastodon-apps' ); ?></label>
+							<select id="bookmark_reaction" name="bookmark_reaction">
+								<?php foreach ( $available_reactions as $reaction_id => $reaction ) : ?>
+									<option value="<?php echo esc_attr( $reaction_id ); ?>" title="<?php echo esc_attr( $reaction->name ); ?>" <?php selected( $reaction_id, $app->get_bookmark_reaction() ); ?>><?php echo esc_html( $reaction->char ); ?></option>
+								<?php endforeach; ?>
+								<?php if ( ! isset( $available_reactions[ $app->get_bookmark_reaction() ] ) ) : ?>
+									<option value="<?php echo esc_attr( $app->get_bookmark_reaction() ); ?>" selected><?php echo esc_html( $app->get_bookmark_reaction() ); ?></option>
+								<?php endif; ?>
+							</select>
+							<p class="description">
+								<span><?php esc_html_e( 'Reaction to use when a Mastodon app bookmarks a status.', 'enable-mastodon-apps' ); ?></span>
+							</p>
+						</fieldset>
+					</td>
+				</tr>
+				<?php endif; ?>
 			</tbody>
 		</table>
 

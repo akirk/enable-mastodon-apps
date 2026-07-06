@@ -79,6 +79,8 @@ class Mastodon_API {
 		add_filter( 'rest_request_before_callbacks', array( $this, 'rest_request_before_callbacks' ), 10, 3 );
 		add_filter( 'rest_authentication_errors', array( $this, 'rest_authentication_errors' ), 20 );
 		add_filter( 'mastodon_api_mapback_user_id', array( $this, 'mapback_user_id' ) );
+		add_filter( 'mastodon_api_favourite_reaction', array( $this, 'mastodon_api_favourite_reaction' ), 10, 2 );
+		add_filter( 'mastodon_api_bookmark_reaction', array( $this, 'mastodon_api_bookmark_reaction' ), 10, 2 );
 		add_filter( 'mastodon_api_in_reply_to_id', array( self::class, 'maybe_get_remapped_reblog_id' ), 15 );
 		add_filter( 'mastodon_api_in_reply_to_id', array( self::class, 'maybe_get_remapped_url' ), 20 );
 		add_filter( 'activitypub_support_post_types', array( $this, 'activitypub_support_post_types' ) );
@@ -448,6 +450,8 @@ class Mastodon_API {
 				'api/v1/statuses/([0-9]+)/favourited_by' => 'api/v1/statuses/$matches[1]/favourited_by',
 				'api/v1/statuses/([0-9]+)/favourite'     => 'api/v1/statuses/$matches[1]/favourite',
 				'api/v1/statuses/([0-9]+)/unfavourite'   => 'api/v1/statuses/$matches[1]/unfavourite',
+				'api/v1/statuses/([0-9]+)/bookmark'      => 'api/v1/statuses/$matches[1]/bookmark',
+				'api/v1/statuses/([0-9]+)/unbookmark'    => 'api/v1/statuses/$matches[1]/unbookmark',
 				'api/v1/statuses/([0-9]+)/reblog'        => 'api/v1/statuses/$matches[1]/reblog',
 				'api/v1/statuses/([0-9]+)/unreblog'      => 'api/v1/statuses/$matches[1]/unreblog',
 				'api/v1/conversations/([0-9]+)/read'     => 'api/v1/conversations/$matches[1]/read',
@@ -1239,6 +1243,26 @@ class Mastodon_API {
 				'methods'             => array( 'POST', 'OPTIONS' ),
 				'callback'            => array( $this, 'api_unfavourite_post' ),
 				'permission_callback' => $this->required_scope( 'write:favourites' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/statuses/(?P<post_id>[0-9]+)/bookmark',
+			array(
+				'methods'             => array( 'POST', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_bookmark_post' ),
+				'permission_callback' => $this->required_scope( 'write:bookmarks' ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/statuses/(?P<post_id>[0-9]+)/unbookmark',
+			array(
+				'methods'             => array( 'POST', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_unbookmark_post' ),
+				'permission_callback' => $this->required_scope( 'write:bookmarks' ),
 			)
 		);
 
@@ -2634,42 +2658,58 @@ class Mastodon_API {
 		return apply_filters( 'mastodon_api_status_context', $context, $context_post_id, $url );
 	}
 
-	public function api_favourite_post( $request ) {
-		$post_id = $request->get_param( 'post_id' );
-		if ( ! $post_id ) {
-			return false;
+	protected function get_reaction_for_status_action( string $action ) {
+		if ( 'bookmark' === $action ) {
+			$reaction = apply_filters( 'mastodon_api_default_bookmark_reaction', apply_filters( 'friends_bookmarks_emoji', '2b50' ), null );
+			return apply_filters( 'mastodon_api_bookmark_reaction', $reaction, Mastodon_App::get_current_app() );
 		}
 
-		$post_id = self::maybe_get_remapped_reblog_id( $post_id );
+		$reaction = apply_filters( 'mastodon_api_default_favourite_reaction', apply_filters( 'friends_favourites_emoji', '2764' ), null );
+		return apply_filters( 'mastodon_api_favourite_reaction', $reaction, Mastodon_App::get_current_app() );
+	}
 
-		// 2b50 = star
-		// 2764 = heart
-		do_action( 'mastodon_api_react', $post_id, '2b50' );
+	public function mastodon_api_favourite_reaction( $reaction, $app = null ) {
+		if ( ! $app ) {
+			$app = Mastodon_App::get_current_app();
+		}
 
-		/**
-		 * Modify the status data.
-		 *
-		 * @param Entity\Status|null $status  The status data.
-		 * @param int                $post_id The object ID to get the status from.
-		 * @param array              $data    Additional status data.
-		 * @return Entity\Status|null The modified status data.
-		 */
-		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
+		if ( $app ) {
+			return $app->get_favourite_reaction();
+		}
+
+		return $reaction;
+	}
+
+	public function mastodon_api_bookmark_reaction( $reaction, $app = null ) {
+		if ( ! $app ) {
+			$app = Mastodon_App::get_current_app();
+		}
+
+		if ( $app ) {
+			return $app->get_bookmark_reaction();
+		}
+
+		return $reaction;
+	}
+
+	protected function get_requested_reblog_status( $status, $requested_id ) {
+		if ( $status && isset( $status->reblog ) && strval( $status->reblog->id ) === strval( $requested_id ) ) {
+			return $status->reblog;
+		}
 
 		return $status;
 	}
 
-	public function api_unfavourite_post( $request ) {
-		$post_id = $request->get_param( 'post_id' );
+	public function api_favourite_post( $request ) {
+		$post_id       = $request->get_param( 'post_id' );
+		$requested_id  = $post_id;
 		if ( ! $post_id ) {
 			return false;
 		}
 
 		$post_id = self::maybe_get_remapped_reblog_id( $post_id );
 
-		// 2b50 = star
-		// 2764 = heart
-		do_action( 'mastodon_api_unreact', $post_id, '2b50' );
+		do_action( 'mastodon_api_react', $post_id, $this->get_reaction_for_status_action( 'favourite' ) );
 
 		/**
 		 * Modify the status data.
@@ -2681,7 +2721,79 @@ class Mastodon_API {
 		 */
 		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
 
-		return $status;
+		return $this->get_requested_reblog_status( $status, $requested_id );
+	}
+
+	public function api_unfavourite_post( $request ) {
+		$post_id      = $request->get_param( 'post_id' );
+		$requested_id = $post_id;
+		if ( ! $post_id ) {
+			return false;
+		}
+
+		$post_id = self::maybe_get_remapped_reblog_id( $post_id );
+
+		do_action( 'mastodon_api_unreact', $post_id, $this->get_reaction_for_status_action( 'favourite' ) );
+
+		/**
+		 * Modify the status data.
+		 *
+		 * @param Entity\Status|null $status  The status data.
+		 * @param int                $post_id The object ID to get the status from.
+		 * @param array              $data    Additional status data.
+		 * @return Entity\Status|null The modified status data.
+		 */
+		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
+
+		return $this->get_requested_reblog_status( $status, $requested_id );
+	}
+
+	public function api_bookmark_post( $request ) {
+		$post_id      = $request->get_param( 'post_id' );
+		$requested_id = $post_id;
+		if ( ! $post_id ) {
+			return false;
+		}
+
+		$post_id = self::maybe_get_remapped_reblog_id( $post_id );
+
+		do_action( 'mastodon_api_react', $post_id, $this->get_reaction_for_status_action( 'bookmark' ) );
+
+		/**
+		 * Modify the status data.
+		 *
+		 * @param Entity\Status|null $status  The status data.
+		 * @param int                $post_id The object ID to get the status from.
+		 * @param array              $data    Additional status data.
+		 * @return Entity\Status|null The modified status data.
+		 */
+		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
+
+		return $this->get_requested_reblog_status( $status, $requested_id );
+	}
+
+	public function api_unbookmark_post( $request ) {
+		$post_id      = $request->get_param( 'post_id' );
+		$requested_id = $post_id;
+		if ( ! $post_id ) {
+			return false;
+		}
+
+		$post_id = self::maybe_get_remapped_reblog_id( $post_id );
+
+		do_action( 'mastodon_api_unreact', $post_id, $this->get_reaction_for_status_action( 'bookmark' ) );
+
+		/**
+		 * Modify the status data.
+		 *
+		 * @param Entity\Status|null $status  The status data.
+		 * @param int                $post_id The object ID to get the status from.
+		 * @param array              $data    Additional status data.
+		 * @return Entity\Status|null The modified status data.
+		 */
+		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
+
+		return $this->get_requested_reblog_status( $status, $requested_id );
 	}
 
 	public function api_reblog_post( $request ) {
