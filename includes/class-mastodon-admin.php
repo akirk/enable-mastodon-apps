@@ -795,6 +795,14 @@ class Mastodon_Admin {
 			$app->set_media_only( false );
 		}
 
+		if ( class_exists( 'Friends\Reactions' ) && isset( $_POST['favourite_reaction'] ) ) {
+			$app->set_favourite_reaction( sanitize_key( wp_unslash( $_POST['favourite_reaction'] ) ) );
+		}
+
+		if ( class_exists( 'Friends\Reactions' ) && isset( $_POST['bookmark_reaction'] ) ) {
+			$app->set_bookmark_reaction( sanitize_key( wp_unslash( $_POST['bookmark_reaction'] ) ) );
+		}
+
 		$app->post_current_settings();
 	}
 
