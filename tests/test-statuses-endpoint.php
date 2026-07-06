@@ -66,7 +66,10 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$reacted   = array();
 
 		$react = function ( $post_id, $reaction ) use ( &$reacted ) {
-			$reacted[] = compact( 'post_id', 'reaction' );
+			$reacted[] = array(
+				'post_id'  => $post_id,
+				'reaction' => $reaction,
+			);
 		};
 		add_action( 'mastodon_api_react', $react, 10, 2 );
 
@@ -111,7 +114,10 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$reacted = array();
 
 		$react = function ( $post_id, $reaction ) use ( &$reacted ) {
-			$reacted[] = compact( 'post_id', 'reaction' );
+			$reacted[] = array(
+				'post_id'  => $post_id,
+				'reaction' => $reaction,
+			);
 		};
 		add_action( 'mastodon_api_react', $react, 10, 2 );
 
