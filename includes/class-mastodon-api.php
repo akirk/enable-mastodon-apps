@@ -366,7 +366,7 @@ class Mastodon_API {
 			'ema_unread',
 			array(
 				'label'                     => _x( 'Unread', 'message', 'enable-mastodon-apps' ),
-				'public'                    => ! false,
+				'public'                    => false,
 				'exclude_from_search'       => true,
 				'show_in_admin_all_list'    => false,
 				'show_in_admin_status_list' => is_admin() && isset( $_GET['post_type'] ) && $dm_cpt === $_GET['post_type'], // phpcs:ignore WordPress.Security.NonceVerification.Recommended
