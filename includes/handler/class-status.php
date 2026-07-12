@@ -264,7 +264,7 @@ class Status extends Handler {
 
 		$count = 0;
 		foreach ( $terms as $term ) {
-			if ( $action === get_term_meta( $term->term_id, 'action', true ) ) {
+			if ( get_term_meta( $term->term_id, 'action', true ) === $action ) {
 				++$count;
 			}
 		}

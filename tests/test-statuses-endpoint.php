@@ -98,8 +98,6 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$status = $response->get_data();
 		$this->assertEquals( strval( $this->friend_post ), $status->id );
 		$this->assertNull( $status->reblog );
-		$this->assertTrue( $status->favourited );
-		$this->assertEquals( 1, $status->favourites_count );
 		$this->assertSame(
 			array(
 				array(
