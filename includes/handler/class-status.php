@@ -43,6 +43,10 @@ class Status extends Handler {
 		add_filter( 'mastodon_api_edit_status', array( $this, 'api_edit_comment' ), 10, 8 );
 		add_filter( 'mastodon_api_edit_status', array( $this, 'api_edit_post' ), 15, 8 );
 		add_filter( 'mastodon_api_status_context', array( $this, 'api_status_context' ), 10, 2 );
+		add_action( 'mastodon_api_react', array( $this, 'store_reaction' ), 10, 3 );
+		add_action( 'mastodon_api_unreact', array( $this, 'remove_reaction' ), 10, 3 );
+		add_filter( 'mastodon_api_favourites_args', array( $this, 'favourites_args' ), 10, 2 );
+		add_filter( 'mastodon_api_bookmarks_args', array( $this, 'bookmarks_args' ), 10, 2 );
 	}
 
 	/**
@@ -128,6 +132,7 @@ class Status extends Handler {
 	 */
 	public function api_status( ?Status_Entity $status, int $object_id ): ?Status_Entity {
 		if ( $status instanceof Status_Entity ) {
+			$this->add_reaction_data( $status, $object_id );
 			return $status;
 		}
 
@@ -181,9 +186,125 @@ class Status extends Handler {
 				}
 			}
 			$status->content = trim( wp_kses_post( $status->content ) );
+			$this->add_reaction_data( $status, $post->ID );
 		}
 
 		return $status;
+	}
+
+	private static function is_reaction_action( $action ) {
+		return in_array( $action, array( 'favourite', 'bookmark' ), true );
+	}
+
+	private static function get_reaction_term_slug( $user_id, $action ) {
+		return sanitize_key( $action . '-user-' . intval( $user_id ) );
+	}
+
+	private static function get_reaction_term( $user_id, $action, $create = false, $reaction = '' ) {
+		if ( ! $user_id || ! self::is_reaction_action( $action ) ) {
+			return null;
+		}
+
+		$slug = self::get_reaction_term_slug( $user_id, $action );
+		$term = get_term_by( 'slug', $slug, Mastodon_API::REACTION_TAXONOMY );
+		if ( $term || ! $create ) {
+			return $term;
+		}
+
+		$inserted = wp_insert_term(
+			sprintf( '%s user %d', $action, $user_id ),
+			Mastodon_API::REACTION_TAXONOMY,
+			array(
+				'slug' => $slug,
+			)
+		);
+		if ( is_wp_error( $inserted ) || empty( $inserted['term_id'] ) ) {
+			return null;
+		}
+
+		update_term_meta( $inserted['term_id'], 'action', $action );
+		update_term_meta( $inserted['term_id'], 'reaction', $reaction );
+		update_term_meta( $inserted['term_id'], 'user_id', intval( $user_id ) );
+
+		return get_term( $inserted['term_id'], Mastodon_API::REACTION_TAXONOMY );
+	}
+
+	public function store_reaction( $post_id, $reaction, $action = 'favourite' ) {
+		$term = self::get_reaction_term( get_current_user_id(), $action, true, $reaction );
+		if ( ! $term ) {
+			return;
+		}
+
+		wp_set_object_terms( intval( $post_id ), array( intval( $term->term_id ) ), Mastodon_API::REACTION_TAXONOMY, true );
+	}
+
+	public function remove_reaction( $post_id, $reaction, $action = 'favourite' ) {
+		$term = self::get_reaction_term( get_current_user_id(), $action );
+		if ( ! $term ) {
+			return;
+		}
+
+		wp_remove_object_terms( intval( $post_id ), array( intval( $term->term_id ) ), Mastodon_API::REACTION_TAXONOMY );
+	}
+
+	private function has_reaction( $post_id, $user_id, $action ) {
+		$term = self::get_reaction_term( $user_id, $action );
+		if ( ! $term ) {
+			return false;
+		}
+
+		return has_term( intval( $term->term_id ), Mastodon_API::REACTION_TAXONOMY, $post_id );
+	}
+
+	private function count_reactions( $post_id, $action ) {
+		$terms = get_the_terms( $post_id, Mastodon_API::REACTION_TAXONOMY );
+		if ( ! is_array( $terms ) ) {
+			return 0;
+		}
+
+		$count = 0;
+		foreach ( $terms as $term ) {
+			if ( $action === get_term_meta( $term->term_id, 'action', true ) ) {
+				++$count;
+			}
+		}
+		return $count;
+	}
+
+	private function add_reaction_data( Status_Entity $status, $post_id ) {
+		$user_id = get_current_user_id();
+		if ( $user_id ) {
+			$status->favourited = $this->has_reaction( $post_id, $user_id, 'favourite' );
+			$status->bookmarked = $this->has_reaction( $post_id, $user_id, 'bookmark' );
+		}
+
+		$status->favourites_count = $this->count_reactions( $post_id, 'favourite' );
+	}
+
+	private function reaction_args( $args, $user_id, $action ) {
+		$term = self::get_reaction_term( $user_id, $action );
+		if ( ! $term ) {
+			return array();
+		}
+
+		if ( ! isset( $args['tax_query'] ) || ! is_array( $args['tax_query'] ) ) {
+			$args['tax_query'] = array(); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+		}
+		$args['tax_query'][] = array(
+			'taxonomy' => Mastodon_API::REACTION_TAXONOMY,
+			'field'    => 'term_id',
+			'terms'    => array( intval( $term->term_id ) ),
+		);
+
+		return $args;
+	}
+
+	public function favourites_args( $args, $user_id ) {
+		return $this->reaction_args( $args, $user_id, 'favourite' );
+	}
+
+	public function bookmarks_args( $args, $user_id ) {
+		return $this->reaction_args( $args, $user_id, 'bookmark' );
 	}
 
 	/**

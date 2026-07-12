@@ -10,6 +10,7 @@
 namespace Enable_Mastodon_Apps\OAuth2;
 
 use Enable_Mastodon_Apps\Mastodon_App;
+use Enable_Mastodon_Apps\Mastodon_OAuth;
 use OAuth2\Request;
 
 /**
@@ -58,7 +59,7 @@ class Authenticate_Handler {
 			'form_fields'     => $_GET, // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		);
 
-		$has_permission = current_user_can( 'edit_private_posts' );
+		$has_permission = Mastodon_OAuth::current_user_can_authorize();
 		if ( ! $has_permission ) {
 			login_header( 'Authorize Mastodon Client', null, new \WP_Error( 'no-permission', __( "You don't have permission to use Mastodon Apps.", 'enable-mastodon-apps' ) ) );
 			$this->render_no_permission_screen( $data );

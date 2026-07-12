@@ -38,6 +38,7 @@ class Mastodon_API {
 	const PREFIX         = 'enable-mastodon-apps';
 	const APP_TAXONOMY   = 'mastodon-app';
 	const REMAP_TAXONOMY = 'mastodon-api-remap';
+	const REACTION_TAXONOMY = 'mastodon-api-reaction';
 	const CPT            = 'enable-mastodon-apps';
 	const POST_CPT       = 'ema-post';
 	const ANNOUNCE_CPT   = 'ema-announce';
@@ -279,6 +280,26 @@ class Mastodon_API {
 		register_taxonomy( self::REMAP_TAXONOMY, null, $args );
 
 		register_term_meta( self::REMAP_TAXONOMY, 'meta', array( 'type' => 'string' ) );
+
+		register_taxonomy(
+			self::REACTION_TAXONOMY,
+			null,
+			array(
+				'labels'       => array(
+					'name'          => 'Mastodon API Reactions',
+					'singular_name' => 'Mastodon API Reaction',
+					'menu_name'     => 'Mastodon API Reactions',
+				),
+				'public'       => false,
+				'show_ui'      => false,
+				'show_in_menu' => false,
+				'show_in_rest' => false,
+				'rewrite'      => false,
+			)
+		);
+		register_term_meta( self::REACTION_TAXONOMY, 'action', array( 'type' => 'string' ) );
+		register_term_meta( self::REACTION_TAXONOMY, 'reaction', array( 'type' => 'string' ) );
+		register_term_meta( self::REACTION_TAXONOMY, 'user_id', array( 'type' => 'integer' ) );
 	}
 
 	public static function get_dm_cpt( $user_id = 0 ) {
@@ -2726,7 +2747,7 @@ class Mastodon_API {
 
 		$post_id = self::maybe_get_remapped_reblog_id( $post_id );
 
-		do_action( 'mastodon_api_react', $post_id, $this->get_reaction_for_status_action( 'favourite' ) );
+		do_action( 'mastodon_api_react', $post_id, $this->get_reaction_for_status_action( 'favourite' ), 'favourite' );
 
 		/**
 		 * Modify the status data.
@@ -2750,7 +2771,7 @@ class Mastodon_API {
 
 		$post_id = self::maybe_get_remapped_reblog_id( $post_id );
 
-		do_action( 'mastodon_api_unreact', $post_id, $this->get_reaction_for_status_action( 'favourite' ) );
+		do_action( 'mastodon_api_unreact', $post_id, $this->get_reaction_for_status_action( 'favourite' ), 'favourite' );
 
 		/**
 		 * Modify the status data.
@@ -2774,7 +2795,7 @@ class Mastodon_API {
 
 		$post_id = self::maybe_get_remapped_reblog_id( $post_id );
 
-		do_action( 'mastodon_api_react', $post_id, $this->get_reaction_for_status_action( 'bookmark' ) );
+		do_action( 'mastodon_api_react', $post_id, $this->get_reaction_for_status_action( 'bookmark' ), 'bookmark' );
 
 		/**
 		 * Modify the status data.
@@ -2798,7 +2819,7 @@ class Mastodon_API {
 
 		$post_id = self::maybe_get_remapped_reblog_id( $post_id );
 
-		do_action( 'mastodon_api_unreact', $post_id, $this->get_reaction_for_status_action( 'bookmark' ) );
+		do_action( 'mastodon_api_unreact', $post_id, $this->get_reaction_for_status_action( 'bookmark' ), 'bookmark' );
 
 		/**
 		 * Modify the status data.
@@ -2814,6 +2835,10 @@ class Mastodon_API {
 	}
 
 	public function api_reblog_post( $request ) {
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Insufficient permissions', array( 'status' => 401 ) );
+		}
+
 		$post_id = $request->get_param( 'post_id' );
 		if ( ! $post_id ) {
 			return false;
@@ -2841,6 +2866,10 @@ class Mastodon_API {
 	}
 
 	public function api_unreblog_post( $request ) {
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Insufficient permissions', array( 'status' => 401 ) );
+		}
+
 		$post_id = $request->get_param( 'post_id' );
 		if ( ! $post_id ) {
 			return false;

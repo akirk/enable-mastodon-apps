@@ -157,8 +157,12 @@ class Mastodon_API_TestCase extends \WP_UnitTestCase {
 	}
 
 	public function dispatch_authenticated( \WP_REST_Request $request ) {
+		return $this->dispatch_authenticated_with_token( $request, $this->token );
+	}
+
+	public function dispatch_authenticated_with_token( \WP_REST_Request $request, $token ) {
 		global $wp_rest_server;
-		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
+		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $token;
 		return $wp_rest_server->dispatch( $request );
 	}
 }

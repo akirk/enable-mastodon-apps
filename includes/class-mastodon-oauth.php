@@ -197,6 +197,21 @@ class Mastodon_OAuth {
 		exit;
 	}
 
+	public static function current_user_can_authorize() {
+		/**
+		 * Filter the WordPress capability required to authorize Mastodon apps.
+		 *
+		 * Defaults to `read` so lower-privileged logged-in users can authorize apps
+		 * for read and interaction endpoints. Posting is still guarded separately
+		 * by the status creation endpoint.
+		 *
+		 * @param string $capability The required WordPress capability.
+		 */
+		$capability = apply_filters( 'mastodon_api_authorize_capability', 'read' );
+
+		return current_user_can( $capability );
+	}
+
 	/**
 	 * Ensure login redirect plugins don't override our OAuth redirect.
 	 *
