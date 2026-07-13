@@ -100,6 +100,12 @@ class Account extends Handler {
 		if ( ! is_object( $user_data ) ) {
 			return $user_data;
 		}
+		if ( ! isset( $user_data->header ) ) {
+			$user_data->header = '';
+		}
+		if ( ! isset( $user_data->header_static ) ) {
+			$user_data->header_static = $user_data->header;
+		}
 		if ( ! is_numeric( $user_data->id ) ) {
 			$user_data->id = \Enable_Mastodon_Apps\Mastodon_API::remap_user_id( $user_data->id );
 		}
