@@ -59,6 +59,20 @@ class AccountsEndpoint_Test extends Mastodon_API_TestCase {
 
 		$this->assertIsString( $data['username'] );
 		$this->assertEquals( $data['username'], strval( $userdata->user_login ) );
+		$this->assertArrayHasKey( 'header', $data );
+		$this->assertIsString( $data['header'] );
+		$this->assertArrayHasKey( 'header_static', $data );
+		$this->assertIsString( $data['header_static'] );
+	}
+
+	public function test_account_filter_adds_missing_header_fields() {
+		$account = apply_filters( 'mastodon_api_account', null, $this->administrator, null, null );
+		unset( $account->header, $account->header_static );
+
+		$account = Handler\Account::api_account_ensure_numeric_id( $account, $this->administrator );
+
+		$this->assertSame( '', $account->header );
+		$this->assertSame( '', $account->header_static );
 	}
 
 	public function test_account_statuses_uses_route_user_id_over_query_user_id() {
