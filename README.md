@@ -6,7 +6,7 @@
 - Tested up to: 6.8
 - Requires PHP: 7.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 1.6.0
+- Stable tag: 1.6.1
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -102,6 +102,19 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 2. The Mastodon Apps settings page.
 
 ## Changelog
+
+### 1.6.1
+- Ensure account headers are always serialized ([#308])
+- Allow lower-privilege users to use Mastodon apps ([#307])
+- Keep EMA unread status out of public searches ([#306])
+- Add configurable reaction mapping ([#305])
+- Add Site Health diagnostics for Mastodon app setup ([#301])
+- Fix registered apps settings link ([#304])
+- Fix conversation participant handling ([#302])
+- Add first line excerpt option ([#300])
+- Use single-line status as post title when media is attached ([#299])
+- Add debug response logging, fix announcement ID type, add notification group_key ([#298])
+- Improve the CSS for the mobile view inside wp-admin ([#297])
 
 ### 1.6.0
 - Support fetching remote/federated posts via status endpoint ([#294])
@@ -347,3 +360,15 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 [#294]: https://github.com/akirk/enable-mastodon-apps/pull/294
 [#295]: https://github.com/akirk/enable-mastodon-apps/pull/295
 [#296]: https://github.com/akirk/enable-mastodon-apps/pull/296
+
+[#297]: https://github.com/akirk/enable-mastodon-apps/pull/297
+[#298]: https://github.com/akirk/enable-mastodon-apps/pull/298
+[#299]: https://github.com/akirk/enable-mastodon-apps/pull/299
+[#300]: https://github.com/akirk/enable-mastodon-apps/pull/300
+[#301]: https://github.com/akirk/enable-mastodon-apps/pull/301
+[#302]: https://github.com/akirk/enable-mastodon-apps/pull/302
+[#304]: https://github.com/akirk/enable-mastodon-apps/pull/304
+[#305]: https://github.com/akirk/enable-mastodon-apps/pull/305
+[#306]: https://github.com/akirk/enable-mastodon-apps/pull/306
+[#307]: https://github.com/akirk/enable-mastodon-apps/pull/307
+[#308]: https://github.com/akirk/enable-mastodon-apps/pull/308
