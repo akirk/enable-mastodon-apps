@@ -127,6 +127,7 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		remove_action( 'mastodon_api_react', $react, 10 );
 
 		$this->assertEquals( 200, $response->get_status() );
+		$this->assertTrue( $response->get_data()->bookmarked );
 		$this->assertSame(
 			array(
 				array(
@@ -136,6 +137,101 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 			),
 			$reacted
 		);
+	}
+
+	public function test_subscriber_can_favourite_but_cannot_post_status() {
+		$subscriber = $this->factory->user->create(
+			array(
+				'role' => 'subscriber',
+			)
+		);
+		$token = wp_generate_password( 128, false );
+		$oauth = new Mastodon_OAuth();
+		$oauth->get_token_storage()->setAccessToken(
+			$token,
+			$this->app->get_client_id(),
+			$subscriber,
+			time() + HOUR_IN_SECONDS,
+			'write:favourites write:statuses'
+		);
+
+		$reacted = array();
+		$react = function ( $post_id, $reaction ) use ( &$reacted ) {
+			$reacted[] = array(
+				'post_id'  => $post_id,
+				'reaction' => $reaction,
+			);
+		};
+		add_action( 'mastodon_api_react', $react, 10, 2 );
+
+		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $token;
+		$request = $this->api_request( 'POST', '/api/v1/statuses/' . $this->friend_post . '/favourite' );
+		$response = $this->dispatch_authenticated_with_token( $request, $token );
+
+		remove_action( 'mastodon_api_react', $react, 10 );
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertTrue( $response->get_data()->favourited );
+		$this->assertSame(
+			array(
+				array(
+					'post_id'  => strval( $this->friend_post ),
+					'reaction' => $this->app->get_favourite_reaction(),
+				),
+			),
+			$reacted
+		);
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'Subscriber should not be able to post.' );
+		$response = $this->dispatch_authenticated_with_token( $request, $token );
+
+		$this->assertEquals( 401, $response->get_status() );
+		$this->assertEquals( 'mastodon_api_submit_post', $response->get_data()['code'] );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses/' . $this->friend_post . '/reblog' );
+		$response = $this->dispatch_authenticated_with_token( $request, $token );
+
+		$this->assertEquals( 401, $response->get_status() );
+		$this->assertEquals( 'mastodon_api_reblog_post', $response->get_data()['code'] );
+	}
+
+	public function test_favourites_and_bookmarks_are_stored_locally() {
+		$request = $this->api_request( 'POST', '/api/v1/statuses/' . $this->friend_post . '/favourite' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses/' . $this->friend_post . '/bookmark' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$request = $this->api_request( 'GET', '/api/v1/statuses/' . $this->friend_post );
+		$response = $this->dispatch_authenticated( $request );
+		$status = $response->get_data();
+		$this->assertTrue( $status->favourited );
+		$this->assertTrue( $status->bookmarked );
+		$this->assertEquals( 1, $status->favourites_count );
+
+		$request = $this->api_request( 'GET', '/api/v1/favourites' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertCount( 1, $response->get_data() );
+		$this->assertEquals( strval( $this->friend_post ), $response->get_data()[0]->id );
+
+		$request = $this->api_request( 'GET', '/api/v1/bookmarks' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertCount( 1, $response->get_data() );
+		$this->assertEquals( strval( $this->friend_post ), $response->get_data()[0]->id );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses/' . $this->friend_post . '/unfavourite' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$request = $this->api_request( 'GET', '/api/v1/statuses/' . $this->friend_post );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertFalse( $response->get_data()->favourited );
+		$this->assertEquals( 0, $response->get_data()->favourites_count );
 	}
 
 	public function test_statuses_delete() {

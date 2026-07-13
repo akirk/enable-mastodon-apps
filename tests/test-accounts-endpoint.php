@@ -61,6 +61,46 @@ class AccountsEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertEquals( $data['username'], strval( $userdata->user_login ) );
 	}
 
+	public function test_account_statuses_uses_route_user_id_over_query_user_id() {
+		$request = $this->api_request( 'GET', '/api/v1/accounts/' . $this->friend . '/statuses' );
+		$request->set_query_params(
+			array(
+				'user_id' => $this->administrator,
+				'limit'   => 30,
+			)
+		);
+
+		$response = $this->dispatch_authenticated( $request );
+		$data     = $response->get_data();
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertCount( 1, $data );
+		$this->assertEquals( strval( $this->friend_post ), $data[0]->id );
+		$this->assertEquals( strval( $this->friend ), $data[0]->account->id );
+	}
+
+	public function test_account_statuses_filters_generated_statuses_by_account_id() {
+		$filter = function ( $status, $post_id ) {
+			if ( intval( $post_id ) === intval( $this->post ) ) {
+				$status->account->id = strval( $this->friend );
+			}
+			return $status;
+		};
+		add_filter( 'mastodon_api_status', $filter, 20, 2 );
+
+		$request  = $this->api_request( 'GET', '/api/v1/accounts/' . $this->administrator . '/statuses' );
+		$response = $this->dispatch_authenticated( $request );
+		$data     = $response->get_data();
+
+		remove_filter( 'mastodon_api_status', $filter, 20 );
+
+		$this->assertEquals( 200, $response->get_status() );
+		foreach ( $data as $status ) {
+			$this->assertEquals( strval( $this->administrator ), $status->account->id );
+			$this->assertNotEquals( strval( $this->post ), $status->id );
+		}
+	}
+
 	public function xtest_accounts_external() {
 		wp_cache_flush();
 		$request = $this->api_request( 'GET', '/api/v1/accounts/' . $this->external_account );

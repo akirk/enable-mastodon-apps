@@ -153,6 +153,53 @@ class AppsEndpoint_Test extends Mastodon_API_TestCase {
 		}
 	}
 
+	public function test_subscriber_can_authorize_app() {
+		$old_get = $_GET;
+		$old_post = $_POST;
+		$old_request = $_REQUEST;
+		$old_request_method = $_SERVER['REQUEST_METHOD'];
+		$old_request_uri = $_SERVER['REQUEST_URI'];
+		$old_user_id = get_current_user_id();
+
+		$subscriber = $this->factory->user->create(
+			array(
+				'role' => 'subscriber',
+			)
+		);
+		$app = Mastodon_App::save(
+			'Subscriber App',
+			array( 'https://test' ),
+			'read write',
+			'https://mastodon.local'
+		);
+
+		$_REQUEST = array(
+			'client_id'     => $app->get_client_id(),
+			'redirect_uri'  => 'https://test',
+			'response_type' => 'code',
+			'scope'         => 'read write:favourites write:statuses',
+			'authorize'     => __( 'Authorize', 'enable-mastodon-apps' ),
+		);
+		$_GET = $_REQUEST;
+		$_POST = $_REQUEST;
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_SERVER['REQUEST_URI'] = add_query_arg( $_REQUEST, '/oauth/authorize' );
+		wp_set_current_user( $subscriber );
+
+		$oauth = new Mastodon_OAuth();
+		$response = $oauth->handle_oauth( 'response' );
+
+		$this->assertEquals( 302, $response->getStatusCode() );
+		$this->assertStringContainsString( 'code=', $response->getHttpHeader( 'Location' ) );
+
+		wp_set_current_user( $old_user_id );
+		$_GET = $old_get;
+		$_POST = $old_post;
+		$_REQUEST = $old_request;
+		$_SERVER['REQUEST_METHOD'] = $old_request_method;
+		$_SERVER['REQUEST_URI'] = $old_request_uri;
+	}
+
 
 	public function test_apps_auto_reregister() {
 		global $wp_rest_server;

@@ -38,6 +38,7 @@ class Mastodon_API {
 	const PREFIX         = 'enable-mastodon-apps';
 	const APP_TAXONOMY   = 'mastodon-app';
 	const REMAP_TAXONOMY = 'mastodon-api-remap';
+	const REACTION_TAXONOMY = 'mastodon-api-reaction';
 	const CPT            = 'enable-mastodon-apps';
 	const POST_CPT       = 'ema-post';
 	const ANNOUNCE_CPT   = 'ema-announce';
@@ -83,6 +84,7 @@ class Mastodon_API {
 		add_filter( 'mastodon_api_bookmark_reaction', array( $this, 'mastodon_api_bookmark_reaction' ), 10, 2 );
 		add_filter( 'mastodon_api_in_reply_to_id', array( self::class, 'maybe_get_remapped_reblog_id' ), 15 );
 		add_filter( 'mastodon_api_in_reply_to_id', array( self::class, 'maybe_get_remapped_url' ), 20 );
+		add_filter( 'mastodon_api_account_statuses', array( $this, 'assign_account_status_reblog_ids' ), 100 );
 		add_filter( 'activitypub_support_post_types', array( $this, 'activitypub_support_post_types' ) );
 		add_filter( 'activitypub_activity_object_array', array( self::class, 'activitypub_in_reply_to_object_array' ), 10, 3 );
 		add_filter( 'mastodon_api_valid_user', array( $this, 'is_user_member_of_blog' ), 10, 2 );
@@ -278,6 +280,26 @@ class Mastodon_API {
 		register_taxonomy( self::REMAP_TAXONOMY, null, $args );
 
 		register_term_meta( self::REMAP_TAXONOMY, 'meta', array( 'type' => 'string' ) );
+
+		register_taxonomy(
+			self::REACTION_TAXONOMY,
+			null,
+			array(
+				'labels'       => array(
+					'name'          => 'Mastodon API Reactions',
+					'singular_name' => 'Mastodon API Reaction',
+					'menu_name'     => 'Mastodon API Reactions',
+				),
+				'public'       => false,
+				'show_ui'      => false,
+				'show_in_menu' => false,
+				'show_in_rest' => false,
+				'rewrite'      => false,
+			)
+		);
+		register_term_meta( self::REACTION_TAXONOMY, 'action', array( 'type' => 'string' ) );
+		register_term_meta( self::REACTION_TAXONOMY, 'reaction', array( 'type' => 'string' ) );
+		register_term_meta( self::REACTION_TAXONOMY, 'user_id', array( 'type' => 'integer' ) );
 	}
 
 	public static function get_dm_cpt( $user_id = 0 ) {
@@ -2259,13 +2281,29 @@ class Mastodon_API {
 	}
 
 	private function get_user_id_from_request( $request ) {
+		$url_params = $request->get_url_params();
+		$user_id    = isset( $url_params['user_id'] ) ? $url_params['user_id'] : $request->get_param( 'user_id' );
+
 		/**
 		 * Map back a public id to the previous user id.
 		 *
 		 * @param int $user_id The public user ID.
 		 * @return int The potentially modified user ID.
 		 */
-		return apply_filters( 'mastodon_api_mapback_user_id', $request->get_param( 'user_id' ) );
+		return apply_filters( 'mastodon_api_mapback_user_id', $user_id );
+	}
+
+	private function get_public_user_id_from_request( $request, $user_id ) {
+		$url_params = $request->get_url_params();
+		if ( isset( $url_params['user_id'] ) ) {
+			return strval( $url_params['user_id'] );
+		}
+
+		if ( is_numeric( $user_id ) ) {
+			return strval( $user_id );
+		}
+
+		return strval( self::remap_user_id( $user_id ) );
 	}
 
 	/**
@@ -2709,7 +2747,7 @@ class Mastodon_API {
 
 		$post_id = self::maybe_get_remapped_reblog_id( $post_id );
 
-		do_action( 'mastodon_api_react', $post_id, $this->get_reaction_for_status_action( 'favourite' ) );
+		do_action( 'mastodon_api_react', $post_id, $this->get_reaction_for_status_action( 'favourite' ), 'favourite' );
 
 		/**
 		 * Modify the status data.
@@ -2733,7 +2771,7 @@ class Mastodon_API {
 
 		$post_id = self::maybe_get_remapped_reblog_id( $post_id );
 
-		do_action( 'mastodon_api_unreact', $post_id, $this->get_reaction_for_status_action( 'favourite' ) );
+		do_action( 'mastodon_api_unreact', $post_id, $this->get_reaction_for_status_action( 'favourite' ), 'favourite' );
 
 		/**
 		 * Modify the status data.
@@ -2757,7 +2795,7 @@ class Mastodon_API {
 
 		$post_id = self::maybe_get_remapped_reblog_id( $post_id );
 
-		do_action( 'mastodon_api_react', $post_id, $this->get_reaction_for_status_action( 'bookmark' ) );
+		do_action( 'mastodon_api_react', $post_id, $this->get_reaction_for_status_action( 'bookmark' ), 'bookmark' );
 
 		/**
 		 * Modify the status data.
@@ -2781,7 +2819,7 @@ class Mastodon_API {
 
 		$post_id = self::maybe_get_remapped_reblog_id( $post_id );
 
-		do_action( 'mastodon_api_unreact', $post_id, $this->get_reaction_for_status_action( 'bookmark' ) );
+		do_action( 'mastodon_api_unreact', $post_id, $this->get_reaction_for_status_action( 'bookmark' ), 'bookmark' );
 
 		/**
 		 * Modify the status data.
@@ -2797,6 +2835,10 @@ class Mastodon_API {
 	}
 
 	public function api_reblog_post( $request ) {
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Insufficient permissions', array( 'status' => 401 ) );
+		}
+
 		$post_id = $request->get_param( 'post_id' );
 		if ( ! $post_id ) {
 			return false;
@@ -2824,6 +2866,10 @@ class Mastodon_API {
 	}
 
 	public function api_unreblog_post( $request ) {
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Insufficient permissions', array( 'status' => 401 ) );
+		}
+
 		$post_id = $request->get_param( 'post_id' );
 		if ( ! $post_id ) {
 			return false;
@@ -3380,6 +3426,7 @@ class Mastodon_API {
 			'exclude_replies' => $request->get_param( 'exclude_replies' ),
 		);
 		$args = apply_filters( 'mastodon_api_account_statuses_args', $args, $request );
+		$args = $this->exclude_account_statuses_feed_cache_post_types( $args, $request, $user_id );
 
 		/**
 		 * Filter the account statuses.
@@ -3391,8 +3438,107 @@ class Mastodon_API {
 		 * @return WP_REST_Response The statuses as a REST response.
 		 */
 		$statuses = apply_filters( 'mastodon_api_statuses', null, $args, $request->get_param( 'min_id' ), $request->get_param( 'max_id' ) );
+		$statuses = apply_filters( 'mastodon_api_account_statuses', $statuses, $request, $user_id );
+		$statuses = $this->filter_account_statuses_by_account( $statuses, $request, $user_id );
 
 		return $this->filter_non_entities( $statuses, Entity\Status::class );
+	}
+
+	public function assign_account_status_reblog_ids( $statuses ) {
+		if ( is_wp_error( $statuses ) ) {
+			return $statuses;
+		}
+
+		$response = null;
+		if ( $statuses instanceof \WP_REST_Response ) {
+			$response = $statuses;
+			$statuses = $response->get_data();
+		}
+
+		if ( ! is_array( $statuses ) ) {
+			return $response ? $response : $statuses;
+		}
+
+		foreach ( $statuses as $status ) {
+			if ( ! is_object( $status ) || empty( $status->reblog ) || empty( $status->id ) ) {
+				continue;
+			}
+
+			$status->id = strval( self::remap_reblog_id( $status->id ) );
+			if ( empty( $status->uri ) || $status->uri === $status->reblog->uri ) {
+				$status->uri = home_url( '?p=' . $status->id );
+			}
+		}
+
+		if ( $response ) {
+			$response->set_data( $statuses );
+			return $response;
+		}
+
+		return $statuses;
+	}
+
+	private function exclude_account_statuses_feed_cache_post_types( $args, $request, $user_id ) {
+		$excluded_post_types = array();
+
+		/**
+		 * Filter post types that should not be treated as account-owned statuses.
+		 *
+		 * @param array           $excluded_post_types The post types to exclude.
+		 * @param WP_REST_Request $request             The current request.
+		 * @param int|string      $user_id             The requested user ID.
+		 */
+		$excluded_post_types = apply_filters( 'mastodon_api_account_statuses_excluded_post_types', $excluded_post_types, $request, $user_id );
+		if ( empty( $excluded_post_types ) || empty( $args['post_type'] ) ) {
+			return $args;
+		}
+
+		if ( is_array( $args['post_type'] ) ) {
+			$args['post_type'] = array_values( array_diff( $args['post_type'], $excluded_post_types ) );
+			if ( empty( $args['post_type'] ) ) {
+				$args = array();
+			}
+			return $args;
+		}
+
+		if ( in_array( $args['post_type'], $excluded_post_types, true ) ) {
+			return array();
+		}
+
+		return $args;
+	}
+
+	private function filter_account_statuses_by_account( $statuses, $request, $user_id ) {
+		if ( is_wp_error( $statuses ) ) {
+			return $statuses;
+		}
+
+		$response = null;
+		if ( $statuses instanceof \WP_REST_Response ) {
+			$response = $statuses;
+			$statuses = $response->get_data();
+		}
+
+		if ( ! is_array( $statuses ) ) {
+			return $response ? $response : $statuses;
+		}
+
+		$requested_user_id = $this->get_public_user_id_from_request( $request, $user_id );
+		$statuses = array_values(
+			array_filter(
+				$statuses,
+				function ( $status ) use ( $requested_user_id ) {
+					return isset( $status->account->id ) && strval( $status->account->id ) === $requested_user_id;
+				}
+			)
+		);
+
+		if ( $response ) {
+			$response->set_data( $statuses );
+			return $response;
+		}
+
+		return $statuses;
 	}
 
 	public function api_account( $request ) {

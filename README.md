@@ -18,6 +18,8 @@ When you use a Mastodon app, you'll enter your own blog URL to connect and log i
 
 You'll then see just the posts on your blog which can already be useful in a multi-author environment (e.g. private blogs). You can also use that Mastodon app to create simple posts with a message + attachment(s) which can be better suited for your usecase than using the Gutenberg-capable WordPress mobile app.
 
+Even without the ActivityPub or Friends plugins, Mastodon apps can be used as a local client for your WordPress posts. Favourites (likes) and bookmarks are stored locally so they can be shown again in the app and in the favourites and bookmarks views.
+
 When used in combination with the [ActivityPub](https://wordpress.org/plugins/activitypub/) (for being followed via Mastodon) and [Friends](https://wordpress.org/plugins/friends/) (for following people on Mastodon or via RSS) plugins, the Enable Mastodon Apps plugin will show you your feed of people you follow and you can follow and unfollow people from within the app.
 
 Be aware that an app will have a post format associated (see the settings page). The plugin will check for the existance of the Friends plugin to find a resonable default (status with Friends plugin, standard otherwise). When you create a post with your Mastodon app, the post format that you selected for the app will be used.
@@ -92,7 +94,7 @@ Here is a list of endpoints and their implementation status:
 
 Unmentioned endpoints are not implemented. Contributions welcome!
 
-Endpoints around interacting with non-local users require the [ActivityPub plugin](https://wordpress.org/plugins/activitypub). Following users requires the [Friends plugin](https://wordpress.org/plugins/friends). Lists-related endpoints require the [Friends Roles plugin](https://github.com/akirk/friends-roles).
+Endpoints around interacting with non-local users require the [ActivityPub plugin](https://wordpress.org/plugins/activitypub). Following users requires the [Friends plugin](https://wordpress.org/plugins/friends). Local favourites (likes) and bookmarks work without either plugin. Lists-related endpoints require the [Friends Roles plugin](https://github.com/akirk/friends-roles).
 
 ## Screenshots
 
