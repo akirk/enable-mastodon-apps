@@ -834,6 +834,8 @@ class Mastodon_Admin {
 			update_option( 'ema_plugin_version', ENABLE_MASTODON_APPS_VERSION );
 		}
 
+		flush_rewrite_rules( false );
+
 		if ( ! get_option( 'mastodon_api_disable_ema_announcements' ) ) {
 			$post_id = false;
 			if ( ! $old_version ) {
