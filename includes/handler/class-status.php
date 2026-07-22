@@ -92,7 +92,7 @@ class Status extends Handler {
 				case 'core/audio':
 				case 'core/video':
 				case 'videopress/video':
-					if ( ! empty( $block['attrs']['id'] ) ) {
+					if ( ! empty( $block['attrs']['id'] ) && self::block_references_attachment( (int) $block['attrs']['id'], $block['innerHTML'] ?? '' ) ) {
 						$media_ids[ $block['attrs']['id'] ] = $block['innerHTML'];
 					}
 					break;
@@ -100,15 +100,23 @@ class Status extends Handler {
 				case 'jetpack/tiled-gallery':
 					if ( ! empty( $block['attrs']['ids'] ) ) {
 						foreach ( $block['attrs']['ids'] as $id ) {
-							$media_ids[ $id ] = $block['innerHTML'];
+							if ( self::block_references_attachment( (int) $id, $block['innerHTML'] ?? '' ) ) {
+								$media_ids[ $id ] = $block['innerHTML'];
+							}
 						}
 					}
 					break;
 				case 'jetpack/image-compare':
-					if ( ! empty( $block['attrs']['beforeImageId'] ) ) {
+					if (
+						! empty( $block['attrs']['beforeImageId'] ) &&
+						self::block_references_attachment( (int) $block['attrs']['beforeImageId'], $block['innerHTML'] ?? '' )
+					) {
 						$media_ids[ $block['attrs']['beforeImageId'] ] = $block['innerHTML'];
 					}
-					if ( ! empty( $block['attrs']['afterImageId'] ) ) {
+					if (
+						! empty( $block['attrs']['afterImageId'] ) &&
+						self::block_references_attachment( (int) $block['attrs']['afterImageId'], $block['innerHTML'] ?? '' )
+					) {
 						$media_ids[ $block['attrs']['afterImageId'] ] = $block['innerHTML'];
 					}
 					break;
@@ -121,6 +129,95 @@ class Status extends Handler {
 
 		// Still need to slice it because one gallery could knock us over the limit.
 		return array_slice( $media_ids, 0, $max_media, true );
+	}
+
+	/**
+	 * Check whether a block's rendered media source belongs to an attachment ID.
+	 *
+	 * @param int    $attachment_id The media attachment ID.
+	 * @param string $html The block HTML.
+	 * @return bool Whether the block references the attachment.
+	 */
+	private static function block_references_attachment( int $attachment_id, string $html ): bool {
+		if ( ! $attachment_id || ! get_post( $attachment_id ) ) {
+			return false;
+		}
+
+		$sources = self::get_media_sources_from_html( $html );
+		if ( empty( $sources ) ) {
+			return true;
+		}
+
+		$filenames = self::get_attachment_filenames( $attachment_id );
+		if ( empty( $filenames ) ) {
+			return false;
+		}
+
+		foreach ( $sources as $source ) {
+			$parts = wp_parse_url( html_entity_decode( $source, ENT_QUOTES ) );
+			if ( empty( $parts['path'] ) ) {
+				continue;
+			}
+
+			if ( in_array( rawurldecode( wp_basename( $parts['path'] ) ), $filenames, true ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Extract media sources from a block's rendered HTML.
+	 *
+	 * @param string $html The block HTML.
+	 * @return array The media source URLs.
+	 */
+	private static function get_media_sources_from_html( string $html ): array {
+		$sources = array();
+
+		if ( preg_match_all( '/\s(?:src|href|poster)=([\'"])(?P<src>.*?)\1/i', $html, $matches ) ) {
+			$sources = array_merge( $sources, $matches['src'] );
+		}
+
+		if ( preg_match_all( '/url\(([\'"]?)(?P<src>[^)\'"]+)\1\)/i', $html, $matches ) ) {
+			$sources = array_merge( $sources, $matches['src'] );
+		}
+
+		return array_values( array_unique( array_filter( $sources ) ) );
+	}
+
+	/**
+	 * Get the known filenames for an attachment and its generated sizes.
+	 *
+	 * @param int $attachment_id The media attachment ID.
+	 * @return array The attachment filenames.
+	 */
+	private static function get_attachment_filenames( int $attachment_id ): array {
+		$filenames = array();
+		$url       = wp_get_attachment_url( $attachment_id );
+		$meta      = wp_get_attachment_metadata( $attachment_id );
+
+		if ( $url ) {
+			$parts = wp_parse_url( $url );
+			if ( ! empty( $parts['path'] ) ) {
+				$filenames[] = rawurldecode( wp_basename( $parts['path'] ) );
+			}
+		}
+
+		if ( ! empty( $meta['file'] ) ) {
+			$filenames[] = wp_basename( $meta['file'] );
+		}
+
+		if ( ! empty( $meta['sizes'] ) && is_array( $meta['sizes'] ) ) {
+			foreach ( $meta['sizes'] as $size ) {
+				if ( ! empty( $size['file'] ) ) {
+					$filenames[] = $size['file'];
+				}
+			}
+		}
+
+		return array_values( array_unique( $filenames ) );
 	}
 
 	/**

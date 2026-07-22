@@ -50,6 +50,32 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertIsInt( $data->favourites_count );
 	}
 
+	public function test_status_does_not_use_attachment_id_when_block_src_does_not_match() {
+		$post_content = sprintf(
+			'<!-- wp:image {"id":%1$d} -->
+<figure class="wp-block-image"><img src="///data/user/0/org.wordpress.android/cache/img_20260718_193843348353428213156283.jpg" alt="" class="wp-image-%1$d" /></figure>
+<!-- /wp:image -->',
+			$this->friend_attachment_id
+		);
+		$post_id      = wp_insert_post(
+			array(
+				'post_author'  => $this->friend,
+				'post_content' => $post_content,
+				'post_title'   => 'Image with stale attachment ID',
+				'post_status'  => 'publish',
+				'post_type'    => 'post',
+			)
+		);
+		set_post_format( $post_id, 'status' );
+
+		$request  = $this->api_request( 'GET', '/api/v1/statuses/' . $post_id );
+		$response = $this->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertEmpty( $data->media_attachments );
+	}
+
 	public function test_statuses_private_id() {
 		$request = $this->api_request( 'GET', '/api/v1/statuses/' . $this->private_post );
 		$response = $this->dispatch( $request );

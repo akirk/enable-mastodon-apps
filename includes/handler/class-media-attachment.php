@@ -168,6 +168,10 @@ class Media_Attachment extends Handler {
 			if ( ! isset( $block['src'] ) ) {
 				continue;
 			}
+			$parts = wp_parse_url( html_entity_decode( $block['src'], ENT_QUOTES ) );
+			if ( empty( $parts['scheme'] ) || ! in_array( $parts['scheme'], array( 'http', 'https' ), true ) ) {
+				continue;
+			}
 
 			$attachment              = new \Enable_Mastodon_Apps\Entity\Media_Attachment();
 			$attachment->id          = strval( 2e10 + crc32( $block['src'] ) );
