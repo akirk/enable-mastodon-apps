@@ -75,6 +75,94 @@ class AccountsEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertSame( '', $account->header_static );
 	}
 
+	public function test_account_uses_saved_mastodon_header_image() {
+		update_user_meta( $this->administrator, 'mastodon_api_header_id', $this->friend_attachment_id );
+
+		$account = apply_filters( 'mastodon_api_account', null, $this->administrator, null, null );
+		$url     = wp_get_attachment_url( $this->friend_attachment_id );
+
+		$this->assertSame( $url, $account->header );
+		$this->assertSame( $url, $account->header_static );
+	}
+
+	public function test_update_credentials_updates_simple_local_avatar() {
+		global $simple_local_avatars;
+
+		$previous_simple_local_avatars = $simple_local_avatars;
+		$simple_local_avatars          = new class() {
+			public function assign_new_user_avatar( $attachment_id, $user_id ) {
+				update_user_meta(
+					$user_id,
+					'simple_local_avatar',
+					array(
+						'media_id' => $attachment_id,
+						'full'     => wp_get_attachment_url( $attachment_id ),
+						'blog_id'  => get_current_blog_id(),
+					)
+				);
+			}
+		};
+		$update_credentials = function ( $data ) {
+			$data['avatar'] = $this->friend_attachment_id;
+			return $data;
+		};
+		add_filter( 'mastodon_api_update_credentials', $update_credentials );
+
+		$request  = $this->api_request( 'PATCH', '/api/v1/accounts/update_credentials' );
+		$response = $this->dispatch_authenticated( $request );
+
+		remove_filter( 'mastodon_api_update_credentials', $update_credentials );
+		$simple_local_avatars = $previous_simple_local_avatars;
+
+		$this->assertEquals( 200, $response->get_status() );
+		$avatar = get_user_meta( $this->administrator, 'simple_local_avatar', true );
+		$this->assertSame( $this->friend_attachment_id, (int) $avatar['media_id'] );
+	}
+
+	public function test_update_credentials_uses_mastodon_avatar_fallback_without_avatar_provider() {
+		global $simple_local_avatars;
+
+		$previous_simple_local_avatars = $simple_local_avatars;
+		$simple_local_avatars          = null;
+		$update_credentials            = function ( $data ) {
+			$data['avatar'] = $this->friend_attachment_id;
+			return $data;
+		};
+		add_filter( 'mastodon_api_update_credentials', $update_credentials );
+
+		$request  = $this->api_request( 'PATCH', '/api/v1/accounts/update_credentials' );
+		$response = $this->dispatch_authenticated( $request );
+
+		remove_filter( 'mastodon_api_update_credentials', $update_credentials );
+		$simple_local_avatars = $previous_simple_local_avatars;
+
+		$this->assertEquals( 200, $response->get_status() );
+		$avatar = get_user_meta( $this->administrator, 'mastodon_api_avatar', true );
+		$this->assertSame( $this->friend_attachment_id, (int) $avatar['media_id'] );
+
+		$account = apply_filters( 'mastodon_api_account', null, $this->administrator, null, null );
+		$url     = wp_get_attachment_url( $this->friend_attachment_id );
+
+		$this->assertSame( $url, $account->avatar );
+		$this->assertSame( $url, $account->avatar_static );
+	}
+
+	public function test_update_credentials_persists_header_attachment_id() {
+		$update_credentials = function ( $data ) {
+			$data['header'] = $this->friend_attachment_id;
+			return $data;
+		};
+		add_filter( 'mastodon_api_update_credentials', $update_credentials );
+
+		$request  = $this->api_request( 'PATCH', '/api/v1/accounts/update_credentials' );
+		$response = $this->dispatch_authenticated( $request );
+
+		remove_filter( 'mastodon_api_update_credentials', $update_credentials );
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertSame( $this->friend_attachment_id, (int) get_user_meta( $this->administrator, 'mastodon_api_header_id', true ) );
+	}
+
 	public function test_account_statuses_uses_route_user_id_over_query_user_id() {
 		$request = $this->api_request( 'GET', '/api/v1/accounts/' . $this->friend . '/statuses' );
 		$request->set_query_params(

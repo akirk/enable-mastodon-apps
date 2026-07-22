@@ -1828,17 +1828,18 @@ class Mastodon_API {
 				return false;
 			}
 			$file_name = $matches[1];
+			$file_content = preg_replace( '/\r\n$/', '', $file_content );
 
 			// require the file needed fo wp_tempnam.
 			require_once ABSPATH . 'wp-admin/includes/file.php';
 			$tmp_name = wp_tempnam( 'patch_upload_' . $key );
-			// Use WP_Filesystem abstraction.
-			global $wp_filesystem;
-			if ( ! $wp_filesystem ) {
-				// init if not yet done.
-				WP_Filesystem();
+			if ( ! $tmp_name ) {
+				return false;
 			}
-			$wp_filesystem->put_contents( $tmp_name, $file_content );
+			$written = file_put_contents( $tmp_name, $file_content ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+			if ( false === $written ) {
+				return false;
+			}
 
 			return array(
 				'name'     => $file_name,
@@ -1964,7 +1965,13 @@ class Mastodon_API {
 		 */
 		$data = apply_filters( 'mastodon_api_update_credentials', $data, $user_id );
 
-		// Update the user with any available data for fields we support (just display_name and note currently).
+		// Update the user with any available data for fields we support.
+		if ( isset( $data['avatar'] ) ) {
+			$this->update_user_avatar( $user_id, $data['avatar'] );
+		}
+		if ( isset( $data['header'] ) ) {
+			update_user_meta( $user_id, 'mastodon_api_header_id', absint( $data['header'] ) );
+		}
 		if ( isset( $data['display_name'] ) ) {
 			wp_update_user(
 				array(
@@ -1982,6 +1989,38 @@ class Mastodon_API {
 
 		// Return the account.
 		return $this->api_account( $request );
+	}
+
+	/**
+	 * Update the user's WordPress avatar when a supported local avatar provider is active.
+	 *
+	 * @param int $user_id       The user ID.
+	 * @param int $attachment_id The attachment ID.
+	 * @return bool Whether an avatar provider handled the update.
+	 */
+	private function update_user_avatar( $user_id, $attachment_id ) {
+		$attachment_id = absint( $attachment_id );
+		if ( ! $attachment_id || ! wp_attachment_is_image( $attachment_id ) ) {
+			return false;
+		}
+
+		global $simple_local_avatars;
+		if ( is_object( $simple_local_avatars ) && method_exists( $simple_local_avatars, 'assign_new_user_avatar' ) ) {
+			$simple_local_avatars->assign_new_user_avatar( $attachment_id, $user_id );
+			return true;
+		}
+
+		update_user_meta(
+			$user_id,
+			'mastodon_api_avatar',
+			array(
+				'media_id' => $attachment_id,
+				'full'     => wp_get_attachment_url( $attachment_id ),
+				'blog_id'  => get_current_blog_id(),
+			)
+		);
+
+		return false;
 	}
 
 	public function query_vars( $query_vars ) {
