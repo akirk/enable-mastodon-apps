@@ -28,6 +28,7 @@ class Account extends Handler {
 		add_filter( 'mastodon_api_account', array( $this, 'api_account' ), 10, 2 );
 		add_filter( 'mastodon_api_account_id', array( $this, 'api_account_id' ), 10, 2 );
 		add_filter( 'mastodon_api_account', array( $this, 'api_account_ema' ), 10, 4 );
+		add_filter( 'mastodon_api_account', array( $this, 'api_account_media_overrides' ), 20, 2 );
 		add_filter( 'mastodon_api_account', array( get_called_class(), 'api_account_ensure_numeric_id' ), 100, 2 );
 	}
 
@@ -78,19 +79,6 @@ class Account extends Handler {
 		$account->display_name   = $user->display_name;
 		$account->avatar         = get_avatar_url( $user->ID );
 		$account->avatar_static  = get_avatar_url( $user->ID );
-		$avatar = get_user_meta( $user->ID, 'mastodon_api_avatar', true );
-		if ( is_array( $avatar ) && ! empty( $avatar['full'] ) ) {
-			$account->avatar        = $avatar['full'];
-			$account->avatar_static = $avatar['full'];
-		}
-		$header_id = absint( get_user_meta( $user->ID, 'mastodon_api_header_id', true ) );
-		if ( $header_id ) {
-			$header_url = wp_get_attachment_url( $header_id );
-			if ( $header_url ) {
-				$account->header        = $header_url;
-				$account->header_static = $header_url;
-			}
-		}
 		$account->acct           = $user->user_login;
 		$account->note           = wpautop( $note );
 		$account->created_at     = new \DateTime( $user->user_registered );
@@ -105,6 +93,29 @@ class Account extends Handler {
 			'note'      => $note,
 			'fields'    => array(),
 		);
+
+		return $account;
+	}
+
+	public function api_account_media_overrides( $account, $user_id ) {
+		if ( ! is_object( $account ) || ! is_numeric( $user_id ) || $user_id <= 0 ) {
+			return $account;
+		}
+
+		$avatar = get_user_meta( $user_id, 'mastodon_api_avatar', true );
+		if ( is_array( $avatar ) && ! empty( $avatar['full'] ) ) {
+			$account->avatar        = $avatar['full'];
+			$account->avatar_static = $avatar['full'];
+		}
+
+		$header_id = absint( get_user_meta( $user_id, 'mastodon_api_header_id', true ) );
+		if ( $header_id ) {
+			$header_url = wp_get_attachment_url( $header_id );
+			if ( $header_url ) {
+				$account->header        = $header_url;
+				$account->header_static = $header_url;
+			}
+		}
 
 		return $account;
 	}
