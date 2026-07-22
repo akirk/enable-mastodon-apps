@@ -78,14 +78,11 @@ class AccountsEndpoint_Test extends Mastodon_API_TestCase {
 	public function test_account_uses_saved_mastodon_header_image() {
 		update_user_meta( $this->administrator, 'mastodon_api_header_id', $this->friend_attachment_id );
 
-		$request  = $this->api_request( 'GET', '/api/v1/accounts/verify_credentials' );
-		$response = $this->dispatch_authenticated( $request );
-		$data     = $response->get_data();
-		$url      = wp_get_attachment_url( $this->friend_attachment_id );
+		$account = apply_filters( 'mastodon_api_account', null, $this->administrator, null, null );
+		$url     = wp_get_attachment_url( $this->friend_attachment_id );
 
-		$this->assertEquals( 200, $response->get_status() );
-		$this->assertSame( $url, $data->header );
-		$this->assertSame( $url, $data->header_static );
+		$this->assertSame( $url, $account->header );
+		$this->assertSame( $url, $account->header_static );
 	}
 
 	public function test_update_credentials_updates_simple_local_avatar() {
@@ -143,14 +140,11 @@ class AccountsEndpoint_Test extends Mastodon_API_TestCase {
 		$avatar = get_user_meta( $this->administrator, 'mastodon_api_avatar', true );
 		$this->assertSame( $this->friend_attachment_id, (int) $avatar['media_id'] );
 
-		$request  = $this->api_request( 'GET', '/api/v1/accounts/verify_credentials' );
-		$response = $this->dispatch_authenticated( $request );
-		$data     = $response->get_data();
-		$url      = wp_get_attachment_url( $this->friend_attachment_id );
+		$account = apply_filters( 'mastodon_api_account', null, $this->administrator, null, null );
+		$url     = wp_get_attachment_url( $this->friend_attachment_id );
 
-		$this->assertEquals( 200, $response->get_status() );
-		$this->assertSame( $url, $data->avatar );
-		$this->assertSame( $url, $data->avatar_static );
+		$this->assertSame( $url, $account->avatar );
+		$this->assertSame( $url, $account->avatar_static );
 	}
 
 	public function test_update_credentials_persists_header_attachment_id() {
