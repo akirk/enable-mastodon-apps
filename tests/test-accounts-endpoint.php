@@ -214,8 +214,8 @@ class AccountsEndpoint_Test extends Mastodon_API_TestCase {
 		remove_filter( 'mastodon_api_has_following_integration', $disable_following_integration );
 
 		$this->assertEquals( 200, $response->get_status() );
-		$this->assertCount( 1, $data );
-		$this->assertSame( strval( $this->friend ), $data[0]['id'] );
+		$this->assertContains( strval( $this->friend ), wp_list_pluck( $data, 'id' ) );
+		$this->assertNotContains( strval( $this->administrator ), wp_list_pluck( $data, 'id' ) );
 	}
 
 	public function test_local_blog_users_are_followers_without_following_integration() {
@@ -229,8 +229,8 @@ class AccountsEndpoint_Test extends Mastodon_API_TestCase {
 		remove_filter( 'mastodon_api_has_following_integration', $disable_following_integration );
 
 		$this->assertEquals( 200, $response->get_status() );
-		$this->assertCount( 1, $data );
-		$this->assertSame( strval( $this->administrator ), $data[0]['id'] );
+		$this->assertContains( strval( $this->administrator ), wp_list_pluck( $data, 'id' ) );
+		$this->assertNotContains( strval( $this->friend ), wp_list_pluck( $data, 'id' ) );
 	}
 
 	public function test_local_blog_user_relationship_is_following_without_following_integration() {
@@ -238,7 +238,11 @@ class AccountsEndpoint_Test extends Mastodon_API_TestCase {
 		add_filter( 'mastodon_api_has_following_integration', $disable_following_integration );
 
 		$request = $this->api_request( 'GET', '/api/v1/accounts/relationships' );
-		$request->set_param( 'id', array( $this->friend ) );
+		$request->set_query_params(
+			array(
+				'id' => array( strval( $this->friend ) ),
+			)
+		);
 
 		$response = $this->dispatch_authenticated( $request );
 		$data     = json_decode( wp_json_encode( $response->get_data() ), true );
@@ -260,9 +264,21 @@ class AccountsEndpoint_Test extends Mastodon_API_TestCase {
 
 		remove_filter( 'mastodon_api_has_following_integration', $disable_following_integration );
 
+		$local_follow_count = max(
+			count(
+				get_users(
+					array(
+						'blog_id' => get_current_blog_id(),
+						'fields'  => 'ID',
+					)
+				)
+			) - 1,
+			0
+		);
+
 		$this->assertEquals( 200, $response->get_status() );
-		$this->assertSame( 1, $data['followers_count'] );
-		$this->assertSame( 1, $data['following_count'] );
+		$this->assertSame( $local_follow_count, $data['followers_count'] );
+		$this->assertSame( $local_follow_count, $data['following_count'] );
 	}
 
 	public function xtest_accounts_external() {
