@@ -49,6 +49,28 @@ class InstanceEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertFalse( $data->registrations, false );
 
 		$this->assertFalse( $data->approval_required, false );
+
+		$this->assertEquals( 4, $data->configuration['statuses']['max_media_attachments'] );
+	}
+
+	public function test_apps_instance_v2_includes_status_limits() {
+		$request = $this->api_request( 'GET', '/api/v2/instance' );
+		$response = $this->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertEquals( 4, $data->configuration['statuses']['max_media_attachments'] );
+	}
+
+	public function test_apps_instance_uses_configured_media_attachment_limit() {
+		update_option( 'mastodon_api_max_media_attachments', 8 );
+
+		$request = $this->api_request( 'GET', '/api/v1/instance' );
+		$response = $this->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertEquals( 8, $data->configuration['statuses']['max_media_attachments'] );
 	}
 
 	public function test_extended_description() {
