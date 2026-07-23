@@ -64,16 +64,14 @@ class Instance extends Handler {
 		$instance->approval_required = false;
 		$instance->invites_enabled   = false;
 		$instance->languages         = empty( get_available_languages() ) ? array( 'en' ) : get_available_languages();
+		$media_attachments           = $this->media_attachment_configuration();
 		$instance->configuration     = array(
-			'statuses'         => array(
+			'statuses'          => array(
 				'max_media_attachments' => Mastodon_API::get_max_media_attachments(),
 			),
-			'media_attachment' => array(
-				'supported_mime_types' => array_values( get_allowed_mime_types() ),
-				'image_size_limit'     => \wp_max_upload_size(),
-				'video_size_limit'     => \wp_max_upload_size(),
-			),
-			'translation'      => array(
+			'media_attachments' => $media_attachments,
+			'media_attachment'  => $media_attachments,
+			'translation'       => array(
 				'enabled' => false,
 			),
 		);
@@ -105,16 +103,14 @@ class Instance extends Handler {
 		);
 		$instance->thumbnail     = array( 'url' => \get_site_icon_url() );
 		$instance->languages     = empty( get_available_languages() ) ? array( 'en' ) : get_available_languages();
+		$media_attachments       = $this->media_attachment_configuration();
 		$instance->configuration = array(
-			'statuses'         => array(
+			'statuses'          => array(
 				'max_media_attachments' => Mastodon_API::get_max_media_attachments(),
 			),
-			'media_attachment' => array(
-				'supported_mime_types' => array_values( get_allowed_mime_types() ),
-				'image_size_limit'     => \wp_max_upload_size(),
-				'video_size_limit'     => \wp_max_upload_size(),
-			),
-			'translation'      => array(
+			'media_attachments' => $media_attachments,
+			'media_attachment'  => $media_attachments,
+			'translation'       => array(
 				'enabled' => false,
 			),
 		);
@@ -129,6 +125,21 @@ class Instance extends Handler {
 		);
 
 		return $instance;
+	}
+
+	/**
+	 * Get the media attachment configuration for instance responses.
+	 *
+	 * @return array
+	 */
+	private function media_attachment_configuration(): array {
+		$upload_size_limit = \wp_max_upload_size();
+
+		return array(
+			'supported_mime_types' => array_values( get_allowed_mime_types() ),
+			'image_size_limit'     => $upload_size_limit,
+			'video_size_limit'     => $upload_size_limit,
+		);
 	}
 
 	/**
