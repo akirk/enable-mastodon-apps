@@ -274,6 +274,26 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertEquals( 422, $response->get_status() );
 	}
 
+	public function test_submit_status_rejects_too_many_media_attachments() {
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'too many attachments' );
+		$request->set_param( 'media_ids', array_fill( 0, 5, (string) $this->friend_attachment_id ) );
+
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 422, $response->get_status() );
+	}
+
+	public function test_submit_status_allows_configured_media_attachment_limit() {
+		update_option( 'mastodon_api_max_media_attachments', 5 );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'configured attachments' );
+		$request->set_param( 'media_ids', array_fill( 0, 5, (string) $this->friend_attachment_id ) );
+
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+	}
+
 	public function submit_status_data_provider() {
 		return array(
 			'basic_status'                    => array(

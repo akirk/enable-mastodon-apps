@@ -44,6 +44,20 @@ class Mastodon_API {
 	const ANNOUNCE_CPT   = 'ema-announce';
 
 	/**
+	 * Get the maximum number of media attachments allowed per status.
+	 *
+	 * @return int The configured media attachment limit.
+	 */
+	public static function get_max_media_attachments(): int {
+		$max_media_attachments = absint( get_option( 'mastodon_api_max_media_attachments', 4 ) );
+		if ( $max_media_attachments < 1 ) {
+			return 4;
+		}
+
+		return $max_media_attachments;
+	}
+
+	/**
 	 * Constructor
 	 */
 	public function __construct() {
@@ -2434,6 +2448,18 @@ class Mastodon_API {
 		$in_reply_to_id = apply_filters( 'mastodon_api_in_reply_to_id', $request->get_param( 'in_reply_to_id' ), $request );
 
 		$media_ids    = $request->get_param( 'media_ids' );
+		$max_media_attachments = self::get_max_media_attachments();
+		if ( is_array( $media_ids ) && count( $media_ids ) > $max_media_attachments ) {
+			return new \WP_Error(
+				'mastodon_' . __FUNCTION__,
+				sprintf(
+					/* translators: %d: maximum number of media attachments per status. */
+					__( 'Validation failed: Media attachments can\'t exceed %d', 'enable-mastodon-apps' ),
+					$max_media_attachments
+				),
+				array( 'status' => 422 )
+			);
+		}
 		$scheduled_at = $request->get_param( 'scheduled_at' );
 
 		$app = Mastodon_App::get_current_app();
@@ -2962,6 +2988,18 @@ class Mastodon_API {
 		$in_reply_to_id = apply_filters( 'mastodon_api_in_reply_to_id', $request->get_param( 'in_reply_to_id' ), $request );
 
 		$media_ids    = $request->get_param( 'media_ids' );
+		$max_media_attachments = self::get_max_media_attachments();
+		if ( is_array( $media_ids ) && count( $media_ids ) > $max_media_attachments ) {
+			return new \WP_Error(
+				'mastodon_' . __FUNCTION__,
+				sprintf(
+					/* translators: %d: maximum number of media attachments per status. */
+					__( 'Validation failed: Media attachments can\'t exceed %d', 'enable-mastodon-apps' ),
+					$max_media_attachments
+				),
+				array( 'status' => 422 )
+			);
+		}
 		$scheduled_at = $request->get_param( 'scheduled_at' );
 
 		$app = Mastodon_App::get_current_app();
