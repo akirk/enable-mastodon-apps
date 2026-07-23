@@ -203,6 +203,68 @@ class AccountsEndpoint_Test extends Mastodon_API_TestCase {
 		}
 	}
 
+	public function test_local_blog_users_are_following_without_following_integration() {
+		$disable_following_integration = '__return_false';
+		add_filter( 'mastodon_api_has_following_integration', $disable_following_integration );
+
+		$request  = $this->api_request( 'GET', '/api/v1/accounts/' . $this->administrator . '/following' );
+		$response = $this->dispatch_authenticated( $request );
+		$data     = json_decode( wp_json_encode( $response->get_data() ), true );
+
+		remove_filter( 'mastodon_api_has_following_integration', $disable_following_integration );
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertCount( 1, $data );
+		$this->assertSame( strval( $this->friend ), $data[0]['id'] );
+	}
+
+	public function test_local_blog_users_are_followers_without_following_integration() {
+		$disable_following_integration = '__return_false';
+		add_filter( 'mastodon_api_has_following_integration', $disable_following_integration );
+
+		$request  = $this->api_request( 'GET', '/api/v1/accounts/' . $this->friend . '/followers' );
+		$response = $this->dispatch_authenticated( $request );
+		$data     = json_decode( wp_json_encode( $response->get_data() ), true );
+
+		remove_filter( 'mastodon_api_has_following_integration', $disable_following_integration );
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertCount( 1, $data );
+		$this->assertSame( strval( $this->administrator ), $data[0]['id'] );
+	}
+
+	public function test_local_blog_user_relationship_is_following_without_following_integration() {
+		$disable_following_integration = '__return_false';
+		add_filter( 'mastodon_api_has_following_integration', $disable_following_integration );
+
+		$request = $this->api_request( 'GET', '/api/v1/accounts/relationships' );
+		$request->set_param( 'id', array( $this->friend ) );
+
+		$response = $this->dispatch_authenticated( $request );
+		$data     = json_decode( wp_json_encode( $response->get_data() ), true );
+
+		remove_filter( 'mastodon_api_has_following_integration', $disable_following_integration );
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertTrue( $data[0]['following'] );
+		$this->assertTrue( $data[0]['followed_by'] );
+	}
+
+	public function test_local_blog_account_counts_include_automatic_follows_without_following_integration() {
+		$disable_following_integration = '__return_false';
+		add_filter( 'mastodon_api_has_following_integration', $disable_following_integration );
+
+		$request  = $this->api_request( 'GET', '/api/v1/accounts/verify_credentials' );
+		$response = $this->dispatch_authenticated( $request );
+		$data     = json_decode( wp_json_encode( $response->get_data() ), true );
+
+		remove_filter( 'mastodon_api_has_following_integration', $disable_following_integration );
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertSame( 1, $data['followers_count'] );
+		$this->assertSame( 1, $data['following_count'] );
+	}
+
 	public function xtest_accounts_external() {
 		wp_cache_flush();
 		$request = $this->api_request( 'GET', '/api/v1/accounts/' . $this->external_account );
