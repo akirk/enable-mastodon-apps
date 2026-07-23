@@ -65,6 +65,9 @@ class Instance extends Handler {
 		$instance->invites_enabled   = false;
 		$instance->languages         = empty( get_available_languages() ) ? array( 'en' ) : get_available_languages();
 		$instance->configuration     = array(
+			'statuses'         => array(
+				'max_media_attachments' => Mastodon_API::get_max_media_attachments(),
+			),
 			'media_attachment' => array(
 				'supported_mime_types' => array_values( get_allowed_mime_types() ),
 				'image_size_limit'     => \wp_max_upload_size(),
@@ -103,6 +106,9 @@ class Instance extends Handler {
 		$instance->thumbnail     = array( 'url' => \get_site_icon_url() );
 		$instance->languages     = empty( get_available_languages() ) ? array( 'en' ) : get_available_languages();
 		$instance->configuration = array(
+			'statuses'         => array(
+				'max_media_attachments' => Mastodon_API::get_max_media_attachments(),
+			),
 			'media_attachment' => array(
 				'supported_mime_types' => array_values( get_allowed_mime_types() ),
 				'image_size_limit'     => \wp_max_upload_size(),

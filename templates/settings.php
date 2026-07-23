@@ -29,7 +29,7 @@
 					</td>
 				</tr>
 				<tr>
-					<th scope="row" rowspan="2"><?php esc_html_e( 'Posting', 'enable-mastodon-apps' ); ?></th>
+					<th scope="row" rowspan="3"><?php esc_html_e( 'Posting', 'enable-mastodon-apps' ); ?></th>
 					<td>
 						<fieldset>
 							<label for="mastodon_api_no_posting_cpt">
@@ -90,6 +90,27 @@
 							</select>
 							<p class="description">
 								<?php esc_html_e( 'If no post format is selected, posts in all post formats will be displayed.', 'enable-mastodon-apps' ); ?>
+							</p>
+						</fieldset>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<fieldset>
+							<label for="mastodon_api_max_media_attachments">
+								<?php esc_html_e( 'Maximum media attachments per post:', 'enable-mastodon-apps' ); ?>
+							</label>
+							<input
+								name="mastodon_api_max_media_attachments"
+								type="number"
+								id="mastodon_api_max_media_attachments"
+								value="<?php echo esc_attr( \Enable_Mastodon_Apps\Mastodon_API::get_max_media_attachments() ); ?>"
+								min="1"
+								step="1"
+								class="small-text"
+							/>
+							<p class="description">
+								<?php esc_html_e( 'This limit is advertised to Mastodon apps and enforced when posting or editing statuses.', 'enable-mastodon-apps' ); ?>
 							</p>
 						</fieldset>
 					</td>
