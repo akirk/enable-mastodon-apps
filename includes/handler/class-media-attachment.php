@@ -26,6 +26,45 @@ class Media_Attachment extends Handler {
 		add_filter( 'mastodon_api_media_attachment', array( $this, 'video_attachment' ), 10, 2 );
 		add_filter( 'mastodon_api_status', array( $this, 'add_generic_image_attachments' ), 20 );
 		add_filter( 'mastodon_api_status', array( $this, 'add_generic_video_attachments' ), 20 );
+		add_action( 'mastodon_api_media_uploaded', array( $this, 'schedule_video_thumbnail_generation' ) );
+	}
+
+	/**
+	 * Schedule a Videopack thumbnail for video uploads when that plugin is available.
+	 *
+	 * @param int $attachment_id The uploaded attachment ID.
+	 */
+	public function schedule_video_thumbnail_generation( int $attachment_id ): void {
+		if ( ! \wp_attachment_is( 'video', $attachment_id ) || \has_post_thumbnail( $attachment_id ) ) {
+			return;
+		}
+
+		/**
+		 * Filters the callable used to schedule thumbnail generation for video uploads.
+		 *
+		 * Return null to use the built-in Videopack integration.
+		 *
+		 * @param callable|null $scheduler     Thumbnail scheduler callback.
+		 * @param int           $attachment_id The uploaded attachment ID.
+		 */
+		$scheduler = \apply_filters( 'mastodon_api_video_thumbnail_scheduler', null, $attachment_id );
+		if ( \is_callable( $scheduler ) ) {
+			$scheduler( $attachment_id );
+			return;
+		}
+
+		if ( ! \function_exists( 'kgvid_schedule_attachment_processing' ) ) {
+			return;
+		}
+
+		if ( \function_exists( 'kgvid_get_options' ) ) {
+			$options = \kgvid_get_options();
+			if ( isset( $options['auto_thumb'] ) && 'on' === $options['auto_thumb'] ) {
+				return;
+			}
+		}
+
+		\kgvid_schedule_attachment_processing( $attachment_id, 'thumbs' );
 	}
 
 	/**

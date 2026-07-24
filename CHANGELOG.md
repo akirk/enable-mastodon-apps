@@ -1,4 +1,5 @@
 ### 1.6.1
+- Add optional Videopack integration for generated video thumbnails.
 - Ensure account headers are always serialized ([#308])
 - Allow lower-privilege users to use Mastodon apps ([#307])
 - Keep EMA unread status out of public searches ([#306])

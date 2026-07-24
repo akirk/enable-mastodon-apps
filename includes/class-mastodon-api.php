@@ -2517,6 +2517,10 @@ class Mastodon_API {
 		}
 
 		$attachment_id = $this->handle_upload( $media['file'] );
+		if ( is_wp_error( $attachment_id ) ) {
+			return $attachment_id;
+		}
+
 		$request->set_param( 'post_id', $attachment_id );
 
 		$description = $request->get_param( 'description' );
@@ -2528,6 +2532,14 @@ class Mastodon_API {
 				)
 			);
 		}
+
+		/**
+		 * Fires after a media attachment was uploaded through the Mastodon API.
+		 *
+		 * @param int             $attachment_id The uploaded attachment ID.
+		 * @param WP_REST_Request $request       The REST request.
+		 */
+		do_action( 'mastodon_api_media_uploaded', $attachment_id, $request );
 
 		return rest_ensure_response( $this->api_get_media( $request ) );
 	}
