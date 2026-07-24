@@ -238,6 +238,15 @@ class Mastodon_Admin {
 			}
 		}
 
+		if ( isset( $_POST['mastodon_api_max_media_attachments'] ) ) {
+			$max_media_attachments = absint( wp_unslash( $_POST['mastodon_api_max_media_attachments'] ) );
+			if ( $max_media_attachments && 4 !== $max_media_attachments ) {
+				update_option( 'mastodon_api_max_media_attachments', $max_media_attachments, false );
+			} else {
+				delete_option( 'mastodon_api_max_media_attachments' );
+			}
+		}
+
 		/**
 		 * The default post type for posting from Mastodon apps when the configured to do so.
 		 *
