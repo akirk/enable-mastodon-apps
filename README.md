@@ -20,6 +20,8 @@ You'll then see just the posts on your blog which can already be useful in a mul
 
 Even without the ActivityPub or Friends plugins, Mastodon apps can be used as a local client for your WordPress posts. Favourites (likes) and bookmarks are stored locally so they can be shown again in the app and in the favourites and bookmarks views.
 
+For generated video thumbnails, install [Videopack](https://wordpress.org/plugins/video-embed-thumbnail-generator/) and configure it with FFMPEG. Enable Mastodon Apps will ask Videopack to generate a thumbnail for videos uploaded through Mastodon clients, then use the video's WordPress featured image as the Mastodon media `preview_url`.
+
 When used in combination with the [ActivityPub](https://wordpress.org/plugins/activitypub/) (for being followed via Mastodon) and [Friends](https://wordpress.org/plugins/friends/) (for following people on Mastodon or via RSS) plugins, the Enable Mastodon Apps plugin will show you your feed of people you follow and you can follow and unfollow people from within the app.
 
 Be aware that an app will have a post format associated (see the settings page). The plugin will check for the existance of the Friends plugin to find a resonable default (status with Friends plugin, standard otherwise). When you create a post with your Mastodon app, the post format that you selected for the app will be used.
