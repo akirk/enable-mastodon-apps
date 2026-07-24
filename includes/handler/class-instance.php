@@ -70,7 +70,6 @@ class Instance extends Handler {
 				'max_media_attachments' => Mastodon_API::get_max_media_attachments(),
 			),
 			'media_attachments' => $media_attachments,
-			'media_attachment'  => $media_attachments,
 			'translation'       => array(
 				'enabled' => false,
 			),
@@ -109,7 +108,6 @@ class Instance extends Handler {
 				'max_media_attachments' => Mastodon_API::get_max_media_attachments(),
 			),
 			'media_attachments' => $media_attachments,
-			'media_attachment'  => $media_attachments,
 			'translation'       => array(
 				'enabled' => false,
 			),

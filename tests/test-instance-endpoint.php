@@ -52,6 +52,7 @@ class InstanceEndpoint_Test extends Mastodon_API_TestCase {
 
 		$this->assertEquals( 4, $data->configuration['statuses']['max_media_attachments'] );
 		$this->assertArrayHasKey( 'media_attachments', $data->configuration );
+		$this->assertArrayNotHasKey( 'media_attachment', $data->configuration );
 		$this->assertEquals( wp_max_upload_size(), $data->configuration['media_attachments']['image_size_limit'] );
 		$this->assertEquals( wp_max_upload_size(), $data->configuration['media_attachments']['video_size_limit'] );
 	}
@@ -64,6 +65,7 @@ class InstanceEndpoint_Test extends Mastodon_API_TestCase {
 		$data = $response->get_data();
 		$this->assertEquals( 4, $data->configuration['statuses']['max_media_attachments'] );
 		$this->assertArrayHasKey( 'media_attachments', $data->configuration );
+		$this->assertArrayNotHasKey( 'media_attachment', $data->configuration );
 		$this->assertEquals( wp_max_upload_size(), $data->configuration['media_attachments']['image_size_limit'] );
 		$this->assertEquals( wp_max_upload_size(), $data->configuration['media_attachments']['video_size_limit'] );
 	}
