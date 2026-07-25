@@ -478,6 +478,23 @@ class Status extends Handler {
 		return trim( wp_strip_all_tags( $post_content_parts[0] ) );
 	}
 
+	private static function get_attachment_description( int $media_id ): string {
+		return trim( wp_strip_all_tags( get_post_field( 'post_excerpt', $media_id ) ) );
+	}
+
+	private static function render_image_figure( int $media_id, string $image_attributes = '' ): string {
+		$description = self::get_attachment_description( $media_id );
+		$html        = '<figure class="wp-block-image"><img src="' . esc_url( wp_get_attachment_url( $media_id ) ) . '" alt="' . esc_attr( $description ) . '" class="wp-image-' . esc_attr( $media_id ) . '"' . $image_attributes . '/>';
+
+		if ( '' !== $description ) {
+			$html .= '<figcaption class="wp-element-caption">' . esc_html( $description ) . '</figcaption>';
+		}
+
+		$html .= '</figure>';
+
+		return $html;
+	}
+
 	public function prepare_post_data( $post_id, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at ) {
 		$post_data = array();
 
@@ -565,7 +582,7 @@ class Status extends Handler {
 						'sizeSlug' => 'large',
 					);
 					$post_data['post_content'] .= '<!-- wp:image ' . wp_json_encode( $meta_json ) . ' -->' . PHP_EOL;
-					$post_data['post_content'] .= '<figure class="wp-block-image"><img src="' . esc_url( wp_get_attachment_url( $media_id ) ) . '" alt="" class="wp-image-' . esc_attr( $media_id ) . '"/></figure>' . PHP_EOL;
+					$post_data['post_content'] .= self::render_image_figure( (int) $media_id ) . PHP_EOL;
 					$post_data['post_content'] .= '<!-- /wp:image -->' . PHP_EOL;
 				} elseif ( \wp_attachment_is( 'video', $media_id ) ) {
 					$post_data['post_content'] .= PHP_EOL;
@@ -791,7 +808,7 @@ class Status extends Handler {
 				$attachment                       = \wp_get_attachment_metadata( $media_id );
 				$comment_data['comment_content'] .= PHP_EOL;
 				$comment_data['comment_content'] .= '<!-- wp:image -->';
-				$comment_data['comment_content'] .= '<p><img src="' . esc_url( wp_get_attachment_url( $media_id ) ) . '" width="' . esc_attr( $attachment['width'] ) . '"  height="' . esc_attr( $attachment['height'] ) . '" class="size-full" /></p>';
+				$comment_data['comment_content'] .= self::render_image_figure( (int) $media_id, ' width="' . esc_attr( $attachment['width'] ) . '" height="' . esc_attr( $attachment['height'] ) . '"' );
 				$comment_data['comment_content'] .= '<!-- /wp:image -->';
 			}
 		}
@@ -854,7 +871,7 @@ class Status extends Handler {
 				$attachment                       = \wp_get_attachment_metadata( $media_id );
 				$comment_data['comment_content'] .= PHP_EOL;
 				$comment_data['comment_content'] .= '<!-- wp:image -->';
-				$comment_data['comment_content'] .= '<p><img src="' . esc_url( wp_get_attachment_url( $media_id ) ) . '" width="' . esc_attr( $attachment['width'] ) . '"  height="' . esc_attr( $attachment['height'] ) . '" class="size-full" /></p>';
+				$comment_data['comment_content'] .= self::render_image_figure( (int) $media_id, ' width="' . esc_attr( $attachment['width'] ) . '" height="' . esc_attr( $attachment['height'] ) . '"' );
 				$comment_data['comment_content'] .= '<!-- /wp:image -->';
 			}
 		}
