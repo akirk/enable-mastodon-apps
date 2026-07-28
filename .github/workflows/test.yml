@@ -41,11 +41,11 @@ jobs:
     name: "Tests: PHP ${{ matrix.php }} - PHPUnit: ${{matrix.phpunit}} - WordPress: ${{matrix.wordpress}}"
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Checkout ActivityPub plugin
         if: ${{ matrix.php >= 8.1 }}
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: Automattic/wordpress-activitypub
           ref: ${{ matrix.activitypub-ref }}
