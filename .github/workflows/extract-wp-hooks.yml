@@ -12,5 +12,5 @@ jobs:
     permissions:
       contents: write # Required to push to wiki repository
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: akirk/extract-wp-hooks@1.1.0
