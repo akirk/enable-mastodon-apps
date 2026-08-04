@@ -263,7 +263,7 @@ class Comment_CPT {
 		$status->created_at = new \DateTime( $comment->comment_date_gmt, new \DateTimeZone( 'UTC' ) );
 		$status->visibility = 'public';
 		$status->uri        = get_comment_link( $comment );
-		$status->content    = $comment->comment_content;
+		$status->content    = wp_slash( $comment->comment_content );
 		$status->account    = $account;
 		if ( $comment->comment_parent ) {
 			$parent_post_id = self::comment_id_to_post_id( $comment->comment_parent );
