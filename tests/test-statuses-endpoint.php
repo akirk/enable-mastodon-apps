@@ -37,6 +37,7 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 
 		$this->assertInstanceOf( '\Enable_Mastodon_Apps\Entity\Account', $data->account );
 		$this->assertIsString( $data->uri );
+		$this->assertEquals( get_permalink( $this->friend_post ), $data->url );
 		$this->assertIsString( $data->content );
 		if ( ! empty( $data->in_reply_to_id ) ) {
 			$this->assertIsInt( $data->in_reply_to_id );

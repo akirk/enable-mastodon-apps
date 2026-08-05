@@ -268,6 +268,7 @@ class Status extends Handler {
 				$status->visibility = 'direct';
 			}
 			$status->uri        = get_the_guid( $post->ID );
+			$status->url        = get_permalink( $post );
 			$status->content    = $post->post_content;
 			if ( ! empty( $post->post_title ) && trim( $post->post_title ) ) {
 				$status->content = '<strong>' . esc_html( $post->post_title ) . '</strong>' . PHP_EOL . $status->content;
