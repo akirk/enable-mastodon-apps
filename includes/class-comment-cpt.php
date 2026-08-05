@@ -263,6 +263,7 @@ class Comment_CPT {
 		$status->created_at = new \DateTime( $comment->comment_date_gmt, new \DateTimeZone( 'UTC' ) );
 		$status->visibility = 'public';
 		$status->uri        = get_comment_link( $comment );
+		$status->url        = $status->uri;
 		$status->content    = $comment->comment_content;
 		$status->account    = $account;
 		if ( $comment->comment_parent ) {
