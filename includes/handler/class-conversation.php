@@ -140,6 +140,103 @@ class Conversation extends Status {
 		return array_values( $accounts );
 	}
 
+	/**
+	 * Mark a conversation and its replies as read.
+	 *
+	 * @param int $id The conversation id, which is the id of the first message.
+	 */
+	public function api_conversation_mark_read( $id ) {
+		$message = $this->get_own_conversation( $id );
+		if ( ! $message ) {
+			return;
+		}
+
+		foreach ( $this->get_conversation_posts( $message ) as $post ) {
+			$read_status = $this->get_read_status( $post->post_status );
+			if ( ! $read_status ) {
+				continue;
+			}
+
+			wp_update_post(
+				array(
+					'ID'          => $post->ID,
+					'post_status' => $read_status,
+				)
+			);
+		}
+	}
+
+	/**
+	 * Delete a conversation and its replies.
+	 *
+	 * @param int $id The conversation id, which is the id of the first message.
+	 */
+	public function delete_conversation( $id ) {
+		$message = $this->get_own_conversation( $id );
+		if ( ! $message ) {
+			return;
+		}
+
+		foreach ( $this->get_conversation_posts( $message ) as $post ) {
+			wp_trash_post( $post->ID );
+		}
+	}
+
+	/**
+	 * Get a conversation that belongs to the current user.
+	 *
+	 * Direct messages are stored in a post type that is specific to the recipient,
+	 * so requiring the post to live in the current user's post type is what limits
+	 * this to their own conversations.
+	 *
+	 * @param int $id The conversation id.
+	 * @return \WP_Post|null The first message of the conversation, or null.
+	 */
+	private function get_own_conversation( $id ) {
+		$message = get_post( $id );
+		if ( ! $message || Mastodon_API::get_dm_cpt() !== $message->post_type ) {
+			return null;
+		}
+
+		return $message;
+	}
+
+	/**
+	 * Get all messages of a conversation, starting with the first one.
+	 *
+	 * @param \WP_Post $message The first message of the conversation.
+	 * @return \WP_Post[] The messages of the conversation.
+	 */
+	private function get_conversation_posts( \WP_Post $message ) {
+		return array_merge(
+			array( $message ),
+			get_children(
+				array(
+					'post_parent' => $message->ID,
+					'post_type'   => Mastodon_API::get_dm_cpt(),
+					'post_status' => $this->get_post_statuses(),
+				)
+			)
+		);
+	}
+
+	/**
+	 * Get the read post status that corresponds to an unread one.
+	 *
+	 * READ_STATUSES and UNREAD_STATUSES hold the same sources in the same order.
+	 *
+	 * @param string $post_status The current post status.
+	 * @return string|null The matching read status, or null if already read.
+	 */
+	private function get_read_status( $post_status ) {
+		$index = array_search( $post_status, self::UNREAD_STATUSES, true );
+		if ( false === $index ) {
+			return null;
+		}
+
+		return self::READ_STATUSES[ $index ];
+	}
+
 	public function conversation_post_type( $post_types, $context_post_id ) {
 		$post_type = get_post_type( $context_post_id );
 		if ( ! $post_type ) {
