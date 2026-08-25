@@ -83,13 +83,32 @@ class Media_Attachment extends Handler {
 		if ( ! $thumb ) {
 			return $data;
 		}
+		$url  = \wp_get_attachment_url( $attachment_id );
 		$meta = \wp_get_attachment_metadata( $attachment_id );
+		if ( ! is_array( $meta ) || empty( $meta['width'] ) || empty( $meta['height'] ) ) {
+			// The metadata was never generated, e.g. for an import; fall back to the file itself.
+			$meta = array(
+				'width'  => 0,
+				'height' => 0,
+			);
+			$file = \get_attached_file( $attachment_id );
+			if ( $file && file_exists( $file ) ) {
+				$size = \wp_getimagesize( $file );
+				if ( $size ) {
+					$meta['width']  = $size[0];
+					$meta['height'] = $size[1];
+				}
+			}
+		}
+		$thumb = false;
 		if ( isset( $meta['sizes']['medium_large'] ) ) {
 			$thumb = \wp_get_attachment_image_src( $attachment_id, 'medium_large' );
 		} elseif ( isset( $meta['sizes']['medium'] ) ) {
 			$thumb = \wp_get_attachment_image_src( $attachment_id, 'medium' );
 		}
-		$url = \wp_get_attachment_url( $attachment_id );
+		if ( ! $thumb ) {
+			$thumb = array( $url, $meta['width'], $meta['height'] );
+		}
 
 		$media_attachment              = new Media_Attachment_Entity();
 		$media_attachment->id          = strval( $attachment_id );
@@ -102,13 +121,13 @@ class Media_Attachment extends Handler {
 				'width'  => $meta['width'],
 				'height' => $meta['height'],
 				'size'   => $meta['width'] . 'x' . $meta['height'],
-				'aspect' => $meta['width'] / $meta['height'],
+				'aspect' => $meta['height'] ? $meta['width'] / $meta['height'] : 0,
 			),
 			'small'    => array(
 				'width'  => $thumb[1],
 				'height' => $thumb[2],
 				'size'   => $thumb[1] . 'x' . $thumb[2],
-				'aspect' => $thumb[1] / $thumb[2],
+				'aspect' => $thumb[2] ? $thumb[1] / $thumb[2] : 0,
 			),
 		);
 
@@ -161,13 +180,13 @@ class Media_Attachment extends Handler {
 				'width'  => $meta['width'],
 				'height' => $meta['height'],
 				'size'   => $meta['width'] . 'x' . $meta['height'],
-				'aspect' => $meta['width'] / $meta['height'],
+				'aspect' => $meta['height'] ? $meta['width'] / $meta['height'] : 0,
 			),
 			'small'    => array(
 				'width'  => $thumb[1],
 				'height' => $thumb[2],
 				'size'   => $thumb[1] . 'x' . $thumb[2],
-				'aspect' => $thumb[1] / $thumb[2],
+				'aspect' => $thumb[2] ? $thumb[1] / $thumb[2] : 0,
 			),
 		);
 
