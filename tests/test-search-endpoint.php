@@ -290,6 +290,9 @@ class Test_Search_Endpoint extends Mastodon_API_TestCase {
 		);
 		set_post_format( $mentions_2016, 'status' );
 
+		// Statuses are only searched for logged-in users; in production the token resolves the user.
+		wp_set_current_user( $this->administrator );
+
 		$request = $this->api_request( 'GET', '/api/v2/search' );
 		$request->set_param( 'q', '2016' );
 		$request->set_param( 'type', 'statuses' );
