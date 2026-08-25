@@ -90,7 +90,12 @@ class Search extends Handler {
 					// TODO allow lookup by URL.
 				}
 			} elseif ( is_user_logged_in() ) {
-				$args['s']              = $q;
+				$date_args = self::get_date_query_args( $q );
+				if ( $date_args ) {
+					$args = array_merge( $args, $date_args );
+				} else {
+					$args['s'] = $q;
+				}
 				$args['offset']         = $request->get_param( 'offset' );
 				$args['posts_per_page'] = $request->get_param( 'limit' );
 				$ret['statuses']        = array_merge( $ret['statuses'], $this->get_posts( $args )->get_data() );
@@ -132,6 +137,44 @@ class Search extends Handler {
 		return $ret;
 	}
 
+
+	/**
+	 * Turn a date-like query into WP_Query date arguments.
+	 *
+	 * Searching for "2016", "2016-05" or "2016-05-17" returns the posts from that
+	 * year, month or day instead of the posts mentioning that string.
+	 *
+	 * @param string $q The search query.
+	 *
+	 * @return array WP_Query arguments, or an empty array if the query is not a date.
+	 */
+	public static function get_date_query_args( $q ) {
+		if ( ! preg_match( '/^(\d{4})(?:-(\d{1,2})(?:-(\d{1,2}))?)?$/', trim( $q ), $m ) ) {
+			return array();
+		}
+		$year  = intval( $m[1] );
+		$month = isset( $m[2] ) ? intval( $m[2] ) : 0;
+		$day   = isset( $m[3] ) ? intval( $m[3] ) : 0;
+
+		if ( $year < 1970 || $year > intval( gmdate( 'Y' ) ) + 1 ) {
+			return array();
+		}
+		if ( $month && ( $month < 1 || $month > 12 ) ) {
+			return array();
+		}
+		if ( $day && ! checkdate( $month, $day, $year ) ) {
+			return array();
+		}
+
+		$date_args = array( 'year' => $year );
+		if ( $month ) {
+			$date_args['monthnum'] = $month;
+		}
+		if ( $day ) {
+			$date_args['day'] = $day;
+		}
+		return $date_args;
+	}
 
 	public function api_search_status_ensure_numeric_id( $ret ) {
 		if ( ! empty( $ret['statuses'] ) && is_array( $ret['statuses'] ) ) {
