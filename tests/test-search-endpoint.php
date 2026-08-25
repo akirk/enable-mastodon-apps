@@ -278,6 +278,7 @@ class Test_Search_Endpoint extends Mastodon_API_TestCase {
 				'post_date'    => '2016-06-01 12:00:00',
 			)
 		);
+		set_post_format( $in_2016, 'status' );
 		$mentions_2016 = wp_insert_post(
 			array(
 				'post_author'  => $this->administrator,
@@ -287,6 +288,7 @@ class Test_Search_Endpoint extends Mastodon_API_TestCase {
 				'post_date'    => '2017-06-01 12:00:00',
 			)
 		);
+		set_post_format( $mentions_2016, 'status' );
 
 		$request = $this->api_request( 'GET', '/api/v2/search' );
 		$request->set_param( 'q', '2016' );
