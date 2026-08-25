@@ -240,4 +240,74 @@ class Test_Search_Endpoint extends Mastodon_API_TestCase {
 		$reply_to_id = apply_filters( 'mastodon_api_in_reply_to_id', $processed_status->id );
 		$this->assertEquals( $original_status_url, $reply_to_id, 'Numeric ID from search should be correctly reversed for reply' );
 	}
+
+	public function test_date_query_args() {
+		$this->assertSame( array( 'year' => 2016 ), Handler\Search::get_date_query_args( '2016' ) );
+		$this->assertSame(
+			array(
+				'year'     => 2016,
+				'monthnum' => 5,
+			),
+			Handler\Search::get_date_query_args( '2016-05' )
+		);
+		$this->assertSame(
+			array(
+				'year'     => 2016,
+				'monthnum' => 5,
+				'day'      => 17,
+			),
+			Handler\Search::get_date_query_args( '2016-5-17' )
+		);
+		$this->assertSame( array(), Handler\Search::get_date_query_args( '2016-13' ) );
+		$this->assertSame( array(), Handler\Search::get_date_query_args( '2016-02-30' ) );
+		$this->assertSame( array(), Handler\Search::get_date_query_args( '1234' ) );
+		$this->assertSame( array(), Handler\Search::get_date_query_args( '20160' ) );
+		$this->assertSame( array(), Handler\Search::get_date_query_args( 'Hello 2016' ) );
+	}
+
+	/**
+	 * Searching for a year returns the posts from that year rather than the posts mentioning it.
+	 */
+	public function test_search_by_year() {
+		$in_2016 = wp_insert_post(
+			array(
+				'post_author'  => $this->administrator,
+				'post_content' => 'Nothing about the year here',
+				'post_status'  => 'publish',
+				'post_type'    => 'post',
+				'post_date'    => '2016-06-01 12:00:00',
+			)
+		);
+		set_post_format( $in_2016, 'status' );
+		$mentions_2016 = wp_insert_post(
+			array(
+				'post_author'  => $this->administrator,
+				'post_content' => 'Remembering 2016',
+				'post_status'  => 'publish',
+				'post_type'    => 'post',
+				'post_date'    => '2017-06-01 12:00:00',
+			)
+		);
+		set_post_format( $mentions_2016, 'status' );
+
+		// Statuses are only searched for logged-in users; in production the token resolves the user.
+		wp_set_current_user( $this->administrator );
+
+		$request = $this->api_request( 'GET', '/api/v2/search' );
+		$request->set_param( 'q', '2016' );
+		$request->set_param( 'type', 'statuses' );
+		$response = $this->dispatch_authenticated( $request );
+		$data     = json_decode( wp_json_encode( $response->get_data() ), true );
+
+		$ids = wp_list_pluck( $data['statuses'], 'id' );
+		$this->assertContains( strval( $in_2016 ), $ids );
+		$this->assertNotContains( strval( $mentions_2016 ), $ids );
+
+		$request = $this->api_request( 'GET', '/api/v2/search' );
+		$request->set_param( 'q', '2016-07' );
+		$request->set_param( 'type', 'statuses' );
+		$response = $this->dispatch_authenticated( $request );
+		$data     = json_decode( wp_json_encode( $response->get_data() ), true );
+		$this->assertEmpty( $data['statuses'] );
+	}
 }
