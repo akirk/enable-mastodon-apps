@@ -251,14 +251,26 @@ class Mastodon_App {
 	}
 
 	public function check_redirect_uri( $redirect_uri ) {
+		if ( ! $redirect_uri ) {
+			return false;
+		}
+
 		$redirect_uris = $this->get_redirect_uris();
 		if ( ! is_array( $redirect_uris ) ) {
 			$redirect_uris = array( $redirect_uris );
 		}
 
 		foreach ( $redirect_uris as $uri ) {
-			if ( $uri === $redirect_uri ) {
-				return true;
+			// Apps registered before newline-separated URIs were split still have them in one string.
+			foreach ( preg_split( '/\s+/', trim( $uri ) ) as $uri ) {
+				if ( $uri === $redirect_uri ) {
+					return true;
+				}
+
+				// The OAuth server matches by prefix, so this needs to agree with it.
+				if ( $uri && 0 === strcasecmp( substr( $redirect_uri, 0, strlen( $uri ) ), $uri ) ) {
+					return true;
+				}
 			}
 		}
 
@@ -575,11 +587,14 @@ class Mastodon_App {
 					}
 					$urls = array();
 					foreach ( $value as $url ) {
-						if ( Mastodon_OAuth::OOB_REDIRECT_URI === $url ) {
-							$urls[] = $url;
-						} elseif ( preg_match( '#^[a-z0-9.-]+://?[a-z0-9.%-]*#i', $url ) ) {
-							// custom protocols are ok.
-							$urls[] = $url;
+						// Mastodon lets apps register multiple redirect URIs separated by newlines.
+						foreach ( preg_split( '/\s+/', trim( $url ) ) as $url ) {
+							if ( Mastodon_OAuth::OOB_REDIRECT_URI === $url ) {
+								$urls[] = $url;
+							} elseif ( preg_match( '#^[a-z0-9.-]+://?[a-z0-9.%-]*#i', $url ) ) {
+								// custom protocols are ok.
+								$urls[] = $url;
+							}
 						}
 					}
 

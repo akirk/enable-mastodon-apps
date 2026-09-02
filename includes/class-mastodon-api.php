@@ -2273,14 +2273,24 @@ class Mastodon_API {
 			return $app;
 		}
 
-		return array(
-			'id'            => $app->get_client_id(),
-			'name'          => $app->get_client_name(),
-			'website'       => $app->get_website(),
-			'redirect_uri'  => implode( ',', is_array( $redirect_uris ) ? $redirect_uris : array( $redirect_uris ) ),
-			'client_id'     => $app->get_client_id(),
-			'client_secret' => $app->get_client_secret(),
+		// The stored URIs are the validated ones, which is what the app is going to be held to.
+		$redirect_uris = $app->get_redirect_uris();
+		if ( ! is_array( $redirect_uris ) ) {
+			$redirect_uris = array( $redirect_uris );
+		}
+		$scopes = $app->get_scopes();
 
+		return array(
+			'id'                       => $app->get_client_id(),
+			'name'                     => $app->get_client_name(),
+			'website'                  => $app->get_website(),
+			// Mastodon's deprecated singular field separates multiple URIs with newlines.
+			'redirect_uri'             => implode( "\n", $redirect_uris ),
+			'redirect_uris'            => array_values( $redirect_uris ),
+			'scopes'                   => $scopes ? explode( ' ', $scopes ) : array(),
+			'client_id'                => $app->get_client_id(),
+			'client_secret'            => $app->get_client_secret(),
+			'client_secret_expires_at' => '0',
 		);
 	}
 

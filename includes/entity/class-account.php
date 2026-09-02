@@ -18,37 +18,41 @@ namespace Enable_Mastodon_Apps\Entity;
  */
 class Account extends Entity {
 	protected $types = array(
-		'id'              => 'string',
-		'username'        => 'string',
-		'acct'            => 'string',
-		'url'             => 'string',
-		'display_name'    => 'string',
-		'note'            => 'string',
-		'avatar'          => 'string',
-		'avatar_static'   => 'string',
-		'header'          => 'string',
-		'header_static'   => 'string',
+		'id'               => 'string',
+		'username'         => 'string',
+		'acct'             => 'string',
+		'url'              => 'string',
+		'uri'              => 'string?',
+		'display_name'     => 'string',
+		'note'             => 'string',
+		'avatar'           => 'string',
+		'avatar_static'    => 'string',
+		'header'           => 'string',
+		'header_static'    => 'string',
 
-		'locked'          => 'bool',
-		'bot'             => 'bool',
-		'group'           => 'bool',
-		'discoverable'    => 'bool?',
-		'noindex'         => 'bool?',
-		'suspended'       => 'bool?',
-		'limited'         => 'bool?',
+		'locked'           => 'bool',
+		'bot'              => 'bool',
+		'group'            => 'bool',
+		'discoverable'     => 'bool?',
+		'noindex'          => 'bool?',
+		'indexable'        => 'bool?',
+		'hide_collections' => 'bool?',
+		'suspended'        => 'bool?',
+		'limited'          => 'bool?',
 
-		'statuses_count'  => 'int',
-		'followers_count' => 'int',
-		'following_count' => 'int',
+		'statuses_count'   => 'int',
+		'followers_count'  => 'int',
+		'following_count'  => 'int',
 
-		'source'          => 'array',
-		'fields'          => 'array',
-		'emojis'          => 'array',
+		'source'           => 'array',
+		'fields'           => 'array',
+		'emojis'           => 'array',
+		'roles'            => 'array',
 
-		'moved'           => 'Account?',
+		'moved'            => 'Account?',
 
-		'created_at'      => 'DateTime',
-		'last_status_at'  => 'Date?',
+		'created_at'       => 'DateTime',
+		'last_status_at'   => 'Date?',
 	);
 	/**
 	 * The account id.
@@ -77,6 +81,13 @@ class Account extends Entity {
 	 * @var string
 	 */
 	public $url;
+
+	/**
+	 * The user’s ActivityPub actor identifier.
+	 *
+	 * @var string|null
+	 */
+	public $uri;
 
 	/**
 	 * The profile’s display name.
@@ -170,6 +181,27 @@ class Account extends Entity {
 	public $noindex = false;
 
 	/**
+	 * Whether public posts of this account are available for search.
+	 *
+	 * @var bool
+	 */
+	public $indexable = true;
+
+	/**
+	 * Whether the account hides the contents of its follows and followers collections.
+	 *
+	 * @var bool
+	 */
+	public $hide_collections = false;
+
+	/**
+	 * The roles assigned to the currently authorized user.
+	 *
+	 * @var array
+	 */
+	public $roles = array();
+
+	/**
 	 * Indicates that the profile is currently inactive and that its user has moved to a new account.
 	 *
 	 * @var Account|null
@@ -232,11 +264,12 @@ class Account extends Entity {
 	 * @var array
 	 */
 	public $source = array(
-		'privacy'   => 'public',
-		'sensitive' => false,
-		'language'  => 'en',
-		'note'      => '',
-		'fields'    => array(),
+		'privacy'               => 'public',
+		'sensitive'             => false,
+		'language'              => 'en',
+		'note'                  => '',
+		'fields'                => array(),
+		'follow_requests_count' => 0,
 	);
 
 	public function __get( $k ) {
