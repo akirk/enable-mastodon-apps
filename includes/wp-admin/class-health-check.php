@@ -16,8 +16,8 @@ use WP_REST_Request;
  */
 class Health_Check {
 	const AUTH_HEADER_ROUTE       = 'diagnostics/authorization-header';
-	const AUTH_HEADER_TRANSIENT   = 'ema_health_check_auth_header_';
 	const AUTH_HEADER_TEST_VALUE  = 'Bearer ema-health-check';
+	const CHECK_LIFETIME_SECONDS  = 300;
 	const REQUEST_TIMEOUT_SECONDS = 10;
 
 	/**
@@ -58,8 +58,7 @@ class Health_Check {
 	 * @return true|WP_Error True if allowed, WP_Error otherwise.
 	 */
 	public static function diagnostic_permission( WP_REST_Request $request ) {
-		$check = $request->get_param( 'check' );
-		if ( $check && get_transient( self::AUTH_HEADER_TRANSIENT . $check ) ) {
+		if ( self::verify_check_token( $request->get_param( 'check' ) ) ) {
 			return true;
 		}
 
@@ -68,6 +67,46 @@ class Health_Check {
 			__( 'The diagnostic token is invalid or expired.', 'enable-mastodon-apps' ),
 			array( 'status' => 403 )
 		);
+	}
+
+	/**
+	 * Create a short-lived token for the diagnostic route.
+	 *
+	 * This is signed rather than stored so that the diagnostic does not depend on
+	 * a working object cache or on the loopback request landing in the same
+	 * transient scope: a failure to store the token would otherwise look like a
+	 * failure to forward the Authorization header.
+	 *
+	 * @return string The token.
+	 */
+	private static function create_check_token() {
+		$payload = ( time() + self::CHECK_LIFETIME_SECONDS ) . ':' . wp_generate_password( 12, false, false );
+
+		return $payload . ':' . hash_hmac( 'sha256', $payload, wp_salt( 'nonce' ) );
+	}
+
+	/**
+	 * Verify a token created by create_check_token().
+	 *
+	 * @param string $token The token.
+	 * @return bool Whether the token is valid and unexpired.
+	 */
+	private static function verify_check_token( $token ) {
+		if ( ! is_string( $token ) ) {
+			return false;
+		}
+
+		$parts = explode( ':', $token );
+		if ( 3 !== count( $parts ) ) {
+			return false;
+		}
+
+		list( $expires, $nonce, $signature ) = $parts;
+		if ( ! ctype_digit( $expires ) || intval( $expires ) < time() ) {
+			return false;
+		}
+
+		return hash_equals( hash_hmac( 'sha256', $expires . ':' . $nonce, wp_salt( 'nonce' ) ), $signature );
 	}
 
 	/**
@@ -308,6 +347,22 @@ class Health_Check {
 			return $result;
 		}
 
+		if ( 'authorization_header_missing' !== $check->get_error_code() ) {
+			// The diagnostic never got a usable answer, so it cannot say anything about the Authorization header.
+			$result['status']         = 'recommended';
+			$result['label']          = __( 'The Authorization header test could not be completed', 'enable-mastodon-apps' );
+			$result['badge']['color'] = 'orange';
+			$result['description']    = self::paragraphs(
+				__( 'The diagnostic request did not reach the diagnostic route, so this test could not determine whether Authorization headers are forwarded. This is not in itself a sign that the header is being stripped.', 'enable-mastodon-apps' ),
+				$check->get_error_message()
+			);
+			$result['actions']        = self::paragraphs(
+				__( 'Check whether WordPress can make loopback requests to itself, and whether a security plugin, firewall, or host-level rule blocks the plugin REST API routes.', 'enable-mastodon-apps' )
+			);
+
+			return $result;
+		}
+
 		$result['status']         = 'critical';
 		$result['label']          = __( 'Authorization headers do not reach WordPress', 'enable-mastodon-apps' );
 		$result['badge']['color'] = 'red';
@@ -512,12 +567,9 @@ class Health_Check {
 	 * @return true|WP_Error True on success, WP_Error otherwise.
 	 */
 	private static function is_authorization_header_forwarded() {
-		$check = wp_generate_password( 32, false, false );
-		set_transient( self::AUTH_HEADER_TRANSIENT . $check, 1, 5 * MINUTE_IN_SECONDS );
-
 		$url = add_query_arg(
 			'check',
-			rawurlencode( $check ),
+			rawurlencode( self::create_check_token() ),
 			self::get_rest_route_url( self::AUTH_HEADER_ROUTE )
 		);
 
@@ -532,8 +584,6 @@ class Health_Check {
 			)
 		);
 
-		delete_transient( self::AUTH_HEADER_TRANSIENT . $check );
-
 		if ( is_wp_error( $response ) ) {
 			return new WP_Error(
 				'authorization_header_request_failed',
@@ -545,23 +595,41 @@ class Health_Check {
 			);
 		}
 
+		$body = json_decode( wp_remote_retrieve_body( $response ), true );
+
 		$code = wp_remote_retrieve_response_code( $response );
 		if ( 200 !== $code ) {
+			$detail = '';
+			if ( is_array( $body ) && ! empty( $body['code'] ) ) {
+				$detail = sprintf(
+					// translators: %s: an error code returned by the REST API.
+					__( ' The response reported the error code %s.', 'enable-mastodon-apps' ),
+					'<code>' . esc_html( $body['code'] ) . '</code>'
+				);
+			}
+
 			return new WP_Error(
 				'authorization_header_unexpected_status',
 				sprintf(
-					// translators: %d: HTTP status code.
-					__( 'The Authorization header diagnostic route returned HTTP %d.', 'enable-mastodon-apps' ),
-					$code
+					// translators: %1$d: HTTP status code, %2$s: an optional sentence with further detail.
+					__( 'The Authorization header diagnostic route returned HTTP %1$d instead of 200.%2$s', 'enable-mastodon-apps' ),
+					$code,
+					$detail
 				)
 			);
 		}
 
-		$body = json_decode( wp_remote_retrieve_body( $response ), true );
 		if ( ! is_array( $body ) ) {
 			return new WP_Error(
 				'authorization_header_invalid_response',
 				__( 'The Authorization header diagnostic route did not return JSON.', 'enable-mastodon-apps' )
+			);
+		}
+
+		if ( ! array_key_exists( 'authorization_header_present', $body ) ) {
+			return new WP_Error(
+				'authorization_header_invalid_response',
+				__( 'The Authorization header diagnostic route returned JSON from somewhere other than the diagnostic itself.', 'enable-mastodon-apps' )
 			);
 		}
 

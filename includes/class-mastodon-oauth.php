@@ -180,7 +180,27 @@ class Mastodon_OAuth {
 		return $this->server->getAccessTokenData( $request, $response );
 	}
 
+	/**
+	 * Authenticate a request through an OAuth access token.
+	 *
+	 * `determine_current_user` runs for every WordPress request, so this only
+	 * looks at the Authorization header when the request is aimed at this
+	 * plugin. Otherwise a Bearer token that belongs to WordPress core or to
+	 * another plugin would be run through this plugin's token validation.
+	 *
+	 * @param int|false $user_id The user id determined so far.
+	 * @return int|false The user id.
+	 */
 	public function authenticate( $user_id ) {
+		if ( ! Mastodon_API::is_mastodon_api_request() ) {
+			return $user_id;
+		}
+
+		if ( Mastodon_API::PREFIX . '/' . WP_Admin\Health_Check::AUTH_HEADER_ROUTE === Mastodon_API::get_current_rest_route() ) {
+			// The Site Health diagnostic sends a synthetic Authorization header that is not meant to authenticate.
+			return $user_id;
+		}
+
 		$token = $this->get_token();
 		if ( is_array( $token ) && isset( $token['user_id'] ) ) {
 			return intval( $token['user_id'] );

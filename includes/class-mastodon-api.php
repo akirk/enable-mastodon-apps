@@ -58,6 +58,98 @@ class Mastodon_API {
 	}
 
 	/**
+	 * Get the REST route the current request is aimed at.
+	 *
+	 * This deliberately does not rely on the parsed query vars alone:
+	 * `determine_current_user` can run before `parse_request` has filled them in,
+	 * and the answer needs to be the same in both cases.
+	 *
+	 * @return string The route without a leading slash, or an empty string if this is not a REST request.
+	 */
+	public static function get_current_rest_route() {
+		if ( ! empty( $GLOBALS['wp']->query_vars['rest_route'] ) ) {
+			return ltrim( $GLOBALS['wp']->query_vars['rest_route'], '/' );
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( ! empty( $_GET['rest_route'] ) ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			return ltrim( sanitize_text_field( wp_unslash( $_GET['rest_route'] ) ), '/' );
+		}
+
+		if ( empty( $_SERVER['REQUEST_URI'] ) ) {
+			return '';
+		}
+
+		$rest_path = wp_parse_url( get_rest_url( null, '/' ), PHP_URL_PATH );
+		if ( ! $rest_path || false === strpos( $rest_path, '/' . rest_get_url_prefix() . '/' ) ) {
+			// Plain permalinks, in which case only the rest_route parameter above applies.
+			return '';
+		}
+
+		$path = wp_parse_url( sanitize_url( wp_unslash( $_SERVER['REQUEST_URI'] ) ), PHP_URL_PATH );
+		if ( ! $path || 0 !== strpos( $path, $rest_path ) ) {
+			return '';
+		}
+
+		return ltrim( substr( $path, strlen( $rest_path ) ), '/' );
+	}
+
+	/**
+	 * Determine whether the current request is aimed at this plugin.
+	 *
+	 * Used to keep the plugin from acting on requests it does not own, most
+	 * importantly to avoid validating Authorization headers that belong to
+	 * WordPress core or to another plugin.
+	 *
+	 * @return bool Whether the request is a Mastodon API request.
+	 */
+	public static function is_mastodon_api_request() {
+		$route = self::get_current_rest_route();
+		if ( $route ) {
+			$is_api_request = 0 === strpos( $route, self::PREFIX );
+		} else {
+			// The short paths (/api/v1/...) are rewritten to REST routes, but the
+			// rewrite has not necessarily been applied yet at this point.
+			$is_api_request = (bool) preg_match( '#^api/(v[0-9]+|nodeinfo)(/|$)#', self::get_current_home_path() );
+		}
+
+		/**
+		 * Filter whether the current request is a Mastodon API request.
+		 *
+		 * Requests that are not are left alone: in particular, their Authorization
+		 * header is not validated against the plugin's OAuth tokens.
+		 *
+		 * @param bool $is_api_request Whether the request is a Mastodon API request.
+		 * @return bool Whether the request is a Mastodon API request.
+		 */
+		return apply_filters( 'mastodon_api_is_api_request', $is_api_request );
+	}
+
+	/**
+	 * Get the path of the current request, relative to the site home.
+	 *
+	 * @return string The path without a leading slash.
+	 */
+	private static function get_current_home_path() {
+		if ( empty( $_SERVER['REQUEST_URI'] ) ) {
+			return '';
+		}
+
+		$path = wp_parse_url( sanitize_url( wp_unslash( $_SERVER['REQUEST_URI'] ) ), PHP_URL_PATH );
+		if ( ! $path ) {
+			return '';
+		}
+
+		$home_path = wp_parse_url( home_url( '/' ), PHP_URL_PATH );
+		if ( $home_path && 0 === strpos( $path, $home_path ) ) {
+			$path = substr( $path, strlen( $home_path ) );
+		}
+
+		return ltrim( $path, '/' );
+	}
+
+	/**
 	 * Constructor
 	 */
 	public function __construct() {
@@ -2269,12 +2361,8 @@ class Mastodon_API {
 	 * @return WP_Error WP_Error object.
 	 */
 	public function rest_authentication_errors( $errors ) {
-		if ( empty( $GLOBALS['wp']->query_vars['rest_route'] ) ) {
-			return $errors;
-		}
-
-		$route = ltrim( $GLOBALS['wp']->query_vars['rest_route'], '/' );
-		if ( 0 !== strpos( $route, self::PREFIX ) ) {
+		$route = self::get_current_rest_route();
+		if ( ! $route || 0 !== strpos( $route, self::PREFIX ) ) {
 			return $errors;
 		}
 
