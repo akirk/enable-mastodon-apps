@@ -27,7 +27,7 @@ class Pixelfed {
 		add_action( 'mastodon_api_new_app', array( $this, 'set_pixelfed_app_options' ) );
 	}
 
-	private function is_pixelfed_client() {
+	public static function is_pixelfed_client() {
 		if ( ! isset( $_SERVER['HTTP_USER_AGENT'] ) ) {
 			return false;
 		}
@@ -44,7 +44,7 @@ class Pixelfed {
 	}
 
 	public function mastodon_api_pixelfed_nodeinfo_software_root( $ret ) {
-		if ( ! $this->is_pixelfed_client() ) {
+		if ( ! self::is_pixelfed_client() ) {
 			return $ret;
 		}
 		$ret['software'] = $this->mastodon_api_pixelfed_nodeinfo_software( array() );
@@ -53,7 +53,7 @@ class Pixelfed {
 	}
 
 	public function mastodon_api_pixelfed_nodeinfo_software( $software ) {
-		$pixelfed = $this->is_pixelfed_client();
+		$pixelfed = self::is_pixelfed_client();
 		if ( ! $pixelfed ) {
 			return $software;
 		}

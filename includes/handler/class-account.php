@@ -30,6 +30,7 @@ class Account extends Handler {
 		add_filter( 'mastodon_api_account', array( $this, 'api_account_ema' ), 10, 4 );
 		add_filter( 'mastodon_api_account', array( $this, 'api_account_media_overrides' ), 20, 2 );
 		add_filter( 'mastodon_api_account', array( get_called_class(), 'api_account_ensure_numeric_id' ), 100, 2 );
+		add_filter( 'mastodon_api_account', array( get_called_class(), 'api_account_mastodon_defaults' ), 110, 2 );
 	}
 
 	public function api_account_ema( $account, $user_id, $request = null, $post = null ) {
@@ -85,13 +86,16 @@ class Account extends Handler {
 		$account->statuses_count = count_user_posts( $user->ID, 'post', true );
 		$account->last_status_at = new \DateTime( $user->user_registered );
 		$account->url            = get_author_posts_url( $user->ID );
+		// The author archive is also what the ActivityPub plugin serves the actor from.
+		$account->uri = $account->url;
 
 		$account->source = array(
-			'privacy'   => 'public',
-			'sensitive' => false,
-			'language'  => get_user_locale( $user->ID ),
-			'note'      => $note,
-			'fields'    => array(),
+			'privacy'               => 'public',
+			'sensitive'             => false,
+			'language'              => get_user_locale( $user->ID ),
+			'note'                  => $note,
+			'fields'                => array(),
+			'follow_requests_count' => 0,
 		);
 
 		return $account;
@@ -135,6 +139,59 @@ class Account extends Handler {
 		}
 
 		return $user_data;
+	}
+
+	/**
+	 * Fill in the parts of the account entity that Mastodon always sends.
+	 *
+	 * Accounts can come from integrations through the `mastodon_api_account` filter, so
+	 * this runs last and only supplies what is missing. Clients deserialize these into
+	 * typed models, and a missing key is not the same as an empty one for them.
+	 *
+	 * @param mixed $user_data The account.
+	 * @param int   $user_id   The user id.
+	 * @return mixed The account.
+	 */
+	public static function api_account_mastodon_defaults( $user_data, $user_id ) {
+		if ( ! is_object( $user_data ) ) {
+			return $user_data;
+		}
+
+		if ( empty( $user_data->uri ) && ! empty( $user_data->url ) ) {
+			$user_data->uri = $user_data->url;
+		}
+
+		if ( is_array( $user_data->source ) && ! isset( $user_data->source['follow_requests_count'] ) ) {
+			$user_data->source['follow_requests_count'] = 0;
+		}
+
+		// Mastodon always states whether a profile field has been verified.
+		$user_data->fields = self::add_field_verification( $user_data->fields );
+		if ( is_array( $user_data->source ) && isset( $user_data->source['fields'] ) ) {
+			$user_data->source['fields'] = self::add_field_verification( $user_data->source['fields'] );
+		}
+
+		return $user_data;
+	}
+
+	/**
+	 * Add the `verified_at` key to profile fields that don't have it.
+	 *
+	 * @param mixed $fields The profile fields.
+	 * @return mixed The profile fields.
+	 */
+	private static function add_field_verification( $fields ) {
+		if ( ! is_array( $fields ) ) {
+			return $fields;
+		}
+
+		foreach ( $fields as $i => $field ) {
+			if ( is_array( $field ) && ! array_key_exists( 'verified_at', $field ) ) {
+				$fields[ $i ]['verified_at'] = null;
+			}
+		}
+
+		return $fields;
 	}
 
 	public static function api_account_id( $user_id, $post_id ) {

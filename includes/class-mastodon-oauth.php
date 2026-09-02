@@ -213,7 +213,12 @@ class Mastodon_OAuth {
 		$response = new Response();
 
 		$authenticate_handler = new OAuth2\Authenticate_Handler();
-		$authenticate_handler->handle( $request, $response );
+		$response             = $authenticate_handler->handle( $request, $response );
+
+		// The consent screen renders itself; anything else has an error to report.
+		if ( $response instanceof Response && 200 !== $response->getStatusCode() ) {
+			$response->send();
+		}
 		exit;
 	}
 

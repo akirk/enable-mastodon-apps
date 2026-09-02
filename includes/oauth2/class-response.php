@@ -58,8 +58,9 @@ class Response extends \OAuth2\Response {
 			if ( ! $this->getParameter( 'created_at' ) ) {
 				$this->setParameter( 'created_at', time() );
 			}
-			if ( ! $this->getParameter( 'refresh_token' ) ) {
-				// Provide a placeholder to prevent apps from crashing when storing undefined.
+			if ( ! $this->getParameter( 'refresh_token' ) && \Enable_Mastodon_Apps\Integration\Pixelfed::is_pixelfed_client() ) {
+				// Pixelfed crashes when storing an undefined refresh token. An empty string is
+				// not a usable token, so it only goes to the clients that need the key present.
 				$this->setParameter( 'refresh_token', '' );
 			}
 		}

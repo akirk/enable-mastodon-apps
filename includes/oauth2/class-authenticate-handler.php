@@ -32,9 +32,11 @@ class Authenticate_Handler {
 		$client_name = $app->get_client_name();
 
 		$redirect_uri = isset( $_GET['redirect_uri'] ) ? sanitize_text_field( wp_unslash( $_GET['redirect_uri'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$redirect_uri = $app->check_redirect_uri( $redirect_uri );
-		if ( is_wp_error( $redirect_uri ) ) {
-			return $redirect_uri;
+		// Omitting it is allowed: the OAuth server then falls back to the registered URI.
+		if ( $redirect_uri && ! $app->check_redirect_uri( $redirect_uri ) ) {
+			$response->setError( 400, 'invalid_redirect_uri', 'The redirect URI is not registered for this app.' );
+
+			return $response;
 		}
 
 		$scopes = array();
