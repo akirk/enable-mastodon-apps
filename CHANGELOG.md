@@ -1,3 +1,16 @@
+### 1.6.2
+- Perform follows through the ActivityPub plugin ([#328])
+- Match Mastodon's app registration, token and account responses ([#326])
+- Only validate Authorization headers on Mastodon API requests ([#325])
+- Search by date when the query is a year, month or day ([#322])
+- Populate status URL fields ([#318])
+- Add captions for media descriptions ([#315])
+- Represent local blog follows in the API ([#313])
+- Add Videopack video thumbnail integration ([#314])
+- Add configurable media attachment limit ([#312])
+- Avoid stale block media attachment IDs ([#311])
+- Fix profile image updates from Mastodon clients ([#310])
+
 ### 1.6.1
 - Add optional Videopack integration for generated video thumbnails.
 - Ensure account headers are always serialized ([#308])
@@ -378,3 +391,15 @@
 [#306]: https://github.com/akirk/enable-mastodon-apps/pull/306
 [#307]: https://github.com/akirk/enable-mastodon-apps/pull/307
 [#308]: https://github.com/akirk/enable-mastodon-apps/pull/308
+
+[#310]: https://github.com/akirk/enable-mastodon-apps/pull/310
+[#311]: https://github.com/akirk/enable-mastodon-apps/pull/311
+[#312]: https://github.com/akirk/enable-mastodon-apps/pull/312
+[#313]: https://github.com/akirk/enable-mastodon-apps/pull/313
+[#314]: https://github.com/akirk/enable-mastodon-apps/pull/314
+[#315]: https://github.com/akirk/enable-mastodon-apps/pull/315
+[#318]: https://github.com/akirk/enable-mastodon-apps/pull/318
+[#322]: https://github.com/akirk/enable-mastodon-apps/pull/322
+[#325]: https://github.com/akirk/enable-mastodon-apps/pull/325
+[#326]: https://github.com/akirk/enable-mastodon-apps/pull/326
+[#328]: https://github.com/akirk/enable-mastodon-apps/pull/328
