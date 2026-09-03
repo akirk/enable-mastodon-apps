@@ -31,14 +31,27 @@ class Activitypub {
 	 */
 	const ACTOR_POST_TYPE = 'ap_actor';
 
+	/**
+	 * The account id the app asked to follow, before any handler rewrote it.
+	 *
+	 * @var string|int|null
+	 */
+	private $requested_account_id = null;
+
 	public function __construct() {
 		if ( ! self::is_available() ) {
 			return;
 		}
 
-		// Run before other integrations so that the account id is still the one the app was given.
-		add_filter( 'mastodon_api_account_follow', array( $this, 'account_follow' ), 9 );
-		add_action( 'mastodon_api_account_unfollow', array( $this, 'account_unfollow' ), 9 );
+		/*
+		 * Following is handled last, so that a plugin that owns following - Friends,
+		 * say - gets first refusal and this is only the fallback. The account id is
+		 * remembered first because such a handler may return something else entirely.
+		 */
+		add_filter( 'mastodon_api_account_follow', array( $this, 'remember_account_id' ), 1 );
+		add_filter( 'mastodon_api_account_follow', array( $this, 'account_follow' ), 20 );
+		add_action( 'mastodon_api_account_unfollow', array( $this, 'remember_account_id' ), 1 );
+		add_action( 'mastodon_api_account_unfollow', array( $this, 'account_unfollow' ), 20 );
 		add_filter( 'mastodon_entity_relationship', array( $this, 'entity_relationship' ), 20, 2 );
 		add_filter( 'mastodon_api_account', array( $this, 'account_counts' ), 16, 2 );
 		add_filter( 'mastodon_api_account_following', array( $this, 'account_following' ), 20, 3 );
@@ -178,15 +191,42 @@ class Activitypub {
 	}
 
 	/**
+	 * Remember the account id the app asked about.
+	 *
+	 * @param string|int $user_id The account id.
+	 * @return string|int The unmodified account id.
+	 */
+	public function remember_account_id( $user_id ) {
+		$this->requested_account_id = $user_id;
+
+		return $user_id;
+	}
+
+	/**
+	 * Get the account id to act on.
+	 *
+	 * A handler that ran before us may have returned something we cannot use, in
+	 * which case we fall back to what the app asked for.
+	 *
+	 * @param string|int $user_id The account id as the filter chain has it.
+	 * @return string|int The account id to act on.
+	 */
+	private function requested_account_id( $user_id ) {
+		if ( is_string( $user_id ) || is_numeric( $user_id ) ) {
+			return $user_id;
+		}
+
+		return $this->requested_account_id;
+	}
+
+	/**
 	 * Follow a remote account through the ActivityPub plugin.
 	 *
 	 * @param string|int $user_id The account id to follow.
 	 * @return string|int|\WP_Error The unmodified account id, or an error if the follow failed.
 	 */
 	public function account_follow( $user_id ) {
-		if ( is_wp_error( $user_id ) ) {
-			return $user_id;
-		}
+		$user_id = $this->requested_account_id( $user_id );
 
 		$actor_post_id = $this->resolve_remote_actor( $user_id, true );
 		if ( ! $actor_post_id ) {
@@ -213,7 +253,7 @@ class Activitypub {
 			);
 		}
 
-		// Another integration may have performed the follow already.
+		// A plugin that owns following has already done it, or it was already followed.
 		if ( \Activitypub\Collection\Following::check_status( $local_actor_id, $actor_post_id ) ) {
 			return $user_id;
 		}
@@ -232,6 +272,8 @@ class Activitypub {
 	 * @param string|int $user_id The account id to unfollow.
 	 */
 	public function account_unfollow( $user_id ) {
+		$user_id = $this->requested_account_id( $user_id );
+
 		$actor_post_id = $this->resolve_remote_actor( $user_id );
 		if ( ! $actor_post_id ) {
 			return;

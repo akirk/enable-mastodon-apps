@@ -142,6 +142,10 @@ class Follow_Endpoint_Test extends Mastodon_API_TestCase {
 	 * A follow that cannot be performed must not be reported as a success.
 	 */
 	public function test_follow_unknown_account_errors() {
+		if ( $this->another_integration_follows() ) {
+			$this->markTestSkipped( 'Another plugin owns following and decides the outcome.' );
+		}
+
 		$user_id = Mastodon_API::remap_user_id( 'nobody@mastodon.local' );
 
 		$request  = $this->api_request( 'POST', '/api/v1/accounts/' . $user_id . '/follow' );
@@ -152,7 +156,32 @@ class Follow_Endpoint_Test extends Mastodon_API_TestCase {
 	}
 
 	/**
-	 * Another plugin that handles follows keeps the last word.
+	 * Whether a plugin other than this one handles follows.
+	 *
+	 * @return bool True if another plugin is hooked into following.
+	 */
+	private function another_integration_follows() {
+		global $wp_filter;
+
+		if ( empty( $wp_filter['mastodon_api_account_follow'] ) ) {
+			return false;
+		}
+
+		foreach ( $wp_filter['mastodon_api_account_follow']->callbacks as $callbacks ) {
+			foreach ( $callbacks as $callback ) {
+				if ( is_array( $callback['function'] ) && $callback['function'][0] instanceof Integration\Activitypub ) {
+					continue;
+				}
+
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * A plugin that owns following gets first refusal and decides the outcome.
 	 */
 	public function test_follow_defers_to_another_integration() {
 		$handled = false;
@@ -170,6 +199,46 @@ class Follow_Endpoint_Test extends Mastodon_API_TestCase {
 
 		$this->assertTrue( $handled );
 		$this->assertEquals( 200, $response->get_status() );
+	}
+
+	/**
+	 * A follow another plugin already performed is not performed a second time.
+	 */
+	public function test_follow_performed_by_another_integration_is_not_repeated() {
+		$actor_post_id = $this->actor_post_id;
+		$handler       = function ( $user_id ) use ( $actor_post_id ) {
+			// Stand in for a plugin that follows through the ActivityPub plugin itself.
+			\Activitypub\Collection\Following::follow( $actor_post_id, get_current_user_id() );
+			return $user_id;
+		};
+		add_filter( 'mastodon_api_account_follow', $handler );
+
+		$request  = $this->api_request( 'POST', '/api/v1/accounts/' . $this->actor_post_id . '/follow' );
+		$response = $this->dispatch_authenticated( $request );
+
+		remove_filter( 'mastodon_api_account_follow', $handler );
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertEquals( 1, $this->count_follow_activities() );
+	}
+
+	/**
+	 * A handler that returns nothing does not cost us the account id.
+	 */
+	public function test_follow_survives_a_handler_that_returns_nothing() {
+		$handler = function () {
+			return null;
+		};
+		add_filter( 'mastodon_api_account_follow', $handler, 15 );
+
+		$request  = $this->api_request( 'POST', '/api/v1/accounts/' . $this->actor_post_id . '/follow' );
+		$response = $this->dispatch_authenticated( $request );
+
+		remove_filter( 'mastodon_api_account_follow', $handler, 15 );
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertEquals( 1, $this->count_follow_activities() );
+		$this->assertEquals( strval( $this->actor_post_id ), $response->get_data()->id );
 	}
 
 	/**
