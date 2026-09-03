@@ -68,6 +68,7 @@ add_action(
 		new Mastodon_API();
 		WP_Admin\Health_Check::init();
 		new Integration\Pixelfed();
+		new Integration\Activitypub();
 		new Comment_CPT();
 	}
 );
