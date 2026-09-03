@@ -3388,11 +3388,20 @@ class Mastodon_API {
 		 *
 		 * @param string          $user_id The user ID.
 		 * @param WP_REST_Request $request The request object.
-		 * @return string The user ID.
+		 * @return string|\WP_Error The user ID, or a WP_Error if the follow could not be performed.
 		 */
-		$user_id = apply_filters( 'mastodon_api_account_follow', $user_id, $request );
+		$followed_user_id = apply_filters( 'mastodon_api_account_follow', $user_id, $request );
 
-		return rest_ensure_response( $this->get_relationship( $user_id, $request ) );
+		if ( is_wp_error( $followed_user_id ) ) {
+			return $followed_user_id;
+		}
+
+		// A handler that returns nothing must not take the account id down with it.
+		if ( ! is_string( $followed_user_id ) && ! is_numeric( $followed_user_id ) ) {
+			$followed_user_id = $user_id;
+		}
+
+		return rest_ensure_response( $this->get_relationship( strval( $followed_user_id ), $request ) );
 	}
 
 	/**
