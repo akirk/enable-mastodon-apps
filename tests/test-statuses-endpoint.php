@@ -527,6 +527,69 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertEquals( 'just a short toot', $p->post_content );
 	}
 
+	public function test_submit_multiline_standard_to_post_type_without_title_support() {
+		$this->app->set_post_formats( 'standard' );
+		$this->app->set_create_post_format( 'standard' );
+		$this->app->set_create_post_type( Mastodon_API::POST_CPT );
+		$this->app->set_disable_blocks( true );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'headline' . PHP_EOL . 'post_content' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$p = get_post( $response->get_data()->id );
+		$this->assertEquals( '', $p->post_title );
+		$this->assertEquals( 'headline' . PHP_EOL . 'post_content', $p->post_content );
+	}
+
+	public function test_submit_single_line_standard_with_media_to_post_type_without_title_support() {
+		$this->app->set_post_formats( 'standard' );
+		$this->app->set_create_post_format( 'standard' );
+		$this->app->set_create_post_type( Mastodon_API::POST_CPT );
+		$this->app->set_disable_blocks( true );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'caption text' );
+		$request->set_param( 'media_ids', array( (string) $this->friend_attachment_id ) );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$p = get_post( $response->get_data()->id );
+		$this->assertEquals( '', $p->post_title );
+		$this->assertStringContainsString( 'caption text', $p->post_content );
+		$this->assertStringContainsString( 'wp:image', $p->post_content );
+	}
+
+	public function test_status_does_not_bold_title_of_post_type_without_title_support() {
+		$post_id = wp_insert_post(
+			array(
+				'post_author'  => $this->administrator,
+				'post_content' => 'post_content',
+				'post_title'   => 'headline',
+				'post_status'  => 'publish',
+				'post_type'    => Mastodon_API::POST_CPT,
+			)
+		);
+
+		$request = $this->api_request( 'GET', '/api/v1/statuses/' . $post_id );
+		$response = $this->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$content = $response->get_data()->content;
+		$this->assertStringNotContainsString( '<strong>', $content );
+		$this->assertStringContainsString( 'headline', $content );
+		$this->assertStringContainsString( 'post_content', $content );
+	}
+
+	public function test_status_bolds_title_of_post_type_with_title_support() {
+		$request = $this->api_request( 'GET', '/api/v1/statuses/' . $this->friend_post );
+		$response = $this->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$this->assertStringContainsString( '<strong>Friend title</strong>', $response->get_data()->content );
+	}
+
 	public function test_submit_standard_uses_first_content_line_as_excerpt() {
 		$this->app->set_post_formats( 'standard' );
 		$this->app->set_create_post_format( 'standard' );
