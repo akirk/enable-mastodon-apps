@@ -119,13 +119,22 @@ class Notification extends Handler {
 		$limit         = $request->get_param( 'limit' ) ? $request->get_param( 'limit' ) : 15;
 		$notifications = array();
 		$types         = $request->get_param( 'types' );
-		$args          = array(
-			'posts_per_page' => $limit + 2,
-		);
 		$exclude_types = $request->get_param( 'exclude_types' );
 		if ( ( ! is_array( $types ) || in_array( 'mention', $types, true ) ) && ( ! is_array( $exclude_types ) || ! in_array( 'mention', $exclude_types, true ) ) ) {
+			$base_args = array(
+				'author__not_in' => array( get_current_user_id() ),
+			);
+
+			$queries = array();
+
 			/**
 			 * Get the WP_Query arguments for fetching notifications.
+			 *
+			 * This filter provides a single query that all its callers need to share. Since
+			 * WP_Query applies post statuses and taxonomy queries to every post type in it,
+			 * one caller can filter out another caller's posts. Prefer the
+			 * mastodon_api_get_notifications_queries filter, which queries each source
+			 * separately.
 			 *
 			 * @param array $args WP_Query arguments.
 			 * @param string $type Type of notifications.
@@ -144,55 +153,95 @@ class Notification extends Handler {
 			 */
 			$args = apply_filters(
 				'mastodon_api_get_notifications_query_args',
-				array(
-					'author__not_in' => array( get_current_user_id() ),
-				),
+				$base_args,
 				'mention',
 				$request
 			);
-			if ( ! isset( $args['post_type'] ) ) {
-				return array();
+			if ( isset( $args['post_type'] ) ) {
+				$queries[] = $args;
 			}
-			$args['posts_per_page'] = $limit + 2;
+
+			/**
+			 * Get the queries for fetching notifications.
+			 *
+			 * Every entry is a set of WP_Query arguments that is queried on its own, so that
+			 * the post statuses or taxonomy queries a notification source needs don't apply
+			 * to the posts of the other sources. The posts the current user authored are
+			 * excluded from each of them.
+			 *
+			 * @param array $queries The queries, each of them WP_Query arguments.
+			 * @param string $type Type of notifications.
+			 * @param object $request Request object from WP.
+			 * @return array The modified queries.
+			 *
+			* Example:
+			* ```php
+			* add_filter( 'mastodon_api_get_notifications_queries', function( $queries, $type ) {
+			*     if ( $type === 'mention' ) {
+			*         $queries[] = array(
+			*             'post_type'   => 'my_message',
+			*             'post_status' => 'my_unread',
+			*         );
+			*     }
+			*     return $queries;
+			* } );
+			* ```
+			 */
+			$queries = apply_filters( 'mastodon_api_get_notifications_queries', $queries, 'mention', $request );
 
 			$notification_dismissed_tag = get_term_by( 'slug', apply_filters( 'mastodon_api_notification_dismissed_tag', 'notification-dismissed' ), 'post_tag' );
-			if ( $notification_dismissed_tag ) {
-				$args['tag__not_in'] = array( $notification_dismissed_tag->term_id );
-			}
-			foreach ( get_posts( $args ) as $post ) {
-				$type = apply_filters( 'mastodon_api_notification_type', 'mention', $post );
-				switch ( $type ) {
-					case 'like':
-						$type = 'favourite';
-						$status  = apply_filters( 'mastodon_api_status', null, $post->post_parent, array() );
-						break;
-					case 'repost':
-						$type = 'reblog';
-						$status  = apply_filters( 'mastodon_api_status', null, $post->post_parent, array() );
-						break;
-					default:
-						$type = 'mention';
-						$status  = apply_filters( 'mastodon_api_status', null, $post->ID, array() );
-				}
 
-				if ( is_array( $types ) && ! in_array( $type, $types, true ) ) {
+			$seen_post_ids = array();
+			foreach ( $queries as $args ) {
+				if ( empty( $args['post_type'] ) ) {
 					continue;
 				}
-				if ( is_array( $exclude_types ) && in_array( $type, $exclude_types, true ) ) {
-					continue;
-				}
+				$args                   = array_merge( $base_args, $args );
+				$args['posts_per_page'] = $limit + 2;
 
-				$account = apply_filters( 'mastodon_api_account', null, $post->post_author, null, $post );
-				if ( $status ) {
-					$status->account = $account;
+				if ( $notification_dismissed_tag ) {
+					$args['tag__not_in'] = array( $notification_dismissed_tag->term_id );
 				}
+				foreach ( get_posts( $args ) as $post ) {
+					if ( isset( $seen_post_ids[ $post->ID ] ) ) {
+						continue;
+					}
+					$seen_post_ids[ $post->ID ] = true;
 
-				$notifications[] = $this->get_notification_array(
-					$type,
-					mysql2date( 'Y-m-d\TH:i:s.000P', $post->post_date, false ),
-					$account,
-					$status
-				);
+					$type = apply_filters( 'mastodon_api_notification_type', 'mention', $post );
+					switch ( $type ) {
+						case 'like':
+							$type = 'favourite';
+							$status  = apply_filters( 'mastodon_api_status', null, $post->post_parent, array() );
+							break;
+						case 'repost':
+							$type = 'reblog';
+							$status  = apply_filters( 'mastodon_api_status', null, $post->post_parent, array() );
+							break;
+						default:
+							$type = 'mention';
+							$status  = apply_filters( 'mastodon_api_status', null, $post->ID, array() );
+					}
+
+					if ( is_array( $types ) && ! in_array( $type, $types, true ) ) {
+						continue;
+					}
+					if ( is_array( $exclude_types ) && in_array( $type, $exclude_types, true ) ) {
+						continue;
+					}
+
+					$account = apply_filters( 'mastodon_api_account', null, $post->post_author, null, $post );
+					if ( $status ) {
+						$status->account = $account;
+					}
+
+					$notifications[] = $this->get_notification_array(
+						$type,
+						mysql2date( 'Y-m-d\TH:i:s.000P', $post->post_date, false ),
+						$account,
+						$status
+					);
+				}
 			}
 		}
 

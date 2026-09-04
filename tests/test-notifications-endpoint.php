@@ -69,6 +69,116 @@ class NotificationsEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertArrayHasKey( '/' . Mastodon_API::PREFIX . '/api/v1/notifications', $routes );
 	}
 
+	/**
+	 * Collect the status IDs of the notifications in a response.
+	 *
+	 * @param array $data The decoded response data.
+	 * @return array The status IDs.
+	 */
+	private function notification_status_ids( array $data ): array {
+		$ids = array();
+		foreach ( $data as $notification ) {
+			if ( ! empty( $notification['status']['id'] ) ) {
+				$ids[] = $notification['status']['id'];
+			}
+		}
+		return $ids;
+	}
+
+	public function test_direct_message_creates_a_notification() {
+		$dm = wp_insert_post(
+			array(
+				'post_author'  => $this->friend,
+				'post_content' => 'A direct message for you',
+				'post_status'  => 'ema_unread',
+				'post_type'    => Mastodon_API::get_dm_cpt( $this->administrator ),
+			)
+		);
+
+		$request  = $this->api_request( 'GET', '/api/v1/notifications' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = json_decode( wp_json_encode( $response->get_data() ), true );
+		$this->assertContains( strval( $dm ), $this->notification_status_ids( $data ) );
+	}
+
+	public function test_comment_creates_a_notification() {
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $this->post,
+				'comment_content'  => 'A comment on your post',
+				'user_id'          => $this->friend,
+				'comment_approved' => 1,
+			)
+		);
+		$comment_post_id = Comment_CPT::comment_id_to_post_id( $comment_id );
+		$this->assertNotEmpty( $comment_post_id );
+
+		$request  = $this->api_request( 'GET', '/api/v1/notifications' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = json_decode( wp_json_encode( $response->get_data() ), true );
+		$this->assertContains( strval( $comment_post_id ), $this->notification_status_ids( $data ) );
+	}
+
+	/**
+	 * A notification source that needs its own post statuses or taxonomy terms must not
+	 * filter out the posts of the other sources.
+	 */
+	public function test_third_party_query_does_not_hide_other_notifications() {
+		$dm = wp_insert_post(
+			array(
+				'post_author'  => $this->friend,
+				'post_content' => 'A direct message for you',
+				'post_status'  => 'ema_unread',
+				'post_type'    => Mastodon_API::get_dm_cpt( $this->administrator ),
+			)
+		);
+
+		add_filter(
+			'mastodon_api_get_notifications_query_args',
+			function ( $args, $type ) {
+				if ( 'mention' !== $type ) {
+					return $args;
+				}
+				$args['post_type'] = 'post';
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+				$args['tax_query'] = array(
+					array(
+						'taxonomy' => 'post_tag',
+						'field'    => 'name',
+						'terms'    => 'mentions-of-someone-else',
+					),
+				);
+				return $args;
+			},
+			10,
+			2
+		);
+
+		$request  = $this->api_request( 'GET', '/api/v1/notifications' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = json_decode( wp_json_encode( $response->get_data() ), true );
+		$this->assertContains( strval( $dm ), $this->notification_status_ids( $data ) );
+	}
+
+	public function test_notification_sources_are_queried_separately() {
+		$queries = apply_filters( 'mastodon_api_get_notifications_queries', array(), 'mention', $this->api_request( 'GET', '/api/v1/notifications' ) );
+
+		$post_types = array();
+		foreach ( $queries as $query ) {
+			$this->assertArrayHasKey( 'post_type', $query );
+			$post_types[] = $query['post_type'];
+		}
+
+		$this->assertContains( Comment_CPT::CPT, $post_types );
+		$this->assertContains( Mastodon_API::get_dm_cpt( get_current_user_id() ), $post_types );
+	}
+
 	public function test_notifications_sorted_newest_first() {
 		$this->inject_test_notifications(
 			array(
