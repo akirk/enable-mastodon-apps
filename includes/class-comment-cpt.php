@@ -50,7 +50,7 @@ class Comment_CPT {
 		add_filter( 'mastodon_api_account', array( $this, 'api_account' ), 10, 4 );
 		add_filter( 'mastodon_api_in_reply_to_id', array( $this, 'mastodon_api_in_reply_to_id' ), 15 );
 		add_filter( 'mastodon_api_notification_type', array( $this, 'mastodon_api_notification_type' ), 10, 2 );
-		add_filter( 'mastodon_api_get_notifications_query_args', array( $this, 'mastodon_api_get_notifications_query_args' ), 10, 2 );
+		add_filter( 'mastodon_api_get_notifications_queries', array( $this, 'mastodon_api_get_notifications_queries' ), 10, 2 );
 	}
 
 	public function register_custom_post_type() {
@@ -363,16 +363,14 @@ class Comment_CPT {
 		return $type;
 	}
 
-	public function mastodon_api_get_notifications_query_args( $args, $type ) {
+	public function mastodon_api_get_notifications_queries( $queries, $type ) {
 		if ( 'mention' === $type ) {
-			if ( ! isset( $args['post_type'] ) ) {
-				$args['post_type'] = array();
-			} elseif ( ! is_array( $args['post_type'] ) ) {
-				$args['post_type'] = array( $args['post_type'] );
-			}
-			$args['post_type'][] = self::CPT;
+			$queries[] = array(
+				'post_type'   => self::CPT,
+				'post_status' => 'publish',
+			);
 		}
 
-		return $args;
+		return $queries;
 	}
 }

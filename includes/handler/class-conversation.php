@@ -38,7 +38,7 @@ class Conversation extends Status {
 		add_filter( 'mastodon_api_conversation_delete', array( $this, 'delete_conversation' ), 10 );
 		add_filter( 'mastodon_api_status_context_post_types', array( $this, 'conversation_post_type' ), 10, 2 );
 		add_filter( 'mastodon_api_status_context_post_statuses', array( $this, 'conversation_post_status' ), 10, 2 );
-		add_filter( 'mastodon_api_get_notifications_query_args', array( $this, 'conversation_query_args' ), 20, 2 );
+		add_filter( 'mastodon_api_get_notifications_queries', array( $this, 'conversation_queries' ), 20, 2 );
 		add_filter( 'the_title', array( $this, 'show_dm_text' ), 10, 2 );
 		add_filter( 'post_row_actions', array( $this, 'dm_row_actions' ), 10, 2 );
 	}
@@ -166,29 +166,17 @@ class Conversation extends Status {
 		return $post_types;
 	}
 
-	public function conversation_query_args( $args, $type ) {
+	public function conversation_queries( $queries, $type ) {
 		if ( 'mention' !== $type ) {
-			return $args;
-		}
-		if ( ! isset( $args['post_type'] ) ) {
-			$args['post_type'] = array();
-		} elseif ( ! is_array( $args['post_type'] ) ) {
-			$args['post_type'] = array( $args['post_type'] );
-		}
-		$args['post_type'][] = Mastodon_Api::get_dm_cpt();
-
-		if ( ! isset( $args['post_status'] ) ) {
-			$args['post_status'] = array();
-		} elseif ( ! is_array( $args['post_status'] ) ) {
-			$args['post_status'] = array( $args['post_status'] );
-		}
-		foreach ( $this->get_post_statuses() as $post_status ) {
-			if ( ! in_array( $post_status, $args['post_status'], true ) ) {
-				$args['post_status'][] = $post_status;
-			}
+			return $queries;
 		}
 
-		return $args;
+		$queries[] = array(
+			'post_type'   => Mastodon_Api::get_dm_cpt(),
+			'post_status' => $this->get_post_statuses(),
+		);
+
+		return $queries;
 	}
 
 	public function show_dm_text( $title, $post_id ) {
