@@ -682,8 +682,12 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$post_id = intval( $data->id );
 		$post = get_post( $post_id );
 		$this->assertNotNull( $post, 'A new post should have been created for the remote reply' );
-		$this->assertStringContainsString( 'wp:activitypub/reply', $post->post_content, 'Post content should contain the activitypub/reply block' );
-		$this->assertStringContainsString( $remote_url, $post->post_content, 'The reply block should point at the remote status' );
+		if ( defined( 'ACTIVITYPUB_PLUGIN_VERSION' ) ) {
+			$this->assertStringContainsString( 'wp:activitypub/reply', $post->post_content, 'Post content should contain the activitypub/reply block' );
+			$this->assertStringContainsString( $remote_url, $post->post_content, 'The reply block should point at the remote status' );
+		} else {
+			$this->assertStringNotContainsString( 'activitypub/reply', $post->post_content, 'Without the ActivityPub plugin there is no block to add' );
+		}
 		$this->assertEquals( $remote_url, get_post_meta( $post_id, 'activitypub_in_reply_to', true ), 'Remote URL should be stored as activitypub_in_reply_to meta' );
 	}
 
