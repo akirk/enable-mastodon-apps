@@ -6,7 +6,7 @@
 - Tested up to: 6.8
 - Requires PHP: 7.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 1.6.2
+- Stable tag: 1.6.3
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -104,6 +104,11 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 2. The Mastodon Apps settings page.
 
 ## Changelog
+
+### 1.6.3
+- Don't make first line bold for post types that don't support titles ([#332])
+- Query every notification source separately ([#331])
+- Include the featured image as a media attachment ([#330])
 
 ### 1.6.2
 - Perform follows through the ActivityPub plugin ([#328])
@@ -399,3 +404,7 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 [#325]: https://github.com/akirk/enable-mastodon-apps/pull/325
 [#326]: https://github.com/akirk/enable-mastodon-apps/pull/326
 [#328]: https://github.com/akirk/enable-mastodon-apps/pull/328
+
+[#330]: https://github.com/akirk/enable-mastodon-apps/pull/330
+[#331]: https://github.com/akirk/enable-mastodon-apps/pull/331
+[#332]: https://github.com/akirk/enable-mastodon-apps/pull/332
