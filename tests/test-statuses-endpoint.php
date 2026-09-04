@@ -77,6 +77,55 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertEmpty( $data->media_attachments );
 	}
 
+	public function test_status_uses_featured_image_as_media_attachment() {
+		$post_id = wp_insert_post(
+			array(
+				'post_author'  => $this->friend,
+				'post_content' => '<!-- wp:paragraph --><p>A post whose image is only the featured image.</p><!-- /wp:paragraph -->',
+				'post_title'   => 'Featured image only',
+				'post_status'  => 'publish',
+				'post_type'    => 'post',
+			)
+		);
+		set_post_thumbnail( $post_id, $this->friend_attachment_id );
+
+		$request  = $this->api_request( 'GET', '/api/v1/statuses/' . $post_id );
+		$response = $this->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertCount( 1, $data->media_attachments );
+		$this->assertEquals( strval( $this->friend_attachment_id ), $data->media_attachments[0]->id );
+		$this->assertStringContainsString( 'A post whose image is only the featured image.', $data->content );
+	}
+
+	public function test_status_does_not_duplicate_featured_image_used_in_content() {
+		$post_content = sprintf(
+			'<!-- wp:image {"id":%1$d} -->
+<figure class="wp-block-image"><img src="https://example.org/image.png" alt="" class="wp-image-%1$d" /></figure>
+<!-- /wp:image -->',
+			$this->friend_attachment_id
+		);
+		$post_id      = wp_insert_post(
+			array(
+				'post_author'  => $this->friend,
+				'post_content' => $post_content,
+				'post_title'   => 'Featured image also in content',
+				'post_status'  => 'publish',
+				'post_type'    => 'post',
+			)
+		);
+		set_post_thumbnail( $post_id, $this->friend_attachment_id );
+
+		$request  = $this->api_request( 'GET', '/api/v1/statuses/' . $post_id );
+		$response = $this->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertCount( 1, $data->media_attachments );
+		$this->assertStringNotContainsString( '<img', $data->content );
+	}
+
 	public function test_statuses_private_id() {
 		$request = $this->api_request( 'GET', '/api/v1/statuses/' . $this->private_post );
 		$response = $this->dispatch( $request );
