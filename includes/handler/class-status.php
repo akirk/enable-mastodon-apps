@@ -276,7 +276,13 @@ class Status extends Handler {
 			$status->url        = get_permalink( $post );
 			$status->content    = $post->post_content;
 			if ( ! empty( $post->post_title ) && trim( $post->post_title ) ) {
-				$status->content = '<strong>' . esc_html( $post->post_title ) . '</strong>' . PHP_EOL . $status->content;
+				if ( post_type_supports( $post->post_type, 'title' ) ) {
+					$status->content = '<strong>' . esc_html( $post->post_title ) . '</strong>' . PHP_EOL . $status->content;
+				} else {
+					// Posts created by an app before the title split was disabled still carry a
+					// title. Keep the text (it can be the entire status) but don't render it bold.
+					$status->content = esc_html( $post->post_title ) . PHP_EOL . $status->content;
+				}
 			}
 			$status->account    = $account;
 			$media_attachments  = $this->get_block_attachments( $post );
@@ -542,13 +548,18 @@ class Status extends Handler {
 		$post_data['post_title'] = '';
 
 		if ( ! $post_format || 'standard' === $post_format ) {
-			$post_content_parts = preg_split( self::get_line_split_pattern(), $status_text, 2 );
-			if ( count( $post_content_parts ) === 2 ) {
-				$post_data['post_title']   = wp_strip_all_tags( $post_content_parts[0] );
-				$post_data['post_content'] = trim( $post_content_parts[1] );
-			} elseif ( ! empty( $media_ids ) ) {
-				$post_data['post_title']   = wp_strip_all_tags( $status_text );
-				$post_data['post_content'] = '';
+			// Only split the first line off as a title if the post type actually supports one.
+			// The default ema-post CPT (and the DM CPT) don't, so the title would be invisible
+			// in WordPress and only come back to the app as a bold first line.
+			if ( post_type_supports( $post_data['post_type'], 'title' ) ) {
+				$post_content_parts = preg_split( self::get_line_split_pattern(), $status_text, 2 );
+				if ( count( $post_content_parts ) === 2 ) {
+					$post_data['post_title']   = wp_strip_all_tags( $post_content_parts[0] );
+					$post_data['post_content'] = trim( $post_content_parts[1] );
+				} elseif ( ! empty( $media_ids ) ) {
+					$post_data['post_title']   = wp_strip_all_tags( $status_text );
+					$post_data['post_content'] = '';
+				}
 			}
 
 			if ( $app->get_first_line_as_excerpt() && ! empty( $post_data['post_content'] ) ) {
