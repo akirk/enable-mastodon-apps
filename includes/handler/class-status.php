@@ -62,7 +62,12 @@ class Status extends Handler {
 		$media_ids = array();
 
 		if ( \function_exists( 'has_post_thumbnail' ) && \has_post_thumbnail( $post->ID ) ) {
-			$media_ids[] = \get_post_thumbnail_id( $post->ID );
+			$thumbnail_id = \get_post_thumbnail_id( $post->ID );
+			if ( $thumbnail_id ) {
+				// The array is keyed by attachment ID, the value is the HTML to be removed from the content.
+				// A featured image is not part of the content, so there is nothing to remove.
+				$media_ids[ $thumbnail_id ] = '';
+			}
 		}
 
 		$blocks = \parse_blocks( $post->post_content );
@@ -278,8 +283,10 @@ class Status extends Handler {
 			foreach ( $media_attachments as $media_id => $html ) {
 				$media_attachment = apply_filters( 'mastodon_api_media_attachment', null, $media_id );
 				if ( $media_attachment ) {
-					// We don't want to show the media in the content as they are attachments.
-					$status->content             = str_replace( $html, '', $status->content );
+					if ( $html ) {
+						// We don't want to show the media in the content as they are attachments.
+						$status->content = str_replace( $html, '', $status->content );
+					}
 					$status->media_attachments[] = $media_attachment;
 				}
 			}
