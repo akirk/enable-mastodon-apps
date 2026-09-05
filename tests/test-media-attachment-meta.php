@@ -85,7 +85,8 @@ class MediaAttachmentMeta_Test extends Mastodon_API_TestCase {
 		$this->assertSame( 800, $meta['original']['width'] );
 		$this->assertSame( 400, $meta['original']['height'] );
 		$this->assertSame( '800x400', $meta['original']['size'] );
-		$this->assertSame( 2.0, $meta['original']['aspect'] );
+		// PHP returns an int from an evenly dividing division, so don't be strict about the type here.
+		$this->assertEquals( 2, $meta['original']['aspect'] );
 		$this->assertSame(
 			array(
 				'x' => 0.5,
