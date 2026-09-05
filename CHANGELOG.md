@@ -1,3 +1,8 @@
+### 1.6.4
+- Don't drop media attachments that lack dimensions ([#334]) - should fix featured images
+- Federate what Mastodon apps actually submit ([#333]) - should fix mentions
+- Implement conversation read and delete handlers ([#321])
+
 ### 1.6.3
 - Don't make first line bold for post types that don't support titles ([#332])
 - Query every notification source separately ([#331])
@@ -412,3 +417,7 @@
 [#330]: https://github.com/akirk/enable-mastodon-apps/pull/330
 [#331]: https://github.com/akirk/enable-mastodon-apps/pull/331
 [#332]: https://github.com/akirk/enable-mastodon-apps/pull/332
+
+[#321]: https://github.com/akirk/enable-mastodon-apps/pull/321
+[#333]: https://github.com/akirk/enable-mastodon-apps/pull/333
+[#334]: https://github.com/akirk/enable-mastodon-apps/pull/334
