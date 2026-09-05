@@ -605,11 +605,13 @@ class Status extends Handler {
 			// Only split the first line off as a title if the post type actually supports one.
 			// The default ema-post CPT (and the DM CPT) don't, so the title would be invisible
 			// in WordPress and only come back to the app as a bold first line.
-			// A status that mentions somebody keeps all of its text in the content: the
-			// ActivityPub plugin reads the content and the excerpt to work out whom to
-			// address, never the title, so a mention that ends up in the title is never
-			// delivered to the person it names.
-			if ( post_type_supports( $post_data['post_type'], 'title' ) && ! self::contains_mention( $submitted_status_text ) ) {
+			// Only the text that would become the title matters: the ActivityPub plugin reads
+			// the content and the excerpt to work out whom to address, never the title, so a
+			// mention that ends up there is never delivered to the person it names. A mention
+			// further down the status is in no danger and the post still gets its title. The
+			// submitted text is what gets checked, since integrations rewrite mentions above.
+			$submitted_parts = preg_split( self::get_line_split_pattern(), $submitted_status_text, 2 );
+			if ( post_type_supports( $post_data['post_type'], 'title' ) && ! self::contains_mention( $submitted_parts[0] ) ) {
 				$post_content_parts = preg_split( self::get_line_split_pattern(), $status_text, 2 );
 				if ( count( $post_content_parts ) === 2 ) {
 					$post_data['post_title']   = wp_strip_all_tags( $post_content_parts[0] );

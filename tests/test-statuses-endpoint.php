@@ -750,6 +750,22 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertStringContainsString( 'What do you think?', $p->post_content );
 	}
 
+	public function test_submit_multiline_status_with_mention_below_the_first_line_keeps_its_title() {
+		$this->app->set_post_formats( 'standard' );
+		$this->app->set_create_post_format( 'standard' );
+		$this->app->set_create_post_type( 'post' );
+		$this->app->set_disable_blocks( true );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'My holiday photos' . PHP_EOL . 'Went with @doe@example.org' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$p = get_post( $response->get_data()->id );
+		$this->assertEquals( 'My holiday photos', $p->post_title, 'A mention below the first line does not cost the post its title' );
+		$this->assertStringContainsString( '@doe@example.org', $p->post_content );
+	}
+
 	public function test_submit_single_line_status_with_mention_and_media_keeps_the_mention_in_the_content() {
 		$this->app->set_post_formats( 'standard' );
 		$this->app->set_create_post_format( 'standard' );
