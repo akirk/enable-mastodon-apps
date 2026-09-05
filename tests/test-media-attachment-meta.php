@@ -114,28 +114,63 @@ class MediaAttachmentMeta_Test extends Mastodon_API_TestCase {
 		$this->assertArrayHasKey( 'focus', $meta );
 	}
 
-	public function test_missing_dimensions_are_looked_up_for_local_images() {
-		$status = $this->status_with_image( array(), wp_get_attachment_url( $this->friend_attachment_id ) );
-
-		// Documented in class-mastodon-api.php.
-		$status = apply_filters( 'mastodon_api_status', $status, $this->friend_post );
-		$data   = $status->jsonSerialize();
+	/**
+	 * Run the handler that adds missing dimensions over a status.
+	 *
+	 * The handler is called directly rather than through the mastodon_api_status
+	 * filter: the ActivityPub plugin hooks that filter at priority 9 and returns
+	 * a status of its own making, discarding the one passed in, so a status built
+	 * here would never reach the handler when that plugin is active.
+	 *
+	 * @param Status $status The status to run the handler over.
+	 *
+	 * @return array The serialized meta data of the first media attachment.
+	 */
+	private function add_missing_dimensions( Status $status ): array {
+		// The constructor registers hooks that are registered already.
+		$handler = ( new \ReflectionClass( \Enable_Mastodon_Apps\Handler\Media_Attachment::class ) )->newInstanceWithoutConstructor();
+		$data    = $handler->add_missing_image_dimensions( $status )->jsonSerialize();
 
 		$this->assertCount( 1, $data['media_attachments'] );
-		$meta = $data['media_attachments'][0]['meta'];
+
+		return (array) $data['media_attachments'][0]['meta'];
+	}
+
+	public function test_missing_dimensions_are_looked_up_for_local_images() {
+		$meta = $this->add_missing_dimensions( $this->status_with_image( array(), wp_get_attachment_url( $this->friend_attachment_id ) ) );
+
 		$this->assertSame( 1000, $meta['original']['width'] );
 		$this->assertSame( 1000, $meta['original']['height'] );
 		$this->assertSame( '1000x1000', $meta['original']['size'] );
 	}
 
+	public function test_missing_dimensions_are_taken_from_a_resized_filename() {
+		$url  = str_replace( 'ima ge.png', 'ima ge-300x200.png', wp_get_attachment_url( $this->friend_attachment_id ) );
+		$meta = $this->add_missing_dimensions( $this->status_with_image( array(), $url ) );
+
+		$this->assertSame( 300, $meta['original']['width'] );
+		$this->assertSame( 200, $meta['original']['height'] );
+	}
+
 	public function test_missing_dimensions_of_remote_images_are_left_alone() {
-		$status = $this->status_with_image( array(), 'https://remote.example/image.png' );
+		$meta = $this->add_missing_dimensions( $this->status_with_image( array(), 'https://remote.example/image.png' ) );
 
-		// Documented in class-mastodon-api.php.
-		$status = apply_filters( 'mastodon_api_status', $status, $this->friend_post );
-		$data   = $status->jsonSerialize();
+		$this->assertSame( array(), $meta );
+	}
 
-		$this->assertCount( 1, $data['media_attachments'] );
-		$this->assertEquals( '{}', wp_json_encode( $data['media_attachments'][0]['meta'] ) );
+	public function test_existing_dimensions_are_not_overwritten() {
+		$status = $this->status_with_image(
+			array(
+				'original' => array(
+					'width'  => 400,
+					'height' => 300,
+				),
+			),
+			wp_get_attachment_url( $this->friend_attachment_id )
+		);
+		$meta   = $this->add_missing_dimensions( $status );
+
+		$this->assertSame( 400, $meta['original']['width'] );
+		$this->assertSame( 300, $meta['original']['height'] );
 	}
 }
