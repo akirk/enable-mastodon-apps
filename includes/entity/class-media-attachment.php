@@ -84,53 +84,75 @@ class Media_Attachment extends Entity {
 	 */
 	public ?string $blurhash = null;
 
-	private function check_meta( $meta, $prepend = '' ) {
-		if ( ! isset( $meta['width'] ) || $meta['width'] <= 0 ) {
-			return new \WP_Error( 'invalid-meta-width', $prepend . 'Meta width must be a positive integer.' );
+	/**
+	 * Normalize a set of dimensions.
+	 *
+	 * @param mixed $meta The array that should carry width and height.
+	 *
+	 * @return array|null The array with consistent width, height, size and aspect, or null if there are no usable dimensions.
+	 */
+	private static function normalize_dimensions( $meta ) {
+		if ( ! is_array( $meta ) ) {
+			return null;
 		}
-		if ( ! isset( $meta['height'] ) || $meta['height'] <= 0 ) {
-			return new \WP_Error( 'invalid-meta-height', $prepend . 'Meta height must be a positive integer.' );
+
+		$width  = isset( $meta['width'] ) ? intval( $meta['width'] ) : 0;
+		$height = isset( $meta['height'] ) ? intval( $meta['height'] ) : 0;
+		if ( $width <= 0 || $height <= 0 ) {
+			return null;
 		}
-		if ( ! isset( $meta['size'] ) || ! is_string( $meta['size'] ) ) {
-			return new \WP_Error( 'invalid-meta-size', $prepend . 'Meta size must be a string.' );
+
+		$meta['width']  = $width;
+		$meta['height'] = $height;
+		$meta['size']   = $width . 'x' . $height;
+		$meta['aspect'] = $width / $height;
+
+		return $meta;
+	}
+
+	/**
+	 * Normalize the meta data, dropping dimensions we cannot use.
+	 *
+	 * Width and height are optional in ActivityStreams, so an attachment handed
+	 * to us by another plugin often has none, and other sources supply zeroes.
+	 * Those dimensions are dropped rather than treated as an error: an image
+	 * without a size hint still displays, an image dropped from the status does
+	 * not.
+	 *
+	 * @param mixed $meta The meta data.
+	 *
+	 * @return array The meta data without unusable dimensions.
+	 */
+	private static function normalize_meta( $meta ) {
+		if ( ! is_array( $meta ) ) {
+			return array();
 		}
-		if ( ! isset( $meta['aspect'] ) || ! is_numeric( $meta['aspect'] ) ) {
-			return new \WP_Error( 'invalid-meta-aspect', $prepend . 'Meta aspect must be a number.' );
+
+		foreach ( array( 'small', 'original' ) as $size ) {
+			if ( ! isset( $meta[ $size ] ) ) {
+				continue;
+			}
+			$dimensions = self::normalize_dimensions( $meta[ $size ] );
+			if ( null === $dimensions ) {
+				unset( $meta[ $size ] );
+			} else {
+				$meta[ $size ] = $dimensions;
+			}
+		}
+
+		if ( isset( $meta['width'] ) || isset( $meta['height'] ) ) {
+			$dimensions = self::normalize_dimensions( $meta );
+			if ( null === $dimensions ) {
+				unset( $meta['width'], $meta['height'], $meta['size'], $meta['aspect'] );
+			} else {
+				$meta = $dimensions;
+			}
 		}
 
 		return $meta;
 	}
 
 	public function validate( $key ) {
-		if ( 'meta' === $key ) {
-			if ( empty( $this->meta ) ) {
-				return new \WP_Error( 'invalid-meta', 'Meta must not be empty.' );
-			}
-			if ( ! is_array( $this->meta ) ) {
-				return new \WP_Error( 'invalid-meta', 'Meta must be an array.' );
-			}
-			if ( 'image' === $this->type ) {
-				if ( isset( $this->meta['small'] ) ) {
-					$meta = $this->check_meta( $this->meta['small'], 'small: ' );
-					if ( is_wp_error( $meta ) ) {
-						return $meta;
-					}
-				}
-				if ( isset( $this->meta['original'] ) ) {
-					$meta = $this->check_meta( $this->meta['original'], 'original: ' );
-					if ( is_wp_error( $meta ) ) {
-						return $meta;
-					}
-				}
-				if ( isset( $this->meta['width'] ) ) {
-					$meta = $this->check_meta( $this->meta );
-					if ( is_wp_error( $meta ) ) {
-						return $meta;
-					}
-				}
-			}
-		}
-
 		if ( 'preview_url' === $key ) {
 			if ( 'video' === $this->type ) {
 				if ( ! $this->preview_url || ! is_string( $this->preview_url ) ) {
@@ -144,6 +166,12 @@ class Media_Attachment extends Entity {
 	public function __get( $key ) {
 		if ( 'url' === $key || 'preview_url' === $key || 'remote_url' === $key ) {
 			return str_replace( ' ', '%20', $this->$key );
+		}
+		if ( 'meta' === $key ) {
+			$meta = self::normalize_meta( $this->meta );
+
+			// Mastodon documents meta as a hash, and an empty PHP array would be serialized as [].
+			return empty( $meta ) ? new \stdClass() : $meta;
 		}
 		return parent::__get( $key );
 	}

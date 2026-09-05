@@ -119,7 +119,8 @@ abstract class Entity implements \JsonSerializable {
 			}
 
 			if ( preg_match( '/array\[([^\]]+)\]/', $object, $matches ) ) {
-				$object = $matches[1];
+				$object    = $matches[1];
+				$skippable = false;
 				if ( substr( $object, -1 ) === '?' ) {
 					$object    = rtrim( $object, '?' );
 					$skippable = true;
@@ -145,6 +146,8 @@ abstract class Entity implements \JsonSerializable {
 						$array[ $var ][ $key ] = $value->jsonSerialize();
 						if ( isset( $array[ $var ][ $key ]['error'] ) ) {
 							if ( $skippable ) {
+								// Not fatal for the entity as a whole, but record it so that it doesn't vanish without a trace.
+								Mastodon_API::set_last_error( get_class( $value ) . ' in ' . get_called_class() . '::$' . $var . ' was skipped: ' . $array[ $var ][ $key ]['error'] );
 								unset( $array[ $var ][ $key ] );
 								continue;
 							}
