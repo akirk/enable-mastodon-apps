@@ -9,6 +9,7 @@ namespace Enable_Mastodon_Apps;
 
 use Enable_Mastodon_Apps\Entity\Media_Attachment;
 use Enable_Mastodon_Apps\Entity\Status;
+use Enable_Mastodon_Apps\Handler\Media_Attachment as Media_Attachment_Handler;
 
 /**
  * Testcases for the media attachment meta data.
@@ -127,9 +128,7 @@ class MediaAttachmentMeta_Test extends Mastodon_API_TestCase {
 	 * @return array The serialized meta data of the first media attachment.
 	 */
 	private function add_missing_dimensions( Status $status ): array {
-		// The constructor registers hooks that are registered already.
-		$handler = ( new \ReflectionClass( \Enable_Mastodon_Apps\Handler\Media_Attachment::class ) )->newInstanceWithoutConstructor();
-		$data    = $handler->add_missing_image_dimensions( $status )->jsonSerialize();
+		$data = Media_Attachment_Handler::add_missing_image_dimensions( $status )->jsonSerialize();
 
 		$this->assertCount( 1, $data['media_attachments'] );
 

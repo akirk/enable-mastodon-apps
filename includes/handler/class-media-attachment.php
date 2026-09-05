@@ -26,7 +26,7 @@ class Media_Attachment extends Handler {
 		add_filter( 'mastodon_api_media_attachment', array( $this, 'video_attachment' ), 10, 2 );
 		add_filter( 'mastodon_api_status', array( $this, 'add_generic_image_attachments' ), 20 );
 		add_filter( 'mastodon_api_status', array( $this, 'add_generic_video_attachments' ), 20 );
-		add_filter( 'mastodon_api_status', array( $this, 'add_missing_image_dimensions' ), 30 );
+		add_filter( 'mastodon_api_status', array( get_called_class(), 'add_missing_image_dimensions' ), 30 );
 		add_action( 'mastodon_api_media_uploaded', array( $this, 'schedule_video_thumbnail_generation' ) );
 	}
 
@@ -323,7 +323,7 @@ class Media_Attachment extends Handler {
 	 *
 	 * @return \Enable_Mastodon_Apps\Entity\Status The status object with image dimensions added.
 	 */
-	public function add_missing_image_dimensions( $status ) {
+	public static function add_missing_image_dimensions( $status ) {
 		if ( ! $status instanceof Status_Entity || empty( $status->media_attachments ) ) {
 			return $status;
 		}
