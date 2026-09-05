@@ -26,6 +26,7 @@ class Media_Attachment extends Handler {
 		add_filter( 'mastodon_api_media_attachment', array( $this, 'video_attachment' ), 10, 2 );
 		add_filter( 'mastodon_api_status', array( $this, 'add_generic_image_attachments' ), 20 );
 		add_filter( 'mastodon_api_status', array( $this, 'add_generic_video_attachments' ), 20 );
+		add_filter( 'mastodon_api_status', array( $this, 'add_missing_image_dimensions' ), 30 );
 		add_action( 'mastodon_api_media_uploaded', array( $this, 'schedule_video_thumbnail_generation' ) );
 	}
 
@@ -238,25 +239,118 @@ class Media_Attachment extends Handler {
 			$attachment->preview_url = $block['src'];
 			$attachment->remote_url  = $block['src'];
 			if ( isset( $block['width'] ) && $block['width'] > 0 && isset( $block['height'] ) && $block['height'] > 0 ) {
-				$attachment->meta = array(
+				$attachment->meta             = array(
 					'width'  => intval( $block['width'] ),
 					'height' => intval( $block['height'] ),
 					'size'   => $block['width'] . 'x' . $block['height'],
 					'aspect' => (int) $block['width'] / (int) $block['height'],
 				);
-			} else {
-				$attachment->meta = array(
-					'width'  => 0,
-					'height' => 0,
-					'size'   => '0x0',
-					'aspect' => 1,
-				);
+				$attachment->meta['original'] = $attachment->meta;
 			}
-			$original                     = $attachment->meta;
-			$attachment->meta['original'] = $original;
-			$attachment->description      = '';
-			$status->media_attachments[]  = $attachment;
+			$attachment->description     = '';
+			$status->media_attachments[] = $attachment;
 		}
+		return $status;
+	}
+
+	/**
+	 * Get the dimensions of a locally hosted image, remembering them for the request.
+	 *
+	 * @param string $url The image URL.
+	 *
+	 * @return array|false An array with the width and the height, or false if they cannot be determined.
+	 */
+	private static function get_local_image_dimensions( string $url ) {
+		static $cache = array();
+		if ( isset( $cache[ $url ] ) ) {
+			return $cache[ $url ];
+		}
+
+		$cache[ $url ] = self::look_up_local_image_dimensions( $url );
+
+		return $cache[ $url ];
+	}
+
+	/**
+	 * Look up the dimensions of a locally hosted image.
+	 *
+	 * @param string $url The image URL.
+	 *
+	 * @return array|false An array with the width and the height, or false if they cannot be determined.
+	 */
+	private static function look_up_local_image_dimensions( string $url ) {
+		$uploads = \wp_get_upload_dir();
+		if ( empty( $uploads['baseurl'] ) || 0 !== strpos( $url, $uploads['baseurl'] ) ) {
+			return false;
+		}
+
+		// A resized file states its dimensions in its filename.
+		if ( preg_match( '/-(\d+)x(\d+)\.\w+$/', $url, $matches ) ) {
+			return array( intval( $matches[1] ), intval( $matches[2] ) );
+		}
+
+		$attachment_id = \attachment_url_to_postid( $url );
+		if ( ! $attachment_id ) {
+			return false;
+		}
+
+		$meta = \wp_get_attachment_metadata( $attachment_id );
+		if ( ! empty( $meta['width'] ) && ! empty( $meta['height'] ) ) {
+			return array( intval( $meta['width'] ), intval( $meta['height'] ) );
+		}
+
+		// The metadata was never generated, e.g. for an import; fall back to the file itself.
+		$file = \get_attached_file( $attachment_id );
+		if ( $file && file_exists( $file ) ) {
+			$size = \wp_getimagesize( $file );
+			if ( $size ) {
+				return array( $size[0], $size[1] );
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Add the dimensions of image attachments that arrived without them.
+	 *
+	 * Width and height are optional in ActivityStreams, so a status assembled
+	 * from an AS2 object -- as the ActivityPub plugin does for its own posts --
+	 * carries no dimensions at all. Clients use them to lay the image out
+	 * before it has loaded, so look them up when the image is one of our own.
+	 *
+	 * @param \Enable_Mastodon_Apps\Entity\Status $status The status object.
+	 *
+	 * @return \Enable_Mastodon_Apps\Entity\Status The status object with image dimensions added.
+	 */
+	public function add_missing_image_dimensions( $status ) {
+		if ( ! $status instanceof Status_Entity || empty( $status->media_attachments ) ) {
+			return $status;
+		}
+
+		foreach ( $status->media_attachments as $media_attachment ) {
+			if ( ! $media_attachment instanceof Media_Attachment_Entity || 'image' !== $media_attachment->type ) {
+				continue;
+			}
+			if ( ! empty( $media_attachment->meta['width'] ) || ! empty( $media_attachment->meta['original']['width'] ) ) {
+				continue;
+			}
+
+			$dimensions = self::get_local_image_dimensions( $media_attachment->url );
+			if ( ! $dimensions ) {
+				continue;
+			}
+
+			list( $width, $height ) = $dimensions;
+
+			$media_attachment->meta['original'] = array(
+				'width'  => $width,
+				'height' => $height,
+				'size'   => $width . 'x' . $height,
+				'aspect' => $height ? $width / $height : 0,
+			);
+		}
+
 		return $status;
 	}
 
@@ -308,13 +402,6 @@ class Media_Attachment extends Handler {
 					'height' => intval( $block['height'] ),
 					'size'   => $block['width'] . 'x' . $block['height'],
 					'aspect' => (int) $block['width'] / (int) $block['height'],
-				);
-			} else {
-				$attachment->meta = array(
-					'width'  => 0,
-					'height' => 0,
-					'size'   => '0x0',
-					'aspect' => 1,
 				);
 			}
 			$attachment->description     = '';
