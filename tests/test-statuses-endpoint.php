@@ -682,8 +682,105 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$post_id = intval( $data->id );
 		$post = get_post( $post_id );
 		$this->assertNotNull( $post, 'A new post should have been created for the remote reply' );
-		$this->assertStringNotContainsString( 'activitypub/reply', $post->post_content, 'Post content should not contain activitypub/reply block' );
+		if ( defined( 'ACTIVITYPUB_PLUGIN_VERSION' ) ) {
+			$this->assertStringContainsString( 'wp:activitypub/reply', $post->post_content, 'Post content should contain the activitypub/reply block' );
+			$this->assertStringContainsString( $remote_url, $post->post_content, 'The reply block should point at the remote status' );
+		} else {
+			$this->assertStringNotContainsString( 'activitypub/reply', $post->post_content, 'Without the ActivityPub plugin there is no block to add' );
+		}
 		$this->assertEquals( $remote_url, get_post_meta( $post_id, 'activitypub_in_reply_to', true ), 'Remote URL should be stored as activitypub_in_reply_to meta' );
+	}
+
+	public function test_submit_status_reply_to_remote_post_without_blocks() {
+		$this->app->set_disable_blocks( true );
+
+		$remote_url = 'https://remote.example/status/23456';
+		$numeric_id = Mastodon_API::remap_url( $remote_url );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'Reply to remote post' );
+		$request->set_param( 'in_reply_to_id', $numeric_id );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$post_id = intval( $response->get_data()->id );
+		$post    = get_post( $post_id );
+		$this->assertStringNotContainsString( 'activitypub/reply', $post->post_content, 'An app that disabled blocks should not get one' );
+		$this->assertEquals( $remote_url, get_post_meta( $post_id, 'activitypub_in_reply_to', true ), 'Remote URL should be stored as activitypub_in_reply_to meta' );
+	}
+
+	public function test_submit_unlisted_status_is_published_quietly() {
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'Not for the public timelines' );
+		$request->set_param( 'visibility', 'unlisted' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$post_id = intval( $response->get_data()->id );
+		$this->assertEquals( 'publish', get_post_status( $post_id ), 'An unlisted status still needs to federate' );
+		$this->assertEquals( 'quiet_public', get_post_meta( $post_id, 'activitypub_content_visibility', true ) );
+	}
+
+	public function test_submit_private_status_stays_private() {
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'Just for my followers' );
+		$request->set_param( 'visibility', 'private' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$post_id = intval( $response->get_data()->id );
+		$this->assertEquals( 'private', get_post_status( $post_id ) );
+		$this->assertEquals( '', get_post_meta( $post_id, 'activitypub_content_visibility', true ) );
+	}
+
+	public function test_submit_multiline_status_with_mention_keeps_the_mention_in_the_content() {
+		$this->app->set_post_formats( 'standard' );
+		$this->app->set_create_post_format( 'standard' );
+		$this->app->set_create_post_type( 'post' );
+		$this->app->set_disable_blocks( true );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', '@doe@example.org' . PHP_EOL . 'What do you think?' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$p = get_post( $response->get_data()->id );
+		$this->assertEquals( '', $p->post_title, 'A mention must not end up in the post title' );
+		$this->assertStringContainsString( '@doe@example.org', $p->post_content );
+		$this->assertStringContainsString( 'What do you think?', $p->post_content );
+	}
+
+	public function test_submit_multiline_status_with_mention_below_the_first_line_keeps_its_title() {
+		$this->app->set_post_formats( 'standard' );
+		$this->app->set_create_post_format( 'standard' );
+		$this->app->set_create_post_type( 'post' );
+		$this->app->set_disable_blocks( true );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'My holiday photos' . PHP_EOL . 'Went with @doe@example.org' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$p = get_post( $response->get_data()->id );
+		$this->assertEquals( 'My holiday photos', $p->post_title, 'A mention below the first line does not cost the post its title' );
+		$this->assertStringContainsString( '@doe@example.org', $p->post_content );
+	}
+
+	public function test_submit_single_line_status_with_mention_and_media_keeps_the_mention_in_the_content() {
+		$this->app->set_post_formats( 'standard' );
+		$this->app->set_create_post_format( 'standard' );
+		$this->app->set_create_post_type( 'post' );
+		$this->app->set_disable_blocks( true );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'look at this @doe@example.org' );
+		$request->set_param( 'media_ids', array( (string) $this->friend_attachment_id ) );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$p = get_post( $response->get_data()->id );
+		$this->assertEquals( '', $p->post_title, 'A mention must not end up in the post title' );
+		$this->assertStringContainsString( '@doe@example.org', $p->post_content );
 	}
 
 	public function test_get_multiple_statuses() {

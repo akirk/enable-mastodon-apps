@@ -492,6 +492,46 @@ class Status extends Handler {
 		return trim( wp_strip_all_tags( $post_content_parts[0] ) );
 	}
 
+	/**
+	 * The ActivityPub content visibility that corresponds to Mastodon's "unlisted".
+	 *
+	 * @return string The visibility value.
+	 */
+	private static function get_quiet_public_visibility(): string {
+		return defined( 'ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC' ) ? ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC : 'quiet_public';
+	}
+
+	/**
+	 * Whether a status mentions somebody on the Fediverse.
+	 *
+	 * @param string $text The status text as it was submitted by the app.
+	 * @return bool Whether the text contains an @user@domain mention.
+	 */
+	private static function contains_mention( string $text ): bool {
+		$username_pattern = defined( 'ACTIVITYPUB_USERNAME_REGEXP' ) ? ACTIVITYPUB_USERNAME_REGEXP : '(?:[A-Za-z0-9\._-]+@(?:[A-Za-z0-9_-]+\.)+[A-Za-z]+)';
+
+		return 1 === preg_match( '/@' . $username_pattern . '/i', $text );
+	}
+
+	/**
+	 * Render the ActivityPub reply block for a status on another server.
+	 *
+	 * @param string $url The URL of the status that is being replied to.
+	 * @return string The block markup, or an empty string without the ActivityPub plugin.
+	 */
+	private static function render_reply_block( string $url ): string {
+		if ( ! defined( 'ACTIVITYPUB_PLUGIN_VERSION' ) ) {
+			return '';
+		}
+
+		$attributes = array(
+			'url'       => $url,
+			'embedPost' => false,
+		);
+
+		return '<!-- wp:activitypub/reply ' . wp_json_encode( $attributes ) . ' /-->' . PHP_EOL . PHP_EOL;
+	}
+
 	private static function get_attachment_description( int $media_id ): string {
 		return trim( wp_strip_all_tags( get_post_field( 'post_excerpt', $media_id ) ) );
 	}
@@ -517,6 +557,10 @@ class Status extends Handler {
 		}
 		$app = Mastodon_App::get_current_app();
 
+		// Keep what the app actually submitted around: integrations rewrite mentions into
+		// links, so the filtered text is no longer a reliable place to look for them.
+		$submitted_status_text = $status_text;
+
 		/**
 		 * Allow modifying the status text before it gets posted.
 		 *
@@ -535,12 +579,22 @@ class Status extends Handler {
 				$post_data['post_status'] = 'publish';
 				break;
 
+			case 'unlisted':
+				// Unlisted is still federated, it is only kept out of the public timelines.
+				// WordPress has no post status for that, so the post is published and the
+				// ActivityPub plugin is asked to address it quietly.
+				$post_data['post_status'] = 'publish';
+				$post_data['meta_input']['activitypub_content_visibility'] = self::get_quiet_public_visibility();
+				break;
+
 			case 'direct':
 				$post_data['post_status'] = 'ema_unread';
 				$post_data['post_type'] = Mastodon_API::get_dm_cpt();
 				break;
 
 			default:
+				// Followers-only posts stay private: WordPress does not federate them and
+				// ActivityPub has no followers-only audience to map them onto.
 				$post_data['post_status'] = 'private';
 				break;
 		}
@@ -551,7 +605,13 @@ class Status extends Handler {
 			// Only split the first line off as a title if the post type actually supports one.
 			// The default ema-post CPT (and the DM CPT) don't, so the title would be invisible
 			// in WordPress and only come back to the app as a bold first line.
-			if ( post_type_supports( $post_data['post_type'], 'title' ) ) {
+			// Only the text that would become the title matters: the ActivityPub plugin reads
+			// the content and the excerpt to work out whom to address, never the title, so a
+			// mention that ends up there is never delivered to the person it names. A mention
+			// further down the status is in no danger and the post still gets its title. The
+			// submitted text is what gets checked, since integrations rewrite mentions above.
+			$submitted_parts = preg_split( self::get_line_split_pattern(), $submitted_status_text, 2 );
+			if ( post_type_supports( $post_data['post_type'], 'title' ) && ! self::contains_mention( $submitted_parts[0] ) ) {
 				$post_content_parts = preg_split( self::get_line_split_pattern(), $status_text, 2 );
 				if ( count( $post_content_parts ) === 2 ) {
 					$post_data['post_title']   = wp_strip_all_tags( $post_content_parts[0] );
@@ -575,7 +635,17 @@ class Status extends Handler {
 			if ( is_numeric( $in_reply_to_id ) ) {
 				$post_data['post_parent'] = $in_reply_to_id;
 			} else {
+				// Our own fallback, applied while the activity is being serialized. It sets
+				// inReplyTo, but by then the audience of the object has already been worked
+				// out, so the author of the post being replied to is not addressed.
 				$post_data['meta_input']['activitypub_in_reply_to'] = $in_reply_to_id;
+
+				// A reply block is what the ActivityPub plugin reads natively while it builds
+				// the object, so the author of the replied-to post ends up in the audience and
+				// is notified about the reply.
+				if ( ! $app->get_disable_blocks() ) {
+					$post_data['post_content'] = self::render_reply_block( $in_reply_to_id ) . $post_data['post_content'];
+				}
 			}
 		}
 

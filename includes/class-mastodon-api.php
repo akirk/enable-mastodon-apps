@@ -3901,8 +3901,8 @@ class Mastodon_API {
 	private function software_string() {
 		global $wp_version;
 		$software = 'WordPress/' . $wp_version;
-		if ( defined( 'ACTIVITYPUB_VERSION' ) ) {
-			$software .= ', ActivityPub/' . ACTIVITYPUB_VERSION;
+		if ( defined( 'ACTIVITYPUB_PLUGIN_VERSION' ) ) {
+			$software .= ', ActivityPub/' . ACTIVITYPUB_PLUGIN_VERSION;
 		}
 		$software .= ', EMA/' . self::VERSION;
 		return $software;
