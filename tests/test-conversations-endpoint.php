@@ -95,4 +95,81 @@ class ConversationsEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertEquals( strval( $reply ), $data[0]->last_status->id );
 		$this->assertEquals( strval( $this->administrator ), $data[0]->last_status->account->id );
 	}
+
+	/**
+	 * Create a conversation owned by the given user.
+	 *
+	 * @param int    $user_id     The owner of the direct message post type.
+	 * @param string $post_status The post status for both messages.
+	 * @return array The root and reply post ids.
+	 */
+	private function create_conversation( $user_id, $post_status = 'ema_unread' ) {
+		$root = wp_insert_post(
+			array(
+				'post_author'  => 0,
+				'post_content' => 'First message',
+				'post_status'  => $post_status,
+				'post_type'    => Mastodon_API::get_dm_cpt( $user_id ),
+				'post_date'    => '2026-06-10 10:55:05',
+			)
+		);
+
+		$reply = wp_insert_post(
+			array(
+				'post_author'  => 0,
+				'post_content' => 'Second message',
+				'post_parent'  => $root,
+				'post_status'  => $post_status,
+				'post_type'    => Mastodon_API::get_dm_cpt( $user_id ),
+				'post_date'    => '2026-06-10 11:24:50',
+			)
+		);
+
+		return array( $root, $reply );
+	}
+
+	public function test_mark_conversation_read() {
+		list( $root, $reply ) = $this->create_conversation( $this->administrator );
+
+		$request = $this->api_request( 'POST', '/api/v1/conversations/' . $root . '/read' );
+		$response = $this->dispatch_authenticated( $request );
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertEquals( 'ema_read', get_post_status( $root ) );
+		$this->assertEquals( 'ema_read', get_post_status( $reply ) );
+		$this->assertFalse( $response->get_data()->unread );
+	}
+
+	public function test_mark_conversation_read_leaves_other_users_conversation_alone() {
+		$other_user = $this->factory->user->create( array( 'role' => 'author' ) );
+		list( $root, $reply ) = $this->create_conversation( $other_user );
+
+		$request = $this->api_request( 'POST', '/api/v1/conversations/' . $root . '/read' );
+		$this->dispatch_authenticated( $request );
+
+		$this->assertEquals( 'ema_unread', get_post_status( $root ) );
+		$this->assertEquals( 'ema_unread', get_post_status( $reply ) );
+	}
+
+	public function test_delete_conversation() {
+		list( $root, $reply ) = $this->create_conversation( $this->administrator );
+
+		$request = $this->api_request( 'DELETE', '/api/v1/conversations/' . $root );
+		$response = $this->dispatch_authenticated( $request );
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertEquals( 'trash', get_post_status( $root ) );
+		$this->assertEquals( 'trash', get_post_status( $reply ) );
+	}
+
+	public function test_delete_conversation_leaves_other_users_conversation_alone() {
+		$other_user = $this->factory->user->create( array( 'role' => 'author' ) );
+		list( $root, $reply ) = $this->create_conversation( $other_user );
+
+		$request = $this->api_request( 'DELETE', '/api/v1/conversations/' . $root );
+		$this->dispatch_authenticated( $request );
+
+		$this->assertEquals( 'ema_unread', get_post_status( $root ) );
+		$this->assertEquals( 'ema_unread', get_post_status( $reply ) );
+	}
 }
