@@ -942,4 +942,29 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertEquals( array( $post_id => 'it' ), $saved );
 		$this->assertEmpty( get_post_meta( $post_id, 'ema_language', true ) );
 	}
+
+	public function test_status_language_is_set_when_another_handler_builds_the_status() {
+		update_post_meta( $this->post, 'ema_language', 'fr' );
+
+		// The ActivityPub plugin builds the status itself, before the default handler runs.
+		$builder = function ( $status, $object_id ) {
+			$post               = get_post( $object_id );
+			$status             = new Entity\Status();
+			$status->id         = strval( $object_id );
+			$status->created_at = new \DateTime( $post->post_date_gmt, new \DateTimeZone( 'UTC' ) );
+			$status->visibility = 'public';
+			$status->uri        = get_the_guid( $object_id );
+			$status->url        = get_permalink( $post );
+			$status->content    = $post->post_content;
+			$status->account    = apply_filters( 'mastodon_api_account', null, $post->post_author, null, $post );
+			return $status;
+		};
+		add_filter( 'mastodon_api_status', $builder, 9, 2 );
+
+		$request  = $this->api_request( 'GET', '/api/v1/statuses/' . $this->post );
+		$response = $this->dispatch_authenticated( $request );
+		remove_filter( 'mastodon_api_status', $builder, 9 );
+
+		$this->assertEquals( 'fr', $response->get_data()->language );
+	}
 }
