@@ -23,6 +23,11 @@ use WP_REST_Response;
  * @package Enable_Mastodon_Apps
  */
 class Status extends Handler {
+	/**
+	 * The post meta key the language of a status is stored under.
+	 */
+	const LANGUAGE_META_KEY = 'ema_language';
+
 	public function __construct() {
 		$this->register_hooks();
 	}
@@ -39,9 +44,9 @@ class Status extends Handler {
 		add_filter( 'mastodon_api_statuses', array( $this, 'api_statuses_ensure_numeric_id' ), 100 );
 		add_filter( 'mastodon_api_tag_timeline', array( $this, 'api_statuses_ensure_numeric_id' ), 100 );
 		add_filter( 'mastodon_api_submit_status', array( $this, 'api_submit_comment' ), 10, 7 );
-		add_filter( 'mastodon_api_submit_status', array( $this, 'api_submit_post' ), 15, 7 );
+		add_filter( 'mastodon_api_submit_status', array( $this, 'api_submit_post' ), 15, 9 );
 		add_filter( 'mastodon_api_edit_status', array( $this, 'api_edit_comment' ), 10, 8 );
-		add_filter( 'mastodon_api_edit_status', array( $this, 'api_edit_post' ), 15, 8 );
+		add_filter( 'mastodon_api_edit_status', array( $this, 'api_edit_post' ), 15, 10 );
 		add_filter( 'mastodon_api_status_context', array( $this, 'api_status_context' ), 10, 2 );
 		add_action( 'mastodon_api_react', array( $this, 'store_reaction' ), 10, 3 );
 		add_action( 'mastodon_api_unreact', array( $this, 'remove_reaction' ), 10, 3 );
@@ -234,7 +239,14 @@ class Status extends Handler {
 	 */
 	public function api_status( ?Status_Entity $status, int $object_id ): ?Status_Entity {
 		if ( $status instanceof Status_Entity ) {
+			// Another handler, e.g. the ActivityPub plugin, built the status already.
 			$this->add_reaction_data( $status, $object_id );
+			if ( null === $status->language ) {
+				$post = get_post( $object_id );
+				if ( $post instanceof \WP_Post ) {
+					$status->language = self::get_post_language( $post );
+				}
+			}
 			return $status;
 		}
 
@@ -297,10 +309,89 @@ class Status extends Handler {
 				}
 			}
 			$status->content = trim( wp_kses_post( $status->content ) );
+			$status->language = self::get_post_language( $post );
 			$this->add_reaction_data( $status, $post->ID );
 		}
 
 		return $status;
+	}
+
+	/**
+	 * Get the language of a post as an ISO 639 language code.
+	 *
+	 * The language an app submitted along with the status is stored as post meta.
+	 * Multilingual plugins keep the language elsewhere, they can replace the storage
+	 * through the filter. A post that has no language falls back to the site language.
+	 *
+	 * @param \WP_Post $post The post.
+	 * @return string The language code.
+	 */
+	public static function get_post_language( \WP_Post $post ): string {
+		$language = get_post_meta( $post->ID, self::LANGUAGE_META_KEY, true );
+
+		/**
+		 * Filter the language of a status.
+		 *
+		 * Allows replacing where the language of a post is read from, e.g. a multilingual
+		 * plugin that keeps its own record of a post's language.
+		 *
+		 * @param string|null $language The stored ISO 639 language code, null when the post has none.
+		 * @param \WP_Post    $post     The post the status is created from.
+		 * @return string|null The language code, null to fall back to the site language.
+		 */
+		$language = apply_filters( 'mastodon_api_status_language', $language ? $language : null, $post );
+
+		if ( ! $language ) {
+			$language = self::locale_to_language( get_locale() );
+		}
+
+		return $language;
+	}
+
+	/**
+	 * Reduce a WordPress locale to the language code Mastodon expects.
+	 *
+	 * @param string $locale The locale, e.g. de_DE.
+	 * @return string The ISO 639 language code, e.g. de.
+	 */
+	public static function locale_to_language( string $locale ): string {
+		$parts = preg_split( '/[_-]/', $locale );
+		return $parts[0] ? $parts[0] : 'en';
+	}
+
+	/**
+	 * Store the language an app submitted along with a status.
+	 *
+	 * @param int   $post_id  The post ID.
+	 * @param mixed $language The ISO 639 language code the app submitted, null when it sent none.
+	 */
+	private static function save_post_language( int $post_id, $language ) {
+		if ( ! is_string( $language ) || '' === $language ) {
+			return;
+		}
+
+		$language = preg_replace( '/[^a-zA-Z_-]/', '', $language );
+		if ( ! $language ) {
+			return;
+		}
+
+		/**
+		 * Short-circuit storing the language of a status.
+		 *
+		 * Allows replacing where the language of a post is stored, e.g. a multilingual
+		 * plugin that keeps its own record of a post's language. Return true when the
+		 * language has been stored elsewhere, so it is not stored as post meta.
+		 *
+		 * @param bool   $stored   Whether the language has been stored. Default false.
+		 * @param int    $post_id  The post ID.
+		 * @param string $language The ISO 639 language code the app submitted.
+		 * @return bool Whether the language has been stored elsewhere.
+		 */
+		if ( apply_filters( 'mastodon_api_pre_save_status_language', false, $post_id, $language ) ) {
+			return;
+		}
+
+		update_post_meta( $post_id, self::LANGUAGE_META_KEY, $language );
 	}
 
 	private static function is_reaction_action( $action ) {
@@ -701,7 +792,7 @@ class Status extends Handler {
 		return $post_data;
 	}
 
-	public function api_submit_post( $status, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at ) {
+	public function api_submit_post( $status, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at, $request = null, $language = null ) {
 		if (
 			$status instanceof \WP_Error // An error was thrown in an earlier hook.
 			|| $status instanceof Status_Entity // A status was already saved in an earlier hook.
@@ -758,9 +849,13 @@ class Status extends Handler {
 					set_post_format( $dm_post_id, $post_format );
 				}
 				update_post_meta( $dm_post_id, 'ema_dm_ids', $dm_post_ids );
+				self::save_post_language( $dm_post_id, $language );
 			}
-		} elseif ( $post_format && 'standard' !== $post_format ) {
-			set_post_format( $post_id, $post_format );
+		} else {
+			if ( $post_format && 'standard' !== $post_format ) {
+				set_post_format( $post_id, $post_format );
+			}
+			self::save_post_language( $post_id, $language );
 		}
 
 		if ( ! empty( $media_ids ) ) {
@@ -799,7 +894,7 @@ class Status extends Handler {
 		return $status;
 	}
 
-	public function api_edit_post( $status, $post_id, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at ) {
+	public function api_edit_post( $status, $post_id, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at, $request = null, $language = null ) {
 		if ( $status instanceof \WP_Error || $status instanceof Status_Entity ) {
 			return $status;
 		}
@@ -819,6 +914,7 @@ class Status extends Handler {
 		if ( 'standard' !== $post_format ) {
 			set_post_format( $post_id, $post_format );
 		}
+		self::save_post_language( $post_id, $language );
 
 		if ( ! empty( $media_ids ) ) {
 			foreach ( $media_ids as $media_id ) {

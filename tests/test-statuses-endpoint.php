@@ -860,4 +860,111 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertIsArray( $data );
 		$this->assertCount( 2, $data ); // Should return both posts when authenticated
 	}
+
+	public function test_status_language_falls_back_to_site_language() {
+		$request  = $this->api_request( 'GET', '/api/v1/statuses/' . $this->post );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		// The test site runs on en_US, Mastodon expects the ISO 639-1 code.
+		$this->assertEquals( 'en', $response->get_data()->language );
+	}
+
+	public function test_submit_status_stores_language() {
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'Bonjour le monde' );
+		$request->set_param( 'language', 'fr' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertEquals( 'fr', $data->language );
+		$this->assertEquals( 'fr', get_post_meta( $data->id, 'ema_language', true ) );
+	}
+
+	public function test_edit_status_updates_language() {
+		update_post_meta( $this->post, 'ema_language', 'fr' );
+
+		$request = $this->api_request( 'PUT', '/api/v1/statuses/' . $this->post );
+		$request->set_param( 'status', 'Hallo Welt' );
+		$request->set_param( 'language', 'de' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$this->assertEquals( 'de', $response->get_data()->language );
+		$this->assertEquals( 'de', get_post_meta( $this->post, 'ema_language', true ) );
+	}
+
+	public function test_submit_status_without_language_keeps_stored_language() {
+		update_post_meta( $this->post, 'ema_language', 'fr' );
+
+		$request = $this->api_request( 'PUT', '/api/v1/statuses/' . $this->post );
+		$request->set_param( 'status', 'Salut' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$this->assertEquals( 'fr', $response->get_data()->language );
+	}
+
+	public function test_status_language_filter_replaces_the_storage() {
+		update_post_meta( $this->post, 'ema_language', 'fr' );
+
+		$filter = function ( $language, $post ) {
+			$this->assertEquals( 'fr', $language );
+			$this->assertInstanceOf( \WP_Post::class, $post );
+			return 'es';
+		};
+		add_filter( 'mastodon_api_status_language', $filter, 10, 2 );
+
+		$request  = $this->api_request( 'GET', '/api/v1/statuses/' . $this->post );
+		$response = $this->dispatch_authenticated( $request );
+		remove_filter( 'mastodon_api_status_language', $filter );
+
+		$this->assertEquals( 'es', $response->get_data()->language );
+	}
+
+	public function test_pre_save_status_language_filter_skips_the_meta() {
+		$saved  = array();
+		$filter = function ( $pre, $post_id, $language ) use ( &$saved ) {
+			$saved[ $post_id ] = $language;
+			return true;
+		};
+		add_filter( 'mastodon_api_pre_save_status_language', $filter, 10, 3 );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'Ciao mondo' );
+		$request->set_param( 'language', 'it' );
+		$response = $this->dispatch_authenticated( $request );
+		remove_filter( 'mastodon_api_pre_save_status_language', $filter );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$post_id = $response->get_data()->id;
+		$this->assertEquals( array( $post_id => 'it' ), $saved );
+		$this->assertEmpty( get_post_meta( $post_id, 'ema_language', true ) );
+	}
+
+	public function test_status_language_is_set_when_another_handler_builds_the_status() {
+		update_post_meta( $this->post, 'ema_language', 'fr' );
+
+		// The ActivityPub plugin builds the status itself, before the default handler runs.
+		$builder = function ( $status, $object_id ) {
+			$post               = get_post( $object_id );
+			$status             = new Entity\Status();
+			$status->id         = strval( $object_id );
+			$status->created_at = new \DateTime( $post->post_date_gmt, new \DateTimeZone( 'UTC' ) );
+			$status->visibility = 'public';
+			$status->uri        = get_the_guid( $object_id );
+			$status->url        = get_permalink( $post );
+			$status->content    = $post->post_content;
+			$status->account    = apply_filters( 'mastodon_api_account', null, $post->post_author, null, $post );
+			return $status;
+		};
+		add_filter( 'mastodon_api_status', $builder, 9, 2 );
+
+		$request  = $this->api_request( 'GET', '/api/v1/statuses/' . $this->post );
+		$response = $this->dispatch_authenticated( $request );
+		remove_filter( 'mastodon_api_status', $builder, 9 );
+
+		$this->assertEquals( 'fr', $response->get_data()->language );
+	}
 }
