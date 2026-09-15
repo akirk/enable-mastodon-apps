@@ -44,9 +44,9 @@ class Status extends Handler {
 		add_filter( 'mastodon_api_statuses', array( $this, 'api_statuses_ensure_numeric_id' ), 100 );
 		add_filter( 'mastodon_api_tag_timeline', array( $this, 'api_statuses_ensure_numeric_id' ), 100 );
 		add_filter( 'mastodon_api_submit_status', array( $this, 'api_submit_comment' ), 10, 7 );
-		add_filter( 'mastodon_api_submit_status', array( $this, 'api_submit_post' ), 15, 8 );
+		add_filter( 'mastodon_api_submit_status', array( $this, 'api_submit_post' ), 15, 9 );
 		add_filter( 'mastodon_api_edit_status', array( $this, 'api_edit_comment' ), 10, 8 );
-		add_filter( 'mastodon_api_edit_status', array( $this, 'api_edit_post' ), 15, 9 );
+		add_filter( 'mastodon_api_edit_status', array( $this, 'api_edit_post' ), 15, 10 );
 		add_filter( 'mastodon_api_status_context', array( $this, 'api_status_context' ), 10, 2 );
 		add_action( 'mastodon_api_react', array( $this, 'store_reaction' ), 10, 3 );
 		add_action( 'mastodon_api_unreact', array( $this, 'remove_reaction' ), 10, 3 );
@@ -239,7 +239,14 @@ class Status extends Handler {
 	 */
 	public function api_status( ?Status_Entity $status, int $object_id ): ?Status_Entity {
 		if ( $status instanceof Status_Entity ) {
+			// Another handler, e.g. the ActivityPub plugin, built the status already.
 			$this->add_reaction_data( $status, $object_id );
+			if ( null === $status->language ) {
+				$post = get_post( $object_id );
+				if ( $post instanceof \WP_Post ) {
+					$status->language = self::get_post_language( $post );
+				}
+			}
 			return $status;
 		}
 
@@ -353,28 +360,13 @@ class Status extends Handler {
 	}
 
 	/**
-	 * Get the language an app submitted along with a status.
-	 *
-	 * @param \WP_REST_Request|null $request The request.
-	 * @return string|null The language code, null when none was submitted.
-	 */
-	private static function requested_language( $request ): ?string {
-		if ( ! $request instanceof \WP_REST_Request ) {
-			return null;
-		}
-		$language = $request->get_param( 'language' );
-
-		return is_string( $language ) && '' !== $language ? $language : null;
-	}
-
-	/**
 	 * Store the language an app submitted along with a status.
 	 *
-	 * @param int         $post_id  The post ID.
-	 * @param string|null $language The ISO 639 language code, null when the app sent none.
+	 * @param int   $post_id  The post ID.
+	 * @param mixed $language The ISO 639 language code the app submitted, null when it sent none.
 	 */
-	private static function save_post_language( int $post_id, ?string $language ) {
-		if ( ! $language ) {
+	private static function save_post_language( int $post_id, $language ) {
+		if ( ! is_string( $language ) || '' === $language ) {
 			return;
 		}
 
@@ -800,7 +792,7 @@ class Status extends Handler {
 		return $post_data;
 	}
 
-	public function api_submit_post( $status, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at, $request = null ) {
+	public function api_submit_post( $status, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at, $request = null, $language = null ) {
 		if (
 			$status instanceof \WP_Error // An error was thrown in an earlier hook.
 			|| $status instanceof Status_Entity // A status was already saved in an earlier hook.
@@ -824,7 +816,6 @@ class Status extends Handler {
 		}
 
 		$post_data = $this->prepare_post_data( null, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at );
-		$language  = self::requested_language( $request );
 
 		$post_id = wp_insert_post( $post_data );
 		if ( is_wp_error( $post_id ) ) {
@@ -903,7 +894,7 @@ class Status extends Handler {
 		return $status;
 	}
 
-	public function api_edit_post( $status, $post_id, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at, $request = null ) {
+	public function api_edit_post( $status, $post_id, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at, $request = null, $language = null ) {
 		if ( $status instanceof \WP_Error || $status instanceof Status_Entity ) {
 			return $status;
 		}
@@ -923,7 +914,7 @@ class Status extends Handler {
 		if ( 'standard' !== $post_format ) {
 			set_post_format( $post_id, $post_format );
 		}
-		self::save_post_language( $post_id, self::requested_language( $request ) );
+		self::save_post_language( $post_id, $language );
 
 		if ( ! empty( $media_ids ) ) {
 			foreach ( $media_ids as $media_id ) {
