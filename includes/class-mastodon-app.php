@@ -153,6 +153,14 @@ class Mastodon_App {
 		return boolval( $options['first_line_as_excerpt'] ?? false );
 	}
 
+	public function get_featured_image() {
+		$options = get_term_meta( $this->term->term_id, 'options', true );
+		if ( ! is_array( $options ) ) {
+			return false;
+		}
+		return boolval( $options['featured_image'] ?? false );
+	}
+
 	public function get_favourite_reaction() {
 		$options = get_term_meta( $this->term->term_id, 'options', true );
 		if ( ! is_array( $options ) || empty( $options['favourite_reaction'] ) ) {
@@ -212,6 +220,15 @@ class Mastodon_App {
 			$options = array();
 		}
 		$options['first_line_as_excerpt'] = $first_line_as_excerpt;
+		return update_term_meta( $this->term->term_id, 'options', $options );
+	}
+
+	public function set_featured_image( $featured_image ) {
+		$options = get_term_meta( $this->term->term_id, 'options', true );
+		if ( ! is_array( $options ) ) {
+			$options = array();
+		}
+		$options['featured_image'] = $featured_image;
 		return update_term_meta( $this->term->term_id, 'options', $options );
 	}
 
@@ -414,6 +431,10 @@ class Mastodon_App {
 
 		if ( $this->get_first_line_as_excerpt() ) {
 			$content .= PHP_EOL . __( 'Use first content line as excerpt', 'enable-mastodon-apps' );
+		}
+
+		if ( $this->get_featured_image() ) {
+			$content .= PHP_EOL . __( 'Use first attached image as featured image', 'enable-mastodon-apps' );
 		}
 
 		if ( $this->get_media_only() ) {
@@ -757,7 +778,7 @@ class Mastodon_App {
 					}
 
 					foreach ( array_keys( $value ) as $key ) {
-						if ( 'blocks' === $key || 'media_only' === $key || 'first_line_as_excerpt' === $key ) {
+						if ( 'blocks' === $key || 'media_only' === $key || 'first_line_as_excerpt' === $key || 'featured_image' === $key ) {
 							$value[ $key ] = boolval( $value[ $key ] );
 							continue;
 						}

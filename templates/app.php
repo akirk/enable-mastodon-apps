@@ -221,30 +221,33 @@ if ( class_exists( 'Friends\Reactions' ) ) {
 					</td>
 				</tr>
 				<tr>
-					<th scope="row"><?php esc_html_e( 'Content formatting', 'enable-mastodon-apps' ); ?></th>
+					<th scope="row"><?php esc_html_e( 'Content', 'enable-mastodon-apps' ); ?></th>
 					<td>
-						<label><input type="checkbox" name="disable_blocks" value="1" <?php checked( $app->get_disable_blocks() ); ?> /> <?php esc_html_e( 'Disable automatic conversion to blocks', 'enable-mastodon-apps' ); ?></label>
-						<p class="description">
-							<span><?php esc_html_e( 'If checked, post content will not be converted to blocks.', 'enable-mastodon-apps' ); ?></span>
-						</p>
+						<fieldset>
+							<label><input type="checkbox" name="disable_blocks" value="1" <?php checked( $app->get_disable_blocks() ); ?> /> <?php esc_html_e( 'Disable automatic conversion to blocks', 'enable-mastodon-apps' ); ?></label>
+							<p class="description">
+								<span><?php esc_html_e( 'If checked, post content submitted through this app will not be converted to blocks.', 'enable-mastodon-apps' ); ?></span>
+							</p>
+							<label><input type="checkbox" name="first_line_as_excerpt" value="1" <?php checked( $app->get_first_line_as_excerpt() ); ?> /> <?php esc_html_e( 'Use first content line as excerpt', 'enable-mastodon-apps' ); ?></label>
+							<p class="description">
+								<span><?php esc_html_e( 'If checked, the first line after the title will be used as the WordPress excerpt for standard posts created by this app.', 'enable-mastodon-apps' ); ?></span>
+							</p>
+						</fieldset>
 					</td>
 				</tr>
 				<tr>
-					<th scope="row"><?php esc_html_e( 'Excerpt', 'enable-mastodon-apps' ); ?></th>
+					<th scope="row"><?php esc_html_e( 'Media', 'enable-mastodon-apps' ); ?></th>
 					<td>
-						<label><input type="checkbox" name="first_line_as_excerpt" value="1" <?php checked( $app->get_first_line_as_excerpt() ); ?> /> <?php esc_html_e( 'Use first content line as excerpt', 'enable-mastodon-apps' ); ?></label>
-						<p class="description">
-							<span><?php esc_html_e( 'If checked, the first line after the title will be used as the WordPress excerpt for standard posts.', 'enable-mastodon-apps' ); ?></span>
-						</p>
-					</td>
-				</tr>
-				<tr>
-					<th scope="row"><?php esc_html_e( 'Timeline filtering', 'enable-mastodon-apps' ); ?></th>
-					<td>
-						<label><input type="checkbox" name="media_only" value="1" <?php checked( $app->get_media_only() ); ?> /> <?php esc_html_e( 'Only show posts with media attachments', 'enable-mastodon-apps' ); ?></label>
-						<p class="description">
-							<span><?php esc_html_e( 'If checked, posts without images or videos will be hidden from timelines.', 'enable-mastodon-apps' ); ?></span>
-						</p>
+						<fieldset>
+							<label><input type="checkbox" name="featured_image" value="1" <?php checked( $app->get_featured_image() ); ?> /> <?php esc_html_e( 'Use first attached image as featured image', 'enable-mastodon-apps' ); ?></label>
+							<p class="description">
+								<span><?php esc_html_e( 'If checked, the first image submitted through this app will become the WordPress featured image when the post type supports one.', 'enable-mastodon-apps' ); ?></span>
+							</p>
+							<label><input type="checkbox" name="media_only" value="1" <?php checked( $app->get_media_only() ); ?> /> <?php esc_html_e( 'Only show posts with media attachments', 'enable-mastodon-apps' ); ?></label>
+							<p class="description">
+								<span><?php esc_html_e( 'If checked, posts without images or videos will be hidden from timelines in this app.', 'enable-mastodon-apps' ); ?></span>
+							</p>
+						</fieldset>
 					</td>
 				</tr>
 				<?php if ( ! empty( $available_reactions ) ) : ?>

@@ -798,6 +798,12 @@ class Mastodon_Admin {
 			$app->set_first_line_as_excerpt( false );
 		}
 
+		if ( isset( $_POST['featured_image'] ) ) {
+			$app->set_featured_image( true );
+		} else {
+			$app->set_featured_image( false );
+		}
+
 		if ( isset( $_POST['media_only'] ) ) {
 			$app->set_media_only( true );
 		} else {

@@ -549,6 +549,37 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertStringContainsString( 'wp:image', $p->post_content );
 	}
 
+	public function test_submit_status_sets_first_image_as_featured_image_when_enabled() {
+		$this->app->set_post_formats( 'standard' );
+		$this->app->set_create_post_format( 'standard' );
+		$this->app->set_create_post_type( 'post' );
+		$this->app->set_disable_blocks( true );
+		$this->app->set_featured_image( true );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'caption text' );
+		$request->set_param( 'media_ids', array( (string) $this->friend_attachment_id ) );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$this->assertEquals( $this->friend_attachment_id, get_post_thumbnail_id( $response->get_data()->id ) );
+	}
+
+	public function test_submit_status_does_not_set_featured_image_by_default() {
+		$this->app->set_post_formats( 'standard' );
+		$this->app->set_create_post_format( 'standard' );
+		$this->app->set_create_post_type( 'post' );
+		$this->app->set_disable_blocks( true );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'caption text' );
+		$request->set_param( 'media_ids', array( (string) $this->friend_attachment_id ) );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$this->assertEquals( 0, get_post_thumbnail_id( $response->get_data()->id ) );
+	}
+
 	public function test_submit_status_adds_media_description_as_alt_text_and_caption() {
 		$this->app->set_post_formats( 'standard' );
 		$this->app->set_create_post_format( 'standard' );
