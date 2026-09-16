@@ -70,6 +70,45 @@ jQuery( function( $ ) {
 		} );
 	} );
 
+	$(document).on( 'change', '.enable-mastodon-apps-mobile-sort select', function() {
+		const select = $( this );
+		const list = select.closest( '.enable-mastodon-apps-mobile-list' );
+		const parts = select.val().split( '-' );
+		const direction = parts.pop();
+		const key = parts.join( '-' );
+		const apps = list.find( '.enable-mastodon-apps-mobile-app' ).get();
+
+		apps.sort( function( a, b ) {
+			let aValue = $( a ).data( 'sort-' + key );
+			let bValue = $( b ).data( 'sort-' + key );
+
+			if ( typeof aValue === 'undefined' ) {
+				aValue = '';
+			}
+			if ( typeof bValue === 'undefined' ) {
+				bValue = '';
+			}
+
+			if ( 'last-used' === key || 'created' === key ) {
+				aValue = parseInt( aValue, 10 ) || 0;
+				bValue = parseInt( bValue, 10 ) || 0;
+			} else {
+				aValue = aValue.toString().toLowerCase();
+				bValue = bValue.toString().toLowerCase();
+			}
+
+			if ( aValue === bValue ) {
+				return 0;
+			}
+
+			return ( aValue > bValue ? 1 : -1 ) * ( 'asc' === direction ? 1 : -1 );
+		} );
+
+		$.each( apps, function( index, app ) {
+			list.append( app );
+		} );
+	} );
+
 	const iframe = $( '.enable-mastodon-apps-settings iframe');
 	if ( iframe.length ) {
 		setInterval( function() {
