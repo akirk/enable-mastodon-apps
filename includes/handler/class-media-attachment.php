@@ -232,6 +232,10 @@ class Media_Attachment extends Handler {
 				continue;
 			}
 
+			if ( self::status_already_has_image_attachment( $status, $block['src'], $match[0] ) ) {
+				continue;
+			}
+
 			$attachment              = new \Enable_Mastodon_Apps\Entity\Media_Attachment();
 			$attachment->id          = strval( 2e10 + crc32( $block['src'] ) );
 			$attachment->type        = 'image';
@@ -251,6 +255,73 @@ class Media_Attachment extends Handler {
 			$status->media_attachments[] = $attachment;
 		}
 		return $status;
+	}
+
+	/**
+	 * Check whether a status already carries an image attachment for a URL.
+	 *
+	 * @param Status_Entity $status The status object.
+	 * @param string        $url The image URL.
+	 * @param string        $html The image HTML.
+	 * @return bool Whether the image is already represented as a media attachment.
+	 */
+	private static function status_already_has_image_attachment( Status_Entity $status, string $url, string $html ): bool {
+		if ( empty( $status->media_attachments ) ) {
+			return false;
+		}
+
+		$url           = html_entity_decode( $url, ENT_QUOTES );
+		$attachment_id = self::get_image_attachment_id_from_html( $html );
+
+		foreach ( $status->media_attachments as $media_attachment ) {
+			if ( ! $media_attachment instanceof Media_Attachment_Entity || 'image' !== $media_attachment->type ) {
+				continue;
+			}
+
+			if ( $attachment_id && isset( $media_attachment->id ) && intval( $media_attachment->id ) === $attachment_id ) {
+				return true;
+			}
+
+			foreach ( array( 'url', 'preview_url', 'remote_url' ) as $property ) {
+				if ( isset( $media_attachment->{$property} ) && self::same_url_without_query( $url, $media_attachment->{$property} ) ) {
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Get the WordPress attachment ID from an image class.
+	 *
+	 * @param string $html The image HTML.
+	 * @return int The attachment ID.
+	 */
+	private static function get_image_attachment_id_from_html( string $html ): int {
+		if ( ! preg_match( '/\bwp-image-(?P<attachment_id>\d+)\b/', $html, $match ) ) {
+			return 0;
+		}
+
+		return intval( $match['attachment_id'] );
+	}
+
+	/**
+	 * Compare two URLs while ignoring cache-busting query strings.
+	 *
+	 * @param string $first_url The first URL.
+	 * @param string $second_url The second URL.
+	 * @return bool Whether the URLs point to the same path.
+	 */
+	private static function same_url_without_query( string $first_url, string $second_url ): bool {
+		$first  = wp_parse_url( html_entity_decode( $first_url, ENT_QUOTES ) );
+		$second = wp_parse_url( html_entity_decode( $second_url, ENT_QUOTES ) );
+
+		if ( empty( $first['host'] ) || empty( $first['path'] ) || empty( $second['host'] ) || empty( $second['path'] ) ) {
+			return false;
+		}
+
+		return strtolower( $first['host'] ) === strtolower( $second['host'] ) && rawurldecode( $first['path'] ) === rawurldecode( $second['path'] );
 	}
 
 	/**

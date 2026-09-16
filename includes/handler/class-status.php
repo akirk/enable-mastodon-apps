@@ -1101,7 +1101,8 @@ class Status extends Handler {
 
 		$post_types[] = \Enable_Mastodon_Apps\Comment_CPT::CPT;
 		$post_types = apply_filters( 'mastodon_api_status_context_post_types', $post_types, $context_post_id );
-		$post_statuses = apply_filters( 'mastodon_api_status_context_post_statuses', 'any', $context_post_id );
+		$post_types = array_values( array_diff( (array) $post_types, array( 'attachment' ) ) );
+		$post_statuses = apply_filters( 'mastodon_api_status_context_post_statuses', array( 'publish', 'private' ), $context_post_id );
 
 		$checked = array();
 		$to_check = array( $context_post_id );
