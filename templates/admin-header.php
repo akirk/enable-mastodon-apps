@@ -38,9 +38,9 @@ function output_request_log( $request, $rest_nonce ) {
 		echo '</div>';
 	}
 }
-function td_timestamp( $timestamp, $strikethrough_past = false ) {
+function td_timestamp( $timestamp, $strikethrough_past = false, $sort_value = null ) {
 	?>
-	<td>
+	<td<?php echo null === $sort_value ? '' : ' data-sort="' . esc_attr( $sort_value ) . '"'; ?>>
 		<abbr title="<?php echo esc_attr( is_numeric( $timestamp ) ? gmdate( 'r', $timestamp ) : $timestamp ); ?>">
 	<?php
 	if ( ! $timestamp ) {
