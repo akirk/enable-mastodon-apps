@@ -22,8 +22,52 @@ jQuery( function( $ ) {
 		this.select();
 	} );
 
-	$(document).on( 'click', '.enable-mastodon-apps-registered-apps-page thead', function( event, response ) {
-		$( this ).parent().find( 'tbody' ).toggle();
+	$(document).on( 'click', '.enable-mastodon-apps-sortable-table th[data-sort-type] button', function( event ) {
+		event.preventDefault();
+
+		const header = $( this ).closest( 'th' );
+		const table = header.closest( 'table' );
+		const tbody = table.find( 'tbody' ).first();
+		const column = header.index();
+		const sortType = header.data( 'sort-type' );
+		const direction = header.hasClass( 'sort-asc' ) ? 'desc' : 'asc';
+		const rows = tbody.find( 'tr' ).get();
+
+		table.find( 'th' ).removeClass( 'sort-asc sort-desc' ).removeAttr( 'aria-sort' );
+		header.addClass( 'asc' === direction ? 'sort-asc' : 'sort-desc' ).attr( 'aria-sort', 'asc' === direction ? 'ascending' : 'descending' );
+
+		rows.sort( function( a, b ) {
+			const aCell = $( a ).children( 'td' ).eq( column );
+			const bCell = $( b ).children( 'td' ).eq( column );
+			let aValue = aCell.data( 'sort' );
+			let bValue = bCell.data( 'sort' );
+
+			if ( typeof aValue === 'undefined' ) {
+				aValue = aCell.text().trim().toLowerCase();
+			}
+			if ( typeof bValue === 'undefined' ) {
+				bValue = bCell.text().trim().toLowerCase();
+			}
+
+			if ( 'number' === sortType ) {
+				aValue = parseInt( aValue, 10 ) || 0;
+				bValue = parseInt( bValue, 10 ) || 0;
+			} else {
+				aValue = aValue.toString().toLowerCase();
+				bValue = bValue.toString().toLowerCase();
+			}
+
+			if ( aValue === bValue ) {
+				return 0;
+			}
+
+			return ( aValue > bValue ? 1 : -1 ) * ( 'asc' === direction ? 1 : -1 );
+		} );
+
+		$.each( rows, function( index, row ) {
+			$( row ).toggleClass( 'alternate', 0 === index % 2 );
+			tbody.append( row );
+		} );
 	} );
 
 	const iframe = $( '.enable-mastodon-apps-settings iframe');

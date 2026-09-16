@@ -35,6 +35,13 @@ class Mastodon_App {
 		'follow',
 		'push',
 	);
+	const SETTINGS_META_KEYS = array(
+		'query_args',
+		'create_post_type',
+		'create_post_format',
+		'view_post_types',
+		'options',
+	);
 
 
 	/**
@@ -48,6 +55,10 @@ class Mastodon_App {
 
 	public function get_client_id() {
 		return $this->term->slug;
+	}
+
+	private function get_term_id() {
+		return $this->term->term_id;
 	}
 
 	public function get_client_secret() {
@@ -951,6 +962,68 @@ class Mastodon_App {
 		return new self( $term );
 	}
 
+	private static function redirect_uris_match( array $redirect_uris, $other_redirect_uris ) {
+		if ( ! is_array( $other_redirect_uris ) ) {
+			$other_redirect_uris = array( $other_redirect_uris );
+		}
+
+		sort( $redirect_uris );
+		sort( $other_redirect_uris );
+
+		return array_values( array_unique( $redirect_uris ) ) === array_values( array_unique( $other_redirect_uris ) );
+	}
+
+	private static function get_matching_app_for_settings( self $new_app ) {
+		$matching_apps = array_filter(
+			self::get_all(),
+			function ( $app ) use ( $new_app ) {
+				if ( $new_app->get_term_id() === $app->get_term_id() ) {
+					return false;
+				}
+
+				if ( $app->get_client_name() !== $new_app->get_client_name() ) {
+					return false;
+				}
+
+				if ( $app->get_website() !== $new_app->get_website() ) {
+					return false;
+				}
+
+				return self::redirect_uris_match( $new_app->get_redirect_uris(), $app->get_redirect_uris() );
+			}
+		);
+
+		if ( empty( $matching_apps ) ) {
+			return null;
+		}
+
+		usort(
+			$matching_apps,
+			function ( $a, $b ) {
+				$a_date = $a->get_last_used() ? $a->get_last_used() : $a->get_creation_date();
+				$b_date = $b->get_last_used() ? $b->get_last_used() : $b->get_creation_date();
+				return $b_date <=> $a_date;
+			}
+		);
+
+		return reset( $matching_apps );
+	}
+
+	private static function apply_matching_app_settings( self $new_app ) {
+		$matching_app = self::get_matching_app_for_settings( $new_app );
+		if ( ! $matching_app ) {
+			return;
+		}
+
+		foreach ( self::SETTINGS_META_KEYS as $meta_key ) {
+			$value = get_term_meta( $matching_app->get_term_id(), $meta_key, true );
+			if ( '' === $value ) {
+				continue;
+			}
+			update_term_meta( $new_app->get_term_id(), $meta_key, $value );
+		}
+	}
+
 	public static function save( $client_name, array $redirect_uris, $scopes, $website ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
 		$client_id     = strtolower( wp_generate_password( 32, false ) );
 		$client_secret = wp_generate_password( 128, false );
@@ -1022,6 +1095,7 @@ class Mastodon_App {
 		foreach ( $app_metadata as $key => $value ) {
 			add_metadata( 'term', $term_id, $key, $value, true );
 		}
+		self::apply_matching_app_settings( new self( get_term( $term_id ) ) );
 		add_metadata( 'term', $term_id, 'client_secret', $client_secret, true );
 		add_metadata( 'term', $term_id, 'creation_date', time(), true );
 

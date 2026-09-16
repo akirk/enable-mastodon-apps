@@ -18,6 +18,30 @@ class MastodonApp_Test extends \WP_UnitTestCase {
 		$this->assertInstanceOf( Mastodon_App::class, $app );
 	}
 
+	public function test_same_app_gets_existing_app_settings() {
+		$app = Mastodon_App::save( 'test', array( 'https://test/callback', 'https://test/alternate' ), 'read', 'https://mastodon.local' );
+		$app->set_post_formats( array( 'aside' ) );
+		$app->set_create_post_type( 'page' );
+		$app->set_create_post_format( 'aside' );
+		$app->set_view_post_types( array( 'post', 'page' ) );
+		$app->set_disable_blocks( true );
+		$app->set_first_line_as_excerpt( true );
+		$app->set_media_only( true );
+
+		$same_app = Mastodon_App::save( 'test', array( 'https://test/alternate', 'https://test/callback' ), 'read write', 'https://mastodon.local' );
+
+		$this->assertNotEquals( $app->get_client_id(), $same_app->get_client_id() );
+		$this->assertNotEquals( $app->get_client_secret(), $same_app->get_client_secret() );
+		$this->assertEquals( 'read write', $same_app->get_scopes() );
+		$this->assertEquals( array( 'aside' ), $same_app->get_post_formats() );
+		$this->assertEquals( 'page', $same_app->get_create_post_type() );
+		$this->assertEquals( 'aside', $same_app->get_create_post_format( true ) );
+		$this->assertContains( 'page', $same_app->get_view_post_types() );
+		$this->assertTrue( $same_app->get_disable_blocks() );
+		$this->assertTrue( $same_app->get_first_line_as_excerpt() );
+		$this->assertTrue( $same_app->get_media_only() );
+	}
+
 	public function test_create_app_with_empty_scope() {
 		$this->expectException( \Exception::class );
 		$app = Mastodon_App::save( 'test', array( Mastodon_OAuth::OOB_REDIRECT_URI ), '', '' );
