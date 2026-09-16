@@ -640,6 +640,20 @@ class Status extends Handler {
 		return $html;
 	}
 
+	private static function maybe_set_featured_image( int $post_id, $media_ids, Mastodon_App $app ): void {
+		if ( ! $app->get_featured_image() || empty( $media_ids ) || ! post_type_supports( get_post_type( $post_id ), 'thumbnail' ) ) {
+			return;
+		}
+
+		foreach ( $media_ids as $media_id ) {
+			$media_id = absint( $media_id );
+			if ( $media_id && wp_attachment_is( 'image', $media_id ) ) {
+				set_post_thumbnail( $post_id, $media_id );
+				return;
+			}
+		}
+	}
+
 	public function prepare_post_data( $post_id, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at ) {
 		$post_data = array();
 
@@ -821,6 +835,7 @@ class Status extends Handler {
 		if ( is_wp_error( $post_id ) ) {
 			return $post_id;
 		}
+		self::maybe_set_featured_image( $post_id, $media_ids, Mastodon_App::get_current_app() );
 
 		if ( 'direct' === $visibility ) {
 			$dm_post_ids = array( $post_data['post_type'] => $post_id );
@@ -910,6 +925,7 @@ class Status extends Handler {
 		if ( is_wp_error( $post_id ) ) {
 			return $post_id;
 		}
+		self::maybe_set_featured_image( $post_id, $media_ids, Mastodon_App::get_current_app() );
 
 		if ( 'standard' !== $post_format ) {
 			set_post_format( $post_id, $post_format );
