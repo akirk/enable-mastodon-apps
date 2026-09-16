@@ -278,12 +278,141 @@ summary {
 }
 
 .enable-mastodon-apps-settings.enable-mastodon-apps-registered-apps-page span.count {
-	float: right;
-	margin-right: .5em;
+	display: block;
+	margin: 0 0 .75em;
 }
 
 .enable-mastodon-apps-settings.enable-mastodon-apps-registered-apps-page .save-app {
 	display: none;
+}
+
+.enable-mastodon-apps-table-scroll {
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
+}
+
+.enable-mastodon-apps-mobile-list {
+	display: none;
+}
+
+.enable-mastodon-apps-sortable-table th button {
+	align-items: center;
+	background: none;
+	border: 0;
+	color: inherit;
+	cursor: pointer;
+	display: inline-flex;
+	font: inherit;
+	font-weight: 600;
+	gap: .35em;
+	margin: 0;
+	padding: 0;
+	text-align: left;
+	white-space: nowrap;
+}
+
+.enable-mastodon-apps-sortable-table th[data-sort-type] {
+	white-space: nowrap;
+}
+
+.enable-mastodon-apps-sortable-table th button:hover {
+	color: #2271b1;
+}
+
+.enable-mastodon-apps-sortable-table th[data-sort-type] button::after {
+	content: "";
+	display: inline-block;
+	min-width: .65em;
+}
+
+.enable-mastodon-apps-sortable-table th.sort-asc button::after {
+	content: "\2191";
+}
+
+.enable-mastodon-apps-sortable-table th.sort-desc button::after {
+	content: "\2193";
+}
+
+@media screen and (max-width: 782px) {
+	.enable-mastodon-apps-settings.enable-mastodon-apps-registered-apps-page {
+		max-width: 100%;
+	}
+
+	.enable-mastodon-apps-settings.enable-mastodon-apps-registered-apps-page span.count {
+		margin: 0 0 .75em;
+	}
+
+	.enable-mastodon-apps-table-scroll {
+		display: none;
+	}
+
+	.enable-mastodon-apps-mobile-list {
+		display: block;
+	}
+
+	.enable-mastodon-apps-mobile-sort {
+		align-items: center;
+		display: flex;
+		gap: .75em;
+		justify-content: space-between;
+		margin: 0 0 .75em;
+	}
+
+	.enable-mastodon-apps-mobile-sort span {
+		font-weight: 600;
+	}
+
+	.enable-mastodon-apps-mobile-sort select {
+		max-width: 60%;
+	}
+
+	.enable-mastodon-apps-mobile-app {
+		background: #fff;
+		border: 1px solid #c3c4c7;
+		margin: 0 0 .75em;
+	}
+
+	.enable-mastodon-apps-mobile-app summary {
+		align-items: center;
+		cursor: pointer;
+		display: flex;
+		gap: .75em;
+		justify-content: space-between;
+		padding: 12px;
+	}
+
+	.enable-mastodon-apps-mobile-app-name {
+		font-weight: 600;
+		min-width: 0;
+	}
+
+	.enable-mastodon-apps-mobile-app-used {
+		color: #646970;
+		flex: 0 0 auto;
+		font-size: 12px;
+	}
+
+	.enable-mastodon-apps-mobile-app dl {
+		display: grid;
+		grid-template-columns: minmax(8em, 40%) 1fr;
+		margin: 0;
+		padding: 0 12px 12px;
+		row-gap: .5em;
+	}
+
+	.enable-mastodon-apps-mobile-app dt {
+		color: #646970;
+		font-weight: 600;
+	}
+
+	.enable-mastodon-apps-mobile-app dd {
+		margin: 0;
+		overflow-wrap: anywhere;
+	}
+
+	.enable-mastodon-apps-mobile-app .button {
+		margin: 0 12px 12px;
+	}
 }
 
 .enable-mastodon-apps-settings h2 {

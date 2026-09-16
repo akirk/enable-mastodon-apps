@@ -22,10 +22,10 @@ $rest_nonce = wp_create_nonce( 'wp_rest' );
 	<?php if ( ! empty( $args['apps'] ) ) : ?>
 		<p>
 			<?php esc_html_e( 'These are the Mastodon apps that have been used with this WordPress site.', 'enable-mastodon-apps' ); ?>
-			<?php esc_html_e( 'You can customize the apps post types, or delete it by click on the Details link.', 'enable-mastodon-apps' ); ?>
+			<?php esc_html_e( 'Use App settings to customize an app\'s post types, post formats, and app-specific options, or to delete the app.', 'enable-mastodon-apps' ); ?>
 			<?php if ( $args['enable_debug'] ) : ?>
 				<br>
-				<?php esc_html_e( 'Since debug mode is activated, you\'ll also be able to see and manage access tokens on the details page.', 'enable-mastodon-apps' ); ?>
+				<?php esc_html_e( 'Since debug mode is activated, you\'ll also be able to see and manage access tokens on the app settings page.', 'enable-mastodon-apps' ); ?>
 			<?php endif; ?>
 		</p>
 		<span class="count">
@@ -39,27 +39,44 @@ $rest_nonce = wp_create_nonce( 'wp_rest' );
 			);
 			?>
 		</span>
-		<table class="widefat">
-			<thead>
-				<th><?php esc_html_e( 'Name', 'enable-mastodon-apps' ); ?></th>
-				<th class="debug-hide"><?php esc_html_e( 'Redirect URI', 'enable-mastodon-apps' ); ?></th>
-				<th><?php echo esc_html_x( 'Create new posts as', 'select post type', 'enable-mastodon-apps' ); ?></th>
-				<th><?php echo esc_html_x( 'in the post format', 'select post format', 'enable-mastodon-apps' ); ?></th>
-				<th><?php esc_html_e( 'Post Formats', 'enable-mastodon-apps' ); ?></th>
-				<th class="debug-hide"><?php esc_html_e( 'Scope', 'enable-mastodon-apps' ); ?></th>
-				<th><?php esc_html_e( 'Last Used', 'enable-mastodon-apps' ); ?></th>
-				<th><?php esc_html_e( 'Created', 'enable-mastodon-apps' ); ?></th>
-				<th></th>
-			</thead>
-			<tbody>
+		<div class="enable-mastodon-apps-table-scroll">
+			<table class="widefat enable-mastodon-apps-sortable-table">
+				<thead>
+					<tr>
+						<th scope="col" data-sort-type="text"><button type="button"><?php esc_html_e( 'Name', 'enable-mastodon-apps' ); ?></button></th>
+						<th scope="col" class="debug-hide" data-sort-type="text"><button type="button"><?php esc_html_e( 'Redirect URI', 'enable-mastodon-apps' ); ?></button></th>
+						<th scope="col" data-sort-type="text"><button type="button"><?php echo esc_html_x( 'Create new posts as', 'select post type', 'enable-mastodon-apps' ); ?></button></th>
+						<th scope="col" data-sort-type="text"><button type="button"><?php echo esc_html_x( 'in the post format', 'select post format', 'enable-mastodon-apps' ); ?></button></th>
+						<th scope="col" data-sort-type="text"><button type="button"><?php esc_html_e( 'Post Formats', 'enable-mastodon-apps' ); ?></button></th>
+						<th scope="col" class="debug-hide" data-sort-type="text"><button type="button"><?php esc_html_e( 'Scope', 'enable-mastodon-apps' ); ?></button></th>
+						<th scope="col" data-sort-type="number" class="sort-desc" aria-sort="descending"><button type="button"><?php esc_html_e( 'Last Used', 'enable-mastodon-apps' ); ?></button></th>
+						<th scope="col" data-sort-type="number"><button type="button"><?php esc_html_e( 'Created', 'enable-mastodon-apps' ); ?></button></th>
+						<th scope="col"><?php esc_html_e( 'Actions', 'enable-mastodon-apps' ); ?></th>
+					</tr>
+				</thead>
+				<tbody>
 				<?php
 				$alternate = true;
 				foreach ( $args['apps'] as $app ) {
 					$alternate = ! $alternate;
+					$redirect_uris = $app->get_redirect_uris();
+					if ( ! is_array( $redirect_uris ) ) {
+						$redirect_uris = explode( ',', $redirect_uris );
+					}
+					$post_formats       = $app->get_post_formats();
+					$post_format_labels = array();
+					foreach ( $post_formats as $slug ) {
+						if ( isset( get_post_format_strings()[ $slug ] ) ) {
+							$post_format_labels[] = get_post_format_strings()[ $slug ];
+						}
+					}
+					$post_formats_title = empty( $post_format_labels ) ? __( 'All', 'enable-mastodon-apps' ) : implode( ', ', $post_format_labels );
+					$post_formats_length = function_exists( 'mb_strlen' ) ? mb_strlen( $post_formats_title ) : strlen( $post_formats_title );
+					$collapse_post_formats = count( $post_format_labels ) > 1 && $post_formats_length > 20;
 
 					?>
 					<tr id='app-<?php echo esc_attr( $app->get_client_id() ); ?>' class="<?php echo $alternate ? 'alternate' : ''; ?>">
-						<td title='<?php echo esc_attr( $app->get_client_id() ); ?>'>
+						<td title='<?php echo esc_attr( $app->get_client_id() ); ?>' data-sort="<?php echo esc_attr( $app->get_client_name() ); ?>">
 							<a href="<?php echo esc_url( $app->get_admin_page() ); ?>"><?php echo esc_html( $app->get_client_name() ); ?></a>
 							<?php
 
@@ -70,14 +87,14 @@ $rest_nonce = wp_create_nonce( 'wp_rest' );
 							}
 							?>
 						</td>
-						<td class="debug-hide"><?php echo wp_kses( implode( '<br/>', is_array( $app->get_redirect_uris() ) ? $app->get_redirect_uris() : explode( ',', $app->get_redirect_uris() ) ), array( 'br' => array() ) ); ?></td>
-						<td>
+						<td class="debug-hide" data-sort="<?php echo esc_attr( implode( ', ', $redirect_uris ) ); ?>"><?php echo wp_kses( implode( '<br/>', $redirect_uris ), array( 'br' => array() ) ); ?></td>
+						<td data-sort="<?php echo esc_attr( get_post_type_object( $app->get_create_post_type() )->labels->singular_name ); ?>">
 							<?php
 							$_post_type = get_post_type_object( $app->get_create_post_type() );
 							echo esc_html( $_post_type->labels->singular_name );
 							?>
 						</td>
-						<td>
+						<td data-sort="<?php echo esc_attr( $app->get_create_post_format() ? $app->get_create_post_format() : 'standard' ); ?>">
 							<?php
 							if ( ! $app->get_create_post_format() ) {
 								echo esc_html_x( 'Standard', 'Post format' ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
@@ -92,37 +109,134 @@ $rest_nonce = wp_create_nonce( 'wp_rest' );
 							}
 							?>
 						</td>
-						<td>
+						<td data-sort="<?php echo esc_attr( $post_formats_title ); ?>" title="<?php echo esc_attr( $post_formats_title ); ?>">
 							<?php
 
-							$post_formats = $app->get_post_formats();
-							if ( empty( $post_formats ) ) {
-								echo esc_html( __( 'All' ) ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
-							} else {
+							if ( empty( $post_format_labels ) ) {
+								echo esc_html( $post_formats_title );
+							} elseif ( $collapse_post_formats ) {
 								echo esc_html(
-									implode(
-										', ',
-										array_map(
-											function ( $slug ) {
-												return get_post_format_strings()[ $slug ];
-											},
-											$post_formats
-										)
+									sprintf(
+										// translators: %d is the number of enabled post formats.
+										_n( '%d post format', '%d post formats', count( $post_format_labels ), 'enable-mastodon-apps' ),
+										count( $post_format_labels )
 									)
 								);
+							} else {
+								echo esc_html( $post_formats_title );
 							}
 							?>
 						</td>
-						<td class="debug-hide"><?php echo esc_html( $app->get_scopes() ); ?></td>
-						<?php td_timestamp( $app->get_last_used() ); ?>
-						<?php td_timestamp( $app->get_creation_date() ); ?>
-						<td><a href="<?php echo esc_url( $app->get_admin_page() ); ?>"><?php esc_html_e( 'Details', 'enable-mastodon-apps' ); ?></a></td>
+						<td class="debug-hide" data-sort="<?php echo esc_attr( $app->get_scopes() ); ?>"><?php echo esc_html( $app->get_scopes() ); ?></td>
+						<?php td_timestamp( $app->get_last_used(), false, $app->get_last_used() ? $app->get_last_used() : $app->get_creation_date() ); ?>
+						<?php td_timestamp( $app->get_creation_date(), false, $app->get_creation_date() ); ?>
+						<td><a href="<?php echo esc_url( $app->get_admin_page() ); ?>"><?php esc_html_e( 'App settings', 'enable-mastodon-apps' ); ?></a></td>
 					</tr>
 					<?php
 				}
 				?>
-			</tbody>
-		</table>
+				</tbody>
+			</table>
+			</div>
+			<div class="enable-mastodon-apps-mobile-list">
+				<label class="enable-mastodon-apps-mobile-sort">
+					<span><?php esc_html_e( 'Sort apps', 'enable-mastodon-apps' ); ?></span>
+					<select>
+						<option value="last-used-desc"><?php esc_html_e( 'Last used', 'enable-mastodon-apps' ); ?></option>
+						<option value="name-asc"><?php esc_html_e( 'Name', 'enable-mastodon-apps' ); ?></option>
+						<option value="created-desc"><?php esc_html_e( 'Created', 'enable-mastodon-apps' ); ?></option>
+						<option value="post-type-asc"><?php echo esc_html_x( 'Create new posts as', 'select post type', 'enable-mastodon-apps' ); ?></option>
+					</select>
+				</label>
+				<?php
+				foreach ( $args['apps'] as $app ) {
+					$redirect_uris = $app->get_redirect_uris();
+					if ( ! is_array( $redirect_uris ) ) {
+						$redirect_uris = explode( ',', $redirect_uris );
+					}
+					$post_formats       = $app->get_post_formats();
+					$post_format_labels = array();
+					foreach ( $post_formats as $slug ) {
+						if ( isset( get_post_format_strings()[ $slug ] ) ) {
+							$post_format_labels[] = get_post_format_strings()[ $slug ];
+						}
+					}
+					$post_formats_title = empty( $post_format_labels ) ? __( 'All', 'enable-mastodon-apps' ) : implode( ', ', $post_format_labels );
+					$_post_type         = get_post_type_object( $app->get_create_post_type() );
+					$last_used          = absint( $app->get_last_used() );
+					$creation_date      = absint( $app->get_creation_date() );
+					if ( $last_used ) {
+						$last_used_text = sprintf(
+						// translators: %s: Human-readable time difference.
+							__( '%s ago' ), // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
+							human_time_diff( $last_used )
+						);
+					} else {
+						$last_used_text = _x( 'Never', 'Code was never used', 'enable-mastodon-apps' );
+					}
+					if ( $creation_date ) {
+						$created_text = sprintf(
+						// translators: %s: Human-readable time difference.
+							__( '%s ago' ), // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
+							human_time_diff( $creation_date )
+						);
+					} else {
+						$created_text = __( 'Unknown', 'enable-mastodon-apps' );
+					}
+					?>
+					<details
+						class="enable-mastodon-apps-mobile-app"
+						data-sort-name="<?php echo esc_attr( $app->get_client_name() ); ?>"
+						data-sort-last-used="<?php echo esc_attr( $last_used ? $last_used : $creation_date ); ?>"
+						data-sort-created="<?php echo esc_attr( $creation_date ); ?>"
+						data-sort-post-type="<?php echo esc_attr( $_post_type->labels->singular_name ); ?>"
+					>
+					<summary>
+						<span class="enable-mastodon-apps-mobile-app-name">
+							<?php echo esc_html( $app->get_client_name() ); ?>
+							<?php
+							if ( ! $app->get_last_used() && Mastodon_App::DEBUG_CLIENT_ID !== $app->get_client_id() ) {
+								echo ' <span class="pill pill-never-used" title="' . esc_html__( 'No tokens or authorization codes associated with this app.', 'enable-mastodon-apps' ) . '">' . esc_html__( 'Never Used', 'enable-mastodon-apps' ) . '</span>';
+							} elseif ( $app->is_outdated() && Mastodon_App::DEBUG_CLIENT_ID !== $app->get_client_id() ) {
+								echo ' <span class="pill pill-outdated" title="' . esc_html__( 'No tokens or authorization codes associated with this app.', 'enable-mastodon-apps' ) . '">' . esc_html__( 'Outdated', 'enable-mastodon-apps' ) . '</span>';
+							}
+							?>
+						</span>
+						<span class="enable-mastodon-apps-mobile-app-used"><?php echo esc_html( $last_used_text ); ?></span>
+					</summary>
+					<dl>
+						<dt><?php echo esc_html_x( 'Create new posts as', 'select post type', 'enable-mastodon-apps' ); ?></dt>
+						<dd><?php echo esc_html( $_post_type->labels->singular_name ); ?></dd>
+						<dt><?php echo esc_html_x( 'in the post format', 'select post format', 'enable-mastodon-apps' ); ?></dt>
+						<dd>
+							<?php
+							if ( ! $app->get_create_post_format() ) {
+								echo esc_html_x( 'Standard', 'Post format' ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
+							} else {
+								foreach ( get_post_format_strings() as $slug => $name ) {
+									if ( $slug === $app->get_create_post_format() ) {
+										echo esc_html( $name );
+										break;
+									}
+								}
+							}
+							?>
+						</dd>
+						<dt><?php esc_html_e( 'Post Formats', 'enable-mastodon-apps' ); ?></dt>
+						<dd><?php echo esc_html( $post_formats_title ); ?></dd>
+						<dt><?php esc_html_e( 'Created', 'enable-mastodon-apps' ); ?></dt>
+						<dd><abbr title="<?php echo esc_attr( $creation_date ? gmdate( 'r', $creation_date ) : $created_text ); ?>"><?php echo esc_html( $created_text ); ?></abbr></dd>
+						<dt class="debug-hide"><?php esc_html_e( 'Redirect URI', 'enable-mastodon-apps' ); ?></dt>
+						<dd class="debug-hide"><?php echo wp_kses( implode( '<br/>', $redirect_uris ), array( 'br' => array() ) ); ?></dd>
+						<dt class="debug-hide"><?php esc_html_e( 'Scope', 'enable-mastodon-apps' ); ?></dt>
+						<dd class="debug-hide"><?php echo esc_html( $app->get_scopes() ); ?></dd>
+					</dl>
+					<a class="button" href="<?php echo esc_url( $app->get_admin_page() ); ?>"><?php esc_html_e( 'App settings', 'enable-mastodon-apps' ); ?></a>
+				</details>
+					<?php
+				}
+				?>
+		</div>
 
 		<?php if ( $args['enable_debug'] ) : ?>
 			<?php if ( ! empty( $args['codes'] ) ) : ?>
