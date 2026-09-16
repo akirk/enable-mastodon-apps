@@ -232,7 +232,7 @@ class Media_Attachment extends Handler {
 				continue;
 			}
 
-			if ( self::status_already_has_image_attachment( $status, $block['src'] ) ) {
+			if ( self::status_already_has_image_attachment( $status, $block['src'], $match[0] ) ) {
 				continue;
 			}
 
@@ -262,15 +262,16 @@ class Media_Attachment extends Handler {
 	 *
 	 * @param Status_Entity $status The status object.
 	 * @param string        $url The image URL.
+	 * @param string        $html The image HTML.
 	 * @return bool Whether the image is already represented as a media attachment.
 	 */
-	private static function status_already_has_image_attachment( Status_Entity $status, string $url ): bool {
+	private static function status_already_has_image_attachment( Status_Entity $status, string $url, string $html ): bool {
 		if ( empty( $status->media_attachments ) ) {
 			return false;
 		}
 
 		$url           = html_entity_decode( $url, ENT_QUOTES );
-		$attachment_id = \attachment_url_to_postid( $url );
+		$attachment_id = self::get_image_attachment_id_from_html( $html );
 
 		foreach ( $status->media_attachments as $media_attachment ) {
 			if ( ! $media_attachment instanceof Media_Attachment_Entity || 'image' !== $media_attachment->type ) {
@@ -289,6 +290,20 @@ class Media_Attachment extends Handler {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Get the WordPress attachment ID from an image class.
+	 *
+	 * @param string $html The image HTML.
+	 * @return int The attachment ID.
+	 */
+	private static function get_image_attachment_id_from_html( string $html ): int {
+		if ( ! preg_match( '/\bwp-image-(?P<attachment_id>\d+)\b/', $html, $match ) ) {
+			return 0;
+		}
+
+		return intval( $match['attachment_id'] );
 	}
 
 	/**

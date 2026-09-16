@@ -141,7 +141,7 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 			$status->visibility          = 'public';
 			$status->uri                 = get_the_guid( $this->friend_post );
 			$status->url                 = get_permalink( $this->friend_post );
-			$status->content             = '<p>Caption</p><img src="' . esc_url( $image_url ) . '" alt="" />';
+			$status->content             = '<p>Caption</p><img src="https://cdn.example.org/resized-image.jpg" alt="" class="wp-image-' . esc_attr( $this->friend_attachment_id ) . '" />';
 			$status->account             = apply_filters( 'mastodon_api_account', null, $this->friend, null, get_post( $this->friend_post ) );
 			$status->media_attachments[] = $media_attachment;
 
