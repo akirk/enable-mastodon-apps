@@ -126,6 +126,68 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertStringNotContainsString( '<img', $data->content );
 	}
 
+	public function test_status_does_not_duplicate_existing_media_attachment_from_generic_image() {
+		$image_url = wp_get_attachment_url( $this->friend_attachment_id );
+		$filter    = function () use ( $image_url ) {
+			$media_attachment              = new Entity\Media_Attachment();
+			$media_attachment->id          = strval( $this->friend_attachment_id );
+			$media_attachment->type        = 'image';
+			$media_attachment->url         = $image_url;
+			$media_attachment->preview_url = $image_url;
+
+			$status                      = new Entity\Status();
+			$status->id                  = strval( $this->friend_post );
+			$status->created_at          = new \DateTime( '2023-01-01 00:00:00', new \DateTimeZone( 'UTC' ) );
+			$status->visibility          = 'public';
+			$status->uri                 = get_the_guid( $this->friend_post );
+			$status->url                 = get_permalink( $this->friend_post );
+			$status->content             = '<p>Caption</p><img src="' . esc_url( $image_url ) . '" alt="" />';
+			$status->account             = apply_filters( 'mastodon_api_account', null, $this->friend, null, get_post( $this->friend_post ) );
+			$status->media_attachments[] = $media_attachment;
+
+			return $status;
+		};
+
+		add_filter( 'mastodon_api_status', $filter, 5 );
+		try {
+			$request  = $this->api_request( 'GET', '/api/v1/statuses/' . $this->friend_post );
+			$response = $this->dispatch( $request );
+		} finally {
+			remove_filter( 'mastodon_api_status', $filter, 5 );
+		}
+
+		$this->assertEquals( 200, $response->get_status() );
+		$data = $response->get_data();
+		$this->assertCount( 1, $data->media_attachments );
+		$this->assertEquals( strval( $this->friend_attachment_id ), $data->media_attachments[0]->id );
+		$this->assertStringNotContainsString( '<img', $data->content );
+	}
+
+	public function test_status_context_does_not_include_child_attachments() {
+		$this->app->set_view_post_types( array( 'post', 'attachment' ) );
+
+		$reply_id = wp_insert_post(
+			array(
+				'post_author'  => $this->administrator,
+				'post_content' => 'A real reply',
+				'post_status'  => 'publish',
+				'post_type'    => 'post',
+				'post_parent'  => $this->friend_post,
+				'post_date'    => '2023-01-05 00:00:00',
+			)
+		);
+
+		$request  = $this->api_request( 'GET', '/api/v1/statuses/' . $this->friend_post . '/context' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data           = $response->get_data();
+		$descendant_ids = wp_list_pluck( $data['descendants'], 'id' );
+
+		$this->assertContains( strval( $reply_id ), $descendant_ids );
+		$this->assertNotContains( strval( $this->friend_attachment_id ), $descendant_ids );
+	}
+
 	public function test_statuses_private_id() {
 		$request = $this->api_request( 'GET', '/api/v1/statuses/' . $this->private_post );
 		$response = $this->dispatch( $request );
