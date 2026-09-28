@@ -100,7 +100,7 @@ Unmentioned endpoints are not implemented. Contributions welcome!
 
 Endpoints around interacting with non-local users require the [ActivityPub plugin](https://wordpress.org/plugins/activitypub). Following users requires the [Friends plugin](https://wordpress.org/plugins/friends). Local favourites (likes) and bookmarks work without either plugin. Lists-related endpoints require the [Friends Roles plugin](https://github.com/akirk/friends-roles).
 
-Remote polls, including polls in private messages, are supported through Friends. Local public poll creation remains owned by a poll provider; EMA recommends [Polls for ActivityPub](https://wordpress.org/plugins/wordpress-polls-for-activitypub/) and returns an explanatory error instead of publishing a status after silently discarding its poll.
+Remote polls, including polls in private messages, are supported through Friends. Install [Polls for ActivityPub](https://wordpress.org/plugins/wordpress-polls-for-activitypub/) to create local polls, retain their current results in WordPress, and vote through Mastodon apps. Without a poll provider, EMA returns an explanatory error instead of publishing a status after silently discarding its poll.
 
 ## Screenshots
 
