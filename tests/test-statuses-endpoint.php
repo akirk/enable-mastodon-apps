@@ -22,6 +22,25 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		global $wp_rest_server;
 		$routes = $wp_rest_server->get_routes();
 		$this->assertArrayHasKey( '/' . Mastodon_API::PREFIX . '/api/v1/statuses', $routes );
+		$this->assertArrayHasKey( '/' . Mastodon_API::PREFIX . '/api/v1/polls/(?P<id>[0-9]+)', $routes );
+		$this->assertArrayHasKey( '/' . Mastodon_API::PREFIX . '/api/v1/polls/(?P<id>[0-9]+)/votes', $routes );
+	}
+
+	public function test_submit_poll_suggests_poll_provider() {
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'Choose one' );
+		$request->set_param(
+			'poll',
+			array(
+				'options'    => array( 'Yes', 'No' ),
+				'expires_in' => 3600,
+			)
+		);
+
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertSame( 422, $response->get_status() );
+		$this->assertSame( 'mastodon_api_poll_provider_required', $response->get_data()['code'] );
+		$this->assertStringContainsString( 'Polls for ActivityPub', $response->get_data()['message'] );
 	}
 
 	public function test_statuses_id() {

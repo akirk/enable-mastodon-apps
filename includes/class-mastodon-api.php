@@ -1299,6 +1299,33 @@ class Mastodon_API {
 
 		register_rest_route(
 			self::PREFIX,
+			'api/v1/polls/(?P<id>[0-9]+)',
+			array(
+				'methods'             => array( 'GET', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_get_poll' ),
+				'permission_callback' => $this->required_scope( 'read:statuses', true ),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/polls/(?P<id>[0-9]+)/votes',
+			array(
+				'methods'             => array( 'POST', 'OPTIONS' ),
+				'callback'            => array( $this, 'api_vote_poll' ),
+				'permission_callback' => $this->required_scope( 'write:statuses' ),
+				'args'                => array(
+					'choices' => array(
+						'type'     => 'array',
+						'required' => true,
+						'items'    => array( 'type' => 'integer' ),
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::PREFIX,
 			'api/v1/statuses',
 			array(
 				'methods'             => array( 'GET', 'OPTIONS' ),
@@ -2580,6 +2607,56 @@ class Mastodon_API {
 		$status = apply_filters( 'mastodon_api_submit_status', null, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at, $request, $language );
 
 		return $this->validate_entity( $status, Entity\Status::class );
+	}
+
+	/**
+	 * Vote in a poll through the integration that owns it.
+	 *
+	 * @param WP_REST_Request $request The REST request.
+	 * @return Entity\Poll|WP_Error The updated poll or an error.
+	 */
+	public function api_vote_poll( $request ) {
+		$choices = $request->get_param( 'choices' );
+		if ( ! is_array( $choices ) || empty( $choices ) || count( $choices ) !== count( array_unique( $choices ) ) ) {
+			return new \WP_Error( 'mastodon_api_invalid_poll_choices', __( 'Choose at least one unique poll option.', 'enable-mastodon-apps' ), array( 'status' => 422 ) );
+		}
+
+		/**
+		 * Handle a vote for a poll exposed through the Mastodon API.
+		 *
+		 * The integration that owns the status is responsible for persisting or
+		 * federating the vote and returning the updated Poll entity.
+		 *
+		 * @param Entity\Poll|WP_Error|null $poll    The result.
+		 * @param int                       $poll_id The poll/status ID.
+		 * @param int[]                     $choices Selected option indexes.
+		 * @param WP_REST_Request           $request The REST request.
+		 */
+		$poll = apply_filters( 'mastodon_api_poll_vote', null, absint( $request->get_param( 'id' ) ), array_map( 'absint', $choices ), $request );
+		if ( is_wp_error( $poll ) ) {
+			return $poll;
+		}
+		if ( ! $poll instanceof Entity\Poll ) {
+			return new \WP_Error( 'mastodon_api_poll_not_found', __( 'Poll not found.', 'enable-mastodon-apps' ), array( 'status' => 404 ) );
+		}
+
+		return $this->validate_entity( $poll, Entity\Poll::class );
+	}
+
+	/**
+	 * Get a poll attached to a status.
+	 *
+	 * @param WP_REST_Request $request The REST request.
+	 * @return Entity\Poll|WP_Error The poll or an error.
+	 */
+	public function api_get_poll( $request ) {
+		$post_id = absint( $request->get_param( 'id' ) );
+		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
+		if ( ! $status instanceof Entity\Status || ! $status->poll instanceof Entity\Poll ) {
+			return new \WP_Error( 'mastodon_api_poll_not_found', __( 'Poll not found.', 'enable-mastodon-apps' ), array( 'status' => 404 ) );
+		}
+
+		return $this->validate_entity( $status->poll, Entity\Poll::class );
 	}
 
 	/**
