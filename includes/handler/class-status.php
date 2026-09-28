@@ -12,6 +12,7 @@ namespace Enable_Mastodon_Apps\Handler;
 use Enable_Mastodon_Apps\Handler\Handler;
 use Enable_Mastodon_Apps\Mastodon_API;
 use Enable_Mastodon_Apps\Mastodon_App;
+use Enable_Mastodon_Apps\Entity\Scheduled_Status as Scheduled_Status_Entity;
 use Enable_Mastodon_Apps\Entity\Status as Status_Entity;
 use WP_REST_Response;
 
@@ -840,7 +841,7 @@ class Status extends Handler {
 		if ( 'direct' === $visibility ) {
 			$dm_post_ids = array( $post_data['post_type'] => $post_id );
 
-			if ( $post_data['post_parent'] ) {
+			if ( ! empty( $post_data['post_parent'] ) ) {
 				$dm_ids = get_post_meta( $post_data['post_parent'], 'ema_dm_ids', true );
 			}
 
@@ -885,15 +886,29 @@ class Status extends Handler {
 		}
 
 		if ( $scheduled_at ) {
-			return array(
-				'id'           => $post_id,
-				'scheduled_at' => $scheduled_at,
-				'params'       => array(
-					'text'         => $status,
-					'visibility'   => $visibility,
-					'scheduled_at' => $scheduled_at,
-				),
+			$scheduled_status                    = new Scheduled_Status_Entity();
+			$scheduled_status->id                = strval( $post_id );
+			$scheduled_status->scheduled_at      = new \DateTime( $scheduled_at );
+			$scheduled_status->params            = array(
+				'text'           => $status_text,
+				'media_ids'      => $media_ids,
+				'sensitive'      => $request ? $request->get_param( 'sensitive' ) : null,
+				'spoiler_text'   => $request ? $request->get_param( 'spoiler_text' ) : null,
+				'visibility'     => $visibility,
+				'language'       => $language,
+				'scheduled_at'   => null,
+				'poll'           => $request ? $request->get_param( 'poll' ) : null,
+				'in_reply_to_id' => $in_reply_to_id ? strval( $in_reply_to_id ) : null,
 			);
+			$scheduled_status->media_attachments = array();
+			foreach ( (array) $media_ids as $media_id ) {
+				$attachment = apply_filters( 'mastodon_api_media_attachment', null, $media_id );
+				if ( $attachment ) {
+					$scheduled_status->media_attachments[] = $attachment;
+				}
+			}
+
+			return $scheduled_status;
 		}
 
 		/**

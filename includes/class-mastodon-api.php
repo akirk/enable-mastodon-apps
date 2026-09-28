@@ -2579,7 +2579,8 @@ class Mastodon_API {
 		 */
 		$status = apply_filters( 'mastodon_api_submit_status', null, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at, $request, $language );
 
-		return $this->validate_entity( $status, Entity\Status::class );
+		$entity_type = $scheduled_at ? Entity\Scheduled_Status::class : Entity\Status::class;
+		return $this->validate_entity( $status, $entity_type );
 	}
 
 	/**
