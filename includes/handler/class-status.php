@@ -44,7 +44,7 @@ class Status extends Handler {
 		add_filter( 'mastodon_api_statuses', array( $this, 'api_statuses_ensure_numeric_id' ), 100 );
 		add_filter( 'mastodon_api_tag_timeline', array( $this, 'api_statuses_ensure_numeric_id' ), 100 );
 		add_filter( 'mastodon_api_submit_status', array( $this, 'api_submit_comment' ), 10, 7 );
-		add_filter( 'mastodon_api_submit_status', array( $this, 'api_submit_post' ), 15, 9 );
+		add_filter( 'mastodon_api_submit_status', array( $this, 'api_submit_post' ), 15, 8 );
 		add_filter( 'mastodon_api_edit_status', array( $this, 'api_edit_comment' ), 10, 8 );
 		add_filter( 'mastodon_api_edit_status', array( $this, 'api_edit_post' ), 15, 10 );
 		add_filter( 'mastodon_api_status_context', array( $this, 'api_status_context' ), 10, 2 );
