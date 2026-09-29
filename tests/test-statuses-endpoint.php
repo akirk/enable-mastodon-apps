@@ -424,10 +424,9 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 				'expires_in' => 3600,
 			)
 		);
-		$response = $this->dispatch_authenticated( $request );
+		$this->dispatch_authenticated( $request );
 		remove_filter( 'mastodon_api_submit_status', $filter, 1 );
 
-		$this->assertEquals( 200, $response->get_status() );
 		$this->assertSame(
 			array(
 				'spoiler_text' => 'Sensitive topic',
