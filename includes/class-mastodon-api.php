@@ -2587,6 +2587,11 @@ class Mastodon_API {
 		}
 		$scheduled_at = $request->get_param( 'scheduled_at' );
 		$language     = $request->get_param( 'language' );
+		$status_data  = array(
+			'spoiler_text' => (string) $request->get_param( 'spoiler_text' ),
+			'language'     => $language,
+			'poll'         => $request->get_param( 'poll' ),
+		);
 
 		$app = Mastodon_App::get_current_app();
 		$post_format = $app->get_create_post_format();
@@ -2600,11 +2605,10 @@ class Mastodon_API {
 		 * @param string             $post_format   The post format.
 		 * @param string             $visibility    The visibility.
 		 * @param string|null        $scheduled_at  The scheduled date.
-		 * @param WP_REST_Request    $request       The request object.
-		 * @param string|null        $language      The ISO 639 language code of the status.
+		 * @param array               $status_data   Additional normalized status fields: spoiler_text, language, and poll.
 		 * @return Entity\Status|null The status data.
 		 */
-		$status = apply_filters( 'mastodon_api_submit_status', null, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at, $request, $language );
+		$status = apply_filters( 'mastodon_api_submit_status', null, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at, $status_data );
 
 		return $this->validate_entity( $status, Entity\Status::class );
 	}
