@@ -45,8 +45,8 @@ class Status extends Handler {
 		add_filter( 'mastodon_api_statuses', array( $this, 'api_statuses_ensure_numeric_id' ), 100 );
 		add_filter( 'mastodon_api_tag_timeline', array( $this, 'api_statuses_ensure_numeric_id' ), 100 );
 		add_filter( 'mastodon_api_submit_status', array( $this, 'api_submit_comment' ), 10, 7 );
-		add_filter( 'mastodon_api_submit_status', array( $this, 'api_submit_post' ), 15, 9 );
-		add_filter( 'mastodon_api_submit_status', array( $this, 'unsupported_poll' ), 14, 9 );
+		add_filter( 'mastodon_api_submit_status', array( $this, 'api_submit_post' ), 15, 8 );
+		add_filter( 'mastodon_api_submit_status', array( $this, 'unsupported_poll' ), 14, 8 );
 		add_filter( 'mastodon_api_edit_status', array( $this, 'api_edit_comment' ), 10, 8 );
 		add_filter( 'mastodon_api_edit_status', array( $this, 'api_edit_post' ), 15, 10 );
 		add_filter( 'mastodon_api_status_context', array( $this, 'api_status_context' ), 10, 2 );
@@ -88,18 +88,18 @@ class Status extends Handler {
 	/**
 	 * Reject poll creation when no poll provider handled the request.
 	 *
-	 * @param mixed            $status  The current result.
-	 * @param string           $text    The submitted text.
-	 * @param mixed            $reply   The reply target.
-	 * @param mixed            $media   Media IDs.
-	 * @param mixed            $format  Post format.
-	 * @param mixed            $privacy Visibility.
-	 * @param mixed            $date    Scheduled date.
-	 * @param \WP_REST_Request $request The request.
+	 * @param mixed  $status  The current result.
+	 * @param string $text    The submitted text.
+	 * @param mixed  $reply   The reply target.
+	 * @param mixed  $media   Media IDs.
+	 * @param mixed  $format  Post format.
+	 * @param mixed  $privacy Visibility.
+	 * @param mixed  $date    Scheduled date.
+	 * @param array  $status_data Additional normalized status fields.
 	 * @return mixed The result or an explanatory error.
 	 */
-	public function unsupported_poll( $status, $text, $reply, $media, $format, $privacy, $date, $request = null ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
-		if ( $status || ! $request || ! $request->get_param( 'poll' ) ) {
+	public function unsupported_poll( $status, $text, $reply, $media, $format, $privacy, $date, $status_data = array() ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+		if ( $status || empty( $status_data['poll'] ) ) {
 			return $status;
 		}
 

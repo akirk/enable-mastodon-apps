@@ -22,7 +22,7 @@ class Polls_For_ActivityPub {
 			return;
 		}
 
-		add_filter( 'mastodon_api_submit_status', array( $this, 'submit_poll' ), 8, 9 );
+		add_filter( 'mastodon_api_submit_status', array( $this, 'submit_poll' ), 8, 8 );
 		add_filter( 'mastodon_api_status_poll', array( $this, 'status_poll' ), 20, 2 );
 		add_filter( 'mastodon_api_poll_vote', array( $this, 'vote' ), 20, 3 );
 	}
@@ -43,18 +43,18 @@ class Polls_For_ActivityPub {
 	 * Direct polls are left to a messaging integration such as Friends, which
 	 * supplies the recipient and creates the poll with a private post status.
 	 *
-	 * @param mixed            $status         Current result.
-	 * @param string           $text           Poll question.
-	 * @param int|string|null  $reply          Reply target.
-	 * @param array            $media           Attached media IDs.
-	 * @param string           $format          Post format.
-	 * @param string           $privacy         Mastodon visibility.
-	 * @param string|null      $date            Scheduled date.
-	 * @param \WP_REST_Request $request         REST request.
+	 * @param mixed           $status         Current result.
+	 * @param string          $text           Poll question.
+	 * @param int|string|null $reply          Reply target.
+	 * @param array           $media           Attached media IDs.
+	 * @param string          $format          Post format.
+	 * @param string          $privacy         Mastodon visibility.
+	 * @param string|null     $date            Scheduled date.
+	 * @param array           $status_data     Additional normalized status fields.
 	 * @return mixed
 	 */
-	public function submit_poll( $status, $text, $reply, $media, $format, $privacy, $date, $request = null ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
-		if ( $status || ! $request || ! $request->get_param( 'poll' ) || 'direct' === $privacy ) {
+	public function submit_poll( $status, $text, $reply, $media, $format, $privacy, $date, $status_data = array() ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+		if ( $status || empty( $status_data['poll'] ) || 'direct' === $privacy ) {
 			return $status;
 		}
 
@@ -66,7 +66,7 @@ class Polls_For_ActivityPub {
 			return new \WP_Error( 'mastodon_api_scheduled_poll', __( 'Scheduling polls is not supported.', 'enable-mastodon-apps' ), array( 'status' => 422 ) );
 		}
 
-		$poll_data = $request->get_param( 'poll' );
+		$poll_data = $status_data['poll'];
 		$options   = isset( $poll_data['options'] ) ? array_values( array_filter( array_map( 'sanitize_text_field', (array) $poll_data['options'] ) ) ) : array();
 		$duration  = isset( $poll_data['expires_in'] ) ? absint( $poll_data['expires_in'] ) : 0;
 		if ( count( $options ) < 2 || ! $duration ) {
