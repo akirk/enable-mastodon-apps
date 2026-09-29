@@ -82,6 +82,8 @@ Here is a list of endpoints and their implementation status:
 - [x] `POST /api/v1/statuses/:id/unreblog` [Undo the boost a status](https://docs.joinmastodon.org/methods/statuses/#unreblog)
 - [x] `GET /api/v1/statuses/:id` [View a single status](https://docs.joinmastodon.org/methods/statuses/#get)
 - [x] `GET /api/v1/statuses` [View multiple statuses](https://docs.joinmastodon.org/methods/statuses/#index)
+- [x] `GET /api/v1/polls/:id` [View a poll](https://docs.joinmastodon.org/methods/polls/#get)
+- [x] `POST /api/v1/polls/:id/votes` [Vote in a poll](https://docs.joinmastodon.org/methods/polls/#vote)
 - [x] `GET /api/v1/notifications/` (partial, just mentions) [Get all notifications](https://docs.joinmastodon.org/methods/notifications/#get)
 - [x] `GET /api/v1/notifications/:id` [Get a single notification](https://docs.joinmastodon.org/methods/notifications/#get-one)
 - [x] `POST /api/v1/notifications/clear` [Dismiss all notification](https://docs.joinmastodon.org/methods/notifications/#clear)
@@ -97,6 +99,8 @@ Here is a list of endpoints and their implementation status:
 Unmentioned endpoints are not implemented. Contributions welcome!
 
 Endpoints around interacting with non-local users require the [ActivityPub plugin](https://wordpress.org/plugins/activitypub). Following users requires the [Friends plugin](https://wordpress.org/plugins/friends). Local favourites (likes) and bookmarks work without either plugin. Lists-related endpoints require the [Friends Roles plugin](https://github.com/akirk/friends-roles).
+
+Remote polls, including polls in private messages, are supported through Friends. Install [Polls for ActivityPub](https://wordpress.org/plugins/wordpress-polls-for-activitypub/) to create local polls, retain their current results in WordPress, and vote through Mastodon apps. Without a poll provider, EMA returns an explanatory error instead of publishing a status after silently discarding its poll.
 
 ## Screenshots
 

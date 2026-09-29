@@ -69,6 +69,7 @@ add_action(
 		WP_Admin\Health_Check::init();
 		new Integration\Pixelfed();
 		new Integration\Activitypub();
+		new Integration\Polls_For_ActivityPub();
 		new Comment_CPT();
 	}
 );
