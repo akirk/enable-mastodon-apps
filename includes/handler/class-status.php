@@ -806,13 +806,14 @@ class Status extends Handler {
 		return $post_data;
 	}
 
-	public function api_submit_post( $status, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at, $request = null, $language = null ) {
+	public function api_submit_post( $status, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at, $status_data = array() ) {
 		if (
 			$status instanceof \WP_Error // An error was thrown in an earlier hook.
 			|| $status instanceof Status_Entity // A status was already saved in an earlier hook.
 		) {
 			return $status;
 		}
+		$language = isset( $status_data['language'] ) ? $status_data['language'] : null;
 
 		$mentions = array();
 		if ( 'direct' === $visibility ) {

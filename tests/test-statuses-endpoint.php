@@ -386,6 +386,42 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertEquals( 422, $response->get_status() );
 	}
 
+	public function test_submit_status_hook_receives_normalized_status_data() {
+		$received = null;
+		$filter   = function ( $status, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at, $status_data ) use ( &$received ) {
+			$received = $status_data;
+			return $status;
+		};
+		add_filter( 'mastodon_api_submit_status', $filter, 1, 8 );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'A warned status' );
+		$request->set_param( 'spoiler_text', 'Sensitive topic' );
+		$request->set_param( 'language', 'fr' );
+		$request->set_param(
+			'poll',
+			array(
+				'options'    => array( 'Yes', 'No' ),
+				'expires_in' => 3600,
+			)
+		);
+		$response = $this->dispatch_authenticated( $request );
+		remove_filter( 'mastodon_api_submit_status', $filter, 1 );
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertSame(
+			array(
+				'spoiler_text' => 'Sensitive topic',
+				'language'     => 'fr',
+				'poll'         => array(
+					'options'    => array( 'Yes', 'No' ),
+					'expires_in' => 3600,
+				),
+			),
+			$received
+		);
+	}
+
 	public function test_submit_status_rejects_too_many_media_attachments() {
 		$request = $this->api_request( 'POST', '/api/v1/statuses' );
 		$request->set_param( 'status', 'too many attachments' );
