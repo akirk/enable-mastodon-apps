@@ -840,7 +840,7 @@ class Status extends Handler {
 		if ( 'direct' === $visibility ) {
 			$dm_post_ids = array( $post_data['post_type'] => $post_id );
 
-			if ( $post_data['post_parent'] ) {
+			if ( ! empty( $post_data['post_parent'] ) ) {
 				$dm_ids = get_post_meta( $post_data['post_parent'], 'ema_dm_ids', true );
 			}
 
