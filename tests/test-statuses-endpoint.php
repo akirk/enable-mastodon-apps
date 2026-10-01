@@ -386,6 +386,32 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertEquals( 422, $response->get_status() );
 	}
 
+	public function test_submit_scheduled_direct_status_returns_scheduled_status() {
+		$user         = get_userdata( $this->friend );
+		$scheduled_at = gmdate( 'c', time() + HOUR_IN_SECONDS );
+		$status_text  = '@' . $user->user_login . ' A scheduled direct message';
+		$request      = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', $status_text );
+		$request->set_param( 'visibility', 'direct' );
+		$request->set_param( 'scheduled_at', $scheduled_at );
+
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertInstanceOf( Entity\Scheduled_Status::class, $data );
+		$this->assertIsString( $data->id );
+		$this->assertSame( $status_text, $data->params['text'] );
+		$this->assertSame( 'direct', $data->params['visibility'] );
+		$this->assertInstanceOf( '\DateTime', $data->scheduled_at );
+		$this->assertSame( 'future', get_post_status( $data->id ) );
+
+		$serialized = $data->jsonSerialize();
+		$this->assertArrayNotHasKey( 'error', $serialized );
+		$this->assertSame( $status_text, $serialized['params']['text'] );
+		$this->assertSame( array(), $serialized['media_attachments'] );
+	}
+
 	public function test_submit_status_rejects_too_many_media_attachments() {
 		$request = $this->api_request( 'POST', '/api/v1/statuses' );
 		$request->set_param( 'status', 'too many attachments' );
