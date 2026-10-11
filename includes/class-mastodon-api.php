@@ -202,6 +202,10 @@ class Mastodon_API {
 		if ( isset( $object_array['inReplyTo'] ) ) {
 			return $object_array;
 		}
+		// Some objects reach this filter without an ID, and url_to_postid() needs a string.
+		if ( empty( $id ) || ! is_string( $id ) ) {
+			return $object_array;
+		}
 		$post_id = \url_to_postid( $id );
 		if ( ! $post_id ) {
 			return $object_array;
