@@ -410,7 +410,7 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$data = $response->get_data();
 		$this->assertCount( 4, $data->media_attachments );
 		foreach ( $data->media_attachments as $i => $attachment ) {
-			$this->assertSame( $media_ids[ $i ], $attachment->id );
+			$this->assertSame( wp_get_attachment_url( (int) $media_ids[ $i ] ), $attachment->url );
 			$this->assertSame( "Photo $i & friends", $attachment->description );
 		}
 		$content = get_post_field( 'post_content', $data->id );
