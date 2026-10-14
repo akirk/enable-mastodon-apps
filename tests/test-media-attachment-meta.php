@@ -68,6 +68,27 @@ class MediaAttachmentMeta_Test extends Mastodon_API_TestCase {
 		$this->assertSame( $meta, $data['media_attachments'][0]['meta'] );
 	}
 
+	public function test_wordpress_emoji_stays_inline_while_regular_images_become_media() {
+		$status = $this->status_with_image( array() );
+		$status->media_attachments = array();
+		$status->content = '<p>Hello <img class="extra wp-smiley" src="https://s.w.org/emoji.png" alt="&#128578;" /> <img src="https://example.org/photo.png" width="800" height="400"></p>';
+		$handler = new Media_Attachment_Handler();
+		$status = $handler->add_generic_image_attachments( $status );
+		$this->assertSame( '<p>Hello 🙂 </p>', $status->content );
+		$this->assertCount( 1, $status->media_attachments );
+		$this->assertSame( 'https://example.org/photo.png', $status->media_attachments[0]->url );
+	}
+
+	public function test_wordpress_smiley_alt_is_escaped_as_text() {
+		$status = $this->status_with_image( array() );
+		$status->media_attachments = array();
+		$status->content = "<p><img class='wp-smiley' src='https://s.w.org/emoji.png' alt='&lt;script&gt;'></p>";
+		$handler = new Media_Attachment_Handler();
+		$status = $handler->add_generic_image_attachments( $status );
+		$this->assertSame( '<p>&lt;script&gt;</p>', $status->content );
+		$this->assertCount( 0, $status->media_attachments );
+	}
+
 	public function test_generic_video_dimensions_are_created_only_under_original() {
 		$status = $this->status_with_image( array() );
 		$status->media_attachments = array();

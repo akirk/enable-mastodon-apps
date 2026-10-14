@@ -214,6 +214,15 @@ class Media_Attachment extends Handler {
 		}
 
 		foreach ( $matches as $match ) {
+			// WordPress renders Unicode emoji as wp-smiley images; keep them inline as text.
+			if ( preg_match( '/\sclass\s*=\s*([\'"])(.*?)\1/is', $match[0], $class ) && in_array( 'wp-smiley', preg_split( '/\s+/', trim( $class[2] ) ), true ) ) {
+				$emoji = '';
+				if ( preg_match( '/\salt\s*=\s*([\'"])(.*?)\1/is', $match[0], $alt ) ) {
+					$emoji = esc_html( html_entity_decode( $alt[2], ENT_QUOTES, 'UTF-8' ) );
+				}
+				$status->content = str_replace( $match[0], $emoji, $status->content );
+				continue;
+			}
 			$status->content = str_replace( $match[0], '', $status->content );
 			if ( ! preg_match( '/<img\b([^>]+)>/', $match[0], $img ) ) {
 				continue;
