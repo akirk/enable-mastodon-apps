@@ -13,6 +13,23 @@ namespace Enable_Mastodon_Apps\Entity;
  * This is the class that implements the Media_Attachment entity.
  */
 class Media_Attachment extends Entity {
+	/**
+	 * Serialize empty metadata as an object.
+	 *
+	 * @return array The serialized attachment.
+	 */
+	#[\ReturnTypeWillChange]
+	public function jsonSerialize() {
+		$data = parent::jsonSerialize();
+		if ( isset( $data['error'] ) ) {
+			return $data;
+		}
+		if ( empty( $data['meta'] ) ) {
+			$data['meta'] = new \stdClass();
+		}
+		return $data;
+	}
+
 	protected $types = array(
 		'id'          => 'string',
 		'type'        => 'string',

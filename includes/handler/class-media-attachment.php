@@ -243,13 +243,14 @@ class Media_Attachment extends Handler {
 			$attachment->preview_url = $block['src'];
 			$attachment->remote_url  = $block['src'];
 			if ( isset( $block['width'] ) && $block['width'] > 0 && isset( $block['height'] ) && $block['height'] > 0 ) {
-				$attachment->meta             = array(
-					'width'  => intval( $block['width'] ),
-					'height' => intval( $block['height'] ),
-					'size'   => $block['width'] . 'x' . $block['height'],
-					'aspect' => (int) $block['width'] / (int) $block['height'],
+				$attachment->meta = array(
+					'original' => array(
+						'width'  => intval( $block['width'] ),
+						'height' => intval( $block['height'] ),
+						'size'   => $block['width'] . 'x' . $block['height'],
+						'aspect' => (int) $block['width'] / (int) $block['height'],
+					),
 				);
-				$attachment->meta['original'] = $attachment->meta;
 			}
 			$attachment->description     = '';
 			$status->media_attachments[] = $attachment;
@@ -469,10 +470,12 @@ class Media_Attachment extends Handler {
 			$attachment->remote_url = $block['src'];
 			if ( isset( $block['width'] ) && $block['width'] > 0 && isset( $block['height'] ) && $block['height'] > 0 ) {
 				$attachment->meta = array(
-					'width'  => intval( $block['width'] ),
-					'height' => intval( $block['height'] ),
-					'size'   => $block['width'] . 'x' . $block['height'],
-					'aspect' => (int) $block['width'] / (int) $block['height'],
+					'original' => array(
+						'width'  => intval( $block['width'] ),
+						'height' => intval( $block['height'] ),
+						'size'   => $block['width'] . 'x' . $block['height'],
+						'aspect' => (int) $block['width'] / (int) $block['height'],
+					),
 				);
 			}
 			$attachment->description     = '';
