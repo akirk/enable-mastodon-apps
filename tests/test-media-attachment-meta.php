@@ -89,6 +89,22 @@ class MediaAttachmentMeta_Test extends Mastodon_API_TestCase {
 		$this->assertCount( 0, $status->media_attachments );
 	}
 
+	public function test_generic_images_preserve_all_four_images_and_their_alt_text() {
+		$status = $this->status_with_image( array() );
+		$status->media_attachments = array();
+		$status->content = '<p>Four photos</p>';
+		for ( $i = 0; $i < 4; ++$i ) {
+			$status->content .= "<img src='https://example.org/photo-$i.png' alt='Photo $i &amp; friends' />";
+		}
+		$handler = new Media_Attachment_Handler();
+		$status = $handler->add_generic_image_attachments( $status );
+		$this->assertCount( 4, $status->media_attachments );
+		foreach ( $status->media_attachments as $i => $attachment ) {
+			$this->assertSame( "https://example.org/photo-$i.png", $attachment->url );
+			$this->assertSame( "Photo $i & friends", $attachment->description );
+		}
+	}
+
 	public function test_generic_video_dimensions_are_created_only_under_original() {
 		$status = $this->status_with_image( array() );
 		$status->media_attachments = array();

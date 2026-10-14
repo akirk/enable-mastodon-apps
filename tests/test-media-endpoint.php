@@ -63,10 +63,43 @@ class MediaEndpoint_Test extends Mastodon_API_TestCase {
 				),
 			)
 		);
+		$request->set_param( 'description', 'A fox & its den' );
 		$response = $this->dispatch_authenticated( $request );
 
 		$this->assertEquals( 200, $response->get_status() );
 		$this->assertInstanceOf( Entity\Media_Attachment::class, $response->get_data() );
+		$this->assertSame( 'A fox & its den', get_post_meta( $response->get_data()->id, '_wp_attachment_image_alt', true ) );
+	}
+
+	public function test_media_description_updates_wordpress_alt_text_and_can_be_cleared() {
+		$description = 'A "fox" & its \\\ den';
+		$request = $this->api_request( 'PUT', '/api/v1/media/' . $this->friend_attachment_id );
+		$request->set_param( 'description', $description );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertSame( $description, $response->get_data()->description );
+		$this->assertSame( $description, get_post_meta( $this->friend_attachment_id, '_wp_attachment_image_alt', true ) );
+		$this->assertSame( $description, get_post_field( 'post_excerpt', $this->friend_attachment_id ) );
+
+		$request->set_param( 'description', '' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertSame( '', $response->get_data()->description );
+		$this->assertSame( '', get_post_meta( $this->friend_attachment_id, '_wp_attachment_image_alt', true ) );
+	}
+
+	public function test_media_reads_wordpress_alt_text_before_caption() {
+		update_post_meta( $this->friend_attachment_id, '_wp_attachment_image_alt', 'A fox in its den' );
+		wp_update_post(
+			array(
+				'ID'           => $this->friend_attachment_id,
+				'post_excerpt' => 'Photo credit',
+			)
+		);
+		$request = $this->api_request( 'GET', '/api/v1/media/' . $this->friend_attachment_id );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertSame( 'A fox in its den', $response->get_data()->description );
 	}
 
 	public function test_get_media() {

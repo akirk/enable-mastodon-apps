@@ -2634,11 +2634,12 @@ class Mastodon_API {
 		$request->set_param( 'post_id', $attachment_id );
 
 		$description = $request->get_param( 'description' );
-		if ( $description ) {
+		if ( null !== $description ) {
+			update_post_meta( $attachment_id, '_wp_attachment_image_alt', wp_slash( $description ) );
 			wp_update_post(
 				array(
 					'ID'           => $attachment_id,
-					'post_excerpt' => $description,
+					'post_excerpt' => wp_slash( $description ),
 				)
 			);
 		}
@@ -2700,11 +2701,12 @@ class Mastodon_API {
 		}
 
 		$description = $request->get_param( 'description' );
-		if ( $description ) {
+		if ( null !== $description ) {
+			update_post_meta( $attachment_id, '_wp_attachment_image_alt', wp_slash( $description ) );
 			wp_update_post(
 				array(
 					'ID'           => $attachment_id,
-					'post_excerpt' => $description,
+					'post_excerpt' => wp_slash( $description ),
 				)
 			);
 		}

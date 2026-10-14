@@ -625,7 +625,11 @@ class Status extends Handler {
 	}
 
 	private static function get_attachment_description( int $media_id ): string {
-		return trim( wp_strip_all_tags( get_post_field( 'post_excerpt', $media_id ) ) );
+		$alt = get_post_meta( $media_id, '_wp_attachment_image_alt', true );
+		if ( '' === $alt ) {
+			$alt = get_post_field( 'post_excerpt', $media_id );
+		}
+		return trim( wp_strip_all_tags( $alt ) );
 	}
 
 	private static function render_image_figure( int $media_id, string $image_attributes = '' ): string {

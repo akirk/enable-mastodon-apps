@@ -380,6 +380,42 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertEquals( 'trash', get_post_status( $this->post ) );
 	}
 
+	public function test_submitted_status_preserves_four_images_with_alt_text() {
+		$media_ids = array();
+		for ( $i = 0; $i < 4; ++$i ) {
+			$media_id = wp_insert_attachment(
+				array(
+					'post_mime_type' => 'image/jpeg',
+					'post_status'    => 'inherit',
+					'guid'           => "https://example.org/photo-$i.jpg",
+				)
+			);
+			update_post_meta( $media_id, '_wp_attachment_image_alt', "Photo $i & friends" );
+			wp_update_attachment_metadata(
+				$media_id,
+				array(
+					'width'  => 800,
+					'height' => 400,
+				)
+			);
+			$media_ids[] = (string) $media_id;
+		}
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'Four photos' );
+		$request->set_param( 'media_ids', $media_ids );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status(), wp_json_encode( $response->get_data() ) );
+		$data = $response->get_data();
+		$this->assertCount( 4, $data->media_attachments );
+		foreach ( $data->media_attachments as $i => $attachment ) {
+			$this->assertSame( $media_ids[ $i ], $attachment->id );
+			$this->assertSame( "Photo $i & friends", $attachment->description );
+		}
+		$content = get_post_field( 'post_content', $data->id );
+		$this->assertSame( 4, substr_count( $content, '<img ' ) );
+		$this->assertStringContainsString( 'alt="Photo 3 &amp; friends"', $content );
+	}
+
 	public function test_submit_status_empty() {
 		$request = $this->api_request( 'POST', '/api/v1/statuses' );
 		$response = $this->dispatch_authenticated( $request );
