@@ -386,6 +386,40 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertEquals( 422, $response->get_status() );
 	}
 
+	public function test_submit_scheduled_direct_status_returns_scheduled_status() {
+		$recipient    = self::factory()->user->create( array( 'user_login' => 'scheduled-recipient' ) );
+		$user         = get_userdata( $recipient );
+		$scheduled_at = gmdate( 'c', time() + HOUR_IN_SECONDS );
+		$status_text  = '@' . $user->user_login . ' A scheduled direct message';
+		$request      = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', $status_text );
+		$request->set_param( 'visibility', 'direct' );
+		$request->set_param( 'scheduled_at', $scheduled_at );
+		$request->set_param( 'sensitive', true );
+		$request->set_param( 'spoiler_text', 'A warning' );
+		$request->set_param( 'language', 'fr' );
+
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status(), wp_json_encode( $response->get_data() ) );
+
+		$data = $response->get_data();
+		$this->assertInstanceOf( Entity\Scheduled_Status::class, $data );
+		$this->assertIsString( $data->id );
+		$this->assertSame( $status_text, $data->params['text'] );
+		$this->assertSame( 'direct', $data->params['visibility'] );
+		$this->assertTrue( $data->params['sensitive'] );
+		$this->assertSame( 'A warning', $data->params['spoiler_text'] );
+		$this->assertSame( 'fr', $data->params['language'] );
+		$this->assertNull( $data->params['poll'] );
+		$this->assertInstanceOf( '\DateTime', $data->scheduled_at );
+		$this->assertSame( 'future', get_post_status( $data->id ) );
+
+		$serialized = $data->jsonSerialize();
+		$this->assertArrayNotHasKey( 'error', $serialized );
+		$this->assertSame( $status_text, $serialized['params']['text'] );
+		$this->assertSame( array(), $serialized['media_attachments'] );
+	}
+
 	public function test_submit_status_hook_receives_normalized_status_data() {
 		$received = null;
 		$filter   = function ( $status, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at, $status_data ) use ( &$received ) {
@@ -410,6 +444,7 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 
 		$this->assertSame(
 			array(
+				'sensitive'    => false,
 				'spoiler_text' => 'Sensitive topic',
 				'language'     => 'fr',
 				'poll'         => array(
