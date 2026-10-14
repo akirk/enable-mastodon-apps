@@ -6,7 +6,7 @@
 - Tested up to: 7.1
 - Requires PHP: 7.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 1.6.4
+- Stable tag: 1.7.0
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -104,6 +104,13 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 2. The Mastodon Apps settings page.
 
 ## Changelog
+
+### 1.7.0
+- Add language support for statuses ([#335]).
+- Convert hashtags into WordPress categories or tags when posting ([#50]).
+- Add an option to use the first attached image as the featured image ([#338]).
+- Improve the registered apps admin interface ([#340]).
+- Many smaller fixes for media attachments and image alt text ([#337], [#355], [#356], [#358]), scheduled statuses ([#349]), direct messages and mention links ([#352]), status submission hooks ([#351]), account profiles ([#354]), and ActivityPub replies ([#353]).
 
 ### 1.6.4
 - Don't drop media attachments that lack dimensions ([#334]) - should fix featured images
@@ -417,3 +424,17 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 [#321]: https://github.com/akirk/enable-mastodon-apps/pull/321
 [#333]: https://github.com/akirk/enable-mastodon-apps/pull/333
 [#334]: https://github.com/akirk/enable-mastodon-apps/pull/334
+
+[#335]: https://github.com/akirk/enable-mastodon-apps/pull/335
+[#337]: https://github.com/akirk/enable-mastodon-apps/pull/337
+[#338]: https://github.com/akirk/enable-mastodon-apps/pull/338
+[#340]: https://github.com/akirk/enable-mastodon-apps/pull/340
+[#349]: https://github.com/akirk/enable-mastodon-apps/pull/349
+[#351]: https://github.com/akirk/enable-mastodon-apps/pull/351
+[#352]: https://github.com/akirk/enable-mastodon-apps/pull/352
+[#353]: https://github.com/akirk/enable-mastodon-apps/pull/353
+[#354]: https://github.com/akirk/enable-mastodon-apps/pull/354
+[#355]: https://github.com/akirk/enable-mastodon-apps/pull/355
+[#356]: https://github.com/akirk/enable-mastodon-apps/pull/356
+[#358]: https://github.com/akirk/enable-mastodon-apps/pull/358
+[#50]: https://github.com/akirk/enable-mastodon-apps/pull/50
