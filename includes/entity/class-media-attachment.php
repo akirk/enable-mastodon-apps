@@ -14,7 +14,7 @@ namespace Enable_Mastodon_Apps\Entity;
  */
 class Media_Attachment extends Entity {
 	/**
-	 * Serialize empty metadata as an object.
+	 * Keep dimensions in size subtrees and serialize empty metadata as an object.
 	 *
 	 * @return array The serialized attachment.
 	 */
@@ -24,9 +24,12 @@ class Media_Attachment extends Entity {
 		if ( isset( $data['error'] ) ) {
 			return $data;
 		}
-		if ( empty( $data['meta'] ) ) {
-			$data['meta'] = new \stdClass();
+		$meta = (array) $data['meta'];
+		if ( isset( $meta['width'], $meta['height'] ) && ! isset( $meta['original'] ) ) {
+			$meta['original'] = array_intersect_key( $meta, array_flip( array( 'width', 'height', 'size', 'aspect' ) ) );
 		}
+		unset( $meta['width'], $meta['height'], $meta['size'], $meta['aspect'] );
+		$data['meta'] = empty( $meta ) ? new \stdClass() : $meta;
 		return $data;
 	}
 
