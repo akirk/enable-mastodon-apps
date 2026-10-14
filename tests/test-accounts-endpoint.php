@@ -85,6 +85,65 @@ class AccountsEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertSame( $url, $account->header_static );
 	}
 
+	public function test_serialized_account_has_fallback_header_urls() {
+		$account = apply_filters( 'mastodon_api_account', null, $this->administrator, null, null );
+		$account->header = '';
+		$account->header_static = '';
+		$data = $account->jsonSerialize();
+
+		$this->assertSame( plugin_dir_url( ENABLE_MASTODON_APPS_PLUGIN_DIR . '/enable-mastodon-apps.php' ) . 'assets/header.png', $data['header'] );
+		$this->assertSame( $data['header'], $data['header_static'] );
+
+		// Integrations can embed an account without running the account filters.
+		$status = new Entity\Status();
+		$status->account = $account;
+		$data = json_decode( wp_json_encode( array( 'account' => $status->account ) ), true );
+		$this->assertNotEmpty( $data['account']['header'] );
+	}
+
+	public function test_serialized_account_adds_field_verification_defaults() {
+		$account = apply_filters( 'mastodon_api_account', null, $this->administrator, null, null );
+		$account->fields = array(
+			array(
+				'name'  => 'Blog',
+				'value' => 'https://example.org/',
+			),
+			array(
+				'name'        => 'Verified',
+				'value'       => 'https://example.org/',
+				'verified_at' => '2026-10-01T00:00:00Z',
+			),
+			array(
+				'name'        => 'Unverified',
+				'value'       => 'https://example.org/',
+				'verified_at' => null,
+			),
+		);
+		$account->source['fields'] = $account->fields;
+		$data = json_decode( wp_json_encode( array( 'account' => $account ) ), true );
+
+		foreach ( array( $data['account']['fields'], $data['account']['source']['fields'] ) as $fields ) {
+			$this->assertArrayHasKey( 'verified_at', $fields[0] );
+			$this->assertNull( $fields[0]['verified_at'] );
+			$this->assertSame( '2026-10-01T00:00:00Z', $fields[1]['verified_at'] );
+			$this->assertNull( $fields[2]['verified_at'] );
+		}
+	}
+
+	public function test_serialized_account_preserves_supplied_headers() {
+		$account = apply_filters( 'mastodon_api_account', null, $this->administrator, null, null );
+		$account->header = 'https://example.org/header.gif';
+		$account->header_static = 'https://example.org/header.png';
+		$data = $account->jsonSerialize();
+
+		$this->assertSame( $account->header, $data['header'] );
+		$this->assertSame( $account->header_static, $data['header_static'] );
+
+		$account->header_static = '';
+		$data = $account->jsonSerialize();
+		$this->assertSame( $account->header, $data['header_static'] );
+	}
+
 	public function test_update_credentials_updates_simple_local_avatar() {
 		global $simple_local_avatars;
 
