@@ -68,6 +68,21 @@ class MediaAttachmentMeta_Test extends Mastodon_API_TestCase {
 		$this->assertSame( $meta, $data['media_attachments'][0]['meta'] );
 	}
 
+	public function test_generic_video_dimensions_are_created_only_under_original() {
+		$status = $this->status_with_image( array() );
+		$status->media_attachments = array();
+		$status->content = '<video src="https://example.org/video.mp4" width="450" height="782"></video>';
+		$handler = new Media_Attachment_Handler();
+		$status = $handler->add_generic_video_attachments( $status );
+		$this->assertCount( 1, $status->media_attachments );
+		$meta = $status->media_attachments[0]->meta;
+		$this->assertSame( array( 'original' ), array_keys( $meta ) );
+		$this->assertSame( 450, $meta['original']['width'] );
+		$this->assertSame( 782, $meta['original']['height'] );
+		$data = $status->jsonSerialize();
+		$this->assertSame( $meta, $data['media_attachments'][0]['meta'] );
+	}
+
 	public function test_attachment_with_zero_dimensions_is_not_dropped() {
 		$data = $this->status_with_image(
 			array(
