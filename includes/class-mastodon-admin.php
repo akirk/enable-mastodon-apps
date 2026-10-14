@@ -12,10 +12,14 @@ namespace Enable_Mastodon_Apps;
  */
 class Mastodon_Admin {
 	private $oauth;
+	private $enable_debug;
 
 	public function __construct( Mastodon_OAuth $oauth ) {
 		$this->oauth = $oauth;
 		add_action( 'admin_menu', array( $this, 'admin_menu' ) );
+		add_action( 'admin_enqueue_scripts', array( $this, 'admin_enqueue_scripts' ) );
+		add_action( 'current_screen', array( $this, 'register_help' ) );
+		add_filter( 'plugin_action_links_' . ENABLE_MASTODON_APPS_PLUGIN_BASENAME, array( $this, 'plugin_action_links' ) );
 	}
 
 	public function admin_menu() {
@@ -29,6 +33,113 @@ class Mastodon_Admin {
 		add_action( 'load-settings_page_enable-mastodon-apps', array( $this, 'process_admin' ) );
 	}
 
+	public function admin_enqueue_scripts() {
+		if ( 'settings_page_enable-mastodon-apps' !== get_current_screen()->id ) {
+			return;
+		}
+		wp_enqueue_script( 'plugin-install' );
+		add_thickbox();
+		wp_enqueue_script( 'updates' );
+		wp_enqueue_style( 'enable-mastodon-apps-admin-styles', plugins_url( 'admin.css', __DIR__ ), array(), '1.0.3' );
+		wp_enqueue_script( 'enable-mastodon-apps-admin-js', plugins_url( 'admin.js', __DIR__ ), array( 'jquery' ), '1.0.0', false );
+	}
+
+	public function register_help( $screen ) {
+		if ( 'settings_page_enable-mastodon-apps' !== $screen->id ) {
+			return;
+		}
+		$ema_post_cpt = get_post_type_object( apply_filters( 'mastodon_api_default_post_type', \Enable_Mastodon_Apps\Mastodon_API::POST_CPT ) );
+		$post_cpt = get_post_type_object( 'post' );
+
+		$screen->add_help_tab(
+			array(
+				'id'      => 'enable-mastodon-apps-help',
+				'title'   => __( 'Settings' ), // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
+				'content' =>
+					'<ul><li><strong>' . esc_html__( 'Hide posts through Mastodon apps from appearing on the WordPress frontend', 'enable-mastodon-apps' ) . '</strong>' .
+
+					'<ul>' .
+					'<li><span>' .
+					__( 'Check this if you want keep your use of Mastodon separate from your activity on your site.', 'enable-mastodon-apps' ) . '</span> <span>' .
+					__( 'Posting through a Mastodon app would still save the post in your WordPress but invisibly to visitors and subscribers of your WordPress.', 'enable-mastodon-apps' ) . '</span> <span>' .
+					wp_kses(
+						sprintf(
+							// translators: Links to the plugin.
+							__( 'Remember that for posting to Mastodon, you\'ll need the <a href="%s">ActivityPub plugin</a>.', 'enable-mastodon-apps' ),
+							'https://wordpress.org/plugins/activitypub/" target="_blank'
+						),
+						array(
+							'a' => array(
+								'href'   => true,
+								'target' => true,
+							),
+						)
+					) . '</span> <span>' .
+					wp_kses(
+						sprintf(
+							// translators: Links to the plugin.
+							__( 'If you also want to follow people and interact with them, please also install the <a href="%s">Friends plugin</a>.', 'enable-mastodon-apps' ),
+							'https://wordpress.org/plugins/friends/" target="_blank'
+						),
+						array(
+							'a' => array(
+								'href'   => true,
+								'target' => true,
+							),
+						)
+					) .
+					'</span></li>' .
+					// translators: %s: a post type name.
+					'<li>' . wp_kses( sprintf( __( 'With this setting, newly registered apps will be configured to save new posts as %s.', 'enable-mastodon-apps' ), '<tt>' . $ema_post_cpt->labels->singular_name . '</tt>' ), array( 'tt' => true ) ) . '</span> <span>' .
+					// translators: %s: a post type name.
+					wp_kses( sprintf( __( 'You can see and edit these posts in the sidebar menu of WP Admin under %s.', 'enable-mastodon-apps' ), '<a href="' . self_admin_url( 'edit.php?post_type=' . $ema_post_cpt->name ) . '">' . $ema_post_cpt->labels->name . '</a>' ), array( 'a' => array( 'href' => true ) ) ) . '</span> <span>' .
+					esc_html__( 'This setting can be changed individually per app in its individual settings page.', 'enable-mastodon-apps' ) . '</span></li>' .
+					'</ul>' .
+					'<li><strong>' . esc_html__( 'Show posts through Mastodon apps on the WordPress frontend', 'enable-mastodon-apps' ) . '</strong>' .
+					'<ul>' .
+					'<li>' . esc_html__( 'Check this if you want to use Mastodon apps to post to the site directly.', 'enable-mastodon-apps' ) . '</span> <span>' .
+					// translators: %s: a post format name.
+					wp_kses( sprintf( __( 'Your posts will appear in your RSS feed and be sent to your subscribers unless you specify a post format, for example %s.', 'enable-mastodon-apps' ), '<tt>' . _x( 'Status', 'Post format' ) . '</tt>' ), array( 'tt' => true ) ) . '</span> <span>' . // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
+					esc_html__( 'That way, those posts will only appear in the specific RSS feed, and are typically not sent to subcribers.', 'enable-mastodon-apps' ) . '</span> <span>' .
+					wp_kses(
+						sprintf(
+							// translators: Links to the plugin.
+							__( 'Like above, if you combine it with the <a href="%s">ActivityPub plugin</a>, people on Mastodon will be able to read your posts.', 'enable-mastodon-apps' ),
+							'https://wordpress.org/plugins/activitypub/" target="_blank'
+						),
+						array(
+							'a' => array(
+								'href'   => true,
+								'target' => true,
+							),
+						)
+					) . '</span> <span>' .
+					wp_kses(
+						sprintf(
+							// translators: Links to the plugin.
+							__( 'Also, with the <a href="%s">Friends plugin</a>, you will be able to follow people and interact with them', 'enable-mastodon-apps' ),
+							'https://wordpress.org/plugins/friends/" target="_blank'
+						),
+						array(
+							'a' => array(
+								'href'   => true,
+								'target' => true,
+							),
+						)
+					) .
+					// translators: %s: a post type name.
+					'<li>' . wp_kses( sprintf( __( 'With this setting, newly registered apps will be configured to save new posts as %s.', 'enable-mastodon-apps' ), '<tt>' . $post_cpt->labels->singular_name . '</tt>' ), array( 'tt' => true ) ) .
+					'</span> <span>' . esc_html__( 'This setting can be changed individually per app in its individual settings page.', 'enable-mastodon-apps' ) . '</span></li>' .
+					'</ul>',
+			)
+		);
+	}
+
+	public function plugin_action_links( $links ) {
+		$links[] = '<a href="' . esc_url( admin_url( 'options-general.php?page=enable-mastodon-apps' ) ) . '">' . esc_html__( 'Settings', 'enable-mastodon-apps' ) . '</a>';
+		return $links;
+	}
+
 	public function process_admin() {
 		if ( ! current_user_can( 'edit_private_posts' ) ) {
 			wp_die( esc_html__( 'Sorry, you are not allowed to change the settings.', 'enable-mastodon-apps' ) );
@@ -38,65 +149,261 @@ class Mastodon_Admin {
 			return;
 		}
 
-		if ( ! wp_verify_nonce( $_POST['_wpnonce'], 'enable-mastodon-apps' ) ) {
+		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( sanitize_key( $_POST['_wpnonce'] ), 'enable-mastodon-apps' ) ) {
+			return;
+		}
+
+		$tab = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : 'welcome';
+		if ( isset( $_POST['app'] ) ) {
+			$app = Mastodon_App::get_by_client_id( sanitize_text_field( wp_unslash( $_POST['app'] ) ) );
+			if ( $app && ! is_wp_error( $app ) ) {
+				return $this->process_admin_app_page( $app );
+			}
+			$tab = 'registered-apps';
+		}
+		switch ( $tab ) {
+			case 'settings':
+				$this->process_admin_settings_page();
+				// We need to reload the page so that the POST_CPT shows up in the correct state.
+				wp_safe_redirect( admin_url( 'options-general.php?page=enable-mastodon-apps&tab=settings' ) );
+				break;
+			case 'debug':
+				$this->process_admin_debug_page();
+				break;
+			case 'registered-apps':
+				$this->process_admin_registered_apps_page();
+				break;
+		}
+	}
+
+	public function admin_page() {
+		$this->enable_debug = get_option( 'mastodon_api_enable_debug' );
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended
+		$tab = isset( $_GET['tab'] ) ? sanitize_text_field( wp_unslash( $_GET['tab'] ) ) : 'welcome';
+		if ( isset( $_GET['app'] ) ) {
+			$app = Mastodon_App::get_by_client_id( sanitize_text_field( wp_unslash( $_GET['app'] ) ) );
+			if ( $app && ! is_wp_error( $app ) ) {
+				return $this->admin_app_page( $app );
+			}
+			$tab = 'registered-apps';
+		}
+		// phpcs:enable
+		switch ( $tab ) {
+			case 'welcome':
+				$this->admin_welcome_page();
+				break;
+			case 'settings':
+				$this->admin_settings_page();
+				break;
+			case 'tester':
+				$this->admin_tester_page();
+				break;
+			case 'debug':
+				$this->admin_debug_page();
+				break;
+			case 'registered-apps':
+				$this->admin_registered_apps_page();
+				break;
+		}
+	}
+
+	public function admin_welcome_page() {
+		load_template(
+			__DIR__ . '/../templates/welcome.php',
+			true,
+			array(
+				'instance_url' => preg_replace( '#^https?://([a-z0-9.-:]+)/?$#i', '$1', home_url() ),
+				'enable_debug' => $this->enable_debug,
+			)
+		);
+	}
+
+	public function process_admin_settings_page() {
+		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( sanitize_key( $_POST['_wpnonce'] ), 'enable-mastodon-apps' ) ) {
+			return;
+		}
+
+		if ( isset( $_POST['mastodon_api_enable_logins'] ) ) {
+			delete_option( 'mastodon_api_disable_logins' );
+		} else {
+			update_option( 'mastodon_api_disable_logins', true );
+		}
+
+		if ( isset( $_POST['mastodon_api_default_create_post_format'] ) ) {
+			$post_format = sanitize_text_field( wp_unslash( $_POST['mastodon_api_default_create_post_format'] ) );
+			if ( in_array( $post_format, get_post_format_slugs(), true ) ) {
+				update_option( 'mastodon_api_default_create_post_format', $post_format, false );
+			} else {
+				delete_option( 'mastodon_api_default_create_post_format' );
+			}
+		}
+
+		if ( isset( $_POST['mastodon_api_max_media_attachments'] ) ) {
+			$max_media_attachments = absint( wp_unslash( $_POST['mastodon_api_max_media_attachments'] ) );
+			if ( $max_media_attachments && 4 !== $max_media_attachments ) {
+				update_option( 'mastodon_api_max_media_attachments', $max_media_attachments, false );
+			} else {
+				delete_option( 'mastodon_api_max_media_attachments' );
+			}
+		}
+
+		/**
+		 * The default post type for posting from Mastodon apps when the configured to do so.
+		 *
+		 * This only applies if the user unchekcks: Make posts through Mastodon apps appear on this WordPress
+		 *
+		 * @param string $post_type The default post type.
+		 *
+		 * Example:
+		 * ```php
+		 * add_filter( 'mastodon_api_default_post_type', function( $post_type ) {
+		 *    return 'my-own-custom-post-type';
+		 * } );
+		 * ```
+		 */
+		$default_ema_post_type = apply_filters( 'mastodon_api_default_post_type', \Enable_Mastodon_Apps\Mastodon_API::POST_CPT );
+
+		if ( isset( $_POST['mastodon_api_posting_cpt'] ) && intval( $_POST['mastodon_api_posting_cpt'] ) === 1 ) {
+			delete_option( 'mastodon_api_posting_cpt' );
+
+			if ( defined( 'ACTIVITYPUB_PLUGIN_VERSION' ) ) {
+				$supported_post_types = (array) \get_option( 'activitypub_support_post_types', array( 'post' ) );
+				if ( ! in_array( $default_ema_post_type, $supported_post_types, true ) ) {
+					$supported_post_types[] = $default_ema_post_type;
+					\update_option( 'activitypub_support_post_types', $supported_post_types );
+				}
+			}
+		} elseif ( isset( $_POST['mastodon_api_posting_cpt'] ) && intval( $_POST['mastodon_api_posting_cpt'] ) === 0 ) {
+			update_option( 'mastodon_api_posting_cpt', 'post', false );
+
+			if ( defined( 'ACTIVITYPUB_PLUGIN_VERSION' ) ) {
+				$supported_post_types = (array) \get_option( 'activitypub_support_post_types', array( 'post' ) );
+				if ( in_array( $default_ema_post_type, $supported_post_types, true ) ) {
+					$supported_post_types = array_diff( $supported_post_types, array( $default_ema_post_type ) );
+					\update_option( 'activitypub_support_post_types', $supported_post_types );
+				}
+			}
+		}
+
+		if ( isset( $_POST['mastodon_api_disable_ema_announcements'] ) ) {
+			delete_option( 'mastodon_api_disable_ema_announcements' );
+		} else {
+			update_option( 'mastodon_api_disable_ema_announcements', true, false );
+		}
+
+		if ( isset( $_POST['mastodon_api_disable_ema_app_settings_changes'] ) ) {
+			delete_option( 'mastodon_api_disable_ema_app_settings_changes' );
+		} else {
+			update_option( 'mastodon_api_disable_ema_app_settings_changes', true, false );
+		}
+
+		if ( isset( $_POST['mastodon_api_enable_debug'] ) ) {
+			update_option( 'mastodon_api_enable_debug', true );
+		} else {
+			delete_option( 'mastodon_api_enable_debug' );
+		}
+	}
+
+	public function admin_settings_page() {
+		load_template(
+			__DIR__ . '/../templates/settings.php',
+			true,
+			array(
+				'enable_debug' => $this->enable_debug,
+			)
+		);
+	}
+
+	public function process_admin_debug_page() {
+		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( sanitize_key( $_POST['_wpnonce'] ), 'enable-mastodon-apps' ) ) {
+			return;
+		}
+
+		if ( isset( $_POST['mastodon_api_debug_mode'] ) ) {
+			update_option( 'mastodon_api_debug_mode', time() + apply_filters( 'enable_mastodon_apps_debug_time', 5 * MINUTE_IN_SECONDS ) );
+		} else {
+			delete_option( 'mastodon_api_debug_mode' );
+		}
+		if ( isset( $_POST['mastodon_api_auto_app_reregister'] ) ) {
+			update_option( 'mastodon_api_auto_app_reregister', true );
+		} else {
+			delete_option( 'mastodon_api_auto_app_reregister' );
+		}
+	}
+
+	public function admin_debug_page() {
+		load_template( __DIR__ . '/../templates/debug.php', true, array() );
+	}
+
+	public function admin_tester_page() {
+		load_template( __DIR__ . '/../templates/tester.php', true, array() );
+	}
+
+	public function process_admin_registered_apps_page() {
+		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( sanitize_key( $_POST['_wpnonce'] ), 'enable-mastodon-apps' ) ) {
 			return;
 		}
 
 		if ( isset( $_POST['delete-code'] ) ) {
-			$deleted = $this->oauth->get_code_storage()->expireAuthorizationCode( $_POST['delete-code'] );
+			$deleted = $this->oauth->get_code_storage()->expireAuthorizationCode( sanitize_text_field( wp_unslash( $_POST['delete-code'] ) ) );
 			add_settings_error(
 				'enable-mastodon-apps',
 				'deleted-codes',
 				sprintf(
-					// translators: %d: number of deleted codes.
+				// translators: %d: number of deleted codes.
 					_n( 'Deleted %d authorization code.', 'Deleted %d authorization codes.', $deleted ? 1 : 0, 'enable-mastodon-apps' ),
 					$deleted ? 1 : 0
-				)
+				),
+				'success'
 			);
 			return;
 		}
 
 		if ( isset( $_POST['delete-token'] ) ) {
-			$deleted = $this->oauth->get_token_storage()->unsetAccessToken( $_POST['delete-token'] );
+				$deleted = $this->oauth->get_token_storage()->unsetAccessToken( sanitize_text_field( wp_unslash( $_POST['delete-token'] ) ) );
 			add_settings_error(
 				'enable-mastodon-apps',
 				'deleted-tokens',
 				sprintf(
-					// translators: %d: number of deleted tokens.
+				// translators: %d: number of deleted tokens.
 					_n( 'Deleted %d access token.', 'Deleted %d access tokens.', $deleted ? 1 : 0, 'enable-mastodon-apps' ),
 					$deleted ? 1 : 0
-				)
+				),
+				'success'
 			);
 			return;
 		}
 
 		if ( isset( $_POST['delete-app'] ) ) {
-			$deleted = Mastodon_App::get_by_client_id( $_POST['delete-app'] )->delete();
+				$deleted = Mastodon_App::get_by_client_id( sanitize_text_field( wp_unslash( $_POST['delete-app'] ) ) )->delete();
 			add_settings_error(
 				'enable-mastodon-apps',
 				'deleted-apps',
 				sprintf(
-					// translators: %d: number of deleted apps.
+				// translators: %d: number of deleted apps.
 					_n( 'Deleted %d app.', 'Deleted %d apps.', $deleted ? 1 : 0, 'enable-mastodon-apps' ),
 					$deleted ? 1 : 0
-				)
+				),
+				'success'
 			);
 			return;
 		}
 
 		if ( isset( $_POST['clear-app-logs'] ) ) {
-			$deleted = Mastodon_App::get_by_client_id( $_POST['clear-app-logs'] )->delete_last_requests();
+				$deleted = Mastodon_App::get_by_client_id( sanitize_text_field( wp_unslash( $_POST['clear-app-logs'] ) ) )->delete_last_requests();
 			if ( $deleted ) {
 				add_settings_error(
 					'enable-mastodon-apps',
 					'clear-app-logs',
-					__( 'App logs were cleared.', 'enable-mastodon-apps' )
+					__( 'App logs were cleared.', 'enable-mastodon-apps' ),
+					'success'
 				);
 			} else {
 				add_settings_error(
 					'enable-mastodon-apps',
 					'clear-app-logs',
-					__( 'App logs could not be cleared.', 'enable-mastodon-apps' )
+					__( 'App logs could not be cleared.', 'enable-mastodon-apps' ),
+					'error'
 				);
 			}
 			return;
@@ -106,7 +413,7 @@ class Mastodon_Admin {
 			foreach ( Mastodon_App::get_all() as $app ) {
 				$deleted = $app->delete_last_requests();
 				if ( $deleted ) {
-					$total_deleted += 1;
+					++$total_deleted;
 				}
 			}
 			if ( $total_deleted ) {
@@ -114,23 +421,35 @@ class Mastodon_Admin {
 					'enable-mastodon-apps',
 					'clear-all-app-logs',
 					sprintf(
-						// translators: %d: number of deleted apps.
+					// translators: %d: number of deleted apps.
 						_n( '%d app logs were cleared.', '%d app logs were cleared.', $total_deleted, 'enable-mastodon-apps' ),
 						$total_deleted
-					)
+					),
+					'success'
 				);
 			} else {
 				add_settings_error(
 					'enable-mastodon-apps',
 					'clear-app-logs',
-					__( 'App logs could not be cleared.', 'enable-mastodon-apps' )
+					__( 'App logs could not be cleared.', 'enable-mastodon-apps' ),
+					'error'
 				);
 			}
 			return;
 		}
 
 		if ( isset( $_POST['delete-outdated'] ) ) {
-			$deleted = OAuth2\AccessTokenStorage::cleanupOldTokens();
+			$apps    = Mastodon_App::get_all();
+			$deleted = OAuth2\Access_Token_Storage::cleanupOldTokens();
+			if ( ! $deleted ) {
+				$deleted = 0;
+			}
+			foreach ( OAuth2\Access_Token_Storage::getAll() as $token => $data ) {
+				if ( ! isset( $apps[ $data['client_id'] ] ) ) {
+					++$deleted;
+					$this->oauth->get_token_storage()->unsetAccessToken( $token );
+				}
+			}
 			if ( $deleted ) {
 				add_settings_error(
 					'enable-mastodon-apps',
@@ -139,11 +458,22 @@ class Mastodon_Admin {
 					// translators: %d: number of deleted tokens.
 						_n( 'Deleted %d access token.', 'Deleted %d access tokens.', $deleted, 'enable-mastodon-apps' ),
 						$deleted
-					)
+					),
+					'success'
 				);
 			}
 
-			$deleted = OAuth2\AuthorizationCodeStorage::cleanupOldCodes();
+			$deleted = OAuth2\Authorization_Code_Storage::cleanupOldCodes();
+			if ( ! $deleted ) {
+				$deleted = 0;
+			}
+			foreach ( OAuth2\Authorization_Code_Storage::getAll() as $code => $data ) {
+				if ( ! isset( $apps[ $data['client_id'] ] ) ) {
+					++$deleted;
+					$this->oauth->get_code_storage()->expireAuthorizationCode( $code );
+				}
+			}
+
 			if ( $deleted ) {
 				add_settings_error(
 					'enable-mastodon-apps',
@@ -152,7 +482,8 @@ class Mastodon_Admin {
 					// translators: %d: number of deleted codes.
 						_n( 'Deleted %d authorization code.', 'Deleted %d authorization codes.', $deleted, 'enable-mastodon-apps' ),
 						$deleted
-					)
+					),
+					'success'
 				);
 			}
 
@@ -165,7 +496,8 @@ class Mastodon_Admin {
 					// translators: %d: number of deleted apps.
 						_n( 'Deleted %d app.', 'Deleted %d apps.', $deleted, 'enable-mastodon-apps' ),
 						$deleted
-					)
+					),
+					'success'
 				);
 			}
 			return;
@@ -175,7 +507,7 @@ class Mastodon_Admin {
 			$deleted = 0;
 			foreach ( Mastodon_App::get_all() as $app ) {
 				if ( ! $app->get_last_used() ) {
-					$deleted += 1;
+					++$deleted;
 					$app->delete();
 				}
 			}
@@ -184,17 +516,18 @@ class Mastodon_Admin {
 				'enable-mastodon-apps',
 				'deleted-apps',
 				sprintf(
-					// translators: %d: number of deleted apps.
+				// translators: %d: number of deleted apps.
 					_n( 'Deleted %d app.', 'Deleted %d apps.', $deleted, 'enable-mastodon-apps' ),
 					$deleted
-				)
+				),
+				'success'
 			);
 
 			$deleted = 0;
-			foreach ( OAuth2\AccessTokenStorage::getAll() as $token => $data ) {
+			foreach ( OAuth2\Access_Token_Storage::getAll() as $token => $data ) {
 				if ( empty( $data['last_used'] ) ) {
 					if ( $this->oauth->get_token_storage()->unsetAccessToken( $token ) ) {
-						$deleted += 1;
+						++$deleted;
 					}
 				}
 			}
@@ -203,17 +536,18 @@ class Mastodon_Admin {
 				'enable-mastodon-apps',
 				'deleted-tokens',
 				sprintf(
-					// translators: %d: number of deleted tokens.
+				// translators: %d: number of deleted tokens.
 					_n( 'Deleted %d token.', 'Deleted %d tokens.', $deleted, 'enable-mastodon-apps' ),
 					$deleted
-				)
+				),
+				'success'
 			);
 			return;
 		}
 
 		if ( isset( $_POST['delete-apps-without-tokens'] ) ) {
 			$app_tokens = array();
-			foreach ( OAuth2\AccessTokenStorage::getAll() as $token => $data ) {
+			foreach ( OAuth2\Access_Token_Storage::getAll() as $token => $data ) {
 				if ( ! isset( $app_tokens[ $data['client_id'] ] ) ) {
 					$app_tokens[ $data['client_id'] ] = array();
 				}
@@ -222,7 +556,7 @@ class Mastodon_Admin {
 			$deleted = 0;
 			foreach ( Mastodon_App::get_all() as $app ) {
 				if ( empty( $app_tokens[ $app->get_client_id() ] ) ) {
-					$deleted += 1;
+					++$deleted;
 					$app->delete();
 				}
 			}
@@ -231,58 +565,33 @@ class Mastodon_Admin {
 				'enable-mastodon-apps',
 				'deleted-apps',
 				sprintf(
-					// translators: %d: number of deleted apps.
+				// translators: %d: number of deleted apps.
 					_n( 'Deleted %d app.', 'Deleted %d apps.', $deleted, 'enable-mastodon-apps' ),
 					$deleted
-				)
+				),
+				'success'
 			);
 			return;
 		}
 
-		if ( isset( $_POST['mastodon_api_enable_logins'] ) ) {
-			delete_option( 'mastodon_api_disable_logins' );
-		} else {
-			update_option( 'mastodon_api_disable_logins', true );
-		}
-
-		if ( isset( $_POST['mastodon_api_auto_app_reregister'] ) ) {
-			update_option( 'mastodon_api_auto_app_reregister', true );
-		} else {
-			delete_option( 'mastodon_api_auto_app_reregister' );
-		}
-
-		if ( isset( $_POST['mastodon_api_reply_as_comment'] ) ) {
-			update_option( 'mastodon_api_reply_as_comment', true );
-		} else {
-			delete_option( 'mastodon_api_reply_as_comment' );
-		}
-
-		if ( isset( $_POST['mastodon_api_debug_mode'] ) ) {
-			update_option( 'mastodon_api_debug_mode', time() + 5 * MINUTE_IN_SECONDS );
-		} else {
-			delete_option( 'mastodon_api_debug_mode' );
-		}
-
-		if ( isset( $_POST['mastodon_api_default_post_formats'] ) && is_array( $_POST['mastodon_api_default_post_formats'] ) ) {
-			$default_post_formats = array_filter(
-				$_POST['mastodon_api_default_post_formats'],
-				function ( $post_format ) {
-					if ( ! in_array( $post_format, get_post_format_slugs(), true ) ) {
-						return false;
-					}
-					return true;
-				}
+		if ( isset( $_POST['delete-orphaned-mappings'] ) ) {
+			$deleted = Mastodon_API::cleanup_orphaned_reblog_mappings();
+			add_settings_error(
+				'enable-mastodon-apps',
+				'deleted-mappings',
+				sprintf(
+				// translators: %d: number of deleted mapping posts.
+					_n( 'Deleted %d orphaned mapping post.', 'Deleted %d orphaned mapping posts.', $deleted, 'enable-mastodon-apps' ),
+					$deleted
+				),
+				'success'
 			);
-
-			if ( ! empty( $default_post_formats ) ) {
-				update_option( 'mastodon_api_default_post_formats', $default_post_formats );
-			} else {
-				delete_option( 'mastodon_api_default_post_formats' );
-			}
+			return;
 		}
 
 		if ( isset( $_POST['app_post_formats'] ) && is_array( $_POST['app_post_formats'] ) ) {
-			foreach ( $_POST['app_post_formats'] as $client_id => $post_formats ) {
+			// phpcs:disable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+			foreach ( wp_unslash( $_POST['app_post_formats'] ) as $client_id => $post_formats ) {
 				$post_formats = array_filter(
 					$post_formats,
 					function ( $post_format ) {
@@ -299,490 +608,371 @@ class Mastodon_Admin {
 		}
 	}
 
-	private function post_format_select( $name, $selected = array() ) {
-		?>
-		<select name="<?php echo esc_attr( $name ); ?>[]" id="<?php echo esc_attr( $name ); ?>" size="10" multiple>
-			<?php
-			foreach ( get_post_format_slugs() as $format ) {
-				?>
-				<option value="<?php echo esc_attr( $format ); ?>" <?php selected( in_array( $format, $selected, true ) ); ?>><?php echo esc_html( $format ); ?></option>
-				<?php
+	public function admin_registered_apps_page() {
+		$codes = OAuth2\Authorization_Code_Storage::getAll();
+
+		uasort(
+			$codes,
+			function ( $a, $b ) {
+				return $b['expires'] <=> $a['expires'];
 			}
-			?>
-		</select>
-		<?php
+		);
+
+		$tokens = OAuth2\Access_Token_Storage::getAll();
+
+		uasort(
+			$tokens,
+			function ( $a, $b ) {
+				if ( $a['last_used'] === $b['last_used'] && $a['last_used'] ) {
+					return $a['expires'] <=> $b['expires'];
+				}
+
+				return $b['last_used'] <=> $a['last_used'];
+			}
+		);
+
+		$apps = Mastodon_App::get_all();
+
+		uasort(
+			$apps,
+			function ( $a, $b ) {
+				$a_date = $a->get_last_used();
+				if ( ! $a_date ) {
+					$a_date = $a->get_creation_date();
+				}
+				$b_date = $b->get_last_used();
+				if ( ! $b_date ) {
+					$b_date = $b->get_creation_date();
+				}
+				return $b_date <=> $a_date;
+			}
+		);
+
+		load_template(
+			__DIR__ . '/../templates/registered-apps.php',
+			true,
+			array(
+				'instance_url' => preg_replace( '#^https?://([a-z0-9.-:]+)/?$#i', '$1', home_url() ),
+				'enable_debug' => $this->enable_debug,
+				'codes'        => $codes,
+				'tokens'       => $tokens,
+				'apps'         => $apps,
+			)
+		);
 	}
 
-	public function admin_page() {
-		$codes = OAuth2\AuthorizationCodeStorage::getAll();
-		$tokens = OAuth2\AccessTokenStorage::getAll();
-		$apps = Mastodon_App::get_all();
-		$rest_nonce = wp_create_nonce( 'wp_rest' );
+	public function process_admin_app_page( Mastodon_App $app ) {
+		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( sanitize_key( $_POST['_wpnonce'] ), 'enable-mastodon-apps' ) ) {
+			return;
+		}
 
-		wp_enqueue_script( 'plugin-install' );
-		add_thickbox();
-		wp_enqueue_script( 'updates' );
+		if ( isset( $_POST['delete-app'] ) && $_POST['delete-app'] === $app->get_client_id() ) {
+			$name    = $app->get_client_name();
+			$deleted = $app->delete();
+			if ( $deleted ) {
+				$message = sprintf(
+					// translators: %s: name of the app.
+					__( 'Deleted app "%s".', 'enable-mastodon-apps' ),
+					$name
+				);
+				wp_safe_redirect( add_query_arg( 'success', $message, admin_url( 'options-general.php?page=enable-mastodon-apps&tab=registered-apps' ) ) );
+				exit;
+			} else {
+				add_settings_error(
+					'enable-mastodon-apps',
+					'deleted-apps',
+					__( 'Could not delete app.', 'enable-mastodon-apps' ),
+					'error'
+				);
+				return;
 
-		$plugins = get_plugins();
-		$activitypub_installed = isset( $plugins['activitypub/activitypub.php'] );
-		$friends_installed = isset( $plugins['friends/friends.php'] );
+			}
+		}
 
-		function output_request_log( $request, $rest_nonce ) {
-			$date = \DateTimeImmutable::createFromFormat( 'U.u', $request['timestamp'] );
-			$url = add_query_arg(
-				array(
-					'_wpnonce' => $rest_nonce,
-					'_pretty'  => 1,
+		if ( isset( $_POST['delete-token'] ) ) {
+			$deleted = $this->oauth->get_token_storage()->unsetAccessToken( sanitize_text_field( wp_unslash( $_POST['delete-token'] ) ) );
+			add_settings_error(
+				'enable-mastodon-apps',
+				'deleted-tokens',
+				sprintf(
+				// translators: %d: number of deleted tokens.
+					_n( 'Deleted %d access token.', 'Deleted %d access tokens.', $deleted ? 1 : 0, 'enable-mastodon-apps' ),
+					$deleted ? 1 : 0
 				),
-				$request['path']
+				'success'
 			);
-			$meta = array_diff_key( $request, array_flip( array( 'timestamp', 'path', 'method' ) ) );
-			if ( empty( $meta ) ) {
-				echo '<div style="margin-left: 1.5em">';
+			return;
+		}
+
+		if ( isset( $_POST['clear-app-logs'] ) ) {
+			$deleted = $app->delete_last_requests();
+			if ( $deleted ) {
+				add_settings_error(
+					'enable-mastodon-apps',
+					'clear-app-logs',
+					__( 'App logs were cleared.', 'enable-mastodon-apps' ),
+					'success'
+				);
 			} else {
-				echo '<details><summary>';
+				add_settings_error(
+					'enable-mastodon-apps',
+					'clear-app-logs',
+					__( 'App logs could not be cleared.', 'enable-mastodon-apps' ),
+					'error'
+				);
 			}
-			if ( isset( $request['app'] ) ) {
-				echo esc_html( $request['app']->get_client_name() );
-			}
-			?>
-			[<?php echo esc_html( $date->format( 'Y-m-d H:i:s.v' ) ); ?>]
-			<?php echo esc_html( ! empty( $request['status'] ) ? $request['status'] : 200 ); ?>
-			<?php echo esc_html( $request['method'] ); ?>
-			<a href="<?php echo esc_url( $url ); ?>"><?php echo esc_html( $request['path'] ); ?></a>
-			<?php
-			if ( ! empty( $meta ) ) {
-				echo '</summary>';
-				echo '<pre style="padding-left: 1em; border-left: 3px solid #999; margin: 0">';
-				foreach ( $meta as $key => $value ) {
-					echo esc_html( $key ), ' ', esc_html( var_export( $value, true ) ), '<br/>';
+			return;
+		}
+
+		$post_formats = array();
+		if ( isset( $_POST['post_formats'] ) && is_array( $_POST['post_formats'] ) ) {
+			$post_formats = array_filter(
+				wp_unslash( $_POST['post_formats'] ),
+				function ( $post_format ) {
+					if ( ! in_array( $post_format, get_post_format_slugs(), true ) ) {
+						return false;
+					}
+					return true;
 				}
-				echo '</pre>';
-				echo '</details>';
-			} else {
-				echo '</div>';
+			);
+
+		}
+		$app->set_post_formats( $post_formats );
+		$post_formats = $app->get_post_formats();
+
+		$_post_types = array();
+		foreach ( array(
+			\Enable_Mastodon_Apps\Mastodon_Api::ANNOUNCE_CPT,
+			\Enable_Mastodon_Apps\Mastodon_Api::POST_CPT,
+			\Enable_Mastodon_Apps\Comment_CPT::CPT,
+		) as $extra_post_type ) {
+			$_post_types[ $extra_post_type ] = get_post_type_object( $extra_post_type );
+		}
+
+		$_post_types = array_merge(
+			$_post_types,
+			\get_post_types( array( 'show_ui' => true ), 'objects' ),
+		);
+
+		if ( isset( $_POST['create_post_type'] ) ) {
+			$create_post_type = sanitize_text_field( wp_unslash( $_POST['create_post_type'] ) );
+			if ( isset( $_post_types[ $create_post_type ] ) ) {
+				$app->set_create_post_type( $create_post_type );
 			}
 		}
-		function td_timestamp( $timestamp, $strikethrough_past = false ) {
-			?>
-			<td>
-				<abbr title="<?php echo esc_attr( is_numeric( $timestamp ) ? gmdate( 'r', $timestamp ) : $timestamp ); ?>">
-					<?php
-					if ( ! $timestamp ) {
-						echo esc_html( _x( 'Never', 'Code was never used', 'enable-mastodon-apps' ) );
-					} elseif ( $timestamp > time() ) {
-						echo esc_html(
-							sprintf(
-								// translators: %s is a relative time.
-								__( 'in %s', 'enable-mastodon-apps' ),
-								human_time_diff( $timestamp )
-							)
-						);
-					} elseif ( $strikethrough_past ) {
-						echo '<strike>';
-						echo esc_html(
-							sprintf(
-								// translators: %s: Human-readable time difference.
-								__( '%s ago' ), // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
-								human_time_diff( $timestamp )
-							)
-						);
-						echo '</strike>';
-					} else {
-						echo esc_html(
-							sprintf(
-								// translators: %s: Human-readable time difference.
-								__( '%s ago' ), // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
-								human_time_diff( $timestamp )
-							)
-						);
-					}
-					?>
-				</abbr>
-			</td>
-			<?php
+
+		if ( isset( $_POST['create_post_format'] ) ) {
+			$create_post_format = sanitize_text_field( wp_unslash( $_POST['create_post_format'] ) );
+			if ( in_array( $create_post_format, $post_formats ) ) {
+				$app->set_create_post_format( $create_post_format );
+			} else {
+				$app->set_create_post_format( '' );
+			}
 		}
-		?>
-		<div class="wrap">
-		<h1><?php esc_html_e( 'Mastodon Apps', 'enable-mastodon-apps' ); ?></h1>
 
-		<h2><?php esc_html_e( 'Recommended Plugins', 'enable-mastodon-apps' ); ?></h2>
-		<p><span><?php esc_html_e( 'On its own, this plugin allows you to publish status posts and show your own posts in the apps\' timelines.', 'enable-mastodon-apps' ); ?> <span><?php esc_html_e( 'To make the plugin more useful, you can install the following plugins:', 'enable-mastodon-apps' ); ?></span></p>
-
-		<?php if ( $activitypub_installed ) : ?>
-			<details><summary><?php esc_html_e( 'The ActivityPub plugin is already installed.', 'enable-mastodon-apps' ); ?></summary>
-		<?php endif; ?>
-		<p><?php esc_html_e( 'The ActivityPub plugin connects your blog to the fediverse: Other people can follow your WordPress using a Mastodon account. It also provides functionality for communicating with the ActivityPub protocol to other plugins.', 'enable-mastodon-apps' ); ?></p>
-		<p><a href="<?php echo \esc_url_raw( \admin_url( 'plugin-install.php?tab=plugin-information&plugin=activitypub&TB_iframe=true' ) ); ?>" class="thickbox open-plugin-details-modal button install-now" target="_blank"><?php \esc_html_e( 'Install the Activitypub Plugin', 'enable-mastodon-apps' ); ?></a></p>
-		<?php if ( $activitypub_installed ) : ?>
-			</details>
-		<?php endif; ?>
-
-		<?php if ( $friends_installed ) : ?>
-			<details><summary><?php esc_html_e( 'The Friends plugin is already installed.', 'enable-mastodon-apps' ); ?></summary>
-		<?php endif; ?>
-		<p><span><?php esc_html_e( 'The Friends plugin allows you to follow other blogs or, if the ActivityPub plugin is also installed, Mastodon accounts.', 'enable-mastodon-apps' ); ?></span> <span><?php esc_html_e( 'You can then see the posts of people you follow inside your Mastodon compatible app.', 'enable-mastodon-apps' ); ?></span></p>
-
-		<p><a href="<?php echo \esc_url_raw( \admin_url( 'plugin-install.php?tab=plugin-information&plugin=friends&TB_iframe=true' ) ); ?>" class="thickbox open-plugin-details-modal button install-now" target="_blank"><?php \esc_html_e( 'Install the Friends Plugin', 'enable-mastodon-apps' ); ?></a></p>
-		<?php if ( $friends_installed ) : ?>
-			</details>
-		<?php endif; ?>
-
-		</p>
-		<style type="text/css">
-			details.tt {
-				font-family: monospace;
-				word-wrap: break-word;
-			}
-			summary {
-				cursor: pointer;
-			}
-			td:last-child {
-				white-space: nowrap;
-			}
-		</style>
-		<form method="post">
-			<?php wp_nonce_field( 'enable-mastodon-apps' ); ?>
-			<table class="form-table">
-				<tbody>
-					<tr>
-						<th scope="row" rowspan="2"><?php esc_html_e( 'Enable Logins', 'enable-mastodon-apps' ); ?></th>
-						<td>
-							<fieldset>
-								<label for="mastodon_api_enable_logins">
-									<input name="mastodon_api_enable_logins" type="checkbox" id="mastodon_api_enable_logins" value="1" <?php checked( '1', ! get_option( 'mastodon_api_disable_logins' ) ); ?> />
-									<span><?php esc_html_e( 'Allow new and existing apps to sign in.', 'enable-mastodon-apps' ); ?></span>
-								</label>
-							</fieldset>
-							<p class="description"><?php esc_html_e( 'New apps can register on their own, so the list might grow if you keep this enabled.', 'enable-mastodon-apps' ); ?></p>
-						</td>
-					</tr>
-					<tr>
-						<td>
-							<fieldset>
-								<label for="mastodon_api_auto_app_reregister">
-									<input name="mastodon_api_auto_app_reregister" type="checkbox" id="mastodon_api_auto_app_reregister" value="1" <?php checked( '1', get_option( 'mastodon_api_auto_app_reregister' ) ); ?> />
-									<span><?php esc_html_e( 'Implicitly re-register the next unknown client.', 'enable-mastodon-apps' ); ?></span>
-								</label>
-							</fieldset>
-							<p class="description"><?php esc_html_e( 'When you (accidentally) delete an app, this allows to use the app when it tries to authorize again.', 'enable-mastodon-apps' ); ?><br/><?php esc_html_e( 'This setting will turn itself off again as soon as an app has done so.', 'enable-mastodon-apps' ); ?></p>
-						</td>
-					</tr>
-					<tr>
-						<th scope="row"><?php esc_html_e( 'Replies', 'enable-mastodon-apps' ); ?></th>
-						<td>
-							<fieldset>
-								<label for="mastodon_api_reply_as_comment">
-									<input name="mastodon_api_reply_as_comment" type="checkbox" id="mastodon_api_reply_as_comment" value="1" <?php checked( get_option( 'mastodon_api_reply_as_comment' ) ); ?> />
-									<span><?php esc_html_e( 'Post replies to posts as comments.', 'enable-mastodon-apps' ); ?></span>
-								</label>
-							</fieldset>
-							<p class="description"><?php esc_html_e( 'Since the ActivityPub plugin handles incoming replies this way, you might want to do this for your own replies as well.', 'enable-mastodon-apps' ); ?></p>
-						</td>
-					</tr>
-					<tr>
-						<th scope="row"><?php esc_html_e( 'Debug Mode', 'enable-mastodon-apps' ); ?></th>
-						<td>
-							<fieldset>
-								<label for="mastodon_api_debug_mode">
-									<input name="mastodon_api_debug_mode" type="checkbox" id="mastodon_api_debug_mode" value="1" <?php checked( get_option( 'mastodon_api_debug_mode' ) > time() ); ?> />
-									<span><?php esc_html_e( 'Log requests to the plugin and expose more information.', 'enable-mastodon-apps' ); ?></span>
-								</label>
-							</fieldset>
-							<p class="description">
-								<?php
-								if ( get_option( 'mastodon_api_debug_mode' ) > time() ) {
-									echo esc_html(
-										sprintf(
-											// translators: %1$s is a relative time, %2$s is a specific time.
-											__( 'Debug mode is active for %1$s (until %2$s).', 'enable-mastodon-apps' ),
-											human_time_diff( get_option( 'mastodon_api_debug_mode' ) ),
-											wp_date( 'H:i:s', get_option( 'mastodon_api_debug_mode' ) )
-										)
-									);
-								} else {
-									esc_html_e( 'Enable this to activate logging of requests.', 'enable-mastodon-apps' );
-								}
-								?>
-							</p>
-						</td>
-					</tr>
-					<tr>
-						<th scope="row"><?php esc_html_e( 'Default Post Formats', 'enable-mastodon-apps' ); ?></th>
-						<td>
-							<details>
-								<summary><?php esc_html_e( 'Change the post formats new apps will receive by default.', 'enable-mastodon-apps' ); ?></summary>
-								<fieldset>
-									<label for="mastodon_api_default_post_formats">
-										<?php $this->post_format_select( 'mastodon_api_default_post_formats', get_option( 'mastodon_api_default_post_formats', array( 'status' ) ) ); ?>
-									</label>
-								</fieldset>
-							</details>
-						</td>
-					</tr>
-				</tbody>
-			</table>
-
-			<button class="button button-primary"><?php esc_html_e( 'Save' ); /* phpcs:ignore WordPress.WP.I18n.MissingArgDomain */ ?></button>
-
-			<?php
-			if ( get_option( 'mastodon_api_debug_mode' ) > time() ) {
-				$debug_start_time = \DateTimeImmutable::createFromFormat( 'U', time() - HOUR_IN_SECONDS );
-				$all_last_requests = array();
-				foreach ( Mastodon_App::get_all() as $app ) {
-					$last_requests = $app->get_last_requests();
-					foreach ( $last_requests as $request ) {
-						$date = \DateTimeImmutable::createFromFormat( 'U.u', $request['timestamp'] );
-						if ( $date > $debug_start_time ) {
-							$request['app'] = $app;
-							$all_last_requests[ $request['timestamp'] ] = $request;
-						}
-					}
-				}
-				if ( $all_last_requests ) {
-					ksort( $all_last_requests );
-					?>
-					<h2><?php esc_html_e( 'Recently Logged Requests', 'enable-mastodon-apps' ); ?></h2>
-					<tt>
-					<?php
-
-					foreach ( $all_last_requests as $request ) {
-						output_request_log( $request, $rest_nonce );
-					}
-					?>
-				</tt>
-					<?php
+		if ( isset( $_POST['view_post_types'] ) && is_array( $_POST['view_post_types'] ) ) {
+			$view_post_types = array(
+				Mastodon_API::ANNOUNCE_CPT => true,
+				Mastodon_API::POST_CPT     => true,
+			);
+			foreach ( wp_unslash( $_POST['view_post_types'] ) as $post_type ) {
+				if ( isset( $_post_types[ $post_type ] ) ) {
+					$view_post_types[ $post_type ] = true;
 				}
 			}
-			?>
+			if ( empty( $view_post_types ) ) {
+				$view_post_types = array( 'post' );
+			}
+			$app->set_view_post_types( array_keys( $view_post_types ) );
+		}
 
-			<?php if ( ! empty( $codes ) ) : ?>
-				<h2><?php esc_html_e( 'Authorization Codes', 'enable-mastodon-apps' ); ?></h2>
-				<details>
-					<summary>
-						<?php
-						echo esc_html(
-							sprintf(
-								// translators: %d is the number of authorization codes.
-								_n( '%d authorization code', '%d authorization codes', count( $codes ), 'enable-mastodon-apps' ),
-								count( $codes )
-							)
-						);
-						?>
-					</summary>
-					<table class="widefat striped">
-						<thead>
-							<th><?php esc_html_e( 'App', 'enable-mastodon-apps' ); ?></th>
-							<th><?php esc_html_e( 'Redirect URI', 'enable-mastodon-apps' ); ?></th>
-							<th><?php esc_html_e( 'Expires', 'enable-mastodon-apps' ); ?></th>
-							<th><?php esc_html_e( 'Scope', 'enable-mastodon-apps' ); ?></th>
-							<th><?php esc_html_e( 'Actions', 'enable-mastodon-apps' ); ?></th>
-						</thead>
-						<tbody>
-							<?php
-							foreach ( $codes as $code => $data ) {
-								?>
-								<tr id="code-<?php echo esc_attr( $code ); ?>" title="<?php echo esc_attr( $code ); ?>">
-									<td>
-										<?php
-										if ( isset( $apps[ $data['client_id'] ] ) ) {
-											echo esc_html( $apps[ $data['client_id'] ]->get_client_name() );
-										} else {
-											echo esc_html( 'Unknown: ' . $data['client_id'] );
-										}
-										?>
-									</td>
-									<td><?php echo esc_html( $data['redirect_uri'] ); ?></td>
-									<?php td_timestamp( $data['expires'] ); ?>
-									<td><?php echo esc_html( $data['scope'] ); ?></td>
-									<td><button name="delete-code" value="<?php echo esc_attr( $code ); ?>" class="button"><?php esc_html_e( 'Delete' ); /* phpcs:ignore WordPress.WP.I18n.MissingArgDomain */ ?></button></td>
-								</tr>
-								<?php
-							}
-							?>
-						</tbody>
-					</table>
-				</details>
-			<?php endif; ?>
+		if ( isset( $_POST['disable_blocks'] ) ) {
+			$app->set_disable_blocks( true );
+		} else {
+			$app->set_disable_blocks( false );
+		}
 
-			<?php if ( ! empty( $tokens ) ) : ?>
-				<h2><?php esc_html_e( 'Access Tokens', 'enable-mastodon-apps' ); ?></h2>
-				<details>
-					<summary>
-						<?php
-						echo esc_html(
-							sprintf(
-								// translators: %d is the number of tokens.
-								_n( '%d token', '%d tokens', count( $tokens ), 'enable-mastodon-apps' ),
-								count( $tokens )
-							)
-						);
-						?>
-					</summary>
-					<table class="widefat striped">
-						<thead>
-							<th><?php esc_html_e( 'App', 'enable-mastodon-apps' ); ?></th>
-							<th><?php esc_html_e( 'User', 'enable-mastodon-apps' ); ?></th>
-							<th><?php esc_html_e( 'Last Used', 'enable-mastodon-apps' ); ?></th>
-							<th><?php esc_html_e( 'Expires', 'enable-mastodon-apps' ); ?></th>
-							<th><?php esc_html_e( 'Scope', 'enable-mastodon-apps' ); ?></th>
-							<th><?php esc_html_e( 'Actions', 'enable-mastodon-apps' ); ?></th>
-						</thead>
-						<tbody>
-							<?php
-							foreach ( $tokens as $token => $data ) {
-								$user = 'app-level';
-								if ( $data['user_id'] ) {
-									$userdata = get_user_by( 'ID', $data['user_id'] );
-									if ( $userdata ) {
-										if ( is_wp_error( $userdata ) ) {
-											$user = $userdata->get_error_message();
-										} else {
-											$user = $userdata->user_login;
-										}
-									} else {
-										$user = 'error';
-									}
-								}
-								?>
-								<tr id="token-<?php echo esc_attr( $token ); ?>" title="<?php echo esc_attr( $token ); ?>">
-									<td>
-										<?php
-										if ( isset( $apps[ $data['client_id'] ] ) ) {
-											?>
-											<a href="#app-<?php echo esc_attr( $data['client_id'] ); ?>"><?php echo esc_html( $apps[ $data['client_id'] ]->get_client_name() ); ?></a>
-											<?php
-										} else {
-											echo esc_html(
-												sprintf(
-												// Translators: %s is the app ID.
-													__( 'Unknown App: %s', 'enable-mastodon-apps' ),
-													$data['client_id']
-												)
-											);
-										}
-										?>
-									</td>
-									<td><?php echo esc_html( $user ); ?></td>
-									<?php td_timestamp( $data['last_used'] ); ?>
-									<?php td_timestamp( $data['expires'], true ); ?>
-									<td><?php echo esc_html( $data['scope'] ); ?></td>
-									<td><button name="delete-token" value="<?php echo esc_attr( $token ); ?>" class="button"><?php esc_html_e( 'Delete' ); /* phpcs:ignore WordPress.WP.I18n.MissingArgDomain */ ?></button></td>
-								</tr>
-								<?php
-							}
-							?>
-						</tbody>
-					</table>
-				</details>
-			<?php endif; ?>
+		if ( isset( $_POST['first_line_as_excerpt'] ) ) {
+			$app->set_first_line_as_excerpt( true );
+		} else {
+			$app->set_first_line_as_excerpt( false );
+		}
 
-			<?php if ( ! empty( $apps ) ) : ?>
-				<h2><?php esc_html_e( 'Apps', 'enable-mastodon-apps' ); ?></h2>
+		if ( isset( $_POST['featured_image'] ) ) {
+			$app->set_featured_image( true );
+		} else {
+			$app->set_featured_image( false );
+		}
 
-				<details>
-					<summary>
-						<?php
-						echo esc_html(
-							sprintf(
-							// translators: %d is the number of apps.
-								_n( '%d apps', '%d apps', count( $apps ), 'enable-mastodon-apps' ),
-								count( $apps )
-							)
-						);
-						?>
-					</summary>
-					<table class="widefat">
-						<thead>
-							<th><?php esc_html_e( 'Name', 'enable-mastodon-apps' ); ?></th>
-							<th><?php esc_html_e( 'Redirect URI', 'enable-mastodon-apps' ); ?></th>
-							<th><?php esc_html_e( 'Scope', 'enable-mastodon-apps' ); ?></th>
-							<th><?php esc_html_e( 'Post Formats', 'enable-mastodon-apps' ); ?></th>
-							<th><?php esc_html_e( 'Last Used', 'enable-mastodon-apps' ); ?></th>
-							<th><?php esc_html_e( 'Created', 'enable-mastodon-apps' ); ?></th>
-							<th><?php esc_html_e( 'Actions', 'enable-mastodon-apps' ); ?></th>
-						</thead>
-						<tbody>
-							<?php
-							$alternate = true;
-							foreach ( $apps as $app ) {
-								$alternate = ! $alternate;
-								?>
-								<tr id='app-<?php echo esc_attr( $app->get_client_id() ); ?>' class="<?php echo $alternate ? 'alternate' : ''; ?>">
-									<td>
-										<?php
-										if ( $app->get_website() ) {
-											?>
-											<a href="<?php echo esc_url( $app->get_website() ); ?>"><?php echo esc_html( $app->get_client_name() ); ?></a>
-											<?php
-										} else {
-											echo esc_html( $app->get_client_name() );
-										}
-										?>
-									</td>
-									<td><?php echo wp_kses( implode( '<br/>', is_array( $app->get_redirect_uris() ) ? $app->get_redirect_uris() : explode( ',', $app->get_redirect_uris() ) ), array( 'br' => array() ) ); ?></td>
-									<td><?php echo esc_html( $app->get_scopes() ); ?></td>
-									<td>
-										<details>
-											<summary><?php echo esc_html( implode( ', ', $app->get_post_formats() ) ); ?></summary>
-											<?php $this->post_format_select( 'app_post_formats[' . $app->get_client_id() . ']', $app->get_post_formats() ); ?>
-										</details>
-									</td>
-									<?php td_timestamp( $app->get_last_used() ); ?>
-									<?php td_timestamp( $app->get_creation_date() ); ?>
-									<td>
-										<button name="save-app" value="<?php echo esc_attr( $app->get_client_id() ); ?>" class="button button-secondary"><?php esc_html_e( 'Save' ); /* phpcs:ignore WordPress.WP.I18n.MissingArgDomain */ ?></button>
-										<button name="delete-app" value="<?php echo esc_attr( $app->get_client_id() ); ?>" class="button button-link-delete"><?php esc_html_e( 'Delete' ); /* phpcs:ignore WordPress.WP.I18n.MissingArgDomain */ ?></button>
-									</td>
-								</tr>
-								<?php
+		if ( isset( $_POST['media_only'] ) ) {
+			$app->set_media_only( true );
+		} else {
+			$app->set_media_only( false );
+		}
 
-								$last_requests = $app->get_last_requests();
-								if ( $last_requests ) {
-									?>
-									<tr id='applog-<?php echo esc_attr( $app->get_client_id() ); ?>' class="<?php echo $alternate ? 'alternate' : ''; ?>">
-										<td colspan="6">
-											<details class="tt"><summary>
-											<?php
-											echo esc_html(
-												sprintf(
-													// translators: %ds is the number of requests.
-													_n( '%d logged request', '%d logged requests', count( $last_requests ), 'enable-mastodon-apps' ),
-													count( $last_requests )
-												)
-											);
-											?>
-											</summary>
-											<?php
-											foreach ( $last_requests as $request ) {
-												output_request_log( $request, $rest_nonce );
-											}
-											?>
-											</details>
-										</td>
-										<td>
-											<button name="clear-app-logs" value="<?php echo esc_attr( $app->get_client_id() ); ?>" class="button button-link-delete"><?php esc_html_e( 'Clear logs', 'enable-mastodon-apps' ); ?></button>
-										</td>
-									</tr>
-									<?php
-								}
-							}
-							?>
-						</tbody>
-					</table>
-				</details>
-			<?php endif; ?>
+		if ( class_exists( 'Friends\Reactions' ) && isset( $_POST['favourite_reaction'] ) ) {
+			$app->set_favourite_reaction( sanitize_key( wp_unslash( $_POST['favourite_reaction'] ) ) );
+		}
 
-			<?php if ( ! empty( $codes ) || ! empty( $tokens ) || ! empty( $apps ) ) : ?>
-				<h2><?php esc_html_e( 'Cleanup', 'enable-mastodon-apps' ); ?></h2>
-					<button name="delete-outdated" class="button"><?php esc_html_e( 'Delete outdated apps and tokens', 'enable-mastodon-apps' ); ?></button>
-					<button name="delete-never-used" class="button"><?php esc_html_e( 'Delete never used apps and tokens', 'enable-mastodon-apps' ); ?></button>
-					<button name="delete-apps-without-tokens" class="button"><?php esc_html_e( 'Delete apps without tokens', 'enable-mastodon-apps' ); ?></button>
-					<button name="clear-all-app-logs" value="<?php echo esc_attr( $app->get_client_id() ); ?>" class="button button-link-delete"><?php esc_html_e( 'Clear all logs', 'enable-mastodon-apps' ); ?></button>
+		if ( class_exists( 'Friends\Reactions' ) && isset( $_POST['bookmark_reaction'] ) ) {
+			$app->set_bookmark_reaction( sanitize_key( wp_unslash( $_POST['bookmark_reaction'] ) ) );
+		}
 
-			<?php endif; ?>
-			</form>
-		</div>
-		<?php
+		$app->post_current_settings();
+	}
+
+	public function admin_app_page( Mastodon_App $app ) {
+		$tokens = array_filter(
+			OAuth2\Access_Token_Storage::getAll(),
+			function ( $token ) use ( $app ) {
+				return $token['client_id'] === $app->get_client_id();
+			}
+		);
+
+		load_template(
+			__DIR__ . '/../templates/app.php',
+			true,
+			array(
+				'enable_debug' => $this->enable_debug,
+				'app'          => $app,
+				'tokens'       => $tokens,
+			)
+		);
+	}
+
+	public static function upgrade_plugin( $override_old_version = false ) {
+		$old_version = get_option( 'ema_plugin_version' );
+		if ( preg_match( '/^(\d+\.\d+\.\d+)$/', $override_old_version ) ) {
+			// Used in tests.
+			$old_version = $override_old_version;
+		} else {
+			update_option( 'ema_plugin_version', ENABLE_MASTODON_APPS_VERSION );
+		}
+
+		if ( ! get_option( 'mastodon_api_disable_ema_announcements' ) ) {
+			$post_id = false;
+			if ( ! $old_version ) {
+				$title = __( 'Welcome to Enable Mastodon Apps!', 'enable-mastodon-apps' );
+				$content = __( 'This is a message from the Enable Mastodon Apps plugin that you have installed on your WordPress.', 'enable-mastodon-apps' );
+				$content .= PHP_EOL . '<br>';
+				$content .= __( 'The plugin allows you to see all posts on your site inside this app.', 'enable-mastodon-apps' );
+				if ( ! defined( 'ACTIVITYPUB_PLUGIN_VERSION' ) ) {
+					// When standalone, we want to post to your WordPress.
+					update_option( 'mastodon_api_posting_cpt', 'post', false );
+					$content .= __( 'If you submit a status, it will be posted to your site.', 'enable-mastodon-apps' );
+					$content .= ' ' . __( "Be aware that this means that it will also be shown in your site's feed.", 'enable-mastodon-apps' );
+				} else {
+					$default_ema_post_type = apply_filters( 'mastodon_api_default_post_type', \Enable_Mastodon_Apps\Mastodon_API::POST_CPT );
+					$supported_post_types = (array) \get_option( 'activitypub_support_post_types', array( 'post' ) );
+					if ( ! in_array( $default_ema_post_type, $supported_post_types, true ) ) {
+						$supported_post_types[] = $default_ema_post_type;
+						\update_option( 'activitypub_support_post_types', $supported_post_types );
+					}
+					$content .= __( 'If you submit a status, it will be posted so that it is hidden from your site (by using a custom post type).', 'enable-mastodon-apps' );
+					$content .= ' ';
+					$content .= __( 'By means of the ActivityPub plugin that you also have installed, it will still be federated to your followers.', 'enable-mastodon-apps' );
+				}
+				$content .= ' ';
+				$content .= __( 'This can be changed individually per app (see the link below).', 'enable-mastodon-apps' );
+				$content .= PHP_EOL . '<br>';
+				$content .= __( 'How it works: By providing the same API that Mastodon offers, it brings two worlds together that were not really designed for this interoperability. Thus, while it typically functions well, you might still experience some unexpected behavior.', 'enable-mastodon-apps' );
+				$content .= ' ';
+				// translators: %s is a clickable URL.
+				$content .= make_clickable( sprintf( __( 'Please visit %s to get help in such a case.', 'enable-mastodon-apps' ), 'https://github.com/akirk/enable-mastodon-apps/issues' ) );
+				$content .= PHP_EOL . '<br>';
+				// translators: %s is a URL.
+				$content .= sprintf( __( 'If you enjoy using this plugin, please let us know at the <a href=%s>EMA WordPress.org plugin page</a>.', 'enable-mastodon-apps' ), '"https://wordpress.org/plugins/enable-mastodon-apps/"' );
+
+				$post_id = wp_insert_post(
+					array(
+						'post_type'    => Mastodon_API::ANNOUNCE_CPT,
+						'post_title'   => $title,
+						'post_status'  => 'publish',
+						'post_content' => $content,
+
+					)
+				);
+
+			} else {
+				$readme = file_get_contents( ENABLE_MASTODON_APPS_PLUGIN_DIR . 'README.md' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+				$changelog = substr( $readme, strpos( $readme, '## Changelog' ) );
+				$first_section = strpos( $changelog, '###' );
+				$changelog = substr( $changelog, $first_section, strpos( $changelog, '###', $first_section + 1 ) - $first_section );
+
+				$changelog = preg_replace( '/\[#(\d+)\]/', '<a href="https://github.com/akirk/enable-mastodon-apps/pull/\1">#\1</a>', $changelog );
+				list( $headline, $changes ) = explode( PHP_EOL, $changelog, 2 );
+
+				// translators: %s: version number.
+				$title = sprintf( __( "What's new in EMA %s?", 'enable-mastodon-apps' ), trim( $headline, ' #' ) );
+
+				$posts = get_posts(
+					array(
+						'post_type'      => Mastodon_API::ANNOUNCE_CPT,
+						'posts_per_page' => 1,
+						'post_status'    => 'publish',
+						'title'          => $title,
+					)
+				);
+				if ( ! $posts ) {
+					$changes = wp_kses( $changes, array( 'a' => array( 'href' => true ) ) );
+
+					$post_id = wp_insert_post(
+						array(
+							'post_type'    => Mastodon_API::ANNOUNCE_CPT,
+							'post_title'   => $title,
+							'post_status'  => 'publish',
+							'post_content' => $changes,
+						)
+					);
+				}
+			}
+			if ( $post_id ) {
+				// Assign all post formats so that it will be shown regardless of the app's (potentially later changed) post format settings.
+				wp_set_object_terms(
+					$post_id,
+					array_map(
+						function ( $slug ) {
+							return 'post-format-' . $slug;
+						},
+						get_post_format_slugs()
+					),
+					'post_format'
+				);
+			}
+		}
+
+		if ( version_compare( $old_version, '1.0.0', '<' ) ) {
+			// If the friends plugin is installed, add the friends post type to the list of post types that can be viewed.
+			if ( class_exists( 'Friends\Friends' ) ) {
+				$apps = Mastodon_App::get_all();
+				foreach ( $apps as $app ) {
+					$view_post_types = $app->get_view_post_types();
+					$view_post_types[] = \Friends\Friends::CPT;
+					$app->set_view_post_types( $view_post_types );
+				}
+			}
+		}
+
+		if ( version_compare( $old_version, '0.9.1', '<' ) ) {
+			$comment_posts = get_posts(
+				array(
+					'post_type'      => Comment_CPT::CPT,
+					'posts_per_page' => -1,
+					'post_status'    => 'any',
+				)
+			);
+			foreach ( $comment_posts as $comment_post ) {
+				$comment_id = get_post_meta( $comment_post->ID, Comment_CPT::META_KEY, true );
+				if ( ! $comment_id ) {
+					continue;
+				}
+				$comment = get_comment( $comment_id );
+				if ( ! $comment || 1 !== intval( $comment->comment_approved ) ) {
+					if ( Comment_CPT::CPT === get_post_type( $comment_post->ID ) ) {
+						wp_delete_post( $comment_post->ID, true );
+					}
+				}
+			}
+		}
 	}
 }

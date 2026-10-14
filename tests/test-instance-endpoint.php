@@ -1,6 +1,6 @@
 <?php
 /**
- * Class Test_Apps_Endpoint
+ * Class InstanceEndpoint_Test
  *
  * @package Enable_Mastodon_Apps
  */
@@ -8,7 +8,7 @@
 namespace Enable_Mastodon_Apps;
 
 /**
- * A testcase for the apps endpoint.
+ * Testcase for the instance endpoint.
  *
  * @package
  */
@@ -20,39 +20,81 @@ class InstanceEndpoint_Test extends Mastodon_API_TestCase {
 	}
 
 	public function test_apps_instance() {
-		global $wp_rest_server;
-		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/instance' );
-		$response = $wp_rest_server->dispatch( $request );
+		$request = $this->api_request( 'GET', '/api/v1/instance' );
+		$response = $this->dispatch( $request );
 		$this->assertEquals( 200, $response->get_status() );
 
 		$data = $response->get_data();
 
-		$this->assertArrayHasKey( 'uri', $data );
-		$this->assertIsString( $data['uri'] );
-		$this->assertEquals( $data['uri'], home_url() );
+		$this->assertTrue( property_exists( $data, 'uri' ) );
+		$this->assertIsString( $data->uri );
+		$this->assertEquals( $data->uri, \wp_parse_url( \home_url(), \PHP_URL_HOST ) );
 
-		$this->assertArrayHasKey( 'account_domain', $data );
-		$this->assertIsString( $data['account_domain'] );
-		$this->assertEquals( $data['account_domain'], \wp_parse_url( \home_url(), \PHP_URL_HOST ) );
+		$this->assertTrue( property_exists( $data, 'title' ) );
+		$this->assertIsString( $data->title );
+		$this->assertEquals( $data->title, get_bloginfo( 'name' ) );
 
-		$this->assertArrayHasKey( 'title', $data );
-		$this->assertIsString( $data['title'] );
-		$this->assertEquals( $data['title'], get_bloginfo( 'name' ) );
+		$this->assertTrue( property_exists( $data, 'description' ) );
+		$this->assertIsString( $data->description );
+		$this->assertEquals( $data->description, get_bloginfo( 'description' ) );
 
-		$this->assertArrayHasKey( 'description', $data );
-		$this->assertIsString( $data['description'] );
-		$this->assertEquals( $data['description'], get_bloginfo( 'description' ) );
+		$this->assertTrue( property_exists( $data, 'email' ) );
+		$this->assertIsString( $data->email );
+		$this->assertEquals( $data->email, get_option( 'admin_email' ) );
 
-		$this->assertArrayHasKey( 'email', $data );
-		$this->assertIsString( $data['email'] );
-		$this->assertEquals( $data['email'], 'not@public.example' );
+		$this->assertTrue( property_exists( $data, 'version' ) );
+		$this->assertIsString( $data->version );
+		$this->assertStringContainsString( ENABLE_MASTODON_APPS_VERSION, $data->version );
 
-		$this->assertArrayHasKey( 'version', $data );
-		$this->assertIsString( $data['version'] );
-		$this->assertStringContainsString( ENABLE_MASTODON_APPS_VERSION, $data['version'] );
+		$this->assertFalse( $data->registrations, false );
 
-		$this->assertFalse( $data['registrations'], false );
+		$this->assertFalse( $data->approval_required, false );
 
-		$this->assertFalse( $data['approval_required'], false );
+		$this->assertEquals( 4, $data->configuration['statuses']['max_media_attachments'] );
+		$this->assertArrayHasKey( 'media_attachments', $data->configuration );
+		$this->assertArrayNotHasKey( 'media_attachment', $data->configuration );
+		$this->assertEquals( wp_max_upload_size(), $data->configuration['media_attachments']['image_size_limit'] );
+		$this->assertEquals( wp_max_upload_size(), $data->configuration['media_attachments']['video_size_limit'] );
+	}
+
+	public function test_apps_instance_v2_includes_status_limits() {
+		$request = $this->api_request( 'GET', '/api/v2/instance' );
+		$response = $this->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertEquals( 4, $data->configuration['statuses']['max_media_attachments'] );
+		$this->assertArrayHasKey( 'media_attachments', $data->configuration );
+		$this->assertArrayNotHasKey( 'media_attachment', $data->configuration );
+		$this->assertEquals( wp_max_upload_size(), $data->configuration['media_attachments']['image_size_limit'] );
+		$this->assertEquals( wp_max_upload_size(), $data->configuration['media_attachments']['video_size_limit'] );
+	}
+
+	public function test_apps_instance_uses_configured_media_attachment_limit() {
+		update_option( 'mastodon_api_max_media_attachments', 8 );
+
+		$request = $this->api_request( 'GET', '/api/v1/instance' );
+		$response = $this->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertEquals( 8, $data->configuration['statuses']['max_media_attachments'] );
+	}
+
+	public function test_extended_description() {
+		$request = $this->api_request( 'GET', '/api/v1/instance/extended_description' );
+		$response = $this->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$this->assertEmpty( $response->get_data()->updated_at );
+
+		$description = 'Updated blog description!';
+		update_option( 'blogdescription', $description );
+
+		$response = $this->dispatch( $request );
+		$this->assertSame( 200, $response->get_status() );
+
+		$this->assertSame( $description, $response->get_data()->content );
+		$this->assertNotEmpty( $response->get_data()->updated_at );
 	}
 }

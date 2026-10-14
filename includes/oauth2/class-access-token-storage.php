@@ -1,8 +1,8 @@
 <?php
 /**
- * OAuth2 Storage: AccessTokenStorage class
+ * OAuth2 Storage: Access_Token_Storage class
  *
- * @package Friends
+ * @package Enable_Mastodon_Apps
  */
 
 namespace Enable_Mastodon_Apps\OAuth2;
@@ -12,7 +12,7 @@ use OAuth2\Storage\AccessTokenInterface;
 /**
  * This class describes an access token storage.
  */
-class AccessTokenStorage implements AccessTokenInterface {
+class Access_Token_Storage implements AccessTokenInterface {
 	const TAXONOMY = 'mastoapi-at';
 
 	private static $access_token_data = array(
@@ -28,7 +28,7 @@ class AccessTokenStorage implements AccessTokenInterface {
 		add_action( 'mastodon_api_cron_hook', array( $this, 'cleanupOldCodes' ) );
 
 		// Store the access tokens in a taxonomy.
-		register_taxonomy( self::TAXONOMY, null );
+		register_taxonomy( self::TAXONOMY, null, array( 'public' => false ) );
 		foreach ( self::$access_token_data as $key => $type ) {
 			register_term_meta(
 				self::TAXONOMY,
@@ -167,14 +167,8 @@ class AccessTokenStorage implements AccessTokenInterface {
 			$access_token = array(
 				'access_token' => $oauth_token,
 			);
-			foreach ( array(
-				'client_id'    => 'client_id',
-				'user_id'      => 'user_id',
-				'expires'      => 'expires',
-				'redirect_uri' => 'redirect_uri',
-				'scope'        => 'scope',
-			) as $key => $meta_key ) {
-				$access_token[ $key ] = get_term_meta( $term->term_id, $meta_key, true );
+			foreach ( array_keys( self::$access_token_data ) as $meta_key ) {
+				$access_token[ $meta_key ] = get_term_meta( $term->term_id, $meta_key, true );
 			}
 
 			$access_token['created_at'] = $access_token['expires'] - YEAR_IN_SECONDS * 2;
@@ -266,7 +260,7 @@ class AccessTokenStorage implements AccessTokenInterface {
 				'taxonomy'   => self::TAXONOMY,
 				'hide_empty' => false,
 				'fields'     => 'ids',
-				'meta_query' => array(
+				'meta_query' => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 					array(
 						'key'     => 'expires',
 						'value'   => time(),
@@ -275,6 +269,10 @@ class AccessTokenStorage implements AccessTokenInterface {
 				),
 			)
 		);
+
+		if ( ! $terms ) {
+			return;
+		}
 
 		foreach ( $terms->terms as $term_id ) {
 			wp_delete_term( $term_id, self::TAXONOMY );
@@ -292,6 +290,10 @@ class AccessTokenStorage implements AccessTokenInterface {
 				'fields'     => 'ids',
 			)
 		);
+
+		if ( ! $terms ) {
+			return;
+		}
 
 		foreach ( $terms->terms as $term_id ) {
 			wp_delete_term( $term_id, self::TAXONOMY );

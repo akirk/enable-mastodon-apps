@@ -9,8 +9,8 @@
 
 namespace Enable_Mastodon_Apps\OAuth2;
 
+use Enable_Mastodon_Apps\Mastodon_OAuth;
 use OAuth2\Request;
-use OAuth2\Response;
 use OAuth2\Server as OAuth2Server;
 
 /**
@@ -18,7 +18,7 @@ use OAuth2\Server as OAuth2Server;
  *
  * This class implements handling the authorization.
  */
-class AuthorizeHandler {
+class Authorize_Handler {
 	private $server;
 
 	public function __construct( OAuth2Server $server ) {
@@ -38,14 +38,15 @@ class AuthorizeHandler {
 		}
 
 		// The initial request will come without a nonce, thus unauthenticated.
-		if ( ! is_user_logged_in() || ! current_user_can( 'edit_private_posts' ) || ! isset( $_POST['authorize'] ) ) {
+		if ( ! is_user_logged_in() || ! Mastodon_OAuth::current_user_can_authorize() || ! isset( $_POST['authorize'] ) ) {
 			// This is handled by a hook in wp-login.php which will display a form asking the user to consent.
 			$response->setRedirect( 302, add_query_arg( array_map( 'rawurlencode', array_merge( $request->getAllQueryParameters(), array( 'action' => 'enable-mastodon-apps-authenticate' ) ) ), wp_login_url() ) );
 			return $response;
 		}
 
 		$user = wp_get_current_user();
-		if ( ! isset( $_POST['authorize'] ) || 'Authorize' !== $_POST['authorize'] ) {
+		switch_to_user_locale( $user->ID );
+		if ( ! isset( $_POST['authorize'] ) || __( 'Authorize', 'enable-mastodon-apps' ) !== $_POST['authorize'] ) {
 			$response->setError( 403, 'user_authorization_required', 'This application requires your consent.' );
 			return $response;
 		}

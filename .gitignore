@@ -1,3 +1,8 @@
+.claude
 .phpunit.result.cache
 composer.lock
 vendor
+.DS_Store
+new-changelog.md
+AGENTS.md
+ISSUE_TRIAGE.md

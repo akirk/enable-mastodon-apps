@@ -25,9 +25,11 @@ class Mastodon_App {
 	 */
 	private $term;
 
+	private static $current_app = null;
+
 	const DEBUG_CLIENT_ID = 'enable-mastodon-apps';
-	const TAXONOMY = 'mastodon-app';
-	const VALID_SCOPES = array(
+	const TAXONOMY        = 'mastodon-app';
+	const VALID_SCOPES    = array(
 		'read',
 		'write',
 		'follow',
@@ -50,10 +52,6 @@ class Mastodon_App {
 
 	public function get_client_secret() {
 		return get_term_meta( $this->term->term_id, 'client_secret', true );
-	}
-
-	public function set_client_secret( $client_secret ) {
-		return update_term_meta( $this->term->term_id, 'client_secret', $client_secret );
 	}
 
 	public function get_redirect_uris() {
@@ -87,10 +85,114 @@ class Mastodon_App {
 	public function get_post_formats() {
 		$query_args = $this->get_query_args();
 		if ( ! isset( $query_args['post_formats'] ) || ! is_array( $query_args['post_formats'] ) ) {
-			return get_option( 'mastodon_api_default_post_formats', array( 'status' ) );
+			return array();
+		}
+
+		if ( array_keys( get_post_format_slugs() ) === $query_args['post_formats'] ) {
+			return array();
 		}
 
 		return $query_args['post_formats'];
+	}
+
+	public function get_admin_page() {
+		return add_query_arg( 'app', $this->term->slug, admin_url( 'options-general.php?page=enable-mastodon-apps' ) );
+	}
+
+	public function get_create_post_type() {
+		$create_post_type = get_term_meta( $this->term->term_id, 'create_post_type', true );
+		if ( ! $create_post_type ) {
+			$create_post_type = 'post';
+		}
+		return $create_post_type;
+	}
+
+	public function get_create_post_format( $raw = false ) {
+		$create_post_format = get_term_meta( $this->term->term_id, 'create_post_format', true );
+		if ( ! $create_post_format && ! $raw ) {
+			$post_formats = $this->get_post_formats();
+			$create_post_format = reset( $post_formats );
+		}
+		return $create_post_format;
+	}
+
+	public function get_view_post_types() {
+		$view_post_types = get_term_meta( $this->term->term_id, 'view_post_types', true );
+		if ( ! $view_post_types ) {
+			$view_post_types = 'post';
+		}
+
+		if ( ! is_array( $view_post_types ) ) {
+			$view_post_types = array( $view_post_types );
+		}
+
+		if ( ! in_array( Mastodon_API::ANNOUNCE_CPT, $view_post_types, true ) ) {
+			$view_post_types[] = Mastodon_API::ANNOUNCE_CPT;
+		}
+
+		if ( ! in_array( Mastodon_API::POST_CPT, $view_post_types, true ) ) {
+			$view_post_types[] = Mastodon_API::POST_CPT;
+		}
+
+		return $view_post_types;
+	}
+
+	public function get_disable_blocks() {
+		$options = get_term_meta( $this->term->term_id, 'options', true );
+		if ( ! is_array( $options ) ) {
+			return false;
+		}
+		return boolval( $options['blocks'] ?? false );
+	}
+
+	public function get_first_line_as_excerpt() {
+		$options = get_term_meta( $this->term->term_id, 'options', true );
+		if ( ! is_array( $options ) ) {
+			return false;
+		}
+		return boolval( $options['first_line_as_excerpt'] ?? false );
+	}
+
+	public function get_featured_image() {
+		$options = get_term_meta( $this->term->term_id, 'options', true );
+		if ( ! is_array( $options ) ) {
+			return false;
+		}
+		return boolval( $options['featured_image'] ?? false );
+	}
+
+	public function get_favourite_reaction() {
+		$options = get_term_meta( $this->term->term_id, 'options', true );
+		if ( ! is_array( $options ) || empty( $options['favourite_reaction'] ) ) {
+			return apply_filters( 'mastodon_api_default_favourite_reaction', apply_filters( 'friends_favourites_emoji', '2764' ), $this );
+		}
+
+		return $options['favourite_reaction'];
+	}
+
+	public function get_bookmark_reaction() {
+		$options = get_term_meta( $this->term->term_id, 'options', true );
+		if ( ! is_array( $options ) || empty( $options['bookmark_reaction'] ) ) {
+			return apply_filters( 'mastodon_api_default_bookmark_reaction', apply_filters( 'friends_bookmarks_emoji', '2b50' ), $this );
+		}
+
+		return $options['bookmark_reaction'];
+	}
+
+	public function set_client_secret( $client_secret ) {
+		return update_term_meta( $this->term->term_id, 'client_secret', $client_secret );
+	}
+
+	public function set_create_post_type( $create_post_type ) {
+		return update_term_meta( $this->term->term_id, 'create_post_type', $create_post_type );
+	}
+
+	public function set_create_post_format( $create_post_format ) {
+		return update_term_meta( $this->term->term_id, 'create_post_format', $create_post_format );
+	}
+
+	public function set_view_post_types( $view_post_types ) {
+		return update_term_meta( $this->term->term_id, 'view_post_types', $view_post_types );
 	}
 
 	public function set_post_formats( $post_formats ) {
@@ -103,32 +205,89 @@ class Mastodon_App {
 		return $this->get_post_formats();
 	}
 
+	public function set_disable_blocks( $disable_blocks ) {
+		$options = get_term_meta( $this->term->term_id, 'options', true );
+		if ( ! is_array( $options ) ) {
+			$options = array();
+		}
+		$options['blocks'] = $disable_blocks;
+		return update_term_meta( $this->term->term_id, 'options', $options );
+	}
+
+	public function set_first_line_as_excerpt( $first_line_as_excerpt ) {
+		$options = get_term_meta( $this->term->term_id, 'options', true );
+		if ( ! is_array( $options ) ) {
+			$options = array();
+		}
+		$options['first_line_as_excerpt'] = $first_line_as_excerpt;
+		return update_term_meta( $this->term->term_id, 'options', $options );
+	}
+
+	public function set_featured_image( $featured_image ) {
+		$options = get_term_meta( $this->term->term_id, 'options', true );
+		if ( ! is_array( $options ) ) {
+			$options = array();
+		}
+		$options['featured_image'] = $featured_image;
+		return update_term_meta( $this->term->term_id, 'options', $options );
+	}
+
+	public function set_favourite_reaction( $reaction ) {
+		$options = get_term_meta( $this->term->term_id, 'options', true );
+		if ( ! is_array( $options ) ) {
+			$options = array();
+		}
+		$options['favourite_reaction'] = $reaction;
+		return update_term_meta( $this->term->term_id, 'options', $options );
+	}
+
+	public function set_bookmark_reaction( $reaction ) {
+		$options = get_term_meta( $this->term->term_id, 'options', true );
+		if ( ! is_array( $options ) ) {
+			$options = array();
+		}
+		$options['bookmark_reaction'] = $reaction;
+		return update_term_meta( $this->term->term_id, 'options', $options );
+	}
+
+	public function get_media_only() {
+		$options = get_term_meta( $this->term->term_id, 'options', true );
+		if ( ! is_array( $options ) ) {
+			return false;
+		}
+		return boolval( $options['media_only'] ?? false );
+	}
+
+	public function set_media_only( $media_only ) {
+		$options = get_term_meta( $this->term->term_id, 'options', true );
+		if ( ! is_array( $options ) ) {
+			$options = array();
+		}
+		$options['media_only'] = $media_only;
+		return update_term_meta( $this->term->term_id, 'options', $options );
+	}
+
 	public function check_redirect_uri( $redirect_uri ) {
+		if ( ! $redirect_uri ) {
+			return false;
+		}
+
 		$redirect_uris = $this->get_redirect_uris();
 		if ( ! is_array( $redirect_uris ) ) {
 			$redirect_uris = array( $redirect_uris );
 		}
 
 		foreach ( $redirect_uris as $uri ) {
-			if ( $uri === $redirect_uri ) {
-				return true;
-			}
-		}
+			// Apps registered before newline-separated URIs were split still have them in one string.
+			foreach ( preg_split( '/\s+/', trim( $uri ) ) as $uri ) {
+				if ( $uri === $redirect_uri ) {
+					return true;
+				}
 
-		return false;
-	}
-
-	public function check_scopes( $requested_scopes ) {
-		$allowed_scopes = explode( ' ', $this->get_scopes() );
-
-		foreach ( explode( ' ', $requested_scopes ) as $s ) {
-			if ( false !== strpos( $s, ':' ) ) {
-				list( $scope, $subscope ) = explode( ':', $s, 2 );
-			} else {
-				$scope = $s;
-			}
-			if ( ! in_array( $scope, $allowed_scopes, true ) ) {
-				return false;
+				// The OAuth server matches by prefix, so this needs to agree with it.
+				if ( $uri && 0 === strcasecmp( substr( $redirect_uri, 0, strlen( $uri ) ), $uri ) ) {
+					return true;
+				}
 			}
 		}
 
@@ -141,65 +300,247 @@ class Mastodon_App {
 
 	public function get_last_requests() {
 		$requests = array();
-		foreach ( get_term_meta( $this->term->term_id, 'request' ) as $request ) {
+		foreach ( get_term_meta( $this->term->term_id, 'request', false ) as $request ) {
 			if ( empty( $request ) || empty( $request['path'] ) ) {
 				delete_metadata( 'term', $this->term->term_id, 'request', $request );
 				continue;
 			}
-			$requests[ $request['timestamp'] * 10000 ] = $request;
+			$requests[ intval( $request['timestamp'] * 10000 ) ] = $request;
 		}
 
 		ksort( $requests );
 		return $requests;
 	}
 
+	public static function log( $request, $additional_debug_data = array() ) {
+		$app = self::get_current_app();
+		if ( ! $app ) {
+			$app = self::get_debug_app();
+		}
+		return $app->was_used( $request, $additional_debug_data );
+	}
+
 	public function was_used( $request, $additional_debug_data = array() ) {
-		static $logged;
-		if ( isset( $logged ) && $logged ) {
-			// Prevent multiple calls.
+		static $logged = array();
+
+		$calls = array();
+		$line = false;
+		foreach ( debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 4 ) as $backtrace ) { // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_debug_backtrace
+			if ( 'Enable_Mastodon_Apps\\Mastodon_App' === $backtrace['class'] ) {
+				$line = basename( $backtrace['file'] ) . ':' . $backtrace['line'];
+				continue;
+			}
+			$calls = array( $line => $backtrace['function'] . '()' );
+			break;
+		}
+		if ( $line && empty( $calls ) ) {
+			$calls[ $line ] = '?';
+		}
+
+		$data = array_merge(
+			array(
+				'timestamp'    => microtime( true ),
+				'path'         => $_SERVER['REQUEST_URI'], // phpcs:ignore
+				'method'       => $_SERVER['REQUEST_METHOD'], // phpcs:ignore
+				'params'       => $request->get_params(),
+				'json'         => $request->get_json_params(),
+				'files'        => $request->get_file_params(),
+				'current_user' => get_current_user_id(),
+				'calls'        => $calls,
+			),
+			$additional_debug_data
+		);
+
+		if ( isset( $logged[ $this->get_client_id() ] ) && $logged[ $this->get_client_id() ] ) {
+			$previous_data = get_metadata_by_mid( 'term', $logged[ $this->get_client_id() ] );
+			if ( is_array( $previous_data->meta_value ) ) {
+				foreach ( $previous_data->meta_value as $key => $value ) {
+					if ( ! isset( $data[ $key ] ) ) {
+						$data[ $key ] = $value;
+						continue;
+					}
+					if ( 'errors' === $key || 'calls' === $key ) {
+						$data[ $key ] = array_merge( $data[ $key ], $value );
+					}
+				}
+			}
+			update_metadata_by_mid( 'term', $logged[ $this->get_client_id() ], $data );
 			return true;
 		}
-		$logged = true;
+
 		if ( get_option( 'mastodon_api_debug_mode' ) > time() ) {
-			add_metadata(
-				'term',
-				$this->term->term_id,
-				'request',
-				array_merge(
-					array(
-						'timestamp'    => microtime( true ),
-						'path'         => $_SERVER['REQUEST_URI'],
-						'method'       => $_SERVER['REQUEST_METHOD'],
-						'params'       => $request->get_params(),
-						'json'         => $request->get_json_params(),
-						'files'        => $request->get_file_params(),
-						'current_user' => get_current_user_id(),
-					),
-					$additional_debug_data
-				)
+			$logged[ $this->get_client_id() ] = add_metadata( 'term', $this->term->term_id, 'request', $data );
+		} else {
+			$logged[ $this->get_client_id() ] = false;
+		}
+
+		if ( $this->get_last_used() < time() - MINUTE_IN_SECONDS ) {
+			update_term_meta( $this->term->term_id, 'last_used', time() );
+		}
+
+		return $logged[ $this->get_client_id() ];
+	}
+
+	/**
+	 * Get the text to display to the user about the current settings.
+	 *
+	 * @param      string $content  The content.
+	 *
+	 * @return     string  The current settings.
+	 */
+	public function get_current_settings_text( string $content = '' ) {
+		$post_formats = $this->get_post_formats();
+		$post_format_strings = array_filter(
+			get_post_format_strings(),
+			function ( $slug ) use ( $post_formats ) {
+				return in_array( $slug, $post_formats, true );
+			},
+			ARRAY_FILTER_USE_KEY
+		);
+
+		if ( empty( $post_format_strings ) ) {
+			// translators: %s is a list of post formats.
+			$content .= PHP_EOL . sprintf( _n( 'Post Format: %s', 'Post Formats: %s', count( get_post_format_strings() ), 'enable-mastodon-apps' ), __( 'All' ) ); // phpcs:ignore WordPress.WP.I18n.MissingArgDomain
+		} else {
+			// translators: %s is a list of post formats.
+			$content .= PHP_EOL . sprintf( _n( 'Post Format: %s', 'Post Formats: %s', count( $post_format_strings ), 'enable-mastodon-apps' ), implode( ', ', $post_format_strings ) );
+		}
+
+		if ( empty( $post_format_strings ) ) {
+			$post_format_strings = get_post_format_strings();
+		}
+
+		$content .= PHP_EOL . _x( 'Create new posts as', 'select post type', 'enable-mastodon-apps' ) . ': ';
+		$content .= get_post_type_object( $this->get_create_post_type() )->labels->singular_name;
+		$content .= ' ' . _x( 'in the post format', 'select post type', 'enable-mastodon-apps' ) . ': ';
+		if ( $this->get_create_post_format() && isset( $post_format_strings[ $this->get_create_post_format() ] ) ) {
+			$content .= $post_format_strings[ $this->get_create_post_format() ];
+		} else {
+			$content .= reset( $post_format_strings );
+		}
+
+		$t = PHP_EOL . __( 'Show these post types', 'enable-mastodon-apps' ) . ': ';
+		foreach ( $this->get_view_post_types() as $post_type ) {
+			$content .= $t . get_post_type_object( $post_type )->labels->name;
+			$t = ', ';
+		}
+
+		if ( $this->get_disable_blocks() ) {
+			$content .= PHP_EOL . __( 'Automatic conversion to blocks is disabled', 'enable-mastodon-apps' );
+		}
+
+		if ( $this->get_first_line_as_excerpt() ) {
+			$content .= PHP_EOL . __( 'Use first content line as excerpt', 'enable-mastodon-apps' );
+		}
+
+		if ( $this->get_featured_image() ) {
+			$content .= PHP_EOL . __( 'Use first attached image as featured image', 'enable-mastodon-apps' );
+		}
+
+		if ( $this->get_media_only() ) {
+			$content .= PHP_EOL . __( 'Only show posts with media attachments', 'enable-mastodon-apps' );
+		}
+
+		$content .= PHP_EOL . __( 'Favourite reaction', 'enable-mastodon-apps' ) . ': ' . $this->get_favourite_reaction();
+		$content .= PHP_EOL . __( 'Bookmark reaction', 'enable-mastodon-apps' ) . ': ' . $this->get_bookmark_reaction();
+
+		return trim( $content );
+	}
+
+	/**
+	 * Posts current settings as an announcement just for this app.
+	 *
+	 * @param      string $title  The title.
+	 * @param      string $intro  The intro text.
+	 *
+	 * @return     int|null  The post ID.
+	 */
+	public function post_current_settings( string $title = '', string $intro = '' ) {
+		if ( get_option( 'mastodon_api_disable_ema_app_settings_changes' ) ) {
+			return null;
+		}
+
+		if ( ! $title ) {
+			$title = sprintf(
+				// translators: %s: app name.
+				__( 'Settings for %s changed', 'enable-mastodon-apps' ),
+				$this->get_client_name()
 			);
 		}
 
-		if ( $this->get_last_used() > time() - MINUTE_IN_SECONDS ) {
-			return true;
+		if ( ! $intro ) {
+			$intro = __( 'The current settings for this app are:', 'enable-mastodon-apps' );
 		}
-		update_term_meta( $this->term->term_id, 'last_used', time() );
+		$content = $this->get_current_settings_text( $intro );
+
+		$previous_posts = get_posts(
+			array(
+				'post_type'   => Mastodon_API::ANNOUNCE_CPT,
+				'post_status' => 'publish',
+				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => 'ema_app_id',
+						'value' => $this->get_client_id(),
+					),
+				),
+			)
+		);
+
+		foreach ( $previous_posts as $previous_post ) {
+			wp_delete_post( $previous_post->ID );
+		}
+
+		$post_id = wp_insert_post(
+			array(
+				'post_type'    => Mastodon_API::ANNOUNCE_CPT,
+				'post_title'   => $title,
+				'post_content' => nl2br( trim( $content ) ),
+				'post_status'  => 'publish',
+				'meta_input'   => array(
+					'ema_app_id' => $this->get_client_id(),
+				),
+			)
+		);
+		if ( $post_id ) {
+			// Assign all post formats so that it will be shown regardless of the app's (potentially later changed) post format settings.
+			wp_set_object_terms(
+				$post_id,
+				array_map(
+					function ( $slug ) {
+						return 'post-format-' . $slug;
+					},
+					get_post_format_slugs()
+				),
+				'post_format'
+			);
+		}
+		return $post_id;
+	}
+
+	public static function set_current_app( $client_id, $request ) {
+		self::$current_app = self::get_by_client_id( $client_id );
+		self::$current_app->was_used( $request );
+		return self::$current_app;
+	}
+
+	public static function get_current_app() {
+		return self::$current_app;
 	}
 
 	public function is_outdated() {
-		foreach ( OAuth2\AccessTokenStorage::getAll() as $token ) {
-			if ( $token['client_id'] === $this->get_client_id() && ! $token['expired'] ) {
+		$now = time();
+		foreach ( OAuth2\Access_Token_Storage::getAll() as $token ) {
+			if ( $token['client_id'] === $this->get_client_id() && $token['expires'] > $now ) {
 				return false;
 			}
 		}
-		foreach ( OAuth2\AuthorizationCodeStorage::getAll() as $code ) {
-			if ( $code['client_id'] === $this->get_client_id() && ! $code['expired'] ) {
+		foreach ( OAuth2\Authorization_Code_Storage::getAll() as $code ) {
+			if ( $code['client_id'] === $this->get_client_id() && $code['expires'] > $now ) {
 				return false;
 			}
 		}
 		return true;
 	}
-
 
 	public function delete() {
 		return wp_delete_term( $this->term->term_id, self::TAXONOMY );
@@ -214,7 +555,7 @@ class Mastodon_App {
 			)
 		) as $term ) {
 			if ( $term instanceof \WP_Term ) {
-				$app = new Mastodon_App( $term );
+				$app                           = new Mastodon_App( $term );
 				$apps[ $app->get_client_id() ] = $app;
 			}
 		}
@@ -267,11 +608,14 @@ class Mastodon_App {
 					}
 					$urls = array();
 					foreach ( $value as $url ) {
-						if ( Mastodon_OAuth::OOB_REDIRECT_URI === $url ) {
-							$urls[] = $url;
-						} elseif ( preg_match( '#^[a-z0-9.-]+://?[a-z0-9.%-]*#i', $url ) ) {
-							// custom protocols are ok.
-							$urls[] = $url;
+						// Mastodon lets apps register multiple redirect URIs separated by newlines.
+						foreach ( preg_split( '/\s+/', trim( $url ) ) as $url ) {
+							if ( Mastodon_OAuth::OOB_REDIRECT_URI === $url ) {
+								$urls[] = $url;
+							} elseif ( preg_match( '#^[a-z0-9.-]+://?[a-z0-9.%-]*#i', $url ) ) {
+								// custom protocols are ok.
+								$urls[] = $url;
+							}
 						}
 					}
 
@@ -343,8 +687,8 @@ class Mastodon_App {
 					if ( ! $url ) {
 						return '';
 					}
-					$host = parse_url( $url, PHP_URL_HOST );
-					$protocol = parse_url( $url, PHP_URL_SCHEME );
+					$host = wp_parse_url( $url, PHP_URL_HOST );
+					$protocol = wp_parse_url( $url, PHP_URL_SCHEME );
 
 					if ( ! $host || 0 !== strpos( 'https', $protocol ) ) {
 						$url = '';
@@ -421,6 +765,35 @@ class Mastodon_App {
 			)
 		);
 
+		register_term_meta(
+			self::TAXONOMY,
+			'options',
+			array(
+				'show_in_rest'      => false,
+				'single'            => true,
+				'type'              => 'array',
+				'sanitize_callback' => function ( $value ) {
+					if ( ! is_array( $value ) ) {
+						return array();
+					}
+
+					foreach ( array_keys( $value ) as $key ) {
+						if ( 'blocks' === $key || 'media_only' === $key || 'first_line_as_excerpt' === $key || 'featured_image' === $key ) {
+							$value[ $key ] = boolval( $value[ $key ] );
+							continue;
+						}
+						if ( 'favourite_reaction' === $key || 'bookmark_reaction' === $key ) {
+							$value[ $key ] = strtolower( sanitize_key( $value[ $key ] ) );
+							continue;
+						}
+						unset( $value[ $key ] );
+					}
+
+					return $value;
+				},
+			)
+		);
+
 		if ( get_option( 'mastodon_api_debug_mode' ) > time() ) {
 			register_term_meta(
 				self::TAXONOMY,
@@ -436,7 +809,7 @@ class Mastodon_App {
 
 						foreach ( array_keys( $value ) as $key ) {
 							if ( 'path' === $key || 'user_agent' === $key ) {
-								$value[ $key ] = preg_replace( '#[^A-Za-z0-9?&%=[\]+.:@_/-]#', ' ', $value[ $key ] );
+								$value[ $key ] = preg_replace( '#[^A-Za-z0-9?&%=[\]+.:@_/()-]#', ' ', $value[ $key ] );
 								continue;
 							}
 							if ( 'status' === $key || 'current_user' === $key ) {
@@ -450,7 +823,21 @@ class Mastodon_App {
 							if ( 'method' === $key && preg_match( '/^[A-Z]{3,15}$/', $value[ $key ] ) ) {
 								continue;
 							}
-							if ( ( 'files' === $key || 'params' === $key || 'json' === $key ) && ! empty( $value[ $key ] ) ) {
+							if (
+								(
+									'files' === $key ||
+									'params' === $key ||
+									'json' === $key ||
+									'errors' === $key ||
+									'calls' === $key ||
+									'shape' === $key
+								) &&
+								! empty( $value[ $key ] )
+							) {
+								continue;
+							}
+							if ( 'count' === $key ) {
+								$value[ $key ] = intval( $value[ $key ] );
 								continue;
 							}
 							unset( $value[ $key ] );
@@ -470,7 +857,7 @@ class Mastodon_App {
 		}
 
 		$filter_by_post_format = $this->get_post_formats();
-		$post_formats = get_post_format_slugs();
+		$post_formats          = get_post_format_slugs();
 		$filter_by_post_format = array_filter(
 			$filter_by_post_format,
 			function ( $post_format ) use ( $post_formats ) {
@@ -507,9 +894,13 @@ class Mastodon_App {
 			}
 			$tax_query[] = $post_format_query;
 		}
-		$args['tax_query'] = $tax_query;
+		$args['tax_query'] = $tax_query; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
 
 		return $args;
+	}
+
+	public function has_scope( $requested_scope ) {
+		return OAuth2\Scope_Util::checkSingleScope( $requested_scope, $this->get_scopes() );
 	}
 
 	/**
@@ -539,7 +930,7 @@ class Mastodon_App {
 		foreach ( self::get_all() as $app ) {
 			if ( $app->is_outdated() ) {
 				if ( $app->delete() ) {
-					$count += 1;
+					++$count;
 				}
 			}
 		}
@@ -560,8 +951,8 @@ class Mastodon_App {
 		return new self( $term );
 	}
 
-	public static function save( $client_name, array $redirect_uris, $scopes, $website ) {
-		$client_id = strtolower( wp_generate_password( 32, false ) );
+	public static function save( $client_name, array $redirect_uris, $scopes, $website ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+		$client_id     = strtolower( wp_generate_password( 32, false ) );
 		$client_secret = wp_generate_password( 128, false );
 
 		$term = wp_insert_term( $client_id, self::TAXONOMY );
@@ -577,8 +968,55 @@ class Mastodon_App {
 			'website'
 		);
 
-		$post_formats = get_option( 'mastodon_api_default_post_formats', array( 'status' ) );
+		$post_formats = array();
+		if ( get_option( 'mastodon_api_default_create_post_format' ) ) {
+			$post_formats[] = get_option( 'mastodon_api_default_create_post_format' );
+		}
+		/**
+		 * Post formats to be enabled for new apps.
+		 *
+		 * @param array $post_formats    The post formats.
+		 *
+		 * @return array The post formats.
+		 *
+		 * Example:
+		 * ```php
+		 * add_filter( 'mastodon_api_new_app_post_formats', function( $post_formats ) {
+		 *    // This will enable standard and aside post formats for new apps.
+		 *    return array( 'standard', 'aside' );
+		 * } );
+		 * ```
+		 */
 		$post_formats = apply_filters( 'mastodon_api_new_app_post_formats', $post_formats, $app_metadata );
+
+		$app_metadata['query_args'] = array( 'post_formats' => $post_formats );
+
+		$app_metadata['create_post_type'] = get_option( 'mastodon_api_posting_cpt', apply_filters( 'mastodon_api_default_post_type', \Enable_Mastodon_Apps\Mastodon_API::POST_CPT ) );
+		$view_post_types = array( 'post', 'comment' );
+		if ( ! in_array( $app_metadata['create_post_type'], $view_post_types ) ) {
+			$view_post_types[] = $app_metadata['create_post_type'];
+		}
+
+		if ( get_option( 'mastodon_api_default_create_post_format' ) && in_array( get_option( 'mastodon_api_default_create_post_format' ), $post_formats ) ) {
+			$app_metadata['create_post_format'] = get_option( 'mastodon_api_default_create_post_format' );
+		}
+
+		/**
+		 * Standard post types that the app can view.
+		 *
+		 * @param array $view_post_types    The post types.
+		 *
+		 * @return array The post types.
+		 *
+		 * Example:
+		 * ```php
+		 * add_filter( 'mastodon_api_view_post_types', function( $view_post_types ) {
+		 *   // This will allow the app to view pages.
+		 *   return array_merge( $view_post_types, array( 'page' ) );
+		 * } );
+		 * ```
+		 */
+		$app_metadata['view_post_types'] = apply_filters( 'mastodon_api_view_post_types', $view_post_types );
 
 		$term_id = $term['term_id'];
 		foreach ( $app_metadata as $key => $value ) {
@@ -592,6 +1030,23 @@ class Mastodon_App {
 			return $term;
 		}
 
-		return new self( $term );
+		$app = new self( $term );
+
+		/**
+		 * Fires after a new app is created.
+		 *
+		 * @param Mastodon_App $app The newly created app.
+		 */
+		do_action( 'mastodon_api_new_app', $app );
+
+		$app->post_current_settings(
+			sprintf(
+				// translators: %s: app name.
+				__( 'App %s created', 'enable-mastodon-apps' ),
+				$client_name
+			),
+			__( 'This app was created with the following settings:', 'enable-mastodon-apps' )
+		);
+		return $app;
 	}
 }

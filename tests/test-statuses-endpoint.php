@@ -1,6 +1,6 @@
 <?php
 /**
- * Class Test_Apps_Endpoint
+ * Class StatusesEndpoint_Test
  *
  * @package Enable_Mastodon_Apps
  */
@@ -8,11 +8,16 @@
 namespace Enable_Mastodon_Apps;
 
 /**
- * A testcase for the apps endpoint.
+ * Testcases for the statuses endpoints.
  *
  * @package
  */
 class StatusesEndpoint_Test extends Mastodon_API_TestCase {
+	public function set_up() {
+		add_theme_support( 'post-formats', array( 'status', 'aside', 'gallery', 'image' ) );
+		parent::set_up();
+	}
+
 	public function test_register_routes() {
 		global $wp_rest_server;
 		$routes = $wp_rest_server->get_routes();
@@ -20,120 +25,1093 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 	}
 
 	public function test_statuses_id() {
-		global $wp_rest_server;
-		$request = new \WP_REST_Request( 'GET', '/' . Mastodon_API::PREFIX . '/api/v1/statuses/' . $this->friend_post );
-		$response = $wp_rest_server->dispatch( $request );
+		$request = $this->api_request( 'GET', '/api/v1/statuses/' . $this->friend_post );
+		$response = $this->dispatch( $request );
 		$this->assertEquals( 200, $response->get_status() );
 
 		$data = $response->get_data();
 		$userdata = get_userdata( $this->administrator );
 
-		$this->assertIsString( $data['id'] );
-		$this->assertEquals( $data['id'], strval( $this->friend_post ) );
+		$this->assertIsString( $data->id );
+		$this->assertEquals( $data->id, strval( $this->friend_post ) );
 
-		$this->assertIsArray( $data['account'] );
-		$this->assertIsString( $data['uri'] );
-		$this->assertIsString( $data['content'] );
-		if ( ! empty( $data['in_reply_to_id'] ) ) {
-			$this->assertIsInt( $data['in_reply_to_id'] );
+		$this->assertInstanceOf( '\Enable_Mastodon_Apps\Entity\Account', $data->account );
+		$this->assertIsString( $data->uri );
+		$this->assertEquals( get_permalink( $this->friend_post ), $data->url );
+		$this->assertIsString( $data->content );
+		if ( ! empty( $data->in_reply_to_id ) ) {
+			$this->assertIsInt( $data->in_reply_to_id );
 		}
-		if ( ! empty( $data['in_reply_to_account_id'] ) ) {
-			$this->assertIsInt( $data['in_reply_to_account_id'] );
+		if ( ! empty( $data->in_reply_to_account_id ) ) {
+			$this->assertIsInt( $data->in_reply_to_account_id );
 		}
-		$this->assertIsString( $data['created_at'] );
-		$this->assertTrue( false !== \DateTime::createFromFormat( 'Y-m-d\TH:i:s.uP', $data['created_at'] ) );
-		$this->assertIsInt( $data['replies_count'] );
-		$this->assertIsInt( $data['reblogs_count'] );
-		$this->assertIsInt( $data['favourites_count'] );
+		$this->assertInstanceOf( '\DateTime', $data->created_at );
+		$this->assertIsInt( $data->replies_count );
+		$this->assertIsInt( $data->reblogs_count );
+		$this->assertIsInt( $data->favourites_count );
+	}
+
+	public function test_status_does_not_use_attachment_id_when_block_src_does_not_match() {
+		$post_content = sprintf(
+			'<!-- wp:image {"id":%1$d} -->
+<figure class="wp-block-image"><img src="///data/user/0/org.wordpress.android/cache/img_20260718_193843348353428213156283.jpg" alt="" class="wp-image-%1$d" /></figure>
+<!-- /wp:image -->',
+			$this->friend_attachment_id
+		);
+		$post_id      = wp_insert_post(
+			array(
+				'post_author'  => $this->friend,
+				'post_content' => $post_content,
+				'post_title'   => 'Image with stale attachment ID',
+				'post_status'  => 'publish',
+				'post_type'    => 'post',
+			)
+		);
+		set_post_format( $post_id, 'status' );
+
+		$request  = $this->api_request( 'GET', '/api/v1/statuses/' . $post_id );
+		$response = $this->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertEmpty( $data->media_attachments );
+	}
+
+	public function test_status_uses_featured_image_as_media_attachment() {
+		$post_id = wp_insert_post(
+			array(
+				'post_author'  => $this->friend,
+				'post_content' => '<!-- wp:paragraph --><p>A post whose image is only the featured image.</p><!-- /wp:paragraph -->',
+				'post_title'   => 'Featured image only',
+				'post_status'  => 'publish',
+				'post_type'    => 'post',
+			)
+		);
+		set_post_thumbnail( $post_id, $this->friend_attachment_id );
+
+		$request  = $this->api_request( 'GET', '/api/v1/statuses/' . $post_id );
+		$response = $this->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertCount( 1, $data->media_attachments );
+		$this->assertEquals( strval( $this->friend_attachment_id ), $data->media_attachments[0]->id );
+		$this->assertStringContainsString( 'A post whose image is only the featured image.', $data->content );
+	}
+
+	public function test_status_does_not_duplicate_featured_image_used_in_content() {
+		$post_content = sprintf(
+			'<!-- wp:image {"id":%1$d} -->
+<figure class="wp-block-image"><img src="https://example.org/image.png" alt="" class="wp-image-%1$d" /></figure>
+<!-- /wp:image -->',
+			$this->friend_attachment_id
+		);
+		$post_id      = wp_insert_post(
+			array(
+				'post_author'  => $this->friend,
+				'post_content' => $post_content,
+				'post_title'   => 'Featured image also in content',
+				'post_status'  => 'publish',
+				'post_type'    => 'post',
+			)
+		);
+		set_post_thumbnail( $post_id, $this->friend_attachment_id );
+
+		$request  = $this->api_request( 'GET', '/api/v1/statuses/' . $post_id );
+		$response = $this->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertCount( 1, $data->media_attachments );
+		$this->assertStringNotContainsString( '<img', $data->content );
+	}
+
+	public function test_status_does_not_duplicate_existing_media_attachment_from_generic_image() {
+		$image_url = wp_get_attachment_url( $this->friend_attachment_id );
+		$filter    = function () use ( $image_url ) {
+			$media_attachment              = new Entity\Media_Attachment();
+			$media_attachment->id          = strval( $this->friend_attachment_id );
+			$media_attachment->type        = 'image';
+			$media_attachment->url         = $image_url;
+			$media_attachment->preview_url = $image_url;
+
+			$status                      = new Entity\Status();
+			$status->id                  = strval( $this->friend_post );
+			$status->created_at          = new \DateTime( '2023-01-01 00:00:00', new \DateTimeZone( 'UTC' ) );
+			$status->visibility          = 'public';
+			$status->uri                 = get_the_guid( $this->friend_post );
+			$status->url                 = get_permalink( $this->friend_post );
+			$status->content             = '<p>Caption</p><img src="https://cdn.example.org/resized-image.jpg" alt="" class="wp-image-' . esc_attr( $this->friend_attachment_id ) . '" />';
+			$status->account             = apply_filters( 'mastodon_api_account', null, $this->friend, null, get_post( $this->friend_post ) );
+			$status->media_attachments[] = $media_attachment;
+
+			return $status;
+		};
+
+		add_filter( 'mastodon_api_status', $filter, 5 );
+		try {
+			$request  = $this->api_request( 'GET', '/api/v1/statuses/' . $this->friend_post );
+			$response = $this->dispatch( $request );
+		} finally {
+			remove_filter( 'mastodon_api_status', $filter, 5 );
+		}
+
+		$this->assertEquals( 200, $response->get_status() );
+		$data = $response->get_data();
+		$this->assertCount( 1, $data->media_attachments );
+		$this->assertEquals( strval( $this->friend_attachment_id ), $data->media_attachments[0]->id );
+		$this->assertStringNotContainsString( '<img', $data->content );
+	}
+
+	public function test_status_context_does_not_include_child_attachments() {
+		$this->app->set_view_post_types( array( 'post', 'attachment' ) );
+
+		$reply_id = wp_insert_post(
+			array(
+				'post_author'  => $this->administrator,
+				'post_content' => 'A real reply',
+				'post_status'  => 'publish',
+				'post_type'    => 'post',
+				'post_parent'  => $this->friend_post,
+				'post_date'    => '2023-01-05 00:00:00',
+			)
+		);
+
+		$request  = $this->api_request( 'GET', '/api/v1/statuses/' . $this->friend_post . '/context' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data           = $response->get_data();
+		$descendant_ids = wp_list_pluck( $data['descendants'], 'id' );
+
+		$this->assertContains( strval( $reply_id ), $descendant_ids );
+		$this->assertNotContains( strval( $this->friend_attachment_id ), $descendant_ids );
+	}
+
+	public function test_statuses_private_id() {
+		$request = $this->api_request( 'GET', '/api/v1/statuses/' . $this->private_post );
+		$response = $this->dispatch( $request );
+		$this->assertEquals( 401, $response->get_status() );
+
+		$request = $this->api_request( 'GET', '/api/v1/statuses/' . $this->private_post );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+	}
+
+	public function test_favourite_returns_requested_reblog_status() {
+		$this->app->set_favourite_reaction( '1f44d' );
+		$reblog_id = Mastodon_API::remap_reblog_id( $this->friend_post );
+		$reacted   = array();
+
+		$react = function ( $post_id, $reaction ) use ( &$reacted ) {
+			$reacted[] = array(
+				'post_id'  => $post_id,
+				'reaction' => $reaction,
+			);
+		};
+		add_action( 'mastodon_api_react', $react, 10, 2 );
+
+		$add_reblog = function ( $status, $post_id ) use ( $reblog_id ) {
+			if ( intval( $post_id ) !== intval( $reblog_id ) ) {
+				return $status;
+			}
+
+			$original = apply_filters( 'mastodon_api_status', null, $this->friend_post, array() );
+			$status   = clone $original;
+
+			$status->id         = strval( $reblog_id );
+			$status->reblog     = clone $original;
+			$status->reblog->id = strval( $this->friend_post );
+			return $status;
+		};
+		add_filter( 'mastodon_api_status', $add_reblog, 20, 2 );
+
+		$request  = $this->api_request( 'POST', '/api/v1/statuses/' . $this->friend_post . '/favourite' );
+		$response = $this->dispatch_authenticated( $request );
+
+		remove_action( 'mastodon_api_react', $react, 10 );
+		remove_filter( 'mastodon_api_status', $add_reblog, 20 );
+
+		$this->assertEquals( 200, $response->get_status() );
+		$status = $response->get_data();
+		$this->assertEquals( strval( $this->friend_post ), $status->id );
+		$this->assertNull( $status->reblog );
+		$this->assertSame(
+			array(
+				array(
+					'post_id'  => strval( $reblog_id ),
+					'reaction' => '1f44d',
+				),
+			),
+			$reacted
+		);
+	}
+
+	public function test_bookmark_route_uses_mapped_reaction() {
+		$this->app->set_bookmark_reaction( '2b50' );
+		$reacted = array();
+
+		$react = function ( $post_id, $reaction ) use ( &$reacted ) {
+			$reacted[] = array(
+				'post_id'  => $post_id,
+				'reaction' => $reaction,
+			);
+		};
+		add_action( 'mastodon_api_react', $react, 10, 2 );
+
+		$request  = $this->api_request( 'POST', '/api/v1/statuses/' . $this->friend_post . '/bookmark' );
+		$response = $this->dispatch_authenticated( $request );
+
+		remove_action( 'mastodon_api_react', $react, 10 );
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertTrue( $response->get_data()->bookmarked );
+		$this->assertSame(
+			array(
+				array(
+					'post_id'  => strval( $this->friend_post ),
+					'reaction' => '2b50',
+				),
+			),
+			$reacted
+		);
+	}
+
+	public function test_subscriber_can_favourite_but_cannot_post_status() {
+		$subscriber = $this->factory->user->create(
+			array(
+				'role' => 'subscriber',
+			)
+		);
+		$token = wp_generate_password( 128, false );
+		$oauth = new Mastodon_OAuth();
+		$oauth->get_token_storage()->setAccessToken(
+			$token,
+			$this->app->get_client_id(),
+			$subscriber,
+			time() + HOUR_IN_SECONDS,
+			'write:favourites write:statuses'
+		);
+
+		$reacted = array();
+		$react = function ( $post_id, $reaction ) use ( &$reacted ) {
+			$reacted[] = array(
+				'post_id'  => $post_id,
+				'reaction' => $reaction,
+			);
+		};
+		add_action( 'mastodon_api_react', $react, 10, 2 );
+
+		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $token;
+		$request = $this->api_request( 'POST', '/api/v1/statuses/' . $this->friend_post . '/favourite' );
+		$response = $this->dispatch_authenticated_with_token( $request, $token );
+
+		remove_action( 'mastodon_api_react', $react, 10 );
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertTrue( $response->get_data()->favourited );
+		$this->assertSame(
+			array(
+				array(
+					'post_id'  => strval( $this->friend_post ),
+					'reaction' => $this->app->get_favourite_reaction(),
+				),
+			),
+			$reacted
+		);
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'Subscriber should not be able to post.' );
+		$response = $this->dispatch_authenticated_with_token( $request, $token );
+
+		$this->assertEquals( 401, $response->get_status() );
+		$this->assertEquals( 'mastodon_api_submit_post', $response->get_data()['code'] );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses/' . $this->friend_post . '/reblog' );
+		$response = $this->dispatch_authenticated_with_token( $request, $token );
+
+		$this->assertEquals( 401, $response->get_status() );
+		$this->assertEquals( 'mastodon_api_reblog_post', $response->get_data()['code'] );
+	}
+
+	public function test_favourites_and_bookmarks_are_stored_locally() {
+		$request = $this->api_request( 'POST', '/api/v1/statuses/' . $this->friend_post . '/favourite' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses/' . $this->friend_post . '/bookmark' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$request = $this->api_request( 'GET', '/api/v1/statuses/' . $this->friend_post );
+		$response = $this->dispatch_authenticated( $request );
+		$status = $response->get_data();
+		$this->assertTrue( $status->favourited );
+		$this->assertTrue( $status->bookmarked );
+		$this->assertEquals( 1, $status->favourites_count );
+
+		$request = $this->api_request( 'GET', '/api/v1/favourites' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertCount( 1, $response->get_data() );
+		$this->assertEquals( strval( $this->friend_post ), $response->get_data()[0]->id );
+
+		$request = $this->api_request( 'GET', '/api/v1/bookmarks' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertCount( 1, $response->get_data() );
+		$this->assertEquals( strval( $this->friend_post ), $response->get_data()[0]->id );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses/' . $this->friend_post . '/unfavourite' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$request = $this->api_request( 'GET', '/api/v1/statuses/' . $this->friend_post );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertFalse( $response->get_data()->favourited );
+		$this->assertEquals( 0, $response->get_data()->favourites_count );
 	}
 
 	public function test_statuses_delete() {
-		global $wp_rest_server;
-		$request = new \WP_REST_Request( 'DELETE', '/' . Mastodon_API::PREFIX . '/api/v1/statuses/' . $this->post );
-		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
-		$response = $wp_rest_server->dispatch( $request );
+		$request = $this->api_request( 'DELETE', '/api/v1/statuses/' . $this->post );
+		$response = $this->dispatch_authenticated( $request );
 		$this->assertEquals( 200, $response->get_status() );
 
 		$this->assertEquals( 'trash', get_post_status( $this->post ) );
 	}
 
-	public function test_status_post_empty() {
-		global $wp_rest_server;
-		$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/statuses' );
-		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
-		$response = $wp_rest_server->dispatch( $request );
+	public function test_submit_status_empty() {
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$response = $this->dispatch_authenticated( $request );
 		$this->assertEquals( 422, $response->get_status() );
 	}
 
-	public function test_status_post_basic_status() {
-		global $wp_rest_server;
-		$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/statuses' );
-		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
-		$request->set_param( 'status', 'test' );
-		$response = $wp_rest_server->dispatch( $request );
+	public function test_submit_status_rejects_too_many_media_attachments() {
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'too many attachments' );
+		$request->set_param( 'media_ids', array_fill( 0, 5, (string) $this->friend_attachment_id ) );
+
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 422, $response->get_status() );
+	}
+
+	public function test_submit_status_allows_configured_media_attachment_limit() {
+		update_option( 'mastodon_api_max_media_attachments', 5 );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'configured attachments' );
+		$request->set_param( 'media_ids', array_fill( 0, 5, (string) $this->friend_attachment_id ) );
+
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+	}
+
+	public function submit_status_data_provider() {
+		return array(
+			'basic_status'                    => array(
+				'status'           => 'test',
+				'new_format'       => 'status',
+				'new_post_type'    => 'post',
+				'disable_blocks'   => true,
+				'expected_title'   => '',
+				'expected_content' => 'test',
+			),
+			'basic_status_blocks'             => array(
+				'status'           => 'test',
+				'new_format'       => 'status',
+				'new_post_type'    => 'post',
+				'disable_blocks'   => false,
+				'expected_title'   => '',
+				'expected_content' => "<!-- wp:paragraph -->\n<p>test</p>\n<!-- /wp:paragraph -->",
+			),
+			'basic_standard'                  => array(
+				'status'           => 'test',
+				'new_format'       => 'standard',
+				'new_post_type'    => 'post',
+				'disable_blocks'   => true,
+				'expected_title'   => '',
+				'expected_content' => 'test',
+			),
+			'basic_standard_blocks'           => array(
+				'status'           => 'test',
+				'new_format'       => 'standard',
+				'new_post_type'    => 'post',
+				'disable_blocks'   => false,
+				'expected_title'   => '',
+				'expected_content' => "<!-- wp:paragraph -->\n<p>test</p>\n<!-- /wp:paragraph -->",
+			),
+			'basic_cpt'                       => array(
+				'status'           => 'test',
+				'new_format'       => 'standard',
+				'new_post_type'    => 'my_custom_post_type',
+				'disable_blocks'   => true,
+				'expected_title'   => '',
+				'expected_content' => 'test',
+			),
+			'multiline_status'                => array(
+				'status'           => 'headline' . PHP_EOL . 'post_content',
+				'new_format'       => 'status',
+				'new_post_type'    => 'post',
+				'disable_blocks'   => true,
+				'expected_title'   => '',
+				'expected_content' => 'headline' . PHP_EOL . 'post_content',
+			),
+			'multiline_status_blocks'         => array(
+				'status'           => 'headline' . PHP_EOL . 'post_content',
+				'new_format'       => 'status',
+				'new_post_type'    => 'post',
+				'disable_blocks'   => false,
+				'expected_title'   => '',
+				'expected_content' => "<!-- wp:paragraph -->\n<p>headline</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:paragraph -->\n<p>post_content</p>\n<!-- /wp:paragraph -->",
+			),
+			'multiline_html_standard'         => array(
+				'status'           => '<p>headline</p><p>post_content</p>',
+				'new_format'       => 'standard',
+				'new_post_type'    => 'post',
+				'disable_blocks'   => true,
+				'expected_title'   => 'headline',
+				'expected_content' => '<p>post_content</p>',
+			),
+			'multiline_html_standard_blocks'  => array(
+				'status'           => '<p>headline</p><p>post_content</p>',
+				'new_format'       => 'standard',
+				'new_post_type'    => 'post',
+				'disable_blocks'   => false,
+				'expected_title'   => 'headline',
+				'expected_content' => "<!-- wp:paragraph -->\n<p>post_content</p>\n<!-- /wp:paragraph -->",
+			),
+			'multiline_html_standard2'        => array(
+				'status'           => '<p>headline</p>' . PHP_EOL . '<p>post_content</p>',
+				'new_format'       => 'standard',
+				'new_post_type'    => 'post',
+				'disable_blocks'   => true,
+				'expected_title'   => 'headline',
+				'expected_content' => '<p>post_content</p>',
+			),
+			'multiline_html_standard2_blocks' => array(
+				'status'           => '<p>headline</p>' . PHP_EOL . '<p>post_content</p>',
+				'new_format'       => 'standard',
+				'new_post_type'    => 'post',
+				'disable_blocks'   => false,
+				'expected_title'   => 'headline',
+				'expected_content' => "<!-- wp:paragraph -->\n<p>post_content</p>\n<!-- /wp:paragraph -->",
+			),
+		);
+	}
+
+	/**
+	 * Test submitting statuses.
+	 *
+	 * @dataProvider submit_status_data_provider
+	 * @param string $status The status to submit.
+	 * @param string $new_format The new post format.
+	 * @param string $new_post_type The new post type.
+	 * @param bool   $disable_blocks Whether to disable blocks.
+	 * @param string $expected_title The expected post title.
+	 * @param string $expected_content The expected post content.
+	 * @return void
+	 */
+	public function test_submit_status( $status, $new_format, $new_post_type, $disable_blocks, $expected_title, $expected_content ) {
+		$this->app->set_post_formats( $new_format );
+		$this->app->set_create_post_format( $new_format );
+		$this->app->set_create_post_type( $new_post_type );
+		$this->app->set_disable_blocks( $disable_blocks );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', $status );
+		$response = $this->dispatch_authenticated( $request );
 		$this->assertEquals( 200, $response->get_status() );
 
 		$data = $response->get_data();
-		$this->assertIsString( $data['id'] );
-		$this->assertIsNumeric( $data['id'] );
-		$p = get_post( $data['id'] );
-		$this->assertEquals( $p->post_content, 'test' );
+		$this->assertIsString( $data->id );
+		$this->assertIsNumeric( $data->id );
+		$p = get_post( $data->id );
+		$this->assertEquals( $p->post_title, $expected_title );
+		$this->assertEquals( $p->post_content, $expected_content );
+		$this->assertEquals( $p->post_type, $new_post_type );
 	}
 
-	public function test_status_post_multiline_status() {
-		global $wp_rest_server;
-		$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/statuses' );
-		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
-		$request->set_param( 'status', 'headline' . PHP_EOL . 'post_content' );
-		$response = $wp_rest_server->dispatch( $request );
-		$this->assertEquals( 200, $response->get_status() );
-
-		$data = $response->get_data();
-		$this->assertIsString( $data['id'] );
-		$this->assertIsNumeric( $data['id'] );
-		$p = get_post( $data['id'] );
-		$this->assertEquals( 'status', get_post_format( $p->ID ) );
-
-		$this->assertEquals( $p->post_title, '' );
-		$this->assertEquals( $p->post_content, 'headline' . PHP_EOL . 'post_content' );
-	}
-
-	public function test_status_post_multiline_standard() {
+	public function test_submit_single_line_standard_with_media() {
 		$this->app->set_post_formats( 'standard' );
-		global $wp_rest_server;
-		$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/statuses' );
-		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
-		$request->set_param( 'status', 'headline' . PHP_EOL . 'post_content' );
-		$response = $wp_rest_server->dispatch( $request );
+		$this->app->set_create_post_format( 'standard' );
+		$this->app->set_create_post_type( 'post' );
+		$this->app->set_disable_blocks( true );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'caption text' );
+		$request->set_param( 'media_ids', array( (string) $this->friend_attachment_id ) );
+		$response = $this->dispatch_authenticated( $request );
 		$this->assertEquals( 200, $response->get_status() );
 
-		$data = $response->get_data();
-		$this->assertIsString( $data['id'] );
-		$this->assertIsNumeric( $data['id'] );
-		$p = get_post( $data['id'] );
-		$this->assertFalse( get_post_format( $p->ID ) );
-
-		$this->assertEquals( $p->post_title, 'headline' );
-		$this->assertEquals( $p->post_content, 'post_content' );
+		$p = get_post( $response->get_data()->id );
+		$this->assertEquals( 'caption text', $p->post_title );
+		$this->assertStringNotContainsString( 'caption text', $p->post_content );
+		$this->assertStringContainsString( 'wp:image', $p->post_content );
 	}
 
-	public function test_status_post_multiline_standard_html() {
-		$this->app->set_post_formats( 'standard' );
-		global $wp_rest_server;
-		$request = new \WP_REST_Request( 'POST', '/' . Mastodon_API::PREFIX . '/api/v1/statuses' );
-		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->token;
-		$request->set_param( 'status', '<p>headline</p>' . PHP_EOL . '<p>post_content</p>' );
+	public function test_submit_status_assigns_existing_hashtag_terms() {
+		$category = self::factory()->category->create( array( 'name' => 'Art' ) );
+		$tag      = self::factory()->tag->create( array( 'name' => 'Café' ) );
+		$this->app->set_create_post_type( 'post' );
+		$filter = function ( $text ) {
+			return str_replace( array( '#ART', '#café' ), 'linked hashtag', $text );
+		};
+		add_filter( 'mastodon_api_submit_status_text', $filter );
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'A post with (#ART), #café! #ART again.' );
+		try {
+			$response = $this->dispatch_authenticated( $request );
+		} finally {
+			remove_filter( 'mastodon_api_submit_status_text', $filter );
+		}
+		$this->assertSame( 200, $response->get_status() );
+		$post_id = (int) $response->get_data()->id;
+		$this->assertContains( $category, wp_get_post_categories( $post_id ) );
+		$this->assertSame( array( $tag ), wp_get_post_tags( $post_id, array( 'fields' => 'ids' ) ) );
+	}
 
-		$response = $wp_rest_server->dispatch( $request );
+	public function test_submit_status_does_not_assign_partial_hashtags_or_url_fragments() {
+		$category = self::factory()->category->create( array( 'name' => 'Art' ) );
+		$tag      = self::factory()->tag->create( array( 'name' => 'Art' ) );
+		$this->app->set_create_post_type( 'post' );
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', '#article #art_work #art2 #arté word#art https://example.org/#art' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertSame( 200, $response->get_status() );
+		$post_id = (int) $response->get_data()->id;
+		$this->assertNotContains( $category, wp_get_post_categories( $post_id ) );
+		$this->assertNotContains( $tag, wp_get_post_tags( $post_id, array( 'fields' => 'ids' ) ) );
+	}
+
+	public function test_hashtag_assignment_respects_post_type_taxonomies_and_existing_posts() {
+		$category = self::factory()->category->create( array( 'name' => 'Art' ) );
+		$tag      = self::factory()->tag->create( array( 'name' => 'Art' ) );
+		$this->app->set_create_post_type( 'page' );
+		Mastodon_App::set_current_app( $this->app->get_client_id(), $this->api_request( 'POST', '/api/v1/statuses' ) );
+		$handler = new Handler\Status();
+		$data    = $handler->prepare_post_data( null, '#art', null, array(), 'standard', 'public', null );
+		$this->assertArrayNotHasKey( 'post_category', $data );
+		$this->assertArrayNotHasKey( 'tags_input', $data );
+
+		$this->app->set_create_post_type( 'post' );
+		Mastodon_App::set_current_app( $this->app->get_client_id(), $this->api_request( 'PUT', '/api/v1/statuses/' . $this->friend_post ) );
+		wp_set_post_categories( $this->friend_post, array( $category ) );
+		wp_set_post_tags( $this->friend_post, array( $tag ) );
+		$data = $handler->prepare_post_data( $this->friend_post, 'Updated text without hashtags', null, array(), 'standard', 'public', null );
+		wp_update_post( $data );
+		$this->assertContains( $category, wp_get_post_categories( $this->friend_post ) );
+		$this->assertSame( array( $tag ), wp_get_post_tags( $this->friend_post, array( 'fields' => 'ids' ) ) );
+	}
+
+	public function test_submit_status_sets_first_image_as_featured_image_when_enabled() {
+		$this->app->set_post_formats( 'standard' );
+		$this->app->set_create_post_format( 'standard' );
+		$this->app->set_create_post_type( 'post' );
+		$this->app->set_disable_blocks( true );
+		$this->app->set_featured_image( true );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'caption text' );
+		$request->set_param( 'media_ids', array( (string) $this->friend_attachment_id ) );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$this->assertEquals( $this->friend_attachment_id, get_post_thumbnail_id( $response->get_data()->id ) );
+	}
+
+	public function test_submit_status_does_not_set_featured_image_by_default() {
+		$this->app->set_post_formats( 'standard' );
+		$this->app->set_create_post_format( 'standard' );
+		$this->app->set_create_post_type( 'post' );
+		$this->app->set_disable_blocks( true );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'caption text' );
+		$request->set_param( 'media_ids', array( (string) $this->friend_attachment_id ) );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$this->assertEquals( 0, get_post_thumbnail_id( $response->get_data()->id ) );
+	}
+
+	public function test_submit_status_adds_media_description_as_alt_text_and_caption() {
+		$this->app->set_post_formats( 'standard' );
+		$this->app->set_create_post_format( 'standard' );
+		$this->app->set_create_post_type( 'post' );
+		$this->app->set_disable_blocks( true );
+
+		wp_update_post(
+			array(
+				'ID'           => $this->friend_attachment_id,
+				'post_excerpt' => 'A fox sitting near the fence',
+			)
+		);
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'caption text' );
+		$request->set_param( 'media_ids', array( (string) $this->friend_attachment_id ) );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$p = get_post( $response->get_data()->id );
+		$this->assertStringContainsString( 'alt="A fox sitting near the fence"', $p->post_content );
+		$this->assertStringContainsString( '<figcaption class="wp-element-caption">A fox sitting near the fence</figcaption>', $p->post_content );
+	}
+
+	public function test_submit_single_line_standard_without_media() {
+		$this->app->set_post_formats( 'standard' );
+		$this->app->set_create_post_format( 'standard' );
+		$this->app->set_create_post_type( 'post' );
+		$this->app->set_disable_blocks( true );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'just a short toot' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$p = get_post( $response->get_data()->id );
+		$this->assertEquals( '', $p->post_title );
+		$this->assertEquals( 'just a short toot', $p->post_content );
+	}
+
+	public function test_submit_multiline_standard_to_post_type_without_title_support() {
+		$this->app->set_post_formats( 'standard' );
+		$this->app->set_create_post_format( 'standard' );
+		$this->app->set_create_post_type( Mastodon_API::POST_CPT );
+		$this->app->set_disable_blocks( true );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'headline' . PHP_EOL . 'post_content' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$p = get_post( $response->get_data()->id );
+		$this->assertEquals( '', $p->post_title );
+		$this->assertEquals( 'headline' . PHP_EOL . 'post_content', $p->post_content );
+	}
+
+	public function test_submit_single_line_standard_with_media_to_post_type_without_title_support() {
+		$this->app->set_post_formats( 'standard' );
+		$this->app->set_create_post_format( 'standard' );
+		$this->app->set_create_post_type( Mastodon_API::POST_CPT );
+		$this->app->set_disable_blocks( true );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'caption text' );
+		$request->set_param( 'media_ids', array( (string) $this->friend_attachment_id ) );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$p = get_post( $response->get_data()->id );
+		$this->assertEquals( '', $p->post_title );
+		$this->assertStringContainsString( 'caption text', $p->post_content );
+		$this->assertStringContainsString( 'wp:image', $p->post_content );
+	}
+
+	public function test_status_does_not_bold_title_of_post_type_without_title_support() {
+		$post_id = wp_insert_post(
+			array(
+				'post_author'  => $this->administrator,
+				'post_content' => 'post_content',
+				'post_title'   => 'headline',
+				'post_status'  => 'publish',
+				'post_type'    => Mastodon_API::POST_CPT,
+			)
+		);
+
+		$request = $this->api_request( 'GET', '/api/v1/statuses/' . $post_id );
+		$response = $this->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$content = $response->get_data()->content;
+		$this->assertStringNotContainsString( '<strong>', $content );
+		$this->assertStringContainsString( 'headline', $content );
+		$this->assertStringContainsString( 'post_content', $content );
+	}
+
+	public function test_status_bolds_title_of_post_type_with_title_support() {
+		$request = $this->api_request( 'GET', '/api/v1/statuses/' . $this->friend_post );
+		$response = $this->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$this->assertStringContainsString( '<strong>Friend title</strong>', $response->get_data()->content );
+	}
+
+	public function test_submit_standard_uses_first_content_line_as_excerpt() {
+		$this->app->set_post_formats( 'standard' );
+		$this->app->set_create_post_format( 'standard' );
+		$this->app->set_create_post_type( 'post' );
+		$this->app->set_disable_blocks( true );
+		$this->app->set_first_line_as_excerpt( true );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'headline' . PHP_EOL . 'summary' . PHP_EOL . 'post content' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$p = get_post( $response->get_data()->id );
+		$this->assertEquals( 'headline', $p->post_title );
+		$this->assertEquals( 'summary', $p->post_excerpt );
+		$this->assertEquals( 'summary' . PHP_EOL . 'post content', $p->post_content );
+	}
+
+	public function test_submit_status_post_data_filter() {
+		$this->app->set_post_formats( 'standard' );
+		$this->app->set_create_post_format( 'standard' );
+		$this->app->set_create_post_type( 'post' );
+		$this->app->set_disable_blocks( true );
+
+		$filter = function ( $post_data ) {
+			$post_data['post_excerpt'] = 'filtered excerpt';
+			return $post_data;
+		};
+
+		add_filter( 'mastodon_api_submit_post_data', $filter, 10, 9 );
+		try {
+			$request = $this->api_request( 'POST', '/api/v1/statuses' );
+			$request->set_param( 'status', 'headline' . PHP_EOL . 'post content' );
+			$response = $this->dispatch_authenticated( $request );
+			$this->assertEquals( 200, $response->get_status() );
+		} finally {
+			remove_filter( 'mastodon_api_submit_post_data', $filter, 10 );
+		}
+
+		$p = get_post( $response->get_data()->id );
+		$this->assertEquals( 'filtered excerpt', $p->post_excerpt );
+	}
+
+	public function test_submit_status_reply() {
+		$query = new \WP_Comment_Query();
+		$count = $query->query(
+			array(
+				'count' => true,
+			)
+		);
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'reply' );
+		$request->set_param( 'in_reply_to_id', $this->post );
+		$response = $this->dispatch_authenticated( $request );
 		$this->assertEquals( 200, $response->get_status() );
 
 		$data = $response->get_data();
-		$this->assertIsString( $data['id'] );
-		$this->assertIsNumeric( $data['id'] );
-		$p = get_post( $data['id'] );
-		$this->assertFalse( get_post_format( $p->ID ) );
+		$this->assertIsString( $data->id );
+		$this->assertIsNumeric( $data->id );
 
-		$this->assertEquals( $p->post_title, '<p>headline</p>' );
-		$this->assertEquals( $p->post_content, '<p>post_content</p>' );
+		$new_count = $query->query(
+			array(
+				'count' => true,
+			)
+		);
+
+		$this->assertTrue( $new_count > $count );
+	}
+
+	public function test_submit_status_reply_to_remote_post() {
+		$remote_url = 'https://remote.example/status/12345';
+		$numeric_id = Mastodon_API::remap_url( $remote_url );
+
+		$comment_count_before = ( new \WP_Comment_Query() )->query( array( 'count' => true ) );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'Reply to remote post' );
+		$request->set_param( 'in_reply_to_id', $numeric_id );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$comment_count_after = ( new \WP_Comment_Query() )->query( array( 'count' => true ) );
+		$this->assertEquals( $comment_count_before, $comment_count_after, 'No comment should be created for remote post replies' );
+
+		$data = $response->get_data();
+		$this->assertNotNull( $data, 'Response should not be null' );
+		$this->assertIsString( $data->id );
+
+		$post_id = intval( $data->id );
+		$post = get_post( $post_id );
+		$this->assertNotNull( $post, 'A new post should have been created for the remote reply' );
+		if ( defined( 'ACTIVITYPUB_PLUGIN_VERSION' ) ) {
+			$this->assertStringContainsString( 'wp:activitypub/reply', $post->post_content, 'Post content should contain the activitypub/reply block' );
+			$this->assertStringContainsString( $remote_url, $post->post_content, 'The reply block should point at the remote status' );
+		} else {
+			$this->assertStringNotContainsString( 'activitypub/reply', $post->post_content, 'Without the ActivityPub plugin there is no block to add' );
+		}
+		$this->assertEquals( $remote_url, get_post_meta( $post_id, 'activitypub_in_reply_to', true ), 'Remote URL should be stored as activitypub_in_reply_to meta' );
+	}
+
+	public function test_submit_status_reply_to_remote_post_without_blocks() {
+		$this->app->set_disable_blocks( true );
+
+		$remote_url = 'https://remote.example/status/23456';
+		$numeric_id = Mastodon_API::remap_url( $remote_url );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'Reply to remote post' );
+		$request->set_param( 'in_reply_to_id', $numeric_id );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$post_id = intval( $response->get_data()->id );
+		$post    = get_post( $post_id );
+		$this->assertStringNotContainsString( 'activitypub/reply', $post->post_content, 'An app that disabled blocks should not get one' );
+		$this->assertEquals( $remote_url, get_post_meta( $post_id, 'activitypub_in_reply_to', true ), 'Remote URL should be stored as activitypub_in_reply_to meta' );
+	}
+
+	public function test_submit_unlisted_status_is_published_quietly() {
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'Not for the public timelines' );
+		$request->set_param( 'visibility', 'unlisted' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$post_id = intval( $response->get_data()->id );
+		$this->assertEquals( 'publish', get_post_status( $post_id ), 'An unlisted status still needs to federate' );
+		$this->assertEquals( 'quiet_public', get_post_meta( $post_id, 'activitypub_content_visibility', true ) );
+	}
+
+	public function test_submit_private_status_stays_private() {
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'Just for my followers' );
+		$request->set_param( 'visibility', 'private' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$post_id = intval( $response->get_data()->id );
+		$this->assertEquals( 'private', get_post_status( $post_id ) );
+		$this->assertEquals( '', get_post_meta( $post_id, 'activitypub_content_visibility', true ) );
+	}
+
+	public function test_submit_multiline_status_with_mention_keeps_the_mention_in_the_content() {
+		$this->app->set_post_formats( 'standard' );
+		$this->app->set_create_post_format( 'standard' );
+		$this->app->set_create_post_type( 'post' );
+		$this->app->set_disable_blocks( true );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', '@doe@example.org' . PHP_EOL . 'What do you think?' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$p = get_post( $response->get_data()->id );
+		$this->assertEquals( '', $p->post_title, 'A mention must not end up in the post title' );
+		$this->assertStringContainsString( '@doe@example.org', $p->post_content );
+		$this->assertStringContainsString( 'What do you think?', $p->post_content );
+	}
+
+	public function test_submit_multiline_status_with_mention_below_the_first_line_keeps_its_title() {
+		$this->app->set_post_formats( 'standard' );
+		$this->app->set_create_post_format( 'standard' );
+		$this->app->set_create_post_type( 'post' );
+		$this->app->set_disable_blocks( true );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'My holiday photos' . PHP_EOL . 'Went with @doe@example.org' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$p = get_post( $response->get_data()->id );
+		$this->assertEquals( 'My holiday photos', $p->post_title, 'A mention below the first line does not cost the post its title' );
+		$this->assertStringContainsString( '@doe@example.org', $p->post_content );
+	}
+
+	public function test_submit_single_line_status_with_mention_and_media_keeps_the_mention_in_the_content() {
+		$this->app->set_post_formats( 'standard' );
+		$this->app->set_create_post_format( 'standard' );
+		$this->app->set_create_post_type( 'post' );
+		$this->app->set_disable_blocks( true );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'look at this @doe@example.org' );
+		$request->set_param( 'media_ids', array( (string) $this->friend_attachment_id ) );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$p = get_post( $response->get_data()->id );
+		$this->assertEquals( '', $p->post_title, 'A mention must not end up in the post title' );
+		$this->assertStringContainsString( '@doe@example.org', $p->post_content );
+	}
+
+	public function test_get_multiple_statuses() {
+		// Test with valid status IDs
+		$request = $this->api_request( 'GET', '/api/v1/statuses' );
+		$request->set_param( 'id', array( strval( $this->friend_post ), strval( $this->post ) ) );
+		$response = $this->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertIsArray( $data );
+		$this->assertCount( 2, $data );
+
+		// Verify each status has the expected structure
+		foreach ( $data as $status ) {
+			$this->assertInstanceOf( '\Enable_Mastodon_Apps\Entity\Status', $status );
+			$this->assertIsString( $status->id );
+			$this->assertInstanceOf( '\Enable_Mastodon_Apps\Entity\Account', $status->account );
+			$this->assertIsString( $status->content );
+			$this->assertInstanceOf( '\DateTime', $status->created_at );
+		}
+	}
+
+	public function test_get_multiple_statuses_empty() {
+		// Test with no IDs
+		$request = $this->api_request( 'GET', '/api/v1/statuses' );
+		$response = $this->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertIsArray( $data );
+		$this->assertEmpty( $data );
+	}
+
+	public function test_get_multiple_statuses_invalid_ids() {
+		// Test with non-existent IDs
+		$request = $this->api_request( 'GET', '/api/v1/statuses' );
+		$request->set_param( 'id', array( '99999', '99998' ) );
+		$response = $this->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertIsArray( $data );
+		$this->assertEmpty( $data );
+	}
+
+	public function test_get_multiple_statuses_mixed_validity() {
+		// Test with mix of valid and invalid IDs
+		$request = $this->api_request( 'GET', '/api/v1/statuses' );
+		$request->set_param( 'id', array( strval( $this->friend_post ), '99999', strval( $this->post ) ) );
+		$response = $this->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertIsArray( $data );
+		$this->assertCount( 2, $data ); // Should only return the valid ones
+	}
+
+	public function test_get_multiple_statuses_private_permission() {
+		// Test with private status - should be filtered out for unauthenticated requests
+		$request = $this->api_request( 'GET', '/api/v1/statuses' );
+		$request->set_param( 'id', array( strval( $this->private_post ), strval( $this->friend_post ) ) );
+		$response = $this->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertIsArray( $data );
+		$this->assertCount( 1, $data ); // Should only return the public one
+
+		// Test with authenticated request - should include private post
+		$request = $this->api_request( 'GET', '/api/v1/statuses' );
+		$request->set_param( 'id', array( strval( $this->private_post ), strval( $this->friend_post ) ) );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertIsArray( $data );
+		$this->assertCount( 2, $data ); // Should return both posts when authenticated
+	}
+
+	public function test_status_language_falls_back_to_site_language() {
+		$request  = $this->api_request( 'GET', '/api/v1/statuses/' . $this->post );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		// The test site runs on en_US, Mastodon expects the ISO 639-1 code.
+		$this->assertEquals( 'en', $response->get_data()->language );
+	}
+
+	public function test_submit_status_stores_language() {
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'Bonjour le monde' );
+		$request->set_param( 'language', 'fr' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertEquals( 'fr', $data->language );
+		$this->assertEquals( 'fr', get_post_meta( $data->id, 'ema_language', true ) );
+	}
+
+	public function test_edit_status_updates_language() {
+		update_post_meta( $this->post, 'ema_language', 'fr' );
+
+		$request = $this->api_request( 'PUT', '/api/v1/statuses/' . $this->post );
+		$request->set_param( 'status', 'Hallo Welt' );
+		$request->set_param( 'language', 'de' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$this->assertEquals( 'de', $response->get_data()->language );
+		$this->assertEquals( 'de', get_post_meta( $this->post, 'ema_language', true ) );
+	}
+
+	public function test_submit_status_without_language_keeps_stored_language() {
+		update_post_meta( $this->post, 'ema_language', 'fr' );
+
+		$request = $this->api_request( 'PUT', '/api/v1/statuses/' . $this->post );
+		$request->set_param( 'status', 'Salut' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$this->assertEquals( 'fr', $response->get_data()->language );
+	}
+
+	public function test_status_language_filter_replaces_the_storage() {
+		update_post_meta( $this->post, 'ema_language', 'fr' );
+
+		$filter = function ( $language, $post ) {
+			$this->assertEquals( 'fr', $language );
+			$this->assertInstanceOf( \WP_Post::class, $post );
+			return 'es';
+		};
+		add_filter( 'mastodon_api_status_language', $filter, 10, 2 );
+
+		$request  = $this->api_request( 'GET', '/api/v1/statuses/' . $this->post );
+		$response = $this->dispatch_authenticated( $request );
+		remove_filter( 'mastodon_api_status_language', $filter );
+
+		$this->assertEquals( 'es', $response->get_data()->language );
+	}
+
+	public function test_pre_save_status_language_filter_skips_the_meta() {
+		$saved  = array();
+		$filter = function ( $pre, $post_id, $language ) use ( &$saved ) {
+			$saved[ $post_id ] = $language;
+			return true;
+		};
+		add_filter( 'mastodon_api_pre_save_status_language', $filter, 10, 3 );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'Ciao mondo' );
+		$request->set_param( 'language', 'it' );
+		$response = $this->dispatch_authenticated( $request );
+		remove_filter( 'mastodon_api_pre_save_status_language', $filter );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$post_id = $response->get_data()->id;
+		$this->assertEquals( array( $post_id => 'it' ), $saved );
+		$this->assertEmpty( get_post_meta( $post_id, 'ema_language', true ) );
+	}
+
+	public function test_status_language_is_set_when_another_handler_builds_the_status() {
+		update_post_meta( $this->post, 'ema_language', 'fr' );
+
+		// The ActivityPub plugin builds the status itself, before the default handler runs.
+		$builder = function ( $status, $object_id ) {
+			$post               = get_post( $object_id );
+			$status             = new Entity\Status();
+			$status->id         = strval( $object_id );
+			$status->created_at = new \DateTime( $post->post_date_gmt, new \DateTimeZone( 'UTC' ) );
+			$status->visibility = 'public';
+			$status->uri        = get_the_guid( $object_id );
+			$status->url        = get_permalink( $post );
+			$status->content    = $post->post_content;
+			$status->account    = apply_filters( 'mastodon_api_account', null, $post->post_author, null, $post );
+			return $status;
+		};
+		add_filter( 'mastodon_api_status', $builder, 9, 2 );
+
+		$request  = $this->api_request( 'GET', '/api/v1/statuses/' . $this->post );
+		$response = $this->dispatch_authenticated( $request );
+		remove_filter( 'mastodon_api_status', $builder, 9 );
+
+		$this->assertEquals( 'fr', $response->get_data()->language );
 	}
 }

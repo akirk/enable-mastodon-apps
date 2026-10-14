@@ -13,7 +13,7 @@ use OAuth2\Storage\ClientCredentialsInterface;
 /**
  * This class describes a mastodon application storage.
  */
-class MastodonAppStorage implements ClientCredentialsInterface {
+class Mastodon_App_Storage implements ClientCredentialsInterface {
 	public function getClientDetails( $client_id ) {
 		if ( ! $this->has( $client_id ) ) {
 			return false;
@@ -94,15 +94,26 @@ class MastodonAppStorage implements ClientCredentialsInterface {
 		$client = $this->get( $client_id );
 		if ( is_wp_error( $client ) && get_option( 'mastodon_api_auto_app_reregister' ) ) {
 			$term = wp_insert_term( $client_id, Mastodon_App::TAXONOMY );
+			// Use wp_kses to avoid filtering out url-escaped characters.
+			$redirect_uri = isset( $_REQUEST['redirect_uri'] ) ? wp_kses( wp_unslash( $_REQUEST['redirect_uri'] ), array() ) : ''; // phpcs:ignore WordPress.Security.NonceVerification
+			$scope = isset( $_REQUEST['scope'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['scope'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification
 
 			$app_metadata = array(
-				'client_name'   => preg_replace( '/[^a-z0-9-]/', ' ', wp_parse_url( $_REQUEST['redirect_uri'], PHP_URL_HOST ) ) . ' (auto-generated)',
-				'redirect_uris' => array( $_REQUEST['redirect_uri'] ),
-				'scopes'        => $_REQUEST['scope'],
+				'client_name'   => preg_replace( '/[^a-z0-9-]/', ' ', wp_parse_url( $redirect_uri, PHP_URL_HOST ) ) . ' (auto-generated)',
+				'redirect_uris' => array( $redirect_uri ),
+				'scopes'        => $scope,
 			);
 
-			$post_formats = get_option( 'mastodon_api_default_post_formats', array( 'status' ) );
-			$post_formats = apply_filters( 'mastodon_api_new_app_post_formats', $post_formats, $app_metadata );
+			$post_formats = apply_filters( 'mastodon_api_new_app_post_formats', array(), $app_metadata );
+			$app_metadata['query_args'] = array( 'post_formats' => $post_formats );
+
+			$app_metadata['create_post_type'] = get_option( 'mastodon_api_posting_cpt', apply_filters( 'mastodon_api_default_post_type', \Enable_Mastodon_Apps\Mastodon_API::POST_CPT ) );
+			$view_post_types = array( 'post', 'comment' );
+			if ( ! in_array( $app_metadata['create_post_type'], $view_post_types ) ) {
+				$view_post_types[] = $app_metadata['create_post_type'];
+			}
+
+			$app_metadata['view_post_types'] = apply_filters( 'mastodon_api_view_post_types', $view_post_types );
 
 			$term_id = $term['term_id'];
 			foreach ( $app_metadata as $key => $value ) {

@@ -30,16 +30,26 @@ if ( file_exists( $phpunitpolyfills ) ) {
 	require_once $phpunitpolyfills;
 }
 
+// Register ap_outbox post type before Migration::init() (priority 1) to avoid doing_it_wrong notices.
+$_activitypub_plugin = dirname( dirname( __DIR__ ) ) . '/activitypub/activitypub.php';
+if ( ! file_exists( $_activitypub_plugin ) ) {
+	$_activitypub_plugin = dirname( dirname( __DIR__ ) ) . '/wordpress-activitypub/activitypub.php';
+}
+if ( file_exists( $_activitypub_plugin ) ) {
+	tests_add_filter( 'init', array( 'Activitypub\Post_Types', 'register_outbox_post_type' ), 0 );
+}
+unset( $_activitypub_plugin );
+
 /**
  * Manually load the plugin being tested.
  */
 function _manually_load_plugin() {
-	$friends_plugin = dirname( dirname( __DIR__ ) ) . '/friends/friends.php'; // phpcs:ignore
-	$alternate_friends_plugin = dirname( __DIR__ ) . '/friends/friends.php'; // phpcs:ignore
-	if ( file_exists( $friends_plugin ) ) {
-		require $friends_plugin;
-	} elseif ( file_exists( $alternate_friends_plugin ) ) {
-		require $alternate_friends_plugin;
+	$activitypub_plugin = dirname( dirname( __DIR__ ) ) . '/activitypub/activitypub.php'; // phpcs:ignore
+	$activitypub_plugin_alternate = dirname( dirname( __DIR__ ) ) . '/wordpress-activitypub/activitypub.php'; // phpcs:ignore
+	if ( file_exists( $activitypub_plugin ) ) {
+		require $activitypub_plugin;
+	} elseif ( file_exists( $activitypub_plugin_alternate ) ) {
+		require $activitypub_plugin_alternate;
 	}
 
 	require dirname( __DIR__ ) . '/enable-mastodon-apps.php'; // phpcs:ignore
@@ -70,7 +80,7 @@ add_filter(
 add_filter(
 	'http_request_args',
 	function ( $args, $url ) {
-		if ( in_array( parse_url( $url, PHP_URL_HOST ), array( 'me.local', 'friend.local', 'mastodon.local' ) ) ) {
+		if ( in_array( wp_parse_url( $url, PHP_URL_HOST ), array( 'me.local', 'friend.local', 'mastodon.local' ) ) ) {
 			$args['reject_unsafe_urls'] = false;
 		}
 		return $args;
@@ -101,7 +111,7 @@ if ( defined( 'TESTS_VERBOSE' ) && TESTS_VERBOSE ) {
 			if ( is_numeric( $meta_value ) || is_string( $meta_value ) ) {
 				echo $meta_value, PHP_EOL;
 			} else {
-				var_dump( $meta_value );
+				var_dump( $meta_value ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_var_dump
 			}
 		},
 		10,

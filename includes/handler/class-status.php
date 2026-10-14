@@ -1,0 +1,1219 @@
+<?php
+/**
+ * Status handler.
+ *
+ * This contains the default Status handlers.
+ *
+ * @package Enable_Mastodon_Apps
+ */
+
+namespace Enable_Mastodon_Apps\Handler;
+
+use Enable_Mastodon_Apps\Handler\Handler;
+use Enable_Mastodon_Apps\Mastodon_API;
+use Enable_Mastodon_Apps\Mastodon_App;
+use Enable_Mastodon_Apps\Entity\Status as Status_Entity;
+use WP_REST_Response;
+
+/**
+ * This is the class that implements the default handler for all Status endpoints.
+ *
+ * @since 0.7.0
+ *
+ * @package Enable_Mastodon_Apps
+ */
+class Status extends Handler {
+	/**
+	 * The post meta key the language of a status is stored under.
+	 */
+	const LANGUAGE_META_KEY = 'ema_language';
+
+	public function __construct() {
+		$this->register_hooks();
+	}
+
+	protected static function get_line_split_pattern() {
+		return '/(<br>|<br \/>|<\/p>|' . PHP_EOL . ')/i';
+	}
+
+	public function register_hooks() {
+		add_filter( 'mastodon_api_status', array( $this, 'api_status' ), 10, 2 );
+		add_filter( 'mastodon_api_status', array( $this, 'api_status_ensure_numeric_id' ), 100 );
+		add_filter( 'mastodon_api_account_statuses_args', array( $this, 'mastodon_api_account_statuses_args' ), 10, 2 );
+		add_filter( 'mastodon_api_statuses', array( $this, 'api_statuses' ), 10, 4 );
+		add_filter( 'mastodon_api_statuses', array( $this, 'api_statuses_ensure_numeric_id' ), 100 );
+		add_filter( 'mastodon_api_tag_timeline', array( $this, 'api_statuses_ensure_numeric_id' ), 100 );
+		add_filter( 'mastodon_api_submit_status', array( $this, 'api_submit_comment' ), 10, 7 );
+		add_filter( 'mastodon_api_submit_status', array( $this, 'api_submit_post' ), 15, 9 );
+		add_filter( 'mastodon_api_edit_status', array( $this, 'api_edit_comment' ), 10, 8 );
+		add_filter( 'mastodon_api_edit_status', array( $this, 'api_edit_post' ), 15, 10 );
+		add_filter( 'mastodon_api_status_context', array( $this, 'api_status_context' ), 10, 2 );
+		add_action( 'mastodon_api_react', array( $this, 'store_reaction' ), 10, 3 );
+		add_action( 'mastodon_api_unreact', array( $this, 'remove_reaction' ), 10, 3 );
+		add_filter( 'mastodon_api_favourites_args', array( $this, 'favourites_args' ), 10, 2 );
+		add_filter( 'mastodon_api_bookmarks_args', array( $this, 'bookmarks_args' ), 10, 2 );
+	}
+
+	/**
+	 * Get media attachments from blocks. They will be formatted as ActivityPub attachments, not as WP attachments.
+	 * Copied almost verbatim from the ActivityPub plugin.
+	 *
+	 * @param \WP_Post $post The post to get the attachments from.
+	 * @param int      $max_media The maximum number of attachments to return.
+	 *
+	 * @return array The attachments.
+	 */
+	protected function get_block_attachments( \WP_Post $post, int $max_media = 10 ): array {
+		$media_ids = array();
+
+		if ( \function_exists( 'has_post_thumbnail' ) && \has_post_thumbnail( $post->ID ) ) {
+			$thumbnail_id = \get_post_thumbnail_id( $post->ID );
+			if ( $thumbnail_id ) {
+				// The array is keyed by attachment ID, the value is the HTML to be removed from the content.
+				// A featured image is not part of the content, so there is nothing to remove.
+				$media_ids[ $thumbnail_id ] = '';
+			}
+		}
+
+		$blocks = \parse_blocks( $post->post_content );
+		return self::get_media_ids_from_blocks( $blocks, $media_ids, $max_media );
+	}
+	/**
+	 * Recursively get media IDs from blocks.
+	 * Copied almost verbatim from the ActivityPub plugin.
+	 *
+	 * @param array $blocks The blocks to search for media IDs.
+	 * @param array $media_ids The media IDs to append new IDs to.
+	 * @param int   $max_media The maximum number of media to return.
+	 *
+	 * @return array The image IDs.
+	 */
+	protected function get_media_ids_from_blocks( array $blocks, array $media_ids, int $max_media ): array {
+
+		foreach ( $blocks as $block ) {
+			// Recurse into inner blocks.
+			if ( ! empty( $block['innerBlocks'] ) ) {
+				$media_ids = self::get_media_ids_from_blocks( $block['innerBlocks'], $media_ids, $max_media );
+			}
+
+			switch ( $block['blockName'] ) {
+				case 'core/image':
+				case 'core/cover':
+				case 'core/audio':
+				case 'core/video':
+				case 'videopress/video':
+					if ( ! empty( $block['attrs']['id'] ) && self::block_references_attachment( (int) $block['attrs']['id'], $block['innerHTML'] ?? '' ) ) {
+						$media_ids[ $block['attrs']['id'] ] = $block['innerHTML'];
+					}
+					break;
+				case 'jetpack/slideshow':
+				case 'jetpack/tiled-gallery':
+					if ( ! empty( $block['attrs']['ids'] ) ) {
+						foreach ( $block['attrs']['ids'] as $id ) {
+							if ( self::block_references_attachment( (int) $id, $block['innerHTML'] ?? '' ) ) {
+								$media_ids[ $id ] = $block['innerHTML'];
+							}
+						}
+					}
+					break;
+				case 'jetpack/image-compare':
+					if (
+						! empty( $block['attrs']['beforeImageId'] ) &&
+						self::block_references_attachment( (int) $block['attrs']['beforeImageId'], $block['innerHTML'] ?? '' )
+					) {
+						$media_ids[ $block['attrs']['beforeImageId'] ] = $block['innerHTML'];
+					}
+					if (
+						! empty( $block['attrs']['afterImageId'] ) &&
+						self::block_references_attachment( (int) $block['attrs']['afterImageId'], $block['innerHTML'] ?? '' )
+					) {
+						$media_ids[ $block['attrs']['afterImageId'] ] = $block['innerHTML'];
+					}
+					break;
+			}
+
+			if ( count( $media_ids ) >= $max_media ) {
+				break;
+			}
+		}
+
+		// Still need to slice it because one gallery could knock us over the limit.
+		return array_slice( $media_ids, 0, $max_media, true );
+	}
+
+	/**
+	 * Check whether a block's rendered media source belongs to an attachment ID.
+	 *
+	 * @param int    $attachment_id The media attachment ID.
+	 * @param string $html The block HTML.
+	 * @return bool Whether the block references the attachment.
+	 */
+	private static function block_references_attachment( int $attachment_id, string $html ): bool {
+		if ( ! $attachment_id || ! get_post( $attachment_id ) ) {
+			return false;
+		}
+
+		$sources = self::get_media_sources_from_html( $html );
+		if ( empty( $sources ) ) {
+			return true;
+		}
+
+		$filenames = self::get_attachment_filenames( $attachment_id );
+		if ( empty( $filenames ) ) {
+			return false;
+		}
+
+		foreach ( $sources as $source ) {
+			$parts = wp_parse_url( html_entity_decode( $source, ENT_QUOTES ) );
+			if ( empty( $parts['path'] ) ) {
+				continue;
+			}
+
+			if ( in_array( rawurldecode( wp_basename( $parts['path'] ) ), $filenames, true ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Extract media sources from a block's rendered HTML.
+	 *
+	 * @param string $html The block HTML.
+	 * @return array The media source URLs.
+	 */
+	private static function get_media_sources_from_html( string $html ): array {
+		$sources = array();
+
+		if ( preg_match_all( '/\s(?:src|href|poster)=([\'"])(?P<src>.*?)\1/i', $html, $matches ) ) {
+			$sources = array_merge( $sources, $matches['src'] );
+		}
+
+		if ( preg_match_all( '/url\(([\'"]?)(?P<src>[^)\'"]+)\1\)/i', $html, $matches ) ) {
+			$sources = array_merge( $sources, $matches['src'] );
+		}
+
+		return array_values( array_unique( array_filter( $sources ) ) );
+	}
+
+	/**
+	 * Get the known filenames for an attachment and its generated sizes.
+	 *
+	 * @param int $attachment_id The media attachment ID.
+	 * @return array The attachment filenames.
+	 */
+	private static function get_attachment_filenames( int $attachment_id ): array {
+		$filenames = array();
+		$url       = wp_get_attachment_url( $attachment_id );
+		$meta      = wp_get_attachment_metadata( $attachment_id );
+
+		if ( $url ) {
+			$parts = wp_parse_url( $url );
+			if ( ! empty( $parts['path'] ) ) {
+				$filenames[] = rawurldecode( wp_basename( $parts['path'] ) );
+			}
+		}
+
+		if ( ! empty( $meta['file'] ) ) {
+			$filenames[] = wp_basename( $meta['file'] );
+		}
+
+		if ( ! empty( $meta['sizes'] ) && is_array( $meta['sizes'] ) ) {
+			foreach ( $meta['sizes'] as $size ) {
+				if ( ! empty( $size['file'] ) ) {
+					$filenames[] = $size['file'];
+				}
+			}
+		}
+
+		return array_values( array_unique( $filenames ) );
+	}
+
+	/**
+	 * Get a status array.
+	 *
+	 * @param Status_Entity $status Current status array.
+	 * @param int           $object_id The object ID to get the status from.
+	 * @return Status_Entity The status entity
+	 */
+	public function api_status( ?Status_Entity $status, int $object_id ): ?Status_Entity {
+		if ( $status instanceof Status_Entity ) {
+			// Another handler, e.g. the ActivityPub plugin, built the status already.
+			$this->add_reaction_data( $status, $object_id );
+			if ( null === $status->language ) {
+				$post = get_post( $object_id );
+				if ( $post instanceof \WP_Post ) {
+					$status->language = self::get_post_language( $post );
+				}
+			}
+			return $status;
+		}
+
+		$post = get_post( $object_id );
+
+		if ( $post && Mastodon_API::ANNOUNCE_CPT === $post->post_type ) {
+			$meta = get_post_meta( $post->ID, 'ema_app_id', true );
+			$app = Mastodon_App::get_current_app();
+			if ( $meta && ( ! $app || $app->get_client_id() !== $meta ) ) {
+				return null;
+			}
+
+			// translators: %s: settings page URL.
+			$post->post_content = trim( $post->post_content ) .
+				'<br>' . PHP_EOL . '<br>' . PHP_EOL .
+				// translators: %s: settings page URL.
+				sprintf( __( 'This message has been added by the EMA plugin. You can disable these messages <a href=%s>in the settings</a>.', 'enable-mastodon-apps' ), '"' . esc_url( admin_url( 'options-general.php?page=enable-mastodon-apps&tab=settings' ) ) . '"' );
+			if ( $app ) {
+				// translators: %s: settings page URL.
+				$post->post_content .= ' ' . sprintf( __( 'Change the <a href=%s>settings for this app here</a>.', 'enable-mastodon-apps' ), '"' . esc_url( admin_url( 'options-general.php?page=enable-mastodon-apps&app=' . $app->get_client_id() ) ) . '"' );
+			}
+		}
+
+		if ( $post instanceof \WP_Post ) {
+			// Documented in class-mastodon-api.php.
+			$account = apply_filters( 'mastodon_api_account', null, $post->post_author, null, $post );
+
+			if ( ! ( $account instanceof \Enable_Mastodon_Apps\Entity\Account ) ) {
+				return $status;
+			}
+			$status             = new Status_Entity();
+			$status->id         = strval( $post->ID );
+			$status->created_at = new \DateTime( $post->post_date_gmt, new \DateTimeZone( 'UTC' ) );
+			$status->visibility = 'public';
+			if ( strpos( $post->post_type, 'ema-dm-' ) === 0 ) {
+				$status->visibility = 'direct';
+			}
+			$status->uri        = get_the_guid( $post->ID );
+			$status->url        = get_permalink( $post );
+			$status->content    = $post->post_content;
+			if ( ! empty( $post->post_title ) && trim( $post->post_title ) ) {
+				if ( post_type_supports( $post->post_type, 'title' ) ) {
+					$status->content = '<strong>' . esc_html( $post->post_title ) . '</strong>' . PHP_EOL . $status->content;
+				} else {
+					// Posts created by an app before the title split was disabled still carry a
+					// title. Keep the text (it can be the entire status) but don't render it bold.
+					$status->content = esc_html( $post->post_title ) . PHP_EOL . $status->content;
+				}
+			}
+			$status->account    = $account;
+			$media_attachments  = $this->get_block_attachments( $post );
+			foreach ( $media_attachments as $media_id => $html ) {
+				$media_attachment = apply_filters( 'mastodon_api_media_attachment', null, $media_id );
+				if ( $media_attachment ) {
+					if ( $html ) {
+						// We don't want to show the media in the content as they are attachments.
+						$status->content = str_replace( $html, '', $status->content );
+					}
+					$status->media_attachments[] = $media_attachment;
+				}
+			}
+			$status->content = trim( wp_kses_post( $status->content ) );
+			$status->language = self::get_post_language( $post );
+			$this->add_reaction_data( $status, $post->ID );
+		}
+
+		return $status;
+	}
+
+	/**
+	 * Get the language of a post as an ISO 639 language code.
+	 *
+	 * The language an app submitted along with the status is stored as post meta.
+	 * Multilingual plugins keep the language elsewhere, they can replace the storage
+	 * through the filter. A post that has no language falls back to the site language.
+	 *
+	 * @param \WP_Post $post The post.
+	 * @return string The language code.
+	 */
+	public static function get_post_language( \WP_Post $post ): string {
+		$language = get_post_meta( $post->ID, self::LANGUAGE_META_KEY, true );
+
+		/**
+		 * Filter the language of a status.
+		 *
+		 * Allows replacing where the language of a post is read from, e.g. a multilingual
+		 * plugin that keeps its own record of a post's language.
+		 *
+		 * @param string|null $language The stored ISO 639 language code, null when the post has none.
+		 * @param \WP_Post    $post     The post the status is created from.
+		 * @return string|null The language code, null to fall back to the site language.
+		 */
+		$language = apply_filters( 'mastodon_api_status_language', $language ? $language : null, $post );
+
+		if ( ! $language ) {
+			$language = self::locale_to_language( get_locale() );
+		}
+
+		return $language;
+	}
+
+	/**
+	 * Reduce a WordPress locale to the language code Mastodon expects.
+	 *
+	 * @param string $locale The locale, e.g. de_DE.
+	 * @return string The ISO 639 language code, e.g. de.
+	 */
+	public static function locale_to_language( string $locale ): string {
+		$parts = preg_split( '/[_-]/', $locale );
+		return $parts[0] ? $parts[0] : 'en';
+	}
+
+	/**
+	 * Store the language an app submitted along with a status.
+	 *
+	 * @param int   $post_id  The post ID.
+	 * @param mixed $language The ISO 639 language code the app submitted, null when it sent none.
+	 */
+	private static function save_post_language( int $post_id, $language ) {
+		if ( ! is_string( $language ) || '' === $language ) {
+			return;
+		}
+
+		$language = preg_replace( '/[^a-zA-Z_-]/', '', $language );
+		if ( ! $language ) {
+			return;
+		}
+
+		/**
+		 * Short-circuit storing the language of a status.
+		 *
+		 * Allows replacing where the language of a post is stored, e.g. a multilingual
+		 * plugin that keeps its own record of a post's language. Return true when the
+		 * language has been stored elsewhere, so it is not stored as post meta.
+		 *
+		 * @param bool   $stored   Whether the language has been stored. Default false.
+		 * @param int    $post_id  The post ID.
+		 * @param string $language The ISO 639 language code the app submitted.
+		 * @return bool Whether the language has been stored elsewhere.
+		 */
+		if ( apply_filters( 'mastodon_api_pre_save_status_language', false, $post_id, $language ) ) {
+			return;
+		}
+
+		update_post_meta( $post_id, self::LANGUAGE_META_KEY, $language );
+	}
+
+	private static function is_reaction_action( $action ) {
+		return in_array( $action, array( 'favourite', 'bookmark' ), true );
+	}
+
+	private static function get_reaction_term_slug( $user_id, $action ) {
+		return sanitize_key( $action . '-user-' . intval( $user_id ) );
+	}
+
+	private static function get_reaction_term( $user_id, $action, $create = false, $reaction = '' ) {
+		if ( ! $user_id || ! self::is_reaction_action( $action ) ) {
+			return null;
+		}
+
+		$slug = self::get_reaction_term_slug( $user_id, $action );
+		$term = get_term_by( 'slug', $slug, Mastodon_API::REACTION_TAXONOMY );
+		if ( $term || ! $create ) {
+			return $term;
+		}
+
+		$inserted = wp_insert_term(
+			sprintf( '%s user %d', $action, $user_id ),
+			Mastodon_API::REACTION_TAXONOMY,
+			array(
+				'slug' => $slug,
+			)
+		);
+		if ( is_wp_error( $inserted ) || empty( $inserted['term_id'] ) ) {
+			return null;
+		}
+
+		update_term_meta( $inserted['term_id'], 'action', $action );
+		update_term_meta( $inserted['term_id'], 'reaction', $reaction );
+		update_term_meta( $inserted['term_id'], 'user_id', intval( $user_id ) );
+
+		return get_term( $inserted['term_id'], Mastodon_API::REACTION_TAXONOMY );
+	}
+
+	public function store_reaction( $post_id, $reaction, $action = 'favourite' ) {
+		$term = self::get_reaction_term( get_current_user_id(), $action, true, $reaction );
+		if ( ! $term ) {
+			return;
+		}
+
+		wp_set_object_terms( intval( $post_id ), array( intval( $term->term_id ) ), Mastodon_API::REACTION_TAXONOMY, true );
+	}
+
+	public function remove_reaction( $post_id, $reaction, $action = 'favourite' ) {
+		$term = self::get_reaction_term( get_current_user_id(), $action );
+		if ( ! $term ) {
+			return;
+		}
+
+		wp_remove_object_terms( intval( $post_id ), array( intval( $term->term_id ) ), Mastodon_API::REACTION_TAXONOMY );
+	}
+
+	private function has_reaction( $post_id, $user_id, $action ) {
+		$term = self::get_reaction_term( $user_id, $action );
+		if ( ! $term ) {
+			return false;
+		}
+
+		return has_term( intval( $term->term_id ), Mastodon_API::REACTION_TAXONOMY, $post_id );
+	}
+
+	private function count_reactions( $post_id, $action ) {
+		$terms = get_the_terms( $post_id, Mastodon_API::REACTION_TAXONOMY );
+		if ( ! is_array( $terms ) ) {
+			return 0;
+		}
+
+		$count = 0;
+		foreach ( $terms as $term ) {
+			if ( get_term_meta( $term->term_id, 'action', true ) === $action ) {
+				++$count;
+			}
+		}
+		return $count;
+	}
+
+	private function add_reaction_data( Status_Entity $status, $post_id ) {
+		$user_id = get_current_user_id();
+		if ( $user_id ) {
+			$status->favourited = $this->has_reaction( $post_id, $user_id, 'favourite' );
+			$status->bookmarked = $this->has_reaction( $post_id, $user_id, 'bookmark' );
+		}
+
+		$status->favourites_count = $this->count_reactions( $post_id, 'favourite' );
+	}
+
+	private function reaction_args( $args, $user_id, $action ) {
+		$term = self::get_reaction_term( $user_id, $action );
+		if ( ! $term ) {
+			return array();
+		}
+
+		if ( ! isset( $args['tax_query'] ) || ! is_array( $args['tax_query'] ) ) {
+			$args['tax_query'] = array(); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+		}
+		$args['tax_query'][] = array(
+			'taxonomy' => Mastodon_API::REACTION_TAXONOMY,
+			'field'    => 'term_id',
+			'terms'    => array( intval( $term->term_id ) ),
+		);
+
+		return $args;
+	}
+
+	public function favourites_args( $args, $user_id ) {
+		return $this->reaction_args( $args, $user_id, 'favourite' );
+	}
+
+	public function bookmarks_args( $args, $user_id ) {
+		return $this->reaction_args( $args, $user_id, 'bookmark' );
+	}
+
+	/**
+	 * Get a list of statuses.
+	 *
+	 * @param array|null $statuses Current statuses.
+	 * @param array      $args Current statuses arguments.
+	 * @param int|null   $min_id Optional minimum status ID.
+	 * @param int|null   $max_id Optional maximum status ID.
+	 * @return WP_REST_Response The statuses as a REST response.
+	 */
+	public function api_statuses( ?array $statuses, array $args, ?int $min_id = null, ?int $max_id = null ): WP_REST_Response {
+		if ( $statuses ) {
+			if ( ! $statuses instanceof WP_REST_Response ) {
+				$statuses = new WP_REST_Response( array_values( $statuses ) );
+			}
+			return $statuses;
+		}
+
+		return $this->get_posts( $args, $min_id, $max_id );
+	}
+
+	public function mastodon_api_account_statuses_args( $args, $request ) {
+		return $this->get_posts_query_args( $args, $request );
+	}
+
+	public function api_statuses_ensure_numeric_id( $statuses ) {
+		$response = null;
+		if ( $statuses instanceof WP_REST_Response ) {
+			$response = $statuses;
+			$statuses = $response->data;
+		}
+		if ( ! is_array( $statuses ) ) {
+			return $statuses;
+		}
+
+		foreach ( $statuses as $k => $status ) {
+			$statuses[ $k ] = $this->api_status_ensure_numeric_id( $status );
+		}
+
+		if ( $response ) {
+			$response->data = $statuses;
+			return $response;
+		}
+
+		return $statuses;
+	}
+
+	public static function convert_to_blocks( $post_content ) {
+		$post_content = preg_split( self::get_line_split_pattern(), $post_content );
+		$post_content = array_map( 'trim', $post_content );
+		$post_content = array_map(
+			function ( $el ) {
+				$el = preg_replace( '/^<p>/i', '', $el );
+				$el = preg_replace( '/<\/p>$/i', '', $el );
+				return $el;
+			},
+			$post_content
+		);
+		$post_content = array_filter( $post_content );
+		if ( empty( $post_content ) ) {
+			return '';
+		}
+		$post_content = '<!-- wp:paragraph -->' . PHP_EOL . '<p>' . implode( '</p>' . PHP_EOL . '<!-- /wp:paragraph -->' . PHP_EOL . PHP_EOL . '<!-- wp:paragraph -->' . PHP_EOL . '<p>', $post_content ) . '</p>' . PHP_EOL . '<!-- /wp:paragraph -->';
+		return $post_content;
+	}
+
+	public static function extract_first_line( $post_content ) {
+		$post_content_parts = preg_split( self::get_line_split_pattern(), $post_content, 2 );
+		if ( empty( $post_content_parts ) ) {
+			return '';
+		}
+
+		return trim( wp_strip_all_tags( $post_content_parts[0] ) );
+	}
+
+	/**
+	 * The ActivityPub content visibility that corresponds to Mastodon's "unlisted".
+	 *
+	 * @return string The visibility value.
+	 */
+	private static function get_quiet_public_visibility(): string {
+		return defined( 'ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC' ) ? ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC : 'quiet_public';
+	}
+
+	/**
+	 * Whether a status mentions somebody on the Fediverse.
+	 *
+	 * @param string $text The status text as it was submitted by the app.
+	 * @return bool Whether the text contains an @user@domain mention.
+	 */
+	private static function contains_mention( string $text ): bool {
+		$username_pattern = defined( 'ACTIVITYPUB_USERNAME_REGEXP' ) ? ACTIVITYPUB_USERNAME_REGEXP : '(?:[A-Za-z0-9\._-]+@(?:[A-Za-z0-9_-]+\.)+[A-Za-z]+)';
+
+		return 1 === preg_match( '/@' . $username_pattern . '/i', $text );
+	}
+
+	/**
+	 * Render the ActivityPub reply block for a status on another server.
+	 *
+	 * @param string $url The URL of the status that is being replied to.
+	 * @return string The block markup, or an empty string without the ActivityPub plugin.
+	 */
+	private static function render_reply_block( string $url ): string {
+		if ( ! defined( 'ACTIVITYPUB_PLUGIN_VERSION' ) ) {
+			return '';
+		}
+
+		$attributes = array(
+			'url'       => $url,
+			'embedPost' => false,
+		);
+
+		return '<!-- wp:activitypub/reply ' . wp_json_encode( $attributes ) . ' /-->' . PHP_EOL . PHP_EOL;
+	}
+
+	private static function get_attachment_description( int $media_id ): string {
+		return trim( wp_strip_all_tags( get_post_field( 'post_excerpt', $media_id ) ) );
+	}
+
+	private static function render_image_figure( int $media_id, string $image_attributes = '' ): string {
+		$description = self::get_attachment_description( $media_id );
+		$html        = '<figure class="wp-block-image"><img src="' . esc_url( wp_get_attachment_url( $media_id ) ) . '" alt="' . esc_attr( $description ) . '" class="wp-image-' . esc_attr( $media_id ) . '"' . $image_attributes . '/>';
+
+		if ( '' !== $description ) {
+			$html .= '<figcaption class="wp-element-caption">' . esc_html( $description ) . '</figcaption>';
+		}
+
+		$html .= '</figure>';
+
+		return $html;
+	}
+
+	private static function maybe_set_featured_image( int $post_id, $media_ids, Mastodon_App $app ): void {
+		if ( ! $app->get_featured_image() || empty( $media_ids ) || ! post_type_supports( get_post_type( $post_id ), 'thumbnail' ) ) {
+			return;
+		}
+
+		foreach ( $media_ids as $media_id ) {
+			$media_id = absint( $media_id );
+			if ( $media_id && wp_attachment_is( 'image', $media_id ) ) {
+				set_post_thumbnail( $post_id, $media_id );
+				return;
+			}
+		}
+	}
+
+	public function prepare_post_data( $post_id, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at ) {
+		$post_data = array();
+
+		if ( $post_id ) {
+			$post_data['ID'] = $post_id;
+		}
+		$app = Mastodon_App::get_current_app();
+
+		// Keep what the app actually submitted around: integrations rewrite mentions into
+		// links, so the filtered text is no longer a reliable place to look for them.
+		$submitted_status_text = $status_text;
+
+		/**
+		 * Allow modifying the status text before it gets posted.
+		 *
+		 * @param string $status The user submitted status text.
+		 * @param int|null $in_reply_to_id The ID of the post to reply to.
+		 * @param string $visibility The visibility of the post.
+		 * @return string The potentially modified status text.
+		 */
+		$status_text = apply_filters( 'mastodon_api_submit_status_text', $status_text, $in_reply_to_id, $visibility );
+
+		$post_data['post_content'] = make_clickable( $status_text );
+		$post_data['post_type']    = $app->get_create_post_type();
+
+		switch ( $visibility ) {
+			case 'public':
+				$post_data['post_status'] = 'publish';
+				break;
+
+			case 'unlisted':
+				// Unlisted is still federated, it is only kept out of the public timelines.
+				// WordPress has no post status for that, so the post is published and the
+				// ActivityPub plugin is asked to address it quietly.
+				$post_data['post_status'] = 'publish';
+				$post_data['meta_input']['activitypub_content_visibility'] = self::get_quiet_public_visibility();
+				break;
+
+			case 'direct':
+				$post_data['post_status'] = 'ema_unread';
+				$post_data['post_type'] = Mastodon_API::get_dm_cpt();
+				break;
+
+			default:
+				// Followers-only posts stay private: WordPress does not federate them and
+				// ActivityPub has no followers-only audience to map them onto.
+				$post_data['post_status'] = 'private';
+				break;
+		}
+
+		$post_data['post_title'] = '';
+
+		if ( ! $post_format || 'standard' === $post_format ) {
+			// Only split the first line off as a title if the post type actually supports one.
+			// The default ema-post CPT (and the DM CPT) don't, so the title would be invisible
+			// in WordPress and only come back to the app as a bold first line.
+			// Only the text that would become the title matters: the ActivityPub plugin reads
+			// the content and the excerpt to work out whom to address, never the title, so a
+			// mention that ends up there is never delivered to the person it names. A mention
+			// further down the status is in no danger and the post still gets its title. The
+			// submitted text is what gets checked, since integrations rewrite mentions above.
+			$submitted_parts = preg_split( self::get_line_split_pattern(), $submitted_status_text, 2 );
+			if ( post_type_supports( $post_data['post_type'], 'title' ) && ! self::contains_mention( $submitted_parts[0] ) ) {
+				$post_content_parts = preg_split( self::get_line_split_pattern(), $status_text, 2 );
+				if ( count( $post_content_parts ) === 2 ) {
+					$post_data['post_title']   = wp_strip_all_tags( $post_content_parts[0] );
+					$post_data['post_content'] = trim( $post_content_parts[1] );
+				} elseif ( ! empty( $media_ids ) ) {
+					$post_data['post_title']   = wp_strip_all_tags( $status_text );
+					$post_data['post_content'] = '';
+				}
+			}
+
+			if ( $app->get_first_line_as_excerpt() && ! empty( $post_data['post_content'] ) ) {
+				$post_data['post_excerpt'] = self::extract_first_line( $post_data['post_content'] );
+			}
+		}
+
+		if ( ! $app->get_disable_blocks() ) {
+			$post_data['post_content'] = self::convert_to_blocks( $post_data['post_content'] );
+		}
+
+		if ( $in_reply_to_id ) {
+			if ( is_numeric( $in_reply_to_id ) ) {
+				$post_data['post_parent'] = $in_reply_to_id;
+			} else {
+				// Our own fallback, applied while the activity is being serialized. It sets
+				// inReplyTo, but by then the audience of the object has already been worked
+				// out, so the author of the post being replied to is not addressed.
+				$post_data['meta_input']['activitypub_in_reply_to'] = $in_reply_to_id;
+
+				// A reply block is what the ActivityPub plugin reads natively while it builds
+				// the object, so the author of the replied-to post ends up in the audience and
+				// is notified about the reply.
+				if ( ! $app->get_disable_blocks() ) {
+					$post_data['post_content'] = self::render_reply_block( $in_reply_to_id ) . $post_data['post_content'];
+				}
+			}
+		}
+
+		if ( $scheduled_at ) {
+			$post_data['post_status'] = 'future';
+			$post_data['post_date']   = $scheduled_at;
+		}
+
+		if ( ! empty( $media_ids ) ) {
+			foreach ( $media_ids as $media_id ) {
+				$media = get_post( $media_id );
+				if ( ! $media ) {
+					return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Media not found', array( 'status' => 400 ) );
+				}
+				if ( 'attachment' !== $media->post_type ) {
+					return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Media not found', array( 'status' => 400 ) );
+				}
+				$attachment = \wp_get_attachment_metadata( $media_id );
+				if ( \wp_attachment_is( 'image', $media_id ) ) {
+					$post_data['post_content'] .= PHP_EOL;
+					$meta_json                  = array(
+						'id'       => intval( $media_id ),
+						'sizeSlug' => 'large',
+					);
+					$post_data['post_content'] .= '<!-- wp:image ' . wp_json_encode( $meta_json ) . ' -->' . PHP_EOL;
+					$post_data['post_content'] .= self::render_image_figure( (int) $media_id ) . PHP_EOL;
+					$post_data['post_content'] .= '<!-- /wp:image -->' . PHP_EOL;
+				} elseif ( \wp_attachment_is( 'video', $media_id ) ) {
+					$post_data['post_content'] .= PHP_EOL;
+					$post_data['post_content'] .= '<!-- wp:video ' . wp_json_encode( array( 'id' => $media_id ) ) . '  -->' . PHP_EOL;
+					$post_data['post_content'] .= '<figure class="wp-block-video"><video controls src="' . esc_url( wp_get_attachment_url( $media_id ) ) . '" width="' . esc_attr( $attachment['width'] ) . '" height="' . esc_attr( $attachment['height'] ) . '" /></figure>' . PHP_EOL;
+					$post_data['post_content'] .= '<!-- /wp:video -->' . PHP_EOL;
+				}
+			}
+		}
+
+		if ( ! $post_id ) {
+			foreach ( array(
+				'category' => 'post_category',
+				'post_tag' => 'tags_input',
+			) as $taxonomy => $field ) {
+				if ( ! is_object_in_taxonomy( $post_data['post_type'], $taxonomy ) ) {
+					continue;
+				}
+				$terms = get_terms(
+					array(
+						'taxonomy'   => $taxonomy,
+						'hide_empty' => false,
+					)
+				);
+				if ( is_wp_error( $terms ) ) {
+					continue;
+				}
+				foreach ( $terms as $term ) {
+					// Match the submitted text before integrations turn hashtags into links.
+					$pattern = '/(?<![\\p{L}\\p{N}\\p{M}_\\/#])#' . preg_quote( $term->name, '/' ) . '(?![\\p{L}\\p{N}\\p{M}_])/iu';
+					if ( preg_match( $pattern, $submitted_status_text ) ) {
+						$post_data[ $field ][] = (int) $term->term_id;
+					}
+				}
+			}
+		}
+
+		/**
+		 * Allow modifying the post data before it gets inserted or updated.
+		 *
+		 * @param array        $post_data      The post data for wp_insert_post() or wp_update_post().
+		 * @param string       $status_text    The user submitted status text after filtering.
+		 * @param int|string|null $in_reply_to_id The ID of the status to reply to.
+		 * @param array        $media_ids      The media attachment IDs.
+		 * @param string       $post_format    The post format to create.
+		 * @param string       $visibility     The requested status visibility.
+		 * @param string|null  $scheduled_at   The scheduled post date.
+		 * @param int|null     $post_id        The post ID when updating.
+		 * @param Mastodon_App $app            The app creating or updating the post.
+		 * @return array The potentially modified post data.
+		 */
+		$post_data = apply_filters( 'mastodon_api_submit_post_data', $post_data, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at, $post_id, $app );
+
+		return $post_data;
+	}
+
+	public function api_submit_post( $status, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at, $request = null, $language = null ) {
+		if (
+			$status instanceof \WP_Error // An error was thrown in an earlier hook.
+			|| $status instanceof Status_Entity // A status was already saved in an earlier hook.
+		) {
+			return $status;
+		}
+
+		$mentions = array();
+		if ( 'direct' === $visibility ) {
+			preg_match_all( '/@(?:[a-zA-Z0-9_@.-]+)/', $status_text, $matches );
+			foreach ( $matches[0] as $match ) {
+				$user = get_user_by( 'login', ltrim( $match, '@' ) );
+				if ( $user ) {
+					$mentions[] = $user->ID;
+				}
+			}
+
+			if ( empty( $mentions ) ) {
+				return new \WP_Error( 'mastodon_' . __FUNCTION__, 'No mentions found', array( 'status' => 400 ) );
+			}
+		}
+
+		$post_data = $this->prepare_post_data( null, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at );
+
+		$post_id = wp_insert_post( $post_data );
+		if ( is_wp_error( $post_id ) ) {
+			return $post_id;
+		}
+		self::maybe_set_featured_image( $post_id, $media_ids, Mastodon_App::get_current_app() );
+
+		if ( 'direct' === $visibility ) {
+			$dm_post_ids = array( $post_data['post_type'] => $post_id );
+
+			if ( ! empty( $post_data['post_parent'] ) ) {
+				$dm_ids = get_post_meta( $post_data['post_parent'], 'ema_dm_ids', true );
+			}
+
+			foreach ( $mentions as $mention_user_id ) {
+				$post_data['post_type'] = Mastodon_API::get_dm_cpt( $mention_user_id );
+				if ( isset( $dm_ids[ $post_data['post_type'] ] ) ) {
+					$post_data['post_parent'] = $dm_ids[ $post_data['post_type'] ];
+				} else {
+					unset( $post_data['post_parent'] );
+				}
+				$dm_id = wp_insert_post( $post_data );
+				if ( is_wp_error( $dm_id ) ) {
+					return $dm_id;
+				}
+
+				$dm_post_ids[ $post_data['post_type'] ] = $dm_id;
+			}
+
+			foreach ( $dm_post_ids as $dm_post_id ) {
+				if ( $post_format && 'standard' !== $post_format ) {
+					set_post_format( $dm_post_id, $post_format );
+				}
+				update_post_meta( $dm_post_id, 'ema_dm_ids', $dm_post_ids );
+				self::save_post_language( $dm_post_id, $language );
+			}
+		} else {
+			if ( $post_format && 'standard' !== $post_format ) {
+				set_post_format( $post_id, $post_format );
+			}
+			self::save_post_language( $post_id, $language );
+		}
+
+		if ( ! empty( $media_ids ) ) {
+			foreach ( $media_ids as $media_id ) {
+				wp_update_post(
+					array(
+						'ID'          => $media_id,
+						'post_parent' => $post_id,
+					)
+				);
+			}
+		}
+
+		if ( $scheduled_at ) {
+			return array(
+				'id'           => $post_id,
+				'scheduled_at' => $scheduled_at,
+				'params'       => array(
+					'text'         => $status,
+					'visibility'   => $visibility,
+					'scheduled_at' => $scheduled_at,
+				),
+			);
+		}
+
+		/**
+		 * Modify the status data.
+		 *
+		 * @param Entity\Status|null $status  The status data.
+		 * @param int                $post_id The object ID to get the status from.
+		 * @param array              $data    Additional status data.
+		 * @return Entity\Status|null The modified status data.
+		 */
+		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
+
+		return $status;
+	}
+
+	public function api_edit_post( $status, $post_id, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at, $request = null, $language = null ) {
+		if ( $status instanceof \WP_Error || $status instanceof Status_Entity ) {
+			return $status;
+		}
+
+		$post = get_post( $post_id );
+		if ( ! $post ) {
+			return $status;
+		}
+
+		$post_data = $this->prepare_post_data( $post_id, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at );
+
+		$post_id = wp_update_post( $post_data );
+		if ( is_wp_error( $post_id ) ) {
+			return $post_id;
+		}
+		self::maybe_set_featured_image( $post_id, $media_ids, Mastodon_App::get_current_app() );
+
+		if ( 'standard' !== $post_format ) {
+			set_post_format( $post_id, $post_format );
+		}
+		self::save_post_language( $post_id, $language );
+
+		if ( ! empty( $media_ids ) ) {
+			foreach ( $media_ids as $media_id ) {
+				wp_update_post(
+					array(
+						'ID'          => $media_id,
+						'post_parent' => $post_id,
+					)
+				);
+			}
+		}
+
+		if ( $scheduled_at ) {
+			return array(
+				'id'           => $post_id,
+				'scheduled_at' => $scheduled_at,
+				'params'       => array(
+					'text'         => $status,
+					'visibility'   => $visibility,
+					'scheduled_at' => $scheduled_at,
+				),
+			);
+		}
+
+		/**
+		 * Modify the status data.
+		 *
+		 * @param Entity\Status|null $status  The status data.
+		 * @param int                $post_id The object ID to get the status from.
+		 * @param array              $data    Additional status data.
+		 * @return Entity\Status|null The modified status data.
+		 */
+		$status = apply_filters( 'mastodon_api_status', null, $post_id, array() );
+
+		return $status;
+	}
+
+	public function api_submit_comment( $status, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at ) {
+		if (
+			$status instanceof \WP_Error // An error was thrown in an earlier hook.
+			|| $status instanceof Status_Entity // A status was already saved in an earlier hook.
+			|| ! $in_reply_to_id // A non-reply should be a post.
+			|| 'direct' === $visibility // But a reply that's a DM should also be a post.
+		) {
+			return $status;
+		}
+		$comment_data = array();
+		$comment_data['comment_content']  = $status_text;
+		$comment_data['comment_parent']   = 0;
+
+		$parent_comment = get_comment( $in_reply_to_id );
+		if ( $parent_comment ) {
+			$comment_data['comment_post_ID'] = $parent_comment->comment_post_ID;
+			$comment_data['comment_parent'] = $in_reply_to_id;
+		} else {
+			$comment_data['comment_post_ID'] = $in_reply_to_id;
+		}
+
+		$comment_data['comment_author']   = '';
+		$comment_data['user_id']          = get_current_user_id();
+		$comment_data['comment_approved'] = 1;
+
+		if ( ! $comment_data['comment_post_ID'] || ! get_post( $comment_data['comment_post_ID'] ) ) {
+			return $status;
+		}
+
+		if ( ! empty( $media_ids ) ) {
+			foreach ( $media_ids as $media_id ) {
+				$media = get_post( $media_id );
+				if ( ! $media ) {
+					return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Media not found', array( 'status' => 400 ) );
+				}
+				if ( 'attachment' !== $media->post_type ) {
+					return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Media not found', array( 'status' => 400 ) );
+				}
+				$attachment                       = \wp_get_attachment_metadata( $media_id );
+				$comment_data['comment_content'] .= PHP_EOL;
+				$comment_data['comment_content'] .= '<!-- wp:image -->';
+				$comment_data['comment_content'] .= self::render_image_figure( (int) $media_id, ' width="' . esc_attr( $attachment['width'] ) . '" height="' . esc_attr( $attachment['height'] ) . '"' );
+				$comment_data['comment_content'] .= '<!-- /wp:image -->';
+			}
+		}
+
+		$comment_id = wp_insert_comment( $comment_data );
+
+		/**
+		 * Modify the status data.
+		 *
+		 * @param Entity\Status|null $status  The status data.
+		 * @param int                $post_id The object ID to get the status from.
+		 * @param array              $data    Additional status data.
+		 * @return Entity\Status|null The modified status data.
+		 */
+		$status = apply_filters(
+			'mastodon_api_status',
+			null,
+			$in_reply_to_id,
+			array(
+				'comment' => get_comment( $comment_id ),
+			)
+		);
+
+		return $status;
+	}
+
+	public function api_edit_comment( $status, $comment_id, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at ) {
+		if ( $status instanceof \WP_Error || $status instanceof Status_Entity || ! $in_reply_to_id ) {
+			return $status;
+		}
+		$comment = get_comment( $comment_id );
+		if ( ! $comment ) {
+			return $status;
+		}
+
+		$comment_data = array();
+		$comment_data['comment_content']  = $status_text;
+
+		$parent_comment = get_comment( $in_reply_to_id );
+		if ( $parent_comment ) {
+			$comment_data['comment_post_ID'] = $parent_comment->comment_post_ID;
+			$comment_data['comment_parent'] = $in_reply_to_id;
+		} else {
+			$comment_data['comment_post_ID'] = $in_reply_to_id;
+		}
+
+		$comment_data['comment_author']   = get_current_user_id();
+		$comment_data['user_id']          = get_current_user_id();
+		$comment_data['comment_approved'] = 1;
+
+		if ( ! empty( $media_ids ) ) {
+			foreach ( $media_ids as $media_id ) {
+				$media = get_post( $media_id );
+				if ( ! $media ) {
+					return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Media not found', array( 'status' => 400 ) );
+				}
+				if ( 'attachment' !== $media->post_type ) {
+					return new \WP_Error( 'mastodon_' . __FUNCTION__, 'Media not found', array( 'status' => 400 ) );
+				}
+				$attachment                       = \wp_get_attachment_metadata( $media_id );
+				$comment_data['comment_content'] .= PHP_EOL;
+				$comment_data['comment_content'] .= '<!-- wp:image -->';
+				$comment_data['comment_content'] .= self::render_image_figure( (int) $media_id, ' width="' . esc_attr( $attachment['width'] ) . '" height="' . esc_attr( $attachment['height'] ) . '"' );
+				$comment_data['comment_content'] .= '<!-- /wp:image -->';
+			}
+		}
+
+		$comment_id = wp_update_comment( $comment_data );
+
+		/**
+		 * Modify the status data.
+		 *
+		 * @param Entity\Status|null $status  The status data.
+		 * @param int                $post_id The object ID to get the status from.
+		 * @param array              $data    Additional status data.
+		 * @return Entity\Status|null The modified status data.
+		 */
+		$status = apply_filters(
+			'mastodon_api_status',
+			null,
+			$in_reply_to_id,
+			array(
+				'comment' => get_comment( $comment_id ),
+			)
+		);
+
+		return $status;
+	}
+
+	public function api_status_context( $context, $context_post_id ) {
+		$post = get_post( $context_post_id );
+		if ( ! $post ) {
+			return $context;
+		}
+
+		$found = array();
+		$post_date = new \DateTime( $post->post_date_gmt, new \DateTimeZone( 'UTC' ) );
+
+		$app = Mastodon_App::get_current_app();
+		if ( $app ) {
+			$post_types = $app->get_view_post_types();
+		} else {
+			$post_types = array();
+		}
+
+		$post_types[] = \Enable_Mastodon_Apps\Comment_CPT::CPT;
+		$post_types = apply_filters( 'mastodon_api_status_context_post_types', $post_types, $context_post_id );
+		$post_types = array_values( array_diff( (array) $post_types, array( 'attachment' ) ) );
+		$post_statuses = apply_filters( 'mastodon_api_status_context_post_statuses', array( 'publish', 'private' ), $context_post_id );
+
+		$checked = array();
+		$to_check = array( $context_post_id );
+		while ( ! empty( $to_check ) ) {
+			$check = array_shift( $to_check );
+			if ( isset( $checked[ $check ] ) ) {
+				continue;
+			}
+			$checked[ $check ] = true;
+			$ancestors = get_post_ancestors( $check );
+			foreach ( $ancestors as $ancestor ) {
+				if ( isset( $checked[ $ancestor ] ) ) {
+					continue;
+				}
+				$found[ $ancestor ] = get_post( $ancestor );
+				$to_check[] = $ancestor;
+			}
+			$children = get_posts(
+				array(
+					'post_parent' => $check,
+					'post_type'   => $post_types,
+					'post_status' => $post_statuses,
+				)
+			);
+			foreach ( $children as $child ) {
+				$to_check[] = $child->ID;
+				$found[ $child->ID ] = $child;
+			}
+		}
+
+		foreach ( array_keys( $found ) as $post_id ) {
+			if ( intval( $post_id ) === intval( $context_post_id ) ) {
+				continue;
+			}
+			$args = array();
+			/**
+			 * Modify the status data.
+			 *
+			 * @param Entity\Status|null $status  The status data.
+			 * @param int                $post_id The object ID to get the status from.
+			 * @param array              $data    Additional status data.
+			 * @return Entity\Status|null The modified status data.
+			 */
+			$status = apply_filters(
+				'mastodon_api_status',
+				null,
+				$post_id,
+				$args
+			);
+
+			if ( $status ) {
+				$type = 'descendants';
+				if ( $status->created_at < $post_date ) {
+					$type = 'ancestors';
+				}
+				if ( ! isset( $context[ $type ] ) ) {
+					$context[ $type ] = array();
+				}
+				$context[ $type ][ $status->id ] = $status;
+			}
+		}
+
+		ksort( $context['ancestors'] );
+
+		ksort( $context['descendants'] );
+
+		$context['ancestors']   = array_values( $context['ancestors'] );
+		$context['descendants'] = array_values( $context['descendants'] );
+		return $context;
+	}
+}

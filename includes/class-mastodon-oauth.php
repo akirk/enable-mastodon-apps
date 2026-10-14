@@ -11,7 +11,7 @@ namespace Enable_Mastodon_Apps;
 
 use OAuth2\Server;
 use OAuth2\Request;
-use OAuth2\Response;
+use Enable_Mastodon_Apps\OAuth2\Response;
 
 /**
  * This is the class that implements the Mastodon Oauth endpoints.
@@ -36,16 +36,18 @@ class Mastodon_OAuth {
 	 */
 	public function __construct() {
 		$config = array(
-			'issuer'          => home_url( '/' ),
-			'enforce_state'   => false,
-			'access_lifetime' => YEAR_IN_SECONDS * 2,
+			'issuer'                     => home_url( '/' ),
+			'enforce_state'              => false,
+			'require_exact_redirect_uri' => false,
+			'access_lifetime'            => YEAR_IN_SECONDS * 2,
 		);
 
-		$this->server = new Server( new Oauth2\AuthorizationCodeStorage(), $config );
-		$this->server->addStorage( new Oauth2\MastodonAppStorage(), 'client_credentials' );
-		$this->server->addStorage( new Oauth2\AccessTokenStorage(), 'access_token' );
+		$this->server = new Server( new Oauth2\Authorization_Code_Storage(), $config );
+		$this->server->addStorage( new Oauth2\Mastodon_App_Storage(), 'client_credentials' );
+		$this->server->addStorage( new Oauth2\Access_Token_Storage(), 'access_token' );
+		$this->server->setScopeUtil( new Oauth2\Scope_Util() );
 
-		if ( '/oauth/token' === strtok( $_SERVER['REQUEST_URI'], '?' ) ) {
+		if ( '/oauth/token' === strtok( $_SERVER['REQUEST_URI'], '?' ) ) { // phpcs:ignore
 			// Avoid interference with private site plugins.
 			add_filter(
 				'pre_option_blog_public',
@@ -55,45 +57,87 @@ class Mastodon_OAuth {
 			);
 		}
 
+		add_action( 'wp_loaded', array( $this, 'rewrite_rules' ) );
+		add_action( 'query_vars', array( $this, 'query_vars' ) );
 		add_action( 'template_redirect', array( $this, 'handle_oauth' ) );
 
-		/*
-		 * A potential way to also determine a user but also for endpoints that don't require authentication.
-		 * add_filter( 'determine_current_user', array( $this, 'authenticate' ), 10 );
-		 */
+		add_filter( 'determine_current_user', array( $this, 'authenticate' ), 10 );
 		add_action( 'login_form_enable-mastodon-apps-authenticate', array( $this, 'authenticate_handler' ) );
+		add_filter( 'login_redirect', array( $this, 'override_login_redirect' ), 999, 2 );
+	}
+
+	public function rewrite_rules() {
+		$existing_rules = get_option( 'rewrite_rules' );
+		$needs_flush    = false;
+
+		$generic =
+			array(
+				'oauth/authorize' => 'authorize',
+				'oauth/token'     => 'token',
+				'oauth/revoke'    => 'revoke',
+			);
+
+		foreach ( $generic as $path => $rule ) {
+			if ( empty( $existing_rules[ '^' . $path ] ) ) {
+				// Add a specific rewrite rule so that we can also catch requests without our prefix.
+				$needs_flush = true;
+			}
+			add_rewrite_rule( '^' . $path, 'index.php?name=' . $path . '&mastodon-oauth=' . $rule, 'top' );
+		}
+
+		if ( $needs_flush ) {
+			global $wp_rewrite;
+			$wp_rewrite->flush_rules();
+		}
+	}
+
+	public function query_vars( $query_vars ) {
+		$query_vars[] = 'mastodon-oauth';
+		return $query_vars;
 	}
 
 	public function handle_oauth( $return_value = false ) {
 		global $wp_query;
-		if ( 'POST' === $_SERVER['REQUEST_METHOD'] && empty( $_POST ) && ! empty( $_REQUEST ) ) {
-			$_POST = $_REQUEST;
+		if ( 'POST' === $_SERVER['REQUEST_METHOD'] && empty( $_POST ) && ! empty( $_REQUEST ) ) { // phpcs:ignore
+			$_POST = $_REQUEST; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		}
-		switch ( strtok( $_SERVER['REQUEST_URI'], '?' ) ) {
-			case '/oauth/authorize':
+		$endpoint = null;
+
+		if ( isset( $wp_query->query['mastodon-oauth'] ) ) {
+			$endpoint = $wp_query->query['mastodon-oauth'];
+		} else {
+			$request_uri = trim( strtok( $_SERVER['REQUEST_URI'], '?' ), '/' ); // phpcs:ignore
+
+			if ( in_array( $request_uri, array( 'oauth/authorize', 'oauth/token', 'oauth/revoke' ) ) ) {
+				$endpoint = explode( '/', $request_uri )[1];
+			}
+		}
+
+		switch ( $endpoint ) {
+			case 'authorize':
 				if ( get_option( 'mastodon_api_disable_logins' ) ) {
 					return null;
 				}
 				$wp_query->is_404 = false;
-				$handler = new OAuth2\AuthorizeHandler( $this->server );
+				$handler          = new OAuth2\Authorize_Handler( $this->server );
 				break;
 
-			case '/oauth/token':
+			case 'token':
 				header( 'Access-Control-Allow-Methods: POST' );
 				header( 'Access-Control-Allow-Headers: content-type' );
 				header( 'Access-Control-Allow-Credentials: true' );
-				if ( 'OPTIONS' === $_SERVER['REQUEST_METHOD'] ) {
+				if ( 'OPTIONS' === $_SERVER['REQUEST_METHOD'] ) { // phpcs:ignore
 					header( 'Access-Control-Allow-Origin: *', true, 204 );
 					exit;
 				}
 				header( 'Access-Control-Allow-Origin: *' );
 				$wp_query->is_404 = false;
-				$handler = new OAuth2\TokenHandler( $this->server );
+				$handler          = new OAuth2\Token_Handler( $this->server );
 				break;
 
-			case '/oauth/revoke':
+			case 'revoke':
 				$wp_query->is_404 = false;
-				$handler = new OAuth2\RevokationHandler( $this->server );
+				$handler          = new OAuth2\Revokation_Handler( $this->server );
 				break;
 		}
 
@@ -102,10 +146,12 @@ class Mastodon_OAuth {
 		}
 
 		if ( get_option( 'mastodon_api_debug_mode' ) > time() ) {
-			$app = Mastodon_App::get_debug_app();
+			// phpcs:disable
+			$app     = Mastodon_App::get_debug_app();
 			$request = new \WP_REST_Request( $_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI'] );
 			$request->set_query_params( $_GET );
 			$request->set_body_params( $_POST );
+			// phpcs:enable
 			$request->set_headers( getallheaders() );
 			$app->was_used( $request );
 		}
@@ -126,15 +172,35 @@ class Mastodon_OAuth {
 	}
 
 	public function get_token() {
-		$request = Request::createFromGlobals();
-		if ( ! $this->server->verifyResourceRequest( $request ) ) {
-			$this->server->getResponse()->send();
+		$request  = Request::createFromGlobals();
+		$response = new Response();
+		if ( ! $this->server->verifyResourceRequest( $request, $response ) ) {
 			return null;
 		}
-		return $this->server->getAccessTokenData( $request );
+		return $this->server->getAccessTokenData( $request, $response );
 	}
 
+	/**
+	 * Authenticate a request through an OAuth access token.
+	 *
+	 * `determine_current_user` runs for every WordPress request, so this only
+	 * looks at the Authorization header when the request is aimed at this
+	 * plugin. Otherwise a Bearer token that belongs to WordPress core or to
+	 * another plugin would be run through this plugin's token validation.
+	 *
+	 * @param int|false $user_id The user id determined so far.
+	 * @return int|false The user id.
+	 */
 	public function authenticate( $user_id ) {
+		if ( ! Mastodon_API::is_mastodon_api_request() ) {
+			return $user_id;
+		}
+
+		if ( Mastodon_API::PREFIX . '/' . WP_Admin\Health_Check::AUTH_HEADER_ROUTE === Mastodon_API::get_current_rest_route() ) {
+			// The Site Health diagnostic sends a synthetic Authorization header that is not meant to authenticate.
+			return $user_id;
+		}
+
 		$token = $this->get_token();
 		if ( is_array( $token ) && isset( $token['user_id'] ) ) {
 			return intval( $token['user_id'] );
@@ -146,9 +212,43 @@ class Mastodon_OAuth {
 		$request  = Request::createFromGlobals();
 		$response = new Response();
 
-		$authenticate_handler = new OAuth2\AuthenticateHandler();
-		$authenticate_handler->handle( $request, $response );
+		$authenticate_handler = new OAuth2\Authenticate_Handler();
+		$response             = $authenticate_handler->handle( $request, $response );
+
+		// The consent screen renders itself; anything else has an error to report.
+		if ( $response instanceof Response && 200 !== $response->getStatusCode() ) {
+			$response->send();
+		}
 		exit;
+	}
+
+	public static function current_user_can_authorize() {
+		/**
+		 * Filter the WordPress capability required to authorize Mastodon apps.
+		 *
+		 * Defaults to `read` so lower-privileged logged-in users can authorize apps
+		 * for read and interaction endpoints. Posting is still guarded separately
+		 * by the status creation endpoint.
+		 *
+		 * @param string $capability The required WordPress capability.
+		 */
+		$capability = apply_filters( 'mastodon_api_authorize_capability', 'read' );
+
+		return current_user_can( $capability );
+	}
+
+	/**
+	 * Ensure login redirect plugins don't override our OAuth redirect.
+	 *
+	 * @param string $redirect_to           The current redirect destination.
+	 * @param string $requested_redirect_to The originally requested redirect destination.
+	 * @return string The redirect destination.
+	 */
+	public function override_login_redirect( $redirect_to, $requested_redirect_to ) {
+		if ( false !== strpos( $requested_redirect_to, 'action=enable-mastodon-apps-authenticate' ) ) {
+			return $requested_redirect_to;
+		}
+		return $redirect_to;
 	}
 
 	public function get_code_storage() {

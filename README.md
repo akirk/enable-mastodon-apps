@@ -1,12 +1,12 @@
 # Enable Mastodon Apps
 
-- Contributors: akirk
+- Contributors: akirk, pfefferle, drivingralle, kittmedia, obenland
 - Tags: mastodon, activitypub, friends, fediverse
 - Requires at least: 5.0
-- Tested up to: 6.2
-- Requires PHP: 5.2.4
+- Tested up to: 7.1
+- Requires PHP: 7.4
 - License: [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
-- Stable tag: 0.6.2
+- Stable tag: 1.6.4
 
 Allow accessing your WordPress with Mastodon clients. Just enter your own blog URL as your instance.
 
@@ -17,6 +17,10 @@ Despite Mastodon implying that you would use this plugin for engaging on Mastodo
 When you use a Mastodon app, you'll enter your own blog URL to connect and log in to your blog in the following screens.
 
 You'll then see just the posts on your blog which can already be useful in a multi-author environment (e.g. private blogs). You can also use that Mastodon app to create simple posts with a message + attachment(s) which can be better suited for your usecase than using the Gutenberg-capable WordPress mobile app.
+
+Even without the ActivityPub or Friends plugins, Mastodon apps can be used as a local client for your WordPress posts. Favourites (likes) and bookmarks are stored locally so they can be shown again in the app and in the favourites and bookmarks views.
+
+For generated video thumbnails, install [Videopack](https://wordpress.org/plugins/video-embed-thumbnail-generator/) and configure it with FFMPEG. Enable Mastodon Apps will ask Videopack to generate a thumbnail for videos uploaded through Mastodon clients, then use the video's WordPress featured image as the Mastodon media `preview_url`.
 
 When used in combination with the [ActivityPub](https://wordpress.org/plugins/activitypub/) (for being followed via Mastodon) and [Friends](https://wordpress.org/plugins/friends/) (for following people on Mastodon or via RSS) plugins, the Enable Mastodon Apps plugin will show you your feed of people you follow and you can follow and unfollow people from within the app.
 
@@ -30,8 +34,11 @@ The plugin has been tested with quite a number of Mastodon clients, among them a
 - [Ivory](https://tapbots.com/ivory/) (macOS and iOS)
 - [Mona](https://mastodon.social/@MonaApp) (macOS)
 - [IceCubes](https://github.com/Dimillian/IceCubesApp) (macOS)
+- [Mammoth](https://getmammoth.app/) (macOS and iOS)
+- [Phanpy](https://phanpy.social) (Web)
+- [Mona](https://mastodon.social/@MonaApp) (macOS and iOS)
 
-Many more, see the [Third-party apps section on joinmastodon.org/apps](https://joinmastodon.org/apps). Each app might have its quirks, [please report an issue when you have troubles[(https://github.com/akirk/enable-mastodon-apps/issues). There is also a chance that the API has not been implemented yet (see below.)
+Many more, see the [Third-party apps section on joinmastodon.org/apps](https://joinmastodon.org/apps). Each app might have its quirks, [please report an issue when you have troubles](https://github.com/akirk/enable-mastodon-apps/issues). There is also a chance that the API has not been implemented yet (see below.)
 
 ## Mastodon API Implementation
 
@@ -55,9 +62,10 @@ Here is a list of endpoints and their implementation status:
 - [ ] `GET /api/v1/lists` (implemented as empty)
 - [ ] `GET /api/v1/custom_emojis` (implemented as empty) [View all custom emojis](https://docs.joinmastodon.org/methods/custom_emojis/#get)
 - [x] `GET /api/v1/accounts/verify_credentials` [Verify account credentials](https://docs.joinmastodon.org/methods/accounts/#verify_credentials)
+- [x] `PATCH /api/v1/accounts/update_credentials` [Update account credentials](https://docs.joinmastodon.org/methods/accounts/#update_credentials)
 - [x] `GET /api/v1/accounts/:id` [Get account](https://docs.joinmastodon.org/methods/accounts/#get)
 - [x] `GET /api/v1/accounts/:id/statuses` [Get account’s statuses](https://docs.joinmastodon.org/methods/accounts/statuses/#get)
-- [ ] `GET /api/v1/accounts/:id/followers` [Get account’s followers](https://docs.joinmastodon.org/methods/accounts/#followers)
+- [x] `GET /api/v1/accounts/:id/followers` [Get account’s followers](https://docs.joinmastodon.org/methods/accounts/#followers)
 - [ ] `GET /api/v1/accounts/:id/following` [Get account’s following](https://docs.joinmastodon.org/methods/accounts/#following)
 - [ ] `GET /api/v1/accounts/:id/featured_tags` [Get account’s featured tags](https://docs.joinmastodon.org/methods/accounts/#featured_tags)
 - [ ] `GET /api/v1/accounts/:id/lists` [Get lists containing this account](https://docs.joinmastodon.org/methods/accounts/#lists)
@@ -73,19 +81,22 @@ Here is a list of endpoints and their implementation status:
 - [x] `POST /api/v1/statuses/:id/reblog` [Boost a status](https://docs.joinmastodon.org/methods/statuses/#boost)
 - [x] `POST /api/v1/statuses/:id/unreblog` [Undo the boost a status](https://docs.joinmastodon.org/methods/statuses/#unreblog)
 - [x] `GET /api/v1/statuses/:id` [View a single status](https://docs.joinmastodon.org/methods/statuses/#get)
+- [x] `GET /api/v1/statuses` [View multiple statuses](https://docs.joinmastodon.org/methods/statuses/#index)
 - [x] `GET /api/v1/notifications/` (partial, just mentions) [Get all notifications](https://docs.joinmastodon.org/methods/notifications/#get)
 - [x] `GET /api/v1/notifications/:id` [Get a single notification](https://docs.joinmastodon.org/methods/notifications/#get-one)
 - [x] `POST /api/v1/notifications/clear` [Dismiss all notification](https://docs.joinmastodon.org/methods/notifications/#clear)
 - [x] `POST /api/v1/notifications/:id/dismiss` [Dismiss a single notification](https://docs.joinmastodon.org/methods/notifications/#dismiss)
 - [x] `GET /api/v1/timelines/home` [View home timeline](https://docs.joinmastodon.org/methods/timelines/#home)
-- [ ] `GET /api/v1/timelines/public` (implemented as empty) [View public timeline](https://docs.joinmastodon.org/methods/timelines/#public)
+- [x] `GET /api/v1/timelines/public` [View public timeline](https://docs.joinmastodon.org/methods/timelines/#public)
 - [ ] `GET /api/v1/markers` (implemented as empty) [Get saved timeline positions](https://docs.joinmastodon.org/methods/markers/#get)
 - [ ] `POST /api/v1/markers` [Save your position in a timeline](https://docs.joinmastodon.org/methods/markers/#create)
 - [x] `GET /api/v2/search` (partial, accounts (local and exact match for remote) and statuses in the local db) [Perform a search](https://docs.joinmastodon.org/methods/search/#v2)
+- [x] `GET /api/v1/favourites` [View your favourites](https://docs.joinmastodon.org/methods/favourites/#get)
+- [x] `GET /api/v1/bookmarks` [View your bookmarks](https://docs.joinmastodon.org/methods/bookmarks/#get)
 
 Unmentioned endpoints are not implemented. Contributions welcome!
 
-Endpoints around interacting with non-local users require the [ActivityPub plugin](https://wordpress.org/plugins/activitypub). Following users requires the [Friends plugin](https://wordpress.org/plugins/friends). Lists-related endpoints require the [Friends Roles plugin](https://github.com/akirk/friends-roles).
+Endpoints around interacting with non-local users require the [ActivityPub plugin](https://wordpress.org/plugins/activitypub). Following users requires the [Friends plugin](https://wordpress.org/plugins/friends). Local favourites (likes) and bookmarks work without either plugin. Lists-related endpoints require the [Friends Roles plugin](https://github.com/akirk/friends-roles).
 
 ## Screenshots
 
@@ -94,82 +105,315 @@ Endpoints around interacting with non-local users require the [ActivityPub plugi
 
 ## Changelog
 
-### 0.6.2
-- Add a setting to implicitly re-register the next unknown client ([#48])
-- Add Instance-Endpoint Filters ([#45]) props @pfefferle
+### 1.6.4
+- Don't drop media attachments that lack dimensions ([#334]) - should fix featured images
+- Federate what Mastodon apps actually submit ([#333]) - should fix mentions
+- Implement conversation read and delete handlers ([#321])
 
-### 0.6.1
-- Communicate the current settings inside Mastodon using an Announcement ([#44])
-- Bring back library adaptations which hopefully solves the "No client id supplied" problem
+### 1.6.3
+- Don't make first line bold for post types that don't support titles ([#332])
+- Query every notification source separately ([#331])
+- Include the featured image as a media attachment ([#330])
 
-### 0.6.0
-- Use a Custom Post Type to for mapping post ids ([#42])
-- Improve response time after transients expired ([#41])
+### 1.6.2
+- Perform follows through the ActivityPub plugin ([#328])
+- Match Mastodon's app registration, token and account responses ([#326])
+- Only validate Authorization headers on Mastodon API requests ([#325])
+- Search by date when the query is a year, month or day ([#322])
+- Populate status URL fields ([#318])
+- Add captions for media descriptions ([#315])
+- Represent local blog follows in the API ([#313])
+- Add Videopack video thumbnail integration ([#314])
+- Add configurable media attachment limit ([#312])
+- Avoid stale block media attachment IDs ([#311])
+- Fix profile image updates from Mastodon clients ([#310])
 
-### 0.5.0
-- Major fixes for Ivory, now we're fullfilling (most of?) their assumptions ([#37])
+### 1.6.1
+- Ensure account headers are always serialized ([#308])
+- Allow lower-privilege users to use Mastodon apps ([#307])
+- Keep EMA unread status out of public searches ([#306])
+- Add configurable reaction mapping ([#305])
+- Add Site Health diagnostics for Mastodon app setup ([#301])
+- Fix registered apps settings link ([#304])
+- Fix conversation participant handling ([#302])
+- Add first line excerpt option ([#300])
+- Use single-line status as post title when media is attached ([#299])
+- Add debug response logging, fix announcement ID type, add notification group_key ([#298])
+- Improve the CSS for the mobile view inside wp-admin ([#297])
 
-### 0.4.2
--  Fix media upload in Ice Cubes and potentially other clients ([#35])
+### 1.6.0
+- Support fetching remote/federated posts via status endpoint ([#294])
+- Fix missing federation when replying to remote Fediverse posts ([#291])
+- Add /api/v1/tags/:name endpoint ([#293])
+- Fix notification pagination ([#292])
+- Fix more incorrect filter docblock types and add missing docblocks ([#296])
+- Fix incorrect return types in timeline and statuses filter documentation ([#295])
 
-### 0.4.1
--  Fix boost attribution ([#33])
+### 1.5.1
+- Add cleanup logic for reblog mapping posts ([#290])
+- Add quote and quoted_update notification types ([#287])
+- Prevent login redirect plugins from breaking OAuth flow ([#289])
+- Add v2/filters and v2/notifications/policy endpoint stubs ([#288])
 
-### 0.4.0
-- Improve notification pagination ([#29])
-- Compatibility fixes for Friends 2.6.0 ([#31])
+### 1.5.0
+- Add option to limit posts with attachments ([#282])
+- Improve registered apps page ([#277])
+- Ensure numeric ids on statuses in searches ([#274])
+- Add the /api/v1/statuses endpoint ([#276])
+- Use a Github action to extract the wp hooks ([#271])
+- Remote type=button attribute ([#268])
+- Add the editor to Mastodon posts ([#266])
 
-### 0.3.6
-- Improve debug logging.
+### 1.4.6
+- Fix registering rewrite rules ([#261])
+- Fix missing type=button on toggle all link ([#259])
+- Bring back post row actions ([#260])
 
-### 0.3.5
-- Fix little inconsistencies with min_id and max_id.
-- Add a debug mode ([#23]).
+### 1.4.5
+- Flush Rewrite Rules later ([#257])
 
-### 0.3.4
-- Implement min_id to avoid double postings in the IceCubes app.
+### 1.4.4
+- Add support for internal DMs ([#253])
+- Improve Debugger ([#256])
 
-### 0.3.3
-- Fixes for Mastodon for iOS and Mammoth.
-- Fix deleting of toots.
+### 1.4.3
+- Fix double creation of reply posts ([#245])
+- Enable OPTIONS and api/apps endpoint even with rest_login_required ([#242])
+- Convert urls to links when posting ([#243])
 
-### 0.3.2
-- Ivory should work now.
-- Posting: wrap mentions and links in HTML tags
-- Attachments: try harder to deduplicate them, identify attachment types
-- Admin: More tools for cleaning out stale apps and tokens
-- Search: You can now search for URLs so that you can reply to them
+### 1.4.2
+- Update search endpoints ([#238])
+- Fix the EMA announcements appearing publically when debug on ([#237])
 
-### 0.3.1
-- Implemented: Attachment descriptions (and updates for it)
-- Use the first line of a post as the post title if we're using a standard post format
+### 1.4.1
+- Allow filtering whether the user is a member of the blog ([#234])
 
-### 0.3.0
-- Implemented: search for a specific remote account to follow it
-- Implemented: Notifications for mentions
-- Added: Option whether replies should be posted as comments on the messages or as new posts
-- Fixed: Ivory should now be able to connect
+### 1.4.0
+- Implement Direct Messages ([#233])
+- Add following endpoint ([#228])
+- Submit Post as Standard if create post format is empty ([#227])
+- Fix comments context API response ([#225])
+- Fix title in standard posts when HTML is submitted ([#226])
 
-### 0.2.1
-- Improve compatibility of Swift based apps
-- Fix fatal error on admin page
+### 1.3.0
+- Fix small errors on app page ([#224])
+- Show internal CPTs if debug is turned on ([#223])
+- Add setting for a default post format ([#221])
+- Improve New Post Setting and explicit set a New post format ([#220], [#222])
+- Assign all post formats to EMA announcements ([#218])
 
-### 0.2.0
-- Post replies as comments ([#3])
-- Fix a fatal when saving the default post format
+### 1.2.1
+- Fixed Boost, Like and Comment notifications ([#216])
+- Announce Initial and Changed App Settings ([#207], [#214])
+- Added a Welcome message to your feed and explain the EMA plugin ([#210])
+- Added missing types to notifications endpoint ([#215])
+- Don't set any post formats as default ([#211])
+- Updated Mastodon API Tester ([#209])
+- Added a setting to disable status updates to be added to the feed ([#208])
+- Added support for the OAuth2 Out of Band flow ([#206])
 
-[#48]: https://github.com/akirk/enable-mastodon-apps/pull/48
-[#45]: https://github.com/akirk/enable-mastodon-apps/pull/45
-[#44]: https://github.com/akirk/enable-mastodon-apps/pull/44
-[#42]: https://github.com/akirk/enable-mastodon-apps/pull/42
-[#41]: https://github.com/akirk/enable-mastodon-apps/pull/41
-[#37]: https://github.com/akirk/enable-mastodon-apps/pull/37
-[#35]: https://github.com/akirk/enable-mastodon-apps/pull/35
-[#33]: https://github.com/akirk/enable-mastodon-apps/pull/33
-[#31]: https://github.com/akirk/enable-mastodon-apps/pull/31
-[#29]: https://github.com/akirk/enable-mastodon-apps/pull/29
-[#23]: https://github.com/akirk/enable-mastodon-apps/pull/23
-[#3]: https://github.com/akirk/enable-mastodon-apps/pull/3
+### 1.1.0
+- Add an Announcement CPT so that we can inform about the changed app settings ([#204])
+- Add support for viewing bookmarks and favourites ([#203])
+- Fix a wrong settings link, thanks @jeherve! ([#202])
+- Fix problems with user language when authorizing ([#201])
 
+### 1.0.0
+- Post through Mastodon Apps to a new post type by default ([#192])
+- Explain the new hide posts setting better ([#198])
+- Don't enforce parameters on non-EMA REST requests ([#197])
+- Add missing CPT supports ([#196])
+- Don't show reblog mapping posts ([#193])
+- Update PHPCompatibility and restrict PHPUnit ([#195])
+- Add missing svn in Github Actions ([#194])
+- Improve REST Authentication Error Debugging ([#191])
+- Use title instead of post_content when there is no line break ([#185])
+- Fix wp:image block created for attachments ([#184])
 
+### 0.9.9
+- Improve targeting of CORS headers ([#181])
+- Fix fatal when deleting an app ([#182])
 
+### 0.9.8
+- Fix replying on received comments via the ActivityPub plugin ([#176])
+
+### 0.9.7
+- Fixed bug where the create post type was ignored ([#175])
+- Automatically convert post content to blocks, can be disabled ([#174])
+
+### 0.9.6
+- Adds steaming_api to instance_v1, props @mediaformat ([#171])
+- PATCH routes: support field_attributes, props @mattwiebe ([#167])
+- Make token storage taxonomies private, props @mattwiebe ([#165])
+- Updated tester.html from upstream
+- Introduce a Never Used label to the registered apps screen.
+
+### 0.9.5
+- Add a details link to the apps page ([#163])
+- Show all comments by others as notifications ([#164])
+- Update NodeInfo endpoint by @pfefferle ([#162])
+- Multisite: ensure that user_ids only work for users of this site by @mattwiebe ([#158])
+- Increase phpcs rules and fix them by @mattwiebe ([#160], [#155])
+- Add `api/v1/accounts/update_credentials` route by @mattwiebe ([#157])
+
+### 0.9.4
+- Added a dedicated page per app in the settings. There you can set which post types should be shown in the app. Also which post type should be created for new posts. ([#154])
+- Fixed authenticating Jetpack so that you can connect WordPress.com to this plugin ([#152])
+
+### 0.9.3
+- Bring back the upgrade code.
+
+### 0.9.2
+- Quick fix to disable the upgrade script to avoid errors.
+
+### 0.9.1
+- Allow an empty search type, to search in all categories ([#150]) props @pfefferle
+- Don't reactivate the Link Manager ([#148])
+- Avoid errors when dividing strings ([#147]) props @mattwiebe
+- Don't include spam comments in the feed ([#149])
+- Ensure no spaces in URLs ([#144])
+- Fix some typos on the Welcome Screen ([#143])
+
+### 0.9.0
+- Complete Rewrite, started at the Cloudfest Hackathon! Props @pfefferle, @drivingralle, @kittmedia, @obenland
+- Thus: all ActivityPub related tasks are handled by the ActivityPub plugin, all following-related tasks by the Friends plugin. Please make sure you have the latest version of those plugins if you want to use such features
+- Reorganized settings, added a way to tester the local api ([#138], [#140])
+- Allow Editing a submitted status ([#137])
+- Improves to Attachments ([#132], [#136])
+- Fix OAuth rewrite path ([#130])
+
+[#224]: https://github.com/akirk/enable-mastodon-apps/pull/224
+[#223]: https://github.com/akirk/enable-mastodon-apps/pull/223
+[#222]: https://github.com/akirk/enable-mastodon-apps/pull/222
+[#221]: https://github.com/akirk/enable-mastodon-apps/pull/221
+[#220]: https://github.com/akirk/enable-mastodon-apps/pull/220
+[#218]: https://github.com/akirk/enable-mastodon-apps/pull/218
+[#216]: https://github.com/akirk/enable-mastodon-apps/pull/216
+[#214]: https://github.com/akirk/enable-mastodon-apps/pull/214
+[#215]: https://github.com/akirk/enable-mastodon-apps/pull/215
+[#211]: https://github.com/akirk/enable-mastodon-apps/pull/211
+[#210]: https://github.com/akirk/enable-mastodon-apps/pull/210
+[#209]: https://github.com/akirk/enable-mastodon-apps/pull/209
+[#208]: https://github.com/akirk/enable-mastodon-apps/pull/208
+[#207]: https://github.com/akirk/enable-mastodon-apps/pull/207
+[#206]: https://github.com/akirk/enable-mastodon-apps/pull/206
+[#204]: https://github.com/akirk/enable-mastodon-apps/pull/204
+[#203]: https://github.com/akirk/enable-mastodon-apps/pull/203
+[#202]: https://github.com/akirk/enable-mastodon-apps/pull/202
+[#201]: https://github.com/akirk/enable-mastodon-apps/pull/201
+[#198]: https://github.com/akirk/enable-mastodon-apps/pull/198
+[#197]: https://github.com/akirk/enable-mastodon-apps/pull/197
+[#196]: https://github.com/akirk/enable-mastodon-apps/pull/196
+[#192]: https://github.com/akirk/enable-mastodon-apps/pull/192
+[#193]: https://github.com/akirk/enable-mastodon-apps/pull/193
+[#195]: https://github.com/akirk/enable-mastodon-apps/pull/195
+[#194]: https://github.com/akirk/enable-mastodon-apps/pull/194
+[#191]: https://github.com/akirk/enable-mastodon-apps/pull/191
+[#185]: https://github.com/akirk/enable-mastodon-apps/pull/185
+[#184]: https://github.com/akirk/enable-mastodon-apps/pull/184
+[#182]: https://github.com/akirk/enable-mastodon-apps/pull/182
+[#181]: https://github.com/akirk/enable-mastodon-apps/pull/181
+[#176]: https://github.com/akirk/enable-mastodon-apps/pull/176
+[#175]: https://github.com/akirk/enable-mastodon-apps/pull/175
+[#174]: https://github.com/akirk/enable-mastodon-apps/pull/174
+[#173]: https://github.com/akirk/enable-mastodon-apps/pull/173
+[#171]: https://github.com/akirk/enable-mastodon-apps/pull/171
+[#167]: https://github.com/akirk/enable-mastodon-apps/pull/167
+[#165]: https://github.com/akirk/enable-mastodon-apps/pull/165
+[#163]: https://github.com/akirk/enable-mastodon-apps/pull/163
+[#164]: https://github.com/akirk/enable-mastodon-apps/pull/164
+[#162]: https://github.com/akirk/enable-mastodon-apps/pull/162
+[#160]: https://github.com/akirk/enable-mastodon-apps/pull/160
+[#158]: https://github.com/akirk/enable-mastodon-apps/pull/158
+[#157]: https://github.com/akirk/enable-mastodon-apps/pull/157
+[#155]: https://github.com/akirk/enable-mastodon-apps/pull/155
+[#154]: https://github.com/akirk/enable-mastodon-apps/pull/154
+[#152]: https://github.com/akirk/enable-mastodon-apps/pull/152
+[#150]: https://github.com/akirk/enable-mastodon-apps/pull/150
+[#148]: https://github.com/akirk/enable-mastodon-apps/pull/148
+[#147]: https://github.com/akirk/enable-mastodon-apps/pull/147
+[#149]: https://github.com/akirk/enable-mastodon-apps/pull/149
+[#144]: https://github.com/akirk/enable-mastodon-apps/pull/144
+[#143]: https://github.com/akirk/enable-mastodon-apps/pull/143
+[#140]: https://github.com/akirk/enable-mastodon-apps/pull/140
+[#138]: https://github.com/akirk/enable-mastodon-apps/pull/138
+[#137]: https://github.com/akirk/enable-mastodon-apps/pull/137
+[#136]: https://github.com/akirk/enable-mastodon-apps/pull/136
+[#132]: https://github.com/akirk/enable-mastodon-apps/pull/132
+[#130]: https://github.com/akirk/enable-mastodon-apps/pull/130
+
+[#225]: https://github.com/akirk/friends/pull/225
+[#226]: https://github.com/akirk/friends/pull/226
+[#227]: https://github.com/akirk/friends/pull/227
+[#228]: https://github.com/akirk/friends/pull/228
+[#233]: https://github.com/akirk/friends/pull/233
+
+[#234]: https://github.com/akirk/enable-mastodon-apps/pull/234
+
+[#237]: https://github.com/akirk/enable-mastodon-apps/pull/237
+[#238]: https://github.com/akirk/enable-mastodon-apps/pull/238
+
+[#242]: https://github.com/akirk/enable-mastodon-apps/pull/242
+[#243]: https://github.com/akirk/enable-mastodon-apps/pull/243
+[#245]: https://github.com/akirk/enable-mastodon-apps/pull/245
+
+[#253]: https://github.com/akirk/enable-mastodon-apps/pull/253
+[#256]: https://github.com/akirk/enable-mastodon-apps/pull/256
+
+[#257]: https://github.com/akirk/enable-mastodon-apps/pull/257
+
+[#259]: https://github.com/akirk/enable-mastodon-apps/pull/259
+[#260]: https://github.com/akirk/enable-mastodon-apps/pull/260
+[#261]: https://github.com/akirk/enable-mastodon-apps/pull/261
+
+[#266]: https://github.com/akirk/enable-mastodon-apps/pull/266
+[#268]: https://github.com/akirk/enable-mastodon-apps/pull/268
+[#271]: https://github.com/akirk/enable-mastodon-apps/pull/271
+[#274]: https://github.com/akirk/enable-mastodon-apps/pull/274
+[#276]: https://github.com/akirk/enable-mastodon-apps/pull/276
+[#277]: https://github.com/akirk/enable-mastodon-apps/pull/277
+[#282]: https://github.com/akirk/enable-mastodon-apps/pull/282
+
+[#287]: https://github.com/akirk/enable-mastodon-apps/pull/287
+[#288]: https://github.com/akirk/enable-mastodon-apps/pull/288
+[#289]: https://github.com/akirk/enable-mastodon-apps/pull/289
+[#290]: https://github.com/akirk/enable-mastodon-apps/pull/290
+
+[#291]: https://github.com/akirk/enable-mastodon-apps/pull/291
+[#292]: https://github.com/akirk/enable-mastodon-apps/pull/292
+[#293]: https://github.com/akirk/enable-mastodon-apps/pull/293
+[#294]: https://github.com/akirk/enable-mastodon-apps/pull/294
+[#295]: https://github.com/akirk/enable-mastodon-apps/pull/295
+[#296]: https://github.com/akirk/enable-mastodon-apps/pull/296
+
+[#297]: https://github.com/akirk/enable-mastodon-apps/pull/297
+[#298]: https://github.com/akirk/enable-mastodon-apps/pull/298
+[#299]: https://github.com/akirk/enable-mastodon-apps/pull/299
+[#300]: https://github.com/akirk/enable-mastodon-apps/pull/300
+[#301]: https://github.com/akirk/enable-mastodon-apps/pull/301
+[#302]: https://github.com/akirk/enable-mastodon-apps/pull/302
+[#304]: https://github.com/akirk/enable-mastodon-apps/pull/304
+[#305]: https://github.com/akirk/enable-mastodon-apps/pull/305
+[#306]: https://github.com/akirk/enable-mastodon-apps/pull/306
+[#307]: https://github.com/akirk/enable-mastodon-apps/pull/307
+[#308]: https://github.com/akirk/enable-mastodon-apps/pull/308
+
+[#310]: https://github.com/akirk/enable-mastodon-apps/pull/310
+[#311]: https://github.com/akirk/enable-mastodon-apps/pull/311
+[#312]: https://github.com/akirk/enable-mastodon-apps/pull/312
+[#313]: https://github.com/akirk/enable-mastodon-apps/pull/313
+[#314]: https://github.com/akirk/enable-mastodon-apps/pull/314
+[#315]: https://github.com/akirk/enable-mastodon-apps/pull/315
+[#318]: https://github.com/akirk/enable-mastodon-apps/pull/318
+[#322]: https://github.com/akirk/enable-mastodon-apps/pull/322
+[#325]: https://github.com/akirk/enable-mastodon-apps/pull/325
+[#326]: https://github.com/akirk/enable-mastodon-apps/pull/326
+[#328]: https://github.com/akirk/enable-mastodon-apps/pull/328
+
+[#330]: https://github.com/akirk/enable-mastodon-apps/pull/330
+[#331]: https://github.com/akirk/enable-mastodon-apps/pull/331
+[#332]: https://github.com/akirk/enable-mastodon-apps/pull/332
+
+[#321]: https://github.com/akirk/enable-mastodon-apps/pull/321
+[#333]: https://github.com/akirk/enable-mastodon-apps/pull/333
+[#334]: https://github.com/akirk/enable-mastodon-apps/pull/334

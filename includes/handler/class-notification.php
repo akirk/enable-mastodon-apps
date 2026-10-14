@@ -1,0 +1,423 @@
+<?php
+/**
+ * Notification handler.
+ *
+ * This contains the default Notification handlers.
+ *
+ * @package Enable_Mastodon_Apps
+ */
+
+namespace Enable_Mastodon_Apps\Handler;
+
+use Enable_Mastodon_Apps\Comment_CPT;
+use Enable_Mastodon_Apps\Handler\Handler;
+use Enable_Mastodon_Apps\Entity\Notification as Notification_Entity;
+
+/**
+ * This is the class that implements the default handler for all Notification endpoints.
+ *
+ * @since 0.7.0
+ *
+ * @package Enable_Mastodon_Apps
+ */
+class Notification extends Handler {
+	public function __construct() {
+		$this->register_hooks();
+	}
+
+	public function register_hooks() {
+
+		add_action( 'mastodon_api_notification_clear', array( $this, 'notification_clear' ), 20, 1 );
+		add_action( 'mastodon_api_notification_dismiss', array( $this, 'notification_dismiss' ), 20, 1 );
+
+		add_filter( 'mastodon_api_notification_get', array( $this, 'notification_get' ), 20, 2 );
+		add_filter( 'mastodon_api_notifications_get', array( $this, 'notifications_get' ), 20, 2 );
+		add_filter( 'mastodon_api_notifications_get', array( $this, 'finalize_notifications' ), 100, 2 );
+	}
+
+	/**
+	 * Handle action calls to get dismiss all notifications.
+	 *
+	 * @param object $request Request object from WP.
+	 *
+	 * @return void
+	 */
+	public function notification_clear( object $request ): void {
+
+		$notification_dismissed_tag = apply_filters( 'mastodon_api_notification_dismissed_tag', 'notification-dismissed' );
+		$notifications              = $this->fetch_notifications( $request );
+		foreach ( $notifications as $notification ) {
+			if ( $notification['status'] ) {
+				wp_set_object_terms( $notification['status']->id, $notification_dismissed_tag, 'post_tag', true );
+			}
+		}
+	}
+
+	/**
+	 * Handle action calls to get dismiss one notification.
+	 *
+	 * @param object $request Request object from WP.
+	 *
+	 * @return void
+	 */
+	public function notification_dismiss( object $request ): void {
+		$notification_dismissed_tag = apply_filters( 'mastodon_api_notification_dismissed_tag', 'notification-dismissed' );
+		$notifications              = $this->fetch_notifications( $request );
+		foreach ( $notifications as $notification ) {
+			if ( $request->get_param( 'id' ) !== $notification['id'] ) {
+				continue;
+			}
+			if ( $notification['status'] ) {
+				wp_set_object_terms( $notification['status']->id, $notification_dismissed_tag, 'post_tag', true );
+			}
+		}
+	}
+
+	/**
+	 * Handle filter calls to get one notification.
+	 *
+	 * @param mixed  $notification Notification to return after working with it.
+	 * @param object $request Request object from WP.
+	 *
+	 * @return mixed
+	 */
+	public function notification_get( $notification, object $request ): object {
+		$notifications = $this->fetch_notifications( $request );
+		foreach ( $notifications as $notification ) {
+			if ( $request->get_param( 'id' ) !== $notification['id'] ) {
+				continue;
+			}
+
+			return $notification;
+		}
+
+		return new \WP_Error( 'notification_not_found', __( 'Notification not found.', 'enable-mastodon-apps' ) );
+	}
+
+	/**
+	 * Handle filter calls to get all notifications.
+	 *
+	 * @param array  $notifications Notification to return after working with it.
+	 * @param object $request Request object from WP.
+	 *
+	 * @return array
+	 */
+	public function notifications_get( array $notifications, object $request ): array {
+		return array_merge( $notifications, $this->fetch_notifications( $request ) );
+	}
+
+	/**
+	 * Helper to get all notifications without pagination.
+	 *
+	 * Pagination is applied later in finalize_notifications() across all sources.
+	 *
+	 * @param object $request Request object from WP.
+	 *
+	 * @return array
+	 */
+	private function fetch_notifications( object $request ): array {
+		$limit         = $request->get_param( 'limit' ) ? $request->get_param( 'limit' ) : 15;
+		$notifications = array();
+		$types         = $request->get_param( 'types' );
+		$exclude_types = $request->get_param( 'exclude_types' );
+		if ( ( ! is_array( $types ) || in_array( 'mention', $types, true ) ) && ( ! is_array( $exclude_types ) || ! in_array( 'mention', $exclude_types, true ) ) ) {
+			$base_args = array(
+				'author__not_in' => array( get_current_user_id() ),
+			);
+
+			$queries = array();
+
+			/**
+			 * Get the WP_Query arguments for fetching notifications.
+			 *
+			 * This filter provides a single query that all its callers need to share. Since
+			 * WP_Query applies post statuses and taxonomy queries to every post type in it,
+			 * one caller can filter out another caller's posts. Prefer the
+			 * mastodon_api_get_notifications_queries filter, which queries each source
+			 * separately.
+			 *
+			 * @param array $args WP_Query arguments.
+			 * @param string $type Type of notifications.
+			 * @param object $request Request object from WP.
+			 * @return array The modified WP_Query arguments.
+			 *
+			* Example:
+			* ```php
+			* add_filter( 'mastodon_api_get_notifications_query_args', function( $args, $type ) {
+			*     if ( $type === 'notification' ) {
+			*         $args['post_type'] = 'notification';
+			*     }
+			*     return $args;
+			* } );
+			* ```
+			 */
+			$args = apply_filters(
+				'mastodon_api_get_notifications_query_args',
+				$base_args,
+				'mention',
+				$request
+			);
+			if ( isset( $args['post_type'] ) ) {
+				$queries[] = $args;
+			}
+
+			/**
+			 * Get the queries for fetching notifications.
+			 *
+			 * Every entry is a set of WP_Query arguments that is queried on its own, so that
+			 * the post statuses or taxonomy queries a notification source needs don't apply
+			 * to the posts of the other sources. The posts the current user authored are
+			 * excluded from each of them.
+			 *
+			 * @param array $queries The queries, each of them WP_Query arguments.
+			 * @param string $type Type of notifications.
+			 * @param object $request Request object from WP.
+			 * @return array The modified queries.
+			 *
+			* Example:
+			* ```php
+			* add_filter( 'mastodon_api_get_notifications_queries', function( $queries, $type ) {
+			*     if ( $type === 'mention' ) {
+			*         $queries[] = array(
+			*             'post_type'   => 'my_message',
+			*             'post_status' => 'my_unread',
+			*         );
+			*     }
+			*     return $queries;
+			* } );
+			* ```
+			 */
+			$queries = apply_filters( 'mastodon_api_get_notifications_queries', $queries, 'mention', $request );
+
+			$notification_dismissed_tag = get_term_by( 'slug', apply_filters( 'mastodon_api_notification_dismissed_tag', 'notification-dismissed' ), 'post_tag' );
+
+			$seen_post_ids = array();
+			foreach ( $queries as $args ) {
+				if ( empty( $args['post_type'] ) ) {
+					continue;
+				}
+				$args                   = array_merge( $base_args, $args );
+				$args['posts_per_page'] = $limit + 2;
+
+				if ( $notification_dismissed_tag ) {
+					$args['tag__not_in'] = array( $notification_dismissed_tag->term_id );
+				}
+				foreach ( get_posts( $args ) as $post ) {
+					if ( isset( $seen_post_ids[ $post->ID ] ) ) {
+						continue;
+					}
+					$seen_post_ids[ $post->ID ] = true;
+
+					$type = apply_filters( 'mastodon_api_notification_type', 'mention', $post );
+					switch ( $type ) {
+						case 'like':
+							$type = 'favourite';
+							$status  = apply_filters( 'mastodon_api_status', null, $post->post_parent, array() );
+							break;
+						case 'repost':
+							$type = 'reblog';
+							$status  = apply_filters( 'mastodon_api_status', null, $post->post_parent, array() );
+							break;
+						default:
+							$type = 'mention';
+							$status  = apply_filters( 'mastodon_api_status', null, $post->ID, array() );
+					}
+
+					if ( is_array( $types ) && ! in_array( $type, $types, true ) ) {
+						continue;
+					}
+					if ( is_array( $exclude_types ) && in_array( $type, $exclude_types, true ) ) {
+						continue;
+					}
+
+					$account = apply_filters( 'mastodon_api_account', null, $post->post_author, null, $post );
+					if ( $status ) {
+						$status->account = $account;
+					}
+
+					$notifications[] = $this->get_notification_array(
+						$type,
+						mysql2date( 'Y-m-d\TH:i:s.000P', $post->post_date, false ),
+						$account,
+						$status
+					);
+				}
+			}
+		}
+
+		return $notifications;
+	}
+
+	/**
+	 * Helper to get notifications as array based on parameter.
+	 *
+	 * @param string                               $type Type of notification.
+	 * @param mixed                                $date Date for limit.
+	 * @param \Enable_Mastodon_Apps\Entity\Account $account Attached account for notifications.
+	 * @param \Enable_Mastodon_Apps\Entity\Status  $status Status of notifications.
+	 *
+	 * @return array
+	 */
+	protected function get_notification_array( string $type, $date, ?\Enable_Mastodon_Apps\Entity\Account $account = null, ?\Enable_Mastodon_Apps\Entity\Status $status = null ): array {
+		$notification = array(
+			'id'         => preg_replace( '/[^0-9]/', '', $date ),
+			'created_at' => $date,
+		);
+		switch ( $type ) {
+			// As per https://docs.joinmastodon.org/entities/Notification/.
+			case 'mention': // Someone mentioned you in their status.
+			case 'status': // Someone you enabled notifications for has posted a status.
+			case 'reblog': // Someone boosted one of your statuses.
+			case 'follow': // Someone followed you.
+			case 'follow_request': // Someone requested to follow you.
+			case 'favourite': // Someone favourited one of your statuses.
+			case 'poll': // A poll you have voted in or created has ended.
+			case 'update': // A status you interacted with has been edited.
+				$notification['type'] = $type;
+				break;
+			default:
+				return array();
+		}
+
+		if ( $account ) {
+			$notification['account'] = $account;
+		}
+
+		if ( $status ) {
+			$notification['status'] = $status;
+			$notification['id']    .= $status->id;
+		}
+
+		// Provide a unique group_key so clients don't try to group notifications.
+		$notification['group_key'] = 'ungrouped-' . $notification['id'];
+
+		return $notification;
+	}
+
+	/**
+	 * Get a value from a notification, regardless of whether it's an array or an Entity.
+	 *
+	 * @param array|Notification_Entity $notification The notification.
+	 * @param string                    $key          The key to retrieve.
+	 *
+	 * @return mixed|null The value, or null if not found.
+	 */
+	private static function get_notification_value( $notification, string $key ) {
+		if ( $notification instanceof Notification_Entity ) {
+			return isset( $notification->$key ) ? $notification->$key : null;
+		}
+		if ( is_array( $notification ) ) {
+			return isset( $notification[ $key ] ) ? $notification[ $key ] : null;
+		}
+		return null;
+	}
+
+	/**
+	 * Finalize notifications: normalize IDs, sort, paginate, and set Link headers.
+	 *
+	 * This runs at priority 100 on the mastodon_api_notifications_get filter to ensure
+	 * all notification sources have contributed before we sort and paginate the combined set.
+	 *
+	 * @param array  $notifications The notifications array from all sources.
+	 * @param object $request       The request object.
+	 *
+	 * @return \WP_REST_Response The finalized, sorted, and paginated notifications.
+	 */
+	public function finalize_notifications( array $notifications, object $request ): \WP_REST_Response {
+		// Normalize entity-based notification IDs and account IDs.
+		foreach ( $notifications as $notification ) {
+			if ( $notification instanceof Notification_Entity ) {
+				$created_at = $notification->created_at;
+				$date_id    = preg_replace( '/[^0-9]/', '', $created_at );
+
+				if ( isset( $notification->status ) && $notification->status ) {
+					$date_id .= $notification->status->id;
+				}
+
+				$notification->id = $date_id;
+
+				if ( isset( $notification->account ) && $notification->account ) {
+					if ( empty( $notification->account->id ) || ! is_numeric( $notification->account->id ) ) {
+						$notification->account->id = \Enable_Mastodon_Apps\Mastodon_API::remap_user_id( $notification->account->id );
+					}
+				}
+			}
+		}
+
+		// Sort all notifications by ID descending (newest first).
+		usort(
+			$notifications,
+			function ( $a, $b ) {
+				$a_id = strval( self::get_notification_value( $a, 'id' ) );
+				$b_id = strval( self::get_notification_value( $b, 'id' ) );
+				return strcmp( $b_id, $a_id );
+			}
+		);
+
+		// Apply pagination across the full merged set.
+		$limit    = $request->get_param( 'limit' ) ? intval( $request->get_param( 'limit' ) ) : 40;
+		$limit    = min( $limit, 80 );
+		$min_id   = $request->get_param( 'min_id' );
+		$max_id   = $request->get_param( 'max_id' );
+		$since_id = $request->get_param( 'since_id' );
+
+		$last_modified = $request->get_header( 'if-modified-since' );
+		if ( $last_modified ) {
+			$last_modified = gmdate( 'Y-m-d\TH:i:s.000P', strtotime( $last_modified ) );
+			if ( ! $max_id || $last_modified > $max_id ) {
+				$max_id = $last_modified;
+			}
+		}
+
+		$ret         = array();
+		$c           = $limit;
+		$next_min_id = false;
+
+		foreach ( $notifications as $notification ) {
+			$id = strval( self::get_notification_value( $notification, 'id' ) );
+			if ( ! $id ) {
+				continue;
+			}
+
+			if ( $max_id ) {
+				if ( $id >= strval( $max_id ) ) {
+					continue;
+				}
+				$max_id = null;
+			}
+
+			if ( false === $next_min_id ) {
+				$next_min_id = $id;
+			}
+
+			if ( $min_id && strval( $min_id ) >= $id ) {
+				break;
+			}
+			if ( $since_id && strval( $since_id ) >= $id ) {
+				break;
+			}
+			if ( $c-- <= 0 ) {
+				break;
+			}
+
+			$ret[] = $notification;
+		}
+
+		// Return as WP_REST_Response with Link headers for pagination.
+		$response = new \WP_REST_Response( $ret );
+		if ( ! empty( $ret ) ) {
+			$first_id = strval( self::get_notification_value( $ret[0], 'id' ) );
+			$last_id  = strval( self::get_notification_value( $ret[ count( $ret ) - 1 ], 'id' ) );
+			$req_uri  = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '/api/v1/notifications';
+
+			if ( $first_id ) {
+				$response->add_link( 'prev', remove_query_arg( 'max_id', add_query_arg( 'min_id', $first_id, home_url( $req_uri ) ) ) );
+			}
+			if ( $last_id ) {
+				$response->add_link( 'next', remove_query_arg( 'min_id', add_query_arg( 'max_id', $last_id, home_url( $req_uri ) ) ) );
+			}
+		}
+
+		return $response;
+	}
+}

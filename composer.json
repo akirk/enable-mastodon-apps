@@ -1,15 +1,15 @@
 {
 	"name": "akirk/enable-mastodon-apps",
 	"description": "A WordPress plugin that implements the Mastodon API to enable access through Mastodon apps",
-	"type": "wordpress-plugin",
 	"license": "GPL-2.0-or-later",
 	"require-dev": {
-		"dealerdirect/phpcodesniffer-composer-installer": "*",
-		"phpcompatibility/php-compatibility": "*",
+		"phpcompatibility/php-compatibility": "^9.3",
+		"phpcompatibility/phpcompatibility-wp": "*",
 		"wp-coding-standards/wpcs": "*",
 		"yoast/phpunit-polyfills": "*",
 		"php-parallel-lint/php-parallel-lint": "^1.3",
-		"phpunit/phpunit": "*"
+		"phpunit/phpunit": "9.*",
+		"akirk/extract-wp-hooks": "*"
 	},
 	"config": {
 		"allow-plugins": {
@@ -35,6 +35,14 @@
 		],
 		"test": [
 			"@php ./vendor/phpunit/phpunit/phpunit --no-coverage"
+		],
+		"docker-test": [
+			"composer install",
+			"bin/install-wp-tests.sh ema-test root ema-test test-db latest true",
+			"@php ./vendor/phpunit/phpunit/phpunit --no-coverage"
+		],
+		"update-wiki": [
+			"test -d ../enable-mastodon-apps.wiki && php ./vendor/akirk/extract-wp-hooks/extract-wp-hooks.php && cd ../enable-mastodon-apps.wiki/ && git add . && git commit -m 'Update hooks'; git push"
 		]
 	},
 	"require": {

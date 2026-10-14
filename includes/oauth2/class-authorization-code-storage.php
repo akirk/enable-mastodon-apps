@@ -14,7 +14,7 @@ use OAuth2\Storage\AuthorizationCodeInterface;
 /**
  * This class implements the OAuth2 authorization code storage.
  */
-class AuthorizationCodeStorage implements AuthorizationCodeInterface {
+class Authorization_Code_Storage implements AuthorizationCodeInterface {
 	const TAXONOMY = 'mastoapi-ac';
 
 	private static $authorization_code_data = array(
@@ -29,7 +29,7 @@ class AuthorizationCodeStorage implements AuthorizationCodeInterface {
 		add_action( 'mastodon_api_cron_hook', array( $this, 'cleanupOldCodes' ) );
 
 		// Store the authorization codes in a taxonomy.
-		register_taxonomy( self::TAXONOMY, null );
+		register_taxonomy( self::TAXONOMY, null, array( 'public' => false ) );
 		foreach ( self::$authorization_code_data as $key => $type ) {
 			register_term_meta(
 				self::TAXONOMY,
@@ -243,7 +243,7 @@ class AuthorizationCodeStorage implements AuthorizationCodeInterface {
 				'taxonomy'   => self::TAXONOMY,
 				'hide_empty' => false,
 				'fields'     => 'ids',
-				'meta_query' => array(
+				'meta_query' => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 					array(
 						'key'     => 'expires',
 						'value'   => time(),
@@ -253,10 +253,14 @@ class AuthorizationCodeStorage implements AuthorizationCodeInterface {
 			)
 		);
 
+		if ( ! $terms ) {
+			return;
+		}
 		foreach ( $terms->terms as $term_id ) {
 			wp_delete_term( $term_id, self::TAXONOMY );
 		}
 	}
+
 
 	/**
 	 * Delete all auth codes when the plugin is uninstalled.
@@ -269,7 +273,9 @@ class AuthorizationCodeStorage implements AuthorizationCodeInterface {
 				'fields'     => 'ids',
 			)
 		);
-
+		if ( ! $terms ) {
+			return;
+		}
 		foreach ( $terms->terms as $term_id ) {
 			wp_delete_term( $term_id, self::TAXONOMY );
 		}
