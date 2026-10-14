@@ -17,40 +17,6 @@ namespace Enable_Mastodon_Apps\Entity;
  * @package Enable_Mastodon_Apps
  */
 class Status extends Entity {
-	/**
-	 * Resolve boosts of boosts to the original status without changing integration data.
-	 *
-	 * @return array The serialized status.
-	 */
-	#[\ReturnTypeWillChange]
-	public function jsonSerialize() {
-		$status   = clone $this;
-		$original = $this->reblog;
-		$seen     = new \SplObjectStorage();
-		$seen->attach( $this );
-		while ( $original instanceof self ) {
-			if ( $seen->contains( $original ) ) {
-				return array( 'error' => 'Circular reblog reference.' );
-			}
-			$seen->attach( $original );
-			if ( ! $original->reblog ) {
-				break;
-			}
-			$original = $original->reblog;
-		}
-		$status->reblog = $original;
-		return $status->serialize_status();
-	}
-
-	/**
-	 * Serialize after resolving the reblog target.
-	 *
-	 * @return array The serialized status.
-	 */
-	private function serialize_status() {
-		return parent::jsonSerialize();
-	}
-
 	protected $types = array(
 		'id'                     => 'string',
 		'created_at'             => 'DateTime',
