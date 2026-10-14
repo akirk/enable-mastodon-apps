@@ -388,12 +388,14 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 					'post_mime_type' => 'image/jpeg',
 					'post_status'    => 'inherit',
 					'guid'           => "https://example.org/photo-$i.jpg",
-				)
+				),
+				"photo-$i.jpg"
 			);
 			update_post_meta( $media_id, '_wp_attachment_image_alt', "Photo $i & friends" );
 			wp_update_attachment_metadata(
 				$media_id,
 				array(
+					'file'   => "photo-$i.jpg",
 					'width'  => 800,
 					'height' => 400,
 				)

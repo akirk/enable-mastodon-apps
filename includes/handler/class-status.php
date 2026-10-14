@@ -626,7 +626,7 @@ class Status extends Handler {
 
 	private static function get_attachment_description( int $media_id ): string {
 		$alt = get_post_meta( $media_id, '_wp_attachment_image_alt', true );
-		if ( '' === $alt ) {
+		if ( ! metadata_exists( 'post', $media_id, '_wp_attachment_image_alt' ) ) {
 			$alt = get_post_field( 'post_excerpt', $media_id );
 		}
 		return trim( wp_strip_all_tags( $alt ) );

@@ -117,8 +117,8 @@ class Media_Attachment extends Handler {
 		$media_attachment->url         = $url;
 		$media_attachment->preview_url = $thumb[0];
 		$media_attachment->description = get_post_meta( $attachment_id, '_wp_attachment_image_alt', true );
-		if ( '' === $media_attachment->description ) {
-			$media_attachment->description = get_the_excerpt( $attachment_id );
+		if ( ! metadata_exists( 'post', $attachment_id, '_wp_attachment_image_alt' ) ) {
+			$media_attachment->description = get_post_field( 'post_excerpt', $attachment_id );
 		}
 		$media_attachment->meta = array(
 			'original' => array(
@@ -178,7 +178,7 @@ class Media_Attachment extends Handler {
 		$media_attachment->type        = 'video';
 		$media_attachment->url         = $url;
 		$media_attachment->preview_url = $thumb[0];
-		$media_attachment->description = get_the_excerpt( $attachment_id );
+		$media_attachment->description = get_post_field( 'post_excerpt', $attachment_id );
 		$media_attachment->meta        = array(
 			'original' => array(
 				'width'  => $meta['width'],
