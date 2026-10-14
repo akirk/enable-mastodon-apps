@@ -166,32 +166,12 @@ class Account extends Handler {
 		}
 
 		// Mastodon always states whether a profile field has been verified.
-		$user_data->fields = self::add_field_verification( $user_data->fields );
+		$user_data->fields = Account_Entity::add_field_verification( $user_data->fields );
 		if ( is_array( $user_data->source ) && isset( $user_data->source['fields'] ) ) {
-			$user_data->source['fields'] = self::add_field_verification( $user_data->source['fields'] );
+			$user_data->source['fields'] = Account_Entity::add_field_verification( $user_data->source['fields'] );
 		}
 
 		return $user_data;
-	}
-
-	/**
-	 * Add the `verified_at` key to profile fields that don't have it.
-	 *
-	 * @param mixed $fields The profile fields.
-	 * @return mixed The profile fields.
-	 */
-	private static function add_field_verification( $fields ) {
-		if ( ! is_array( $fields ) ) {
-			return $fields;
-		}
-
-		foreach ( $fields as $i => $field ) {
-			if ( is_array( $field ) && ! array_key_exists( 'verified_at', $field ) ) {
-				$fields[ $i ]['verified_at'] = null;
-			}
-		}
-
-		return $fields;
 	}
 
 	public static function api_account_id( $user_id, $post_id ) {

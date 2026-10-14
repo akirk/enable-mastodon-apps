@@ -214,6 +214,15 @@ class Media_Attachment extends Handler {
 		}
 
 		foreach ( $matches as $match ) {
+			// WordPress renders Unicode emoji as wp-smiley images; keep them inline as text.
+			if ( preg_match( '/\sclass\s*=\s*([\'"])(.*?)\1/is', $match[0], $class ) && in_array( 'wp-smiley', preg_split( '/\s+/', trim( $class[2] ) ), true ) ) {
+				$emoji = '';
+				if ( preg_match( '/\salt\s*=\s*([\'"])(.*?)\1/is', $match[0], $alt ) ) {
+					$emoji = esc_html( html_entity_decode( $alt[2], ENT_QUOTES, 'UTF-8' ) );
+				}
+				$status->content = str_replace( $match[0], $emoji, $status->content );
+				continue;
+			}
 			$status->content = str_replace( $match[0], '', $status->content );
 			if ( ! preg_match( '/<img\b([^>]+)>/', $match[0], $img ) ) {
 				continue;
@@ -243,13 +252,14 @@ class Media_Attachment extends Handler {
 			$attachment->preview_url = $block['src'];
 			$attachment->remote_url  = $block['src'];
 			if ( isset( $block['width'] ) && $block['width'] > 0 && isset( $block['height'] ) && $block['height'] > 0 ) {
-				$attachment->meta             = array(
-					'width'  => intval( $block['width'] ),
-					'height' => intval( $block['height'] ),
-					'size'   => $block['width'] . 'x' . $block['height'],
-					'aspect' => (int) $block['width'] / (int) $block['height'],
+				$attachment->meta = array(
+					'original' => array(
+						'width'  => intval( $block['width'] ),
+						'height' => intval( $block['height'] ),
+						'size'   => $block['width'] . 'x' . $block['height'],
+						'aspect' => (int) $block['width'] / (int) $block['height'],
+					),
 				);
-				$attachment->meta['original'] = $attachment->meta;
 			}
 			$attachment->description     = '';
 			$status->media_attachments[] = $attachment;
@@ -469,10 +479,12 @@ class Media_Attachment extends Handler {
 			$attachment->remote_url = $block['src'];
 			if ( isset( $block['width'] ) && $block['width'] > 0 && isset( $block['height'] ) && $block['height'] > 0 ) {
 				$attachment->meta = array(
-					'width'  => intval( $block['width'] ),
-					'height' => intval( $block['height'] ),
-					'size'   => $block['width'] . 'x' . $block['height'],
-					'aspect' => (int) $block['width'] / (int) $block['height'],
+					'original' => array(
+						'width'  => intval( $block['width'] ),
+						'height' => intval( $block['height'] ),
+						'size'   => $block['width'] . 'x' . $block['height'],
+						'aspect' => (int) $block['width'] / (int) $block['height'],
+					),
 				);
 			}
 			$attachment->description     = '';

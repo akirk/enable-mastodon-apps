@@ -45,7 +45,7 @@ class Status extends Handler {
 		add_filter( 'mastodon_api_statuses', array( $this, 'api_statuses_ensure_numeric_id' ), 100 );
 		add_filter( 'mastodon_api_tag_timeline', array( $this, 'api_statuses_ensure_numeric_id' ), 100 );
 		add_filter( 'mastodon_api_submit_status', array( $this, 'api_submit_comment' ), 10, 7 );
-		add_filter( 'mastodon_api_submit_status', array( $this, 'api_submit_post' ), 15, 9 );
+		add_filter( 'mastodon_api_submit_status', array( $this, 'api_submit_post' ), 15, 8 );
 		add_filter( 'mastodon_api_edit_status', array( $this, 'api_edit_comment' ), 10, 8 );
 		add_filter( 'mastodon_api_edit_status', array( $this, 'api_edit_post' ), 15, 10 );
 		add_filter( 'mastodon_api_status_context', array( $this, 'api_status_context' ), 10, 2 );
@@ -788,6 +788,33 @@ class Status extends Handler {
 			}
 		}
 
+		if ( ! $post_id ) {
+			foreach ( array(
+				'category' => 'post_category',
+				'post_tag' => 'tags_input',
+			) as $taxonomy => $field ) {
+				if ( ! is_object_in_taxonomy( $post_data['post_type'], $taxonomy ) ) {
+					continue;
+				}
+				$terms = get_terms(
+					array(
+						'taxonomy'   => $taxonomy,
+						'hide_empty' => false,
+					)
+				);
+				if ( is_wp_error( $terms ) ) {
+					continue;
+				}
+				foreach ( $terms as $term ) {
+					// Match the submitted text before integrations turn hashtags into links.
+					$pattern = '/(?<![\\p{L}\\p{N}\\p{M}_\\/#])#' . preg_quote( $term->name, '/' ) . '(?![\\p{L}\\p{N}\\p{M}_])/iu';
+					if ( preg_match( $pattern, $submitted_status_text ) ) {
+						$post_data[ $field ][] = (int) $term->term_id;
+					}
+				}
+			}
+		}
+
 		/**
 		 * Allow modifying the post data before it gets inserted or updated.
 		 *
@@ -807,13 +834,14 @@ class Status extends Handler {
 		return $post_data;
 	}
 
-	public function api_submit_post( $status, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at, $request = null, $language = null ) {
+	public function api_submit_post( $status, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at, $status_data = array() ) {
 		if (
 			$status instanceof \WP_Error // An error was thrown in an earlier hook.
 			|| $status instanceof Status_Entity // A status was already saved in an earlier hook.
 		) {
 			return $status;
 		}
+		$language = isset( $status_data['language'] ) ? $status_data['language'] : null;
 
 		$mentions = array();
 		if ( 'direct' === $visibility ) {

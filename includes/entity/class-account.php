@@ -17,6 +17,50 @@ namespace Enable_Mastodon_Apps\Entity;
  * @package Enable_Mastodon_Apps
  */
 class Account extends Entity {
+	/**
+	 * Supply account defaults even for accounts built directly by integrations.
+	 *
+	 * @return array The serialized account.
+	 */
+	#[\ReturnTypeWillChange]
+	public function jsonSerialize() {
+		$data = parent::jsonSerialize();
+		if ( isset( $data['error'] ) ) {
+			return $data;
+		}
+		if ( empty( $data['header'] ) ) {
+			$data['header'] = ! empty( $data['header_static'] ) ? $data['header_static'] : plugin_dir_url( ENABLE_MASTODON_APPS_PLUGIN_DIR . '/enable-mastodon-apps.php' ) . 'assets/header.png';
+		}
+		if ( empty( $data['header_static'] ) ) {
+			$data['header_static'] = $data['header'];
+		}
+		$data['fields'] = self::add_field_verification( $data['fields'] );
+		if ( isset( $data['source']['fields'] ) ) {
+			$data['source']['fields'] = self::add_field_verification( $data['source']['fields'] );
+		}
+		return $data;
+	}
+
+	/**
+	 * Add the `verified_at` key to profile fields that don't have it.
+	 *
+	 * @param mixed $fields The profile fields.
+	 * @return mixed The profile fields.
+	 */
+	public static function add_field_verification( $fields ) {
+		if ( ! is_array( $fields ) ) {
+			return $fields;
+		}
+
+		foreach ( $fields as $i => $field ) {
+			if ( is_array( $field ) && ! array_key_exists( 'verified_at', $field ) ) {
+				$fields[ $i ]['verified_at'] = null;
+			}
+		}
+
+		return $fields;
+	}
+
 	protected $types = array(
 		'id'               => 'string',
 		'username'         => 'string',

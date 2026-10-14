@@ -51,6 +51,59 @@ class MediaAttachmentMeta_Test extends Mastodon_API_TestCase {
 		$this->assertEquals( '{}', wp_json_encode( $data['media_attachments'][0]['meta'] ) );
 	}
 
+	public function test_generic_image_dimensions_are_created_only_under_original() {
+		$status = $this->status_with_image( array() );
+		$status->media_attachments = array();
+		$status->content = '<p><img src="https://example.org/generic.png" width="800" height="400"></p>';
+		$handler = new Media_Attachment_Handler();
+		$status = $handler->add_generic_image_attachments( $status );
+		$this->assertCount( 1, $status->media_attachments );
+		$meta = $status->media_attachments[0]->meta;
+		$this->assertSame( array( 'original' ), array_keys( $meta ) );
+		$this->assertSame( 800, $meta['original']['width'] );
+		$this->assertSame( 400, $meta['original']['height'] );
+		$this->assertSame( '800x400', $meta['original']['size'] );
+		$this->assertEquals( 2, $meta['original']['aspect'] );
+		$data = $status->jsonSerialize();
+		$this->assertSame( $meta, $data['media_attachments'][0]['meta'] );
+	}
+
+	public function test_wordpress_emoji_stays_inline_while_regular_images_become_media() {
+		$status = $this->status_with_image( array() );
+		$status->media_attachments = array();
+		$status->content = '<p>Hello <img class="extra wp-smiley" src="https://s.w.org/emoji.png" alt="&#128578;" /> <img src="https://example.org/photo.png" width="800" height="400"></p>';
+		$handler = new Media_Attachment_Handler();
+		$status = $handler->add_generic_image_attachments( $status );
+		$this->assertSame( '<p>Hello 🙂 </p>', $status->content );
+		$this->assertCount( 1, $status->media_attachments );
+		$this->assertSame( 'https://example.org/photo.png', $status->media_attachments[0]->url );
+	}
+
+	public function test_wordpress_smiley_alt_is_escaped_as_text() {
+		$status = $this->status_with_image( array() );
+		$status->media_attachments = array();
+		$status->content = "<p><img class='wp-smiley' src='https://s.w.org/emoji.png' alt='&lt;script&gt;'></p>";
+		$handler = new Media_Attachment_Handler();
+		$status = $handler->add_generic_image_attachments( $status );
+		$this->assertSame( '<p>&lt;script&gt;</p>', $status->content );
+		$this->assertCount( 0, $status->media_attachments );
+	}
+
+	public function test_generic_video_dimensions_are_created_only_under_original() {
+		$status = $this->status_with_image( array() );
+		$status->media_attachments = array();
+		$status->content = '<video src="https://example.org/video.mp4" width="450" height="782"></video>';
+		$handler = new Media_Attachment_Handler();
+		$status = $handler->add_generic_video_attachments( $status );
+		$this->assertCount( 1, $status->media_attachments );
+		$meta = $status->media_attachments[0]->meta;
+		$this->assertSame( array( 'original' ), array_keys( $meta ) );
+		$this->assertSame( 450, $meta['original']['width'] );
+		$this->assertSame( 782, $meta['original']['height'] );
+		$data = $status->jsonSerialize();
+		$this->assertSame( $meta, $data['media_attachments'][0]['meta'] );
+	}
+
 	public function test_attachment_with_zero_dimensions_is_not_dropped() {
 		$data = $this->status_with_image(
 			array(

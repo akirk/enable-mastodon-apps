@@ -387,7 +387,8 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 	}
 
 	public function test_submit_scheduled_direct_status_returns_scheduled_status() {
-		$user         = get_userdata( $this->friend );
+		$recipient    = self::factory()->user->create( array( 'user_login' => 'scheduled-recipient' ) );
+		$user         = get_userdata( $recipient );
 		$scheduled_at = gmdate( 'c', time() + HOUR_IN_SECONDS );
 		$status_text  = '@' . $user->user_login . ' A scheduled direct message';
 		$request      = $this->api_request( 'POST', '/api/v1/statuses' );
@@ -396,7 +397,7 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$request->set_param( 'scheduled_at', $scheduled_at );
 
 		$response = $this->dispatch_authenticated( $request );
-		$this->assertEquals( 200, $response->get_status() );
+		$this->assertEquals( 200, $response->get_status(), wp_json_encode( $response->get_data() ) );
 
 		$data = $response->get_data();
 		$this->assertInstanceOf( Entity\Scheduled_Status::class, $data );
@@ -410,6 +411,41 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertArrayNotHasKey( 'error', $serialized );
 		$this->assertSame( $status_text, $serialized['params']['text'] );
 		$this->assertSame( array(), $serialized['media_attachments'] );
+	}
+
+	public function test_submit_status_hook_receives_normalized_status_data() {
+		$received = null;
+		$filter   = function ( $status, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at, $status_data ) use ( &$received ) {
+			$received = $status_data;
+			return $status;
+		};
+		add_filter( 'mastodon_api_submit_status', $filter, 1, 8 );
+
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'A warned status' );
+		$request->set_param( 'spoiler_text', 'Sensitive topic' );
+		$request->set_param( 'language', 'fr' );
+		$request->set_param(
+			'poll',
+			array(
+				'options'    => array( 'Yes', 'No' ),
+				'expires_in' => 3600,
+			)
+		);
+		$this->dispatch_authenticated( $request );
+		remove_filter( 'mastodon_api_submit_status', $filter, 1 );
+
+		$this->assertSame(
+			array(
+				'spoiler_text' => 'Sensitive topic',
+				'language'     => 'fr',
+				'poll'         => array(
+					'options'    => array( 'Yes', 'No' ),
+					'expires_in' => 3600,
+				),
+			),
+			$received
+		);
 	}
 
 	public function test_submit_status_rejects_too_many_media_attachments() {
@@ -573,6 +609,60 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertEquals( 'caption text', $p->post_title );
 		$this->assertStringNotContainsString( 'caption text', $p->post_content );
 		$this->assertStringContainsString( 'wp:image', $p->post_content );
+	}
+
+	public function test_submit_status_assigns_existing_hashtag_terms() {
+		$category = self::factory()->category->create( array( 'name' => 'Art' ) );
+		$tag      = self::factory()->tag->create( array( 'name' => 'Café' ) );
+		$this->app->set_create_post_type( 'post' );
+		$filter = function ( $text ) {
+			return str_replace( array( '#ART', '#café' ), 'linked hashtag', $text );
+		};
+		add_filter( 'mastodon_api_submit_status_text', $filter );
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', 'A post with (#ART), #café! #ART again.' );
+		try {
+			$response = $this->dispatch_authenticated( $request );
+		} finally {
+			remove_filter( 'mastodon_api_submit_status_text', $filter );
+		}
+		$this->assertSame( 200, $response->get_status() );
+		$post_id = (int) $response->get_data()->id;
+		$this->assertContains( $category, wp_get_post_categories( $post_id ) );
+		$this->assertSame( array( $tag ), wp_get_post_tags( $post_id, array( 'fields' => 'ids' ) ) );
+	}
+
+	public function test_submit_status_does_not_assign_partial_hashtags_or_url_fragments() {
+		$category = self::factory()->category->create( array( 'name' => 'Art' ) );
+		$tag      = self::factory()->tag->create( array( 'name' => 'Art' ) );
+		$this->app->set_create_post_type( 'post' );
+		$request = $this->api_request( 'POST', '/api/v1/statuses' );
+		$request->set_param( 'status', '#article #art_work #art2 #arté word#art https://example.org/#art' );
+		$response = $this->dispatch_authenticated( $request );
+		$this->assertSame( 200, $response->get_status() );
+		$post_id = (int) $response->get_data()->id;
+		$this->assertNotContains( $category, wp_get_post_categories( $post_id ) );
+		$this->assertNotContains( $tag, wp_get_post_tags( $post_id, array( 'fields' => 'ids' ) ) );
+	}
+
+	public function test_hashtag_assignment_respects_post_type_taxonomies_and_existing_posts() {
+		$category = self::factory()->category->create( array( 'name' => 'Art' ) );
+		$tag      = self::factory()->tag->create( array( 'name' => 'Art' ) );
+		$this->app->set_create_post_type( 'page' );
+		Mastodon_App::set_current_app( $this->app->get_client_id(), $this->api_request( 'POST', '/api/v1/statuses' ) );
+		$handler = new Handler\Status();
+		$data    = $handler->prepare_post_data( null, '#art', null, array(), 'standard', 'public', null );
+		$this->assertArrayNotHasKey( 'post_category', $data );
+		$this->assertArrayNotHasKey( 'tags_input', $data );
+
+		$this->app->set_create_post_type( 'post' );
+		Mastodon_App::set_current_app( $this->app->get_client_id(), $this->api_request( 'PUT', '/api/v1/statuses/' . $this->friend_post ) );
+		wp_set_post_categories( $this->friend_post, array( $category ) );
+		wp_set_post_tags( $this->friend_post, array( $tag ) );
+		$data = $handler->prepare_post_data( $this->friend_post, 'Updated text without hashtags', null, array(), 'standard', 'public', null );
+		wp_update_post( $data );
+		$this->assertContains( $category, wp_get_post_categories( $this->friend_post ) );
+		$this->assertSame( array( $tag ), wp_get_post_tags( $this->friend_post, array( 'fields' => 'ids' ) ) );
 	}
 
 	public function test_submit_status_sets_first_image_as_featured_image_when_enabled() {
