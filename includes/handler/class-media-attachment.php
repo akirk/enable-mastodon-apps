@@ -116,8 +116,11 @@ class Media_Attachment extends Handler {
 		$media_attachment->type        = 'image';
 		$media_attachment->url         = $url;
 		$media_attachment->preview_url = $thumb[0];
-		$media_attachment->description = get_the_excerpt( $attachment_id );
-		$media_attachment->meta        = array(
+		$media_attachment->description = get_post_meta( $attachment_id, '_wp_attachment_image_alt', true );
+		if ( ! metadata_exists( 'post', $attachment_id, '_wp_attachment_image_alt' ) ) {
+			$media_attachment->description = get_post_field( 'post_excerpt', $attachment_id );
+		}
+		$media_attachment->meta = array(
 			'original' => array(
 				'width'  => $meta['width'],
 				'height' => $meta['height'],
@@ -175,7 +178,7 @@ class Media_Attachment extends Handler {
 		$media_attachment->type        = 'video';
 		$media_attachment->url         = $url;
 		$media_attachment->preview_url = $thumb[0];
-		$media_attachment->description = get_the_excerpt( $attachment_id );
+		$media_attachment->description = get_post_field( 'post_excerpt', $attachment_id );
 		$media_attachment->meta        = array(
 			'original' => array(
 				'width'  => $meta['width'],
@@ -228,9 +231,12 @@ class Media_Attachment extends Handler {
 				continue;
 			}
 			$block = array();
-			foreach ( array( 'src', 'width', 'height' ) as $attr ) {
-				if ( preg_match( '/\s' . $attr . '="(?P<' . $attr . '>[^"]+)"/', $img[1], $m ) ) {
-					$block[ $attr ] = $m[ $attr ];
+			$processor = new \WP_HTML_Tag_Processor( $match[0] );
+			$processor->next_tag( 'IMG' );
+			foreach ( array( 'src', 'width', 'height', 'alt' ) as $attr ) {
+				$value = $processor->get_attribute( $attr );
+				if ( is_string( $value ) ) {
+					$block[ $attr ] = $value;
 				}
 			}
 			if ( ! isset( $block['src'] ) ) {
@@ -261,7 +267,7 @@ class Media_Attachment extends Handler {
 					),
 				);
 			}
-			$attachment->description     = '';
+			$attachment->description     = isset( $block['alt'] ) ? $block['alt'] : '';
 			$status->media_attachments[] = $attachment;
 		}
 		return $status;
