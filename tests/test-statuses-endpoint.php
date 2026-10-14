@@ -395,6 +395,9 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$request->set_param( 'status', $status_text );
 		$request->set_param( 'visibility', 'direct' );
 		$request->set_param( 'scheduled_at', $scheduled_at );
+		$request->set_param( 'sensitive', true );
+		$request->set_param( 'spoiler_text', 'A warning' );
+		$request->set_param( 'language', 'fr' );
 
 		$response = $this->dispatch_authenticated( $request );
 		$this->assertEquals( 200, $response->get_status(), wp_json_encode( $response->get_data() ) );
@@ -404,6 +407,10 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertIsString( $data->id );
 		$this->assertSame( $status_text, $data->params['text'] );
 		$this->assertSame( 'direct', $data->params['visibility'] );
+		$this->assertTrue( $data->params['sensitive'] );
+		$this->assertSame( 'A warning', $data->params['spoiler_text'] );
+		$this->assertSame( 'fr', $data->params['language'] );
+		$this->assertNull( $data->params['poll'] );
 		$this->assertInstanceOf( '\DateTime', $data->scheduled_at );
 		$this->assertSame( 'future', get_post_status( $data->id ) );
 
@@ -437,6 +444,7 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 
 		$this->assertSame(
 			array(
+				'sensitive'    => false,
 				'spoiler_text' => 'Sensitive topic',
 				'language'     => 'fr',
 				'poll'         => array(

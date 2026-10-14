@@ -920,12 +920,12 @@ class Status extends Handler {
 			$scheduled_status->params            = array(
 				'text'           => $status_text,
 				'media_ids'      => $media_ids,
-				'sensitive'      => $request ? $request->get_param( 'sensitive' ) : null,
-				'spoiler_text'   => $request ? $request->get_param( 'spoiler_text' ) : null,
+				'sensitive'      => ! empty( $status_data['sensitive'] ),
+				'spoiler_text'   => isset( $status_data['spoiler_text'] ) ? $status_data['spoiler_text'] : '',
 				'visibility'     => $visibility,
 				'language'       => $language,
 				'scheduled_at'   => null,
-				'poll'           => $request ? $request->get_param( 'poll' ) : null,
+				'poll'           => isset( $status_data['poll'] ) ? $status_data['poll'] : null,
 				'in_reply_to_id' => $in_reply_to_id ? strval( $in_reply_to_id ) : null,
 			);
 			$scheduled_status->media_attachments = array();
