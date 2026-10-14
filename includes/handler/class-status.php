@@ -39,12 +39,14 @@ class Status extends Handler {
 	public function register_hooks() {
 		add_filter( 'mastodon_api_status', array( $this, 'api_status' ), 10, 2 );
 		add_filter( 'mastodon_api_status', array( $this, 'api_status_ensure_numeric_id' ), 100 );
+		add_filter( 'mastodon_api_status', array( $this, 'api_status_poll' ), 90, 3 );
 		add_filter( 'mastodon_api_account_statuses_args', array( $this, 'mastodon_api_account_statuses_args' ), 10, 2 );
 		add_filter( 'mastodon_api_statuses', array( $this, 'api_statuses' ), 10, 4 );
 		add_filter( 'mastodon_api_statuses', array( $this, 'api_statuses_ensure_numeric_id' ), 100 );
 		add_filter( 'mastodon_api_tag_timeline', array( $this, 'api_statuses_ensure_numeric_id' ), 100 );
 		add_filter( 'mastodon_api_submit_status', array( $this, 'api_submit_comment' ), 10, 7 );
-		add_filter( 'mastodon_api_submit_status', array( $this, 'api_submit_post' ), 15, 9 );
+		add_filter( 'mastodon_api_submit_status', array( $this, 'api_submit_post' ), 15, 8 );
+		add_filter( 'mastodon_api_submit_status', array( $this, 'unsupported_poll' ), 14, 8 );
 		add_filter( 'mastodon_api_edit_status', array( $this, 'api_edit_comment' ), 10, 8 );
 		add_filter( 'mastodon_api_edit_status', array( $this, 'api_edit_post' ), 15, 10 );
 		add_filter( 'mastodon_api_status_context', array( $this, 'api_status_context' ), 10, 2 );
@@ -52,6 +54,60 @@ class Status extends Handler {
 		add_action( 'mastodon_api_unreact', array( $this, 'remove_reaction' ), 10, 3 );
 		add_filter( 'mastodon_api_favourites_args', array( $this, 'favourites_args' ), 10, 2 );
 		add_filter( 'mastodon_api_bookmarks_args', array( $this, 'bookmarks_args' ), 10, 2 );
+	}
+
+	/**
+	 * Allow integrations to attach a Mastodon poll entity to a status.
+	 *
+	 * @param Status_Entity|null $status    The status entity.
+	 * @param int                $object_id The WordPress object ID.
+	 * @param array              $data      Additional status data.
+	 * @return Status_Entity|null The status entity.
+	 */
+	public function api_status_poll( $status, $object_id, $data = array() ) {
+		if ( ! $status instanceof Status_Entity || $status->poll ) {
+			return $status;
+		}
+
+		/**
+		 * Filter the poll attached to a Mastodon status.
+		 *
+		 * @param \Enable_Mastodon_Apps\Entity\Poll|null $poll      The poll entity.
+		 * @param int                                      $object_id The WordPress object ID.
+		 * @param Status_Entity                            $status    The containing status.
+		 * @param array                                    $data      Additional status data.
+		 */
+		$poll = apply_filters( 'mastodon_api_status_poll', null, $object_id, $status, $data );
+		if ( $poll instanceof \Enable_Mastodon_Apps\Entity\Poll ) {
+			$status->poll = $poll;
+		}
+
+		return $status;
+	}
+
+	/**
+	 * Reject poll creation when no poll provider handled the request.
+	 *
+	 * @param mixed  $status  The current result.
+	 * @param string $text    The submitted text.
+	 * @param mixed  $reply   The reply target.
+	 * @param mixed  $media   Media IDs.
+	 * @param mixed  $format  Post format.
+	 * @param mixed  $privacy Visibility.
+	 * @param mixed  $date    Scheduled date.
+	 * @param array  $status_data Additional normalized status fields.
+	 * @return mixed The result or an explanatory error.
+	 */
+	public function unsupported_poll( $status, $text, $reply, $media, $format, $privacy, $date, $status_data = array() ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+		if ( $status || empty( $status_data['poll'] ) ) {
+			return $status;
+		}
+
+		return new \WP_Error(
+			'mastodon_api_poll_provider_required',
+			__( 'No integration handled this poll. Polls for ActivityPub is the recommended provider for creating local polls.', 'enable-mastodon-apps' ),
+			array( 'status' => 422 )
+		);
 	}
 
 	/**
@@ -806,13 +862,14 @@ class Status extends Handler {
 		return $post_data;
 	}
 
-	public function api_submit_post( $status, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at, $request = null, $language = null ) {
+	public function api_submit_post( $status, $status_text, $in_reply_to_id, $media_ids, $post_format, $visibility, $scheduled_at, $status_data = array() ) {
 		if (
 			$status instanceof \WP_Error // An error was thrown in an earlier hook.
 			|| $status instanceof Status_Entity // A status was already saved in an earlier hook.
 		) {
 			return $status;
 		}
+		$language = isset( $status_data['language'] ) ? $status_data['language'] : null;
 
 		$mentions = array();
 		if ( 'direct' === $visibility ) {
