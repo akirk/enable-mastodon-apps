@@ -787,6 +787,33 @@ class Status extends Handler {
 			}
 		}
 
+		if ( ! $post_id ) {
+			foreach ( array(
+				'category' => 'post_category',
+				'post_tag' => 'tags_input',
+			) as $taxonomy => $field ) {
+				if ( ! is_object_in_taxonomy( $post_data['post_type'], $taxonomy ) ) {
+					continue;
+				}
+				$terms = get_terms(
+					array(
+						'taxonomy'   => $taxonomy,
+						'hide_empty' => false,
+					)
+				);
+				if ( is_wp_error( $terms ) ) {
+					continue;
+				}
+				foreach ( $terms as $term ) {
+					// Match the submitted text before integrations turn hashtags into links.
+					$pattern = '/(?<![\\p{L}\\p{N}\\p{M}_\\/#])#' . preg_quote( $term->name, '/' ) . '(?![\\p{L}\\p{N}\\p{M}_])/iu';
+					if ( preg_match( $pattern, $submitted_status_text ) ) {
+						$post_data[ $field ][] = (int) $term->term_id;
+					}
+				}
+			}
+		}
+
 		/**
 		 * Allow modifying the post data before it gets inserted or updated.
 		 *
