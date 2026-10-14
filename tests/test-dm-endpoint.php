@@ -48,8 +48,16 @@ class DMEndpoint_Test extends Mastodon_API_TestCase {
 
 			$this->assertEquals( 200, $response->get_status() );
 			$status = $response->get_data();
-			$this->assertStringContainsString( $link, get_post( $status->id )->post_content );
-			$this->assertStringContainsString( $link, $status->content );
+			foreach ( array( get_post( $status->id )->post_content, $status->content ) as $content ) {
+				$processor = new \WP_HTML_Tag_Processor( $content );
+				$this->assertTrue( $processor->next_tag( 'A' ) );
+				$this->assertSame( 'https://example.org/@dmrecipient', $processor->get_attribute( 'href' ) );
+				$this->assertSame( 'mention', $processor->get_attribute( 'rel' ) );
+				$this->assertTrue( $processor->has_class( 'u-url' ) );
+				$this->assertTrue( $processor->has_class( 'mention' ) );
+				$this->assertStringContainsString( '>@dmrecipient</a>', $content );
+				$this->assertFalse( $processor->next_tag( 'A' ) );
+			}
 			$this->assertSame( 1, substr_count( $status->content, '<a ' ) );
 		} finally {
 			remove_filter( 'mastodon_api_submit_status_text', $filter );
