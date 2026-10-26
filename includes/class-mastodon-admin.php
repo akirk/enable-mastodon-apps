@@ -238,6 +238,15 @@ class Mastodon_Admin {
 			}
 		}
 
+		if ( isset( $_POST['mastodon_api_max_characters'] ) ) {
+			$max_characters = absint( wp_unslash( $_POST['mastodon_api_max_characters'] ) );
+			if ( $max_characters && 500 !== $max_characters ) {
+				update_option( 'mastodon_api_max_characters', $max_characters, false );
+			} else {
+				delete_option( 'mastodon_api_max_characters' );
+			}
+		}
+
 		if ( isset( $_POST['mastodon_api_max_media_attachments'] ) ) {
 			$max_media_attachments = absint( wp_unslash( $_POST['mastodon_api_max_media_attachments'] ) );
 			if ( $max_media_attachments && 4 !== $max_media_attachments ) {
