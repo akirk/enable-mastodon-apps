@@ -97,6 +97,27 @@
 				<tr>
 					<td>
 						<fieldset>
+							<label for="mastodon_api_max_characters">
+								<?php esc_html_e( 'Maximum post length (characters):', 'enable-mastodon-apps' ); ?>
+							</label>
+							<input
+								name="mastodon_api_max_characters"
+								type="number"
+								id="mastodon_api_max_characters"
+								value="<?php echo esc_attr( \Enable_Mastodon_Apps\Mastodon_API::get_max_characters() ); ?>"
+								min="1"
+								step="1"
+								class="small-text"
+							/>
+							<p class="description">
+								<?php esc_html_e( 'Mastodon apps use this advertised limit when composing posts. Default: 500 characters.', 'enable-mastodon-apps' ); ?>
+							</p>
+						</fieldset>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<fieldset>
 							<label for="mastodon_api_max_media_attachments">
 								<?php esc_html_e( 'Maximum media attachments per post:', 'enable-mastodon-apps' ); ?>
 							</label>

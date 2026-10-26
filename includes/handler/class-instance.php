@@ -67,6 +67,7 @@ class Instance extends Handler {
 		$media_attachments           = $this->media_attachment_configuration();
 		$instance->configuration     = array(
 			'statuses'          => array(
+				'max_characters'        => Mastodon_API::get_max_characters(),
 				'max_media_attachments' => Mastodon_API::get_max_media_attachments(),
 			),
 			'media_attachments' => $media_attachments,
@@ -105,6 +106,7 @@ class Instance extends Handler {
 		$media_attachments       = $this->media_attachment_configuration();
 		$instance->configuration = array(
 			'statuses'          => array(
+				'max_characters'        => Mastodon_API::get_max_characters(),
 				'max_media_attachments' => Mastodon_API::get_max_media_attachments(),
 			),
 			'media_attachments' => $media_attachments,

@@ -44,6 +44,16 @@ class Mastodon_API {
 	const ANNOUNCE_CPT   = 'ema-announce';
 
 	/**
+	 * Get the maximum post length advertised to Mastodon apps.
+	 *
+	 * @return int The configured character limit.
+	 */
+	public static function get_max_characters(): int {
+		$max_characters = absint( get_option( 'mastodon_api_max_characters', 500 ) );
+		return $max_characters > 0 ? $max_characters : 500;
+	}
+
+	/**
 	 * Get the maximum number of media attachments allowed per status.
 	 *
 	 * @return int The configured media attachment limit.
