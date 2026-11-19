@@ -269,6 +269,33 @@ class AccountsEndpoint_Test extends Mastodon_API_TestCase {
 		}
 	}
 
+	public function test_account_statuses_only_media_filters_integration_results() {
+		$filter = function () {
+			$statuses = array();
+			foreach ( array( false, true ) as $has_media ) {
+				$status = apply_filters( 'mastodon_api_status', null, $this->post, array() );
+				$status->id = $has_media ? '102' : '101';
+				$status->account->id = strval( $this->administrator );
+				$status->media_attachments = $has_media ? array( new Entity\Media_Attachment() ) : array();
+				$statuses[] = $status;
+			}
+			return new \WP_REST_Response( $statuses );
+		};
+		add_filter( 'mastodon_api_account_statuses', $filter, 99 );
+		try {
+			$request = $this->api_request( 'GET', '/api/v1/accounts/' . $this->administrator . '/statuses' );
+			$response = $this->dispatch_authenticated( $request );
+			$this->assertCount( 2, $response->get_data() );
+
+			$request->set_param( 'only_media', true );
+			$response = $this->dispatch_authenticated( $request );
+			$this->assertSame( 200, $response->get_status() );
+			$this->assertSame( array( '102' ), wp_list_pluck( $response->get_data(), 'id' ) );
+		} finally {
+			remove_filter( 'mastodon_api_account_statuses', $filter, 99 );
+		}
+	}
+
 	public function test_local_blog_users_are_following_without_following_integration() {
 		$disable_following_integration = '__return_false';
 		add_filter( 'mastodon_api_has_following_integration', $disable_following_integration );

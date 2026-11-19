@@ -55,6 +55,35 @@ class Activitypub {
 		add_filter( 'mastodon_entity_relationship', array( $this, 'entity_relationship' ), 20, 2 );
 		add_filter( 'mastodon_api_account', array( $this, 'account_counts' ), 16, 2 );
 		add_filter( 'mastodon_api_account_following', array( $this, 'account_following' ), 20, 3 );
+		add_filter( 'mastodon_api_account_statuses_args', array( $this, 'account_statuses_args' ), 20, 2 );
+	}
+
+	/**
+	 * Let ActivityPub fetch the outbox for a remote actor account ID.
+	 *
+	 * @param array            $args    Status query arguments.
+	 * @param \WP_REST_Request $request The account statuses request.
+	 * @return array Updated arguments for ActivityPub's status handler.
+	 */
+	public function account_statuses_args( $args, $request ) {
+		if ( empty( $args['author'] ) || ! is_numeric( $args['author'] ) || $request->get_param( 'pinned' ) ) {
+			return $args;
+		}
+
+		$actor_post = get_post( (int) $args['author'] );
+		if ( ! $actor_post || self::ACTOR_POST_TYPE !== $actor_post->post_type ) {
+			return $args;
+		}
+
+		$actor = \Activitypub\Collection\Remote_Actors::get_actor( $actor_post );
+		if ( ! $actor || is_wp_error( $actor ) ) {
+			return $args;
+		}
+
+		$args['activitypub'] = $actor->get_id();
+		unset( $args['author'] );
+
+		return $args;
 	}
 
 	/**
