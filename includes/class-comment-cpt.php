@@ -99,11 +99,38 @@ class Comment_CPT {
 		return $comment_id;
 	}
 
+	/**
+	 * Whether a comment should be mirrored to the comment CPT.
+	 *
+	 * Only replies belong in the Mastodon status stream. Plugins use other
+	 * comment types for their own records, for example WooCommerce order
+	 * notes, Action Scheduler logs, likes, votes or check-ins, and those must
+	 * not become published posts.
+	 *
+	 * @param \WP_Comment $comment The comment.
+	 * @return bool
+	 */
+	public static function should_mirror_comment( $comment ) {
+		/**
+		 * Filters the comment types that are mirrored to the comment CPT, and so
+		 * appear as statuses in Mastodon apps.
+		 *
+		 * @param string[]    $comment_types Comment types to mirror. Default array( 'comment' ).
+		 * @param \WP_Comment $comment       The comment being considered.
+		 */
+		$comment_types = apply_filters( 'mastodon_api_mirrored_comment_types', array( 'comment' ), $comment );
+
+		return in_array( get_comment_type( $comment ), (array) $comment_types, true );
+	}
+
 	public static function create_comment_post( $comment_id, $comment ) {
 		if ( ! $comment && $comment_id ) {
 			$comment = get_comment( $comment_id );
 		}
 		if ( ! $comment || ! isset( $comment->comment_approved ) || '1' !== strval( $comment->comment_approved ) ) {
+			return;
+		}
+		if ( ! self::should_mirror_comment( $comment ) ) {
 			return;
 		}
 		$parent_post_id = $comment->comment_post_ID;
