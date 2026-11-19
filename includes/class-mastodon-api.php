@@ -3793,8 +3793,9 @@ class Mastodon_API {
 		$statuses = array_values(
 			array_filter(
 				$statuses,
-				function ( $status ) use ( $requested_user_id ) {
-					return isset( $status->account->id ) && strval( $status->account->id ) === $requested_user_id;
+				function ( $status ) use ( $requested_user_id, $request ) {
+					return isset( $status->account->id ) && strval( $status->account->id ) === $requested_user_id
+						&& ( ! $request->get_param( 'only_media' ) || ! empty( $status->media_attachments ) );
 				}
 			)
 		);

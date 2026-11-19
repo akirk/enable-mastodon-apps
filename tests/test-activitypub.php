@@ -15,6 +15,30 @@ use Enable_Mastodon_Apps\Comment_CPT;
  * @package
  */
 class ActivityPub_Test extends Mastodon_API_TestCase {
+	public function test_remote_actor_account_statuses_use_activitypub_outbox() {
+		$actor_id = \Activitypub\Collection\Remote_Actors::create(
+			array(
+				'id'                => 'https://example.org/@user',
+				'type'              => 'Person',
+				'inbox'             => 'https://example.org/@user/inbox',
+				'preferredUsername' => 'user',
+			)
+		);
+		$this->assertNotWPError( $actor_id );
+		$integration = new Integration\Activitypub();
+		$request = new \WP_REST_Request( 'GET' );
+		$args = array( 'author' => strval( $actor_id ) );
+		$result = $integration->account_statuses_args( $args, $request );
+		$this->assertSame( 'https://example.org/@user', $result['activitypub'] );
+		$this->assertArrayNotHasKey( 'author', $result );
+
+		$request->set_param( 'pinned', true );
+		$this->assertSame( $args, $integration->account_statuses_args( $args, $request ) );
+		$request->set_param( 'pinned', false );
+		$args['author'] = $this->administrator;
+		$this->assertSame( $args, $integration->account_statuses_args( $args, $request ) );
+	}
+
 	public function set_up() {
 		if ( ! class_exists( '\Activitypub\Activitypub' ) ) {
 			return $this->markTestSkipped( 'The ActivityPub plugin is not loaded.' );
