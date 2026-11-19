@@ -273,9 +273,8 @@ class AccountsEndpoint_Test extends Mastodon_API_TestCase {
 		$filter = function () {
 			$statuses = array();
 			foreach ( array( false, true ) as $has_media ) {
-				$status = new Entity\Status();
+				$status = apply_filters( 'mastodon_api_status', null, $this->post, array() );
 				$status->id = $has_media ? '102' : '101';
-				$status->account = new Entity\Account();
 				$status->account->id = strval( $this->administrator );
 				$status->media_attachments = $has_media ? array( new Entity\Media_Attachment() ) : array();
 				$statuses[] = $status;
