@@ -24,6 +24,38 @@ class StatusesEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertArrayHasKey( '/' . Mastodon_API::PREFIX . '/api/v1/statuses', $routes );
 	}
 
+	public function test_remote_url_status_context() {
+		$url = 'https://example.org/users/test/statuses/123';
+		$seen_url = null;
+		$context_filter = function ( $context, $post_id, $context_url ) use ( &$seen_url ) {
+			$seen_url = $context_url;
+			$status = new Entity\Status();
+			$status->id = 'https://example.org/reply';
+			$status->in_reply_to_id = $context_url;
+			$context['descendants']['remote-reply'] = $status;
+			return $context;
+		};
+		$block_http = function () {
+			return new \WP_Error( 'test_remote_request', 'No network in this test' );
+		};
+		add_filter( 'pre_http_request', $block_http );
+		add_filter( 'mastodon_api_status_context', $context_filter, 100, 3 );
+		try {
+			$request = $this->api_request( 'GET', '/api/v1/statuses/' . $url . '/context' );
+			$response = $this->dispatch( $request );
+		} finally {
+			remove_filter( 'pre_http_request', $block_http );
+			remove_filter( 'mastodon_api_status_context', $context_filter, 100 );
+		}
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( $url, $seen_url );
+		$data = $response->get_data();
+		$this->assertSame( array(), $data['ancestors'] );
+		$this->assertArrayHasKey( 0, $data['descendants'] );
+		$this->assertTrue( is_numeric( $data['descendants'][0]->id ) );
+		$this->assertTrue( ctype_digit( $data['descendants'][0]->in_reply_to_id ) );
+	}
+
 	public function test_statuses_id() {
 		$request = $this->api_request( 'GET', '/api/v1/statuses/' . $this->friend_post );
 		$response = $this->dispatch( $request );

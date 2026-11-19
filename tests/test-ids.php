@@ -15,6 +15,27 @@ use WP_REST_Request;
  */
 class Ids_Test extends Mastodon_API_TestCase {
 	private $mapped_id;
+
+	public function test_remote_reply_and_reblog_ids_are_numeric() {
+		$url = 'https://metalhead.club/users/mariusor/statuses/117642274990754211';
+		$status = new Entity\Status();
+		$status->id = '123';
+		$status->in_reply_to_id = $url;
+		$status->reblog = new Entity\Status();
+		$status->reblog->id = $url;
+		$status->reblog->in_reply_to_id = $url . '-parent';
+
+		$handler = new Handler\Handler();
+		$status = $handler->api_status_ensure_numeric_id( $status );
+
+		$this->assertSame( '123', $status->id );
+		$this->assertTrue( ctype_digit( $status->in_reply_to_id ) );
+		$this->assertTrue( is_numeric( $status->reblog->id ) );
+		$this->assertTrue( ctype_digit( $status->reblog->in_reply_to_id ) );
+		$this->assertSame( $url, Mastodon_API::maybe_get_remapped_url( $status->in_reply_to_id ) );
+		$this->assertSame( $url, Mastodon_API::maybe_get_remapped_url( $status->reblog->id ) );
+	}
+
 	public function account_id_mapper( $account, $user_id ) {
 		if ( strval( $user_id ) === strval( $this->administrator ) ) {
 			$account->id = 'activitypub@example.org';

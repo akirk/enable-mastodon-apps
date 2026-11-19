@@ -166,12 +166,16 @@ class Handler {
 			$status->id = \Enable_Mastodon_Apps\Mastodon_API::remap_url( $status->id );
 		}
 
+		if ( isset( $status->in_reply_to_id ) && ! is_numeric( $status->in_reply_to_id ) ) {
+			$status->in_reply_to_id = strval( \Enable_Mastodon_Apps\Mastodon_API::remap_url( $status->in_reply_to_id ) );
+		}
+
 		if ( isset( $status->account->id ) && ! is_numeric( $status->account->id ) ) {
 			$status->account->id = \Enable_Mastodon_Apps\Mastodon_API::remap_user_id( $status->account->id );
 		}
 
-		if ( isset( $status->reblog->account->id ) && ! is_numeric( $status->reblog->account->id ) ) {
-			$status->reblog->account->id = \Enable_Mastodon_Apps\Mastodon_API::remap_user_id( $status->reblog->account->id );
+		if ( isset( $status->reblog ) ) {
+			$status->reblog = $this->api_status_ensure_numeric_id( $status->reblog );
 		}
 
 		foreach ( $status->media_attachments as $media_attachment ) {

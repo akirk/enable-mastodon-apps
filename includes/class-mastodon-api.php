@@ -581,6 +581,9 @@ class Mastodon_API {
 		$parametrized = apply_filters(
 			'mastodon_api_parametrized_routes',
 			array(
+				'api/v1/statuses/(https?://.+)/context$' => 'api/v1/statuses/$matches[1]/context',
+				'api/v1/statuses/(https?://.+)$'         => 'api/v1/statuses/$matches[1]',
+				'api/v1/accounts/([^/]+)/endorsements'   => 'api/v1/accounts/$matches[1]/endorsements',
 				'api/v1/accounts/([^/]+)/featured_tags'  => 'api/v1/accounts/$matches[1]/featured_tags',
 				'api/v1/accounts/([^/]+)/following'      => 'api/v1/accounts/$matches[1]/following',
 				'api/v1/accounts/([^/]+)/followers'      => 'api/v1/accounts/$matches[1]/followers',
@@ -635,6 +638,33 @@ class Mastodon_API {
 	}
 
 	public function add_rest_routes() {
+		register_rest_route(
+			self::PREFIX,
+			'api/v1/accounts/(?P<user_id>[^/]+)/endorsements',
+			array(
+				'methods'             => array( 'GET', 'OPTIONS' ),
+				'callback'            => '__return_empty_array',
+				'permission_callback' => $this->required_scope( 'read:accounts', true ),
+			)
+		);
+
+		// Older clients may still have remote URLs cached as status IDs.
+		$legacy_status_routes = array(
+			'/context' => 'api_get_status_context',
+			''         => 'api_get_post',
+		);
+		foreach ( $legacy_status_routes as $suffix => $callback ) {
+			register_rest_route(
+				self::PREFIX,
+				'api/v1/statuses/(?P<post_id>https?://.+)' . $suffix,
+				array(
+					'methods'             => array( 'GET', 'OPTIONS' ),
+					'callback'            => array( $this, $callback ),
+					'permission_callback' => $this->required_scope( 'read:statuses', true ),
+				)
+			);
+		}
+
 		register_rest_route(
 			self::PREFIX,
 			'api/v1/apps',
@@ -2877,7 +2907,13 @@ class Mastodon_API {
 
 		$context_post_id = self::maybe_get_remapped_reblog_id( $context_post_id );
 
-		$url = get_permalink( $context_post_id );
+		if ( preg_match( '#^https?://#', (string) $context_post_id ) ) {
+			$context_post_id = self::remap_url( $context_post_id );
+		}
+		$url = self::maybe_get_remapped_url( $context_post_id );
+		if ( $url === $context_post_id ) {
+			$url = get_permalink( $context_post_id );
+		}
 
 		$context = array(
 			'ancestors'   => array(),
@@ -2892,7 +2928,12 @@ class Mastodon_API {
 		 * @param string $url             The permalink of the post.
 		 * @return array The context with 'ancestors' and 'descendants' arrays.
 		 */
-		return apply_filters( 'mastodon_api_status_context', $context, $context_post_id, $url );
+		$context = apply_filters( 'mastodon_api_status_context', $context, $context_post_id, $url );
+		$handler = new Handler\Handler();
+		foreach ( array( 'ancestors', 'descendants' ) as $key ) {
+			$context[ $key ] = array_values( array_map( array( $handler, 'api_status_ensure_numeric_id' ), $context[ $key ] ) );
+		}
+		return $context;
 	}
 
 	protected function get_reaction_for_status_action( string $action ) {
@@ -3200,6 +3241,9 @@ class Mastodon_API {
 			return new WP_REST_Response( array( 'error' => 'Record not found' ), 404 );
 		}
 
+		if ( preg_match( '#^https?://#', (string) $post_id ) ) {
+			$post_id = self::remap_url( $post_id );
+		}
 		$post_id = self::maybe_get_remapped_reblog_id( $post_id );
 
 		// Check if this is a URL-remapped ID (e.g. a remote/federated post).
