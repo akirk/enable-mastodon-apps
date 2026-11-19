@@ -29,7 +29,7 @@
 					</td>
 				</tr>
 				<tr>
-					<th scope="row" rowspan="3"><?php esc_html_e( 'Posting', 'enable-mastodon-apps' ); ?></th>
+					<th scope="row" rowspan="4"><?php esc_html_e( 'Posting', 'enable-mastodon-apps' ); ?></th>
 					<td>
 						<fieldset>
 							<label for="mastodon_api_no_posting_cpt">
