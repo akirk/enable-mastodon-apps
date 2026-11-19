@@ -15,6 +15,13 @@ namespace Enable_Mastodon_Apps;
 class AccountsEndpoint_Test extends Mastodon_API_TestCase {
 	private $external_account = 'alex@kirk.at';
 
+	public function test_account_endorsements_returns_empty_list() {
+		$request = $this->api_request( 'GET', '/api/v1/accounts/' . $this->administrator . '/endorsements' );
+		$response = $this->dispatch( $request );
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( array(), $response->get_data() );
+	}
+
 	public function mastodon_api_webfinger( $body, $url ) {
 		if ( $url !== $this->external_account ) {
 			return $body;
