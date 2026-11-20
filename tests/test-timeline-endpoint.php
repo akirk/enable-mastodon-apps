@@ -13,6 +13,60 @@ namespace Enable_Mastodon_Apps;
  * @package
  */
 class TimelineEndpoint_Test extends Mastodon_API_TestCase {
+	/**
+	 * The local timeline keeps our replies on remote posts but excludes remote authors.
+	 */
+	public function test_local_timeline_excludes_remote_posts_and_comments() {
+		$remote_post = self::factory()->post->create(
+			array(
+				'post_author' => 0,
+				'post_status' => 'publish',
+				'post_type'   => 'post',
+			)
+		);
+		$remote_comment = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $remote_post,
+				'user_id'         => 0,
+			)
+		);
+		$own_comment = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $remote_post,
+				'user_id'         => $this->administrator,
+			)
+		);
+		$remote_comment_post = (int) Comment_CPT::comment_id_to_post_id( $remote_comment );
+		$own_comment_post = (int) Comment_CPT::comment_id_to_post_id( $own_comment );
+		$queries = array();
+		$capture = function ( $posts, $query ) use ( &$queries ) {
+			if ( 'publish' === $query->get( 'post_status' ) && in_array( 0, (array) $query->get( 'author__not_in' ), true ) ) {
+				$queries[] = $query;
+			}
+			return $posts;
+		};
+		add_filter( 'posts_results', $capture, 10, 2 );
+		try {
+			$request = new \WP_REST_Request( 'GET', '/enable-mastodon-apps/api/v1/timelines/public' );
+			$request->set_param( 'local', true );
+			$request->set_param( 'limit', 80 );
+			$handler = new Handler\Timeline();
+			$handler->api_public_timeline( null, $request );
+		} finally {
+			remove_filter( 'posts_results', $capture, 10 );
+			remove_filter( 'mastodon_api_timelines', array( $handler, 'api_timelines' ), 10 );
+			remove_filter( 'mastodon_api_tag_timeline', array( $handler, 'api_tag_timeline' ), 10 );
+			remove_filter( 'mastodon_api_public_timeline', array( $handler, 'api_public_timeline' ), 10 );
+		}
+		$this->assertNotEmpty( $queries );
+		$query = end( $queries );
+		$ids = wp_list_pluck( $query->posts, 'ID' );
+		$this->assertContains( $this->post, $ids );
+		$this->assertContains( $own_comment_post, $ids );
+		$this->assertNotContains( $remote_post, $ids );
+		$this->assertNotContains( $remote_comment_post, $ids );
+	}
+
 	public function test_register_routes() {
 		global $wp_rest_server;
 		$routes = $wp_rest_server->get_routes();

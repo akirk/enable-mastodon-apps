@@ -70,6 +70,62 @@ class NotificationsEndpoint_Test extends Mastodon_API_TestCase {
 	}
 
 	/**
+	 * A boost notification names the booster without making them the original author.
+	 */
+	public function test_boost_notification_preserves_original_status_author() {
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $this->post,
+				'comment_type'     => 'repost',
+				'comment_approved' => 1,
+				'user_id'          => $this->friend,
+			)
+		);
+		$mapped_id = Comment_CPT::comment_id_to_post_id( $comment_id );
+		$status = new Entity\Status();
+		$status->id = (string) $this->post;
+		$status->created_at = new \DateTime();
+		$status->content = 'The original post.';
+		$status->account = new Entity\Account();
+		$status->account->id = (string) $this->administrator;
+		$booster = new Entity\Account();
+		$booster->id = (string) $this->friend;
+		$queries = function () use ( $mapped_id ) {
+			return array(
+				array(
+					'post_type' => Comment_CPT::CPT,
+					'post__in'  => array( $mapped_id ),
+				),
+			);
+		};
+		$status_filter = function ( $value, $id ) use ( $status ) {
+			return (int) $id === $this->post ? $status : $value;
+		};
+		$account_filter = function ( $account, $id ) use ( $booster ) {
+			return (int) $id === $this->friend ? $booster : $account;
+		};
+		add_filter( 'mastodon_api_get_notifications_queries', $queries, PHP_INT_MAX );
+		add_filter( 'mastodon_api_status', $status_filter, PHP_INT_MAX, 2 );
+		add_filter( 'mastodon_api_account', $account_filter, PHP_INT_MAX, 2 );
+		try {
+			$response = $this->dispatch_authenticated( $this->api_request( 'GET', '/api/v1/notifications' ) );
+			$data = json_decode( wp_json_encode( $response->get_data() ), true );
+		} finally {
+			remove_filter( 'mastodon_api_get_notifications_queries', $queries, PHP_INT_MAX );
+			remove_filter( 'mastodon_api_status', $status_filter, PHP_INT_MAX );
+			remove_filter( 'mastodon_api_account', $account_filter, PHP_INT_MAX );
+		}
+		$found = false;
+		foreach ( $data as $notification ) {
+			if ( 'reblog' === $notification['type'] && (string) $this->friend === (string) $notification['account']['id'] ) {
+				$found = true;
+				$this->assertSame( (string) $this->administrator, (string) $notification['status']['account']['id'] );
+			}
+		}
+		$this->assertTrue( $found );
+	}
+
+	/**
 	 * Collect the status IDs of the notifications in a response.
 	 *
 	 * @param array $data The decoded response data.

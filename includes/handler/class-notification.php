@@ -231,7 +231,7 @@ class Notification extends Handler {
 					}
 
 					$account = apply_filters( 'mastodon_api_account', null, $post->post_author, null, $post );
-					if ( $status ) {
+					if ( $status && 'mention' === $type ) {
 						$status->account = $account;
 					}
 
