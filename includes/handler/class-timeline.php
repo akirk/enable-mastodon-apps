@@ -115,6 +115,12 @@ class Timeline extends Handler {
 		 */
 		$args = apply_filters( 'mastodon_api_timelines_args', $args, $request );
 
+		if ( rest_sanitize_boolean( $request->get_param( 'local' ) ) ) {
+			// Cached remote posts and received comments have no local WordPress author.
+			// Keep locally authored replies even when their parent post is remote.
+			$args['author__not_in'] = array_unique( array_merge( (array) ( $args['author__not_in'] ?? array() ), array( 0 ) ) );
+		}
+
 		return $this->get_posts( $args, $request->get_param( 'min_id' ), $request->get_param( 'max_id' ) );
 	}
 }
