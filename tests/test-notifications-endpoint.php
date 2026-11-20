@@ -109,7 +109,7 @@ class NotificationsEndpoint_Test extends Mastodon_API_TestCase {
 		add_filter( 'mastodon_api_account', $account_filter, PHP_INT_MAX, 2 );
 		try {
 			$response = $this->dispatch_authenticated( $this->api_request( 'GET', '/api/v1/notifications' ) );
-			$data = json_decode( wp_json_encode( $response->get_data() ), true );
+			$data = $response->get_data();
 		} finally {
 			remove_filter( 'mastodon_api_get_notifications_queries', $queries, PHP_INT_MAX );
 			remove_filter( 'mastodon_api_status', $status_filter, PHP_INT_MAX );
@@ -117,9 +117,9 @@ class NotificationsEndpoint_Test extends Mastodon_API_TestCase {
 		}
 		$found = false;
 		foreach ( $data as $notification ) {
-			if ( 'reblog' === $notification['type'] && (string) $this->friend === (string) $notification['account']['id'] ) {
+			if ( 'reblog' === $notification['type'] && (string) $this->friend === (string) $notification['account']->id ) {
 				$found = true;
-				$this->assertSame( (string) $this->administrator, (string) $notification['status']['account']['id'] );
+				$this->assertSame( (string) $this->administrator, (string) $notification['status']->account->id );
 			}
 		}
 		$this->assertTrue( $found );
