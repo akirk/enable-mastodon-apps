@@ -143,7 +143,11 @@ class Handler {
 
 		usort(
 			$statuses,
-			function ( $a, $b ) {
+			function ( $a, $b ) use ( $args ) {
+				if ( ! empty( $args['mastodon_api_deduplicate'] ) ) {
+					// Cached publication dates need not follow the insertion-ID cursors.
+					return (int) $b->id <=> (int) $a->id;
+				}
 				return $b->created_at->getTimestamp() - $a->created_at->getTimestamp();
 			}
 		);
