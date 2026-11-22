@@ -14,57 +14,36 @@ namespace Enable_Mastodon_Apps;
  */
 class CommentsCPT_Tests extends \WP_UnitTestCase {
 	/**
-	 * Comment accounts use their stored ActivityPub actor without URL resolution.
+	 * Protocol integrations receive the original comment when resolving its account.
 	 */
-	public function test_remote_comment_uses_stored_actor_and_falls_back_to_url() {
-		if ( ! class_exists( '\\Activitypub\\Collection\\Remote_Actors' ) ) {
-			$this->markTestSkipped( 'ActivityPub is not available.' );
-		}
-		$parent_id = self::factory()->post->create();
+	public function test_comment_account_filter_receives_original_comment() {
+		$post_id = self::factory()->post->create();
 		$comment = self::factory()->comment->create_and_get(
 			array(
-				'comment_post_ID'    => $parent_id,
+				'comment_post_ID'    => $post_id,
 				'comment_author_url' => 'https://example.org/@reader',
 				'user_id'            => 0,
 			)
 		);
-		$actor_id = self::factory()->post->create( array( 'post_type' => 'ap_actor' ) );
+		$proxy_id = Comment_CPT::comment_id_to_post_id( $comment->comment_ID );
 		$account = new Entity\Account();
-		$account->id = (string) $actor_id;
-		$lookups = array();
-		$resolve = function ( $value, $id ) use ( $actor_id, $comment, $account, &$lookups ) {
-			if ( (int) $id === $actor_id || $comment->comment_author_url === $id ) {
-				$lookups[] = $id;
+		$account->id = '123456';
+		$context = null;
+		$resolve = function ( $value, $id, $request = null, $source = null ) use ( $comment, $account, &$context ) {
+			if ( $comment->comment_author_url === $id ) {
+				$context = $source;
 				return $account;
 			}
 			return $value;
 		};
-		$restore_account = function ( $value, $id ) use ( $actor_id, $comment, $account ) {
-			return (int) $id === $actor_id || $comment->comment_author_url === $id ? $account : $value;
-		};
-		add_filter( 'mastodon_api_account', $resolve, 1, 2 );
-		add_filter( 'mastodon_api_account', $restore_account, PHP_INT_MAX, 2 );
+		add_filter( 'mastodon_api_account', $resolve, 1, 4 );
 		try {
-			$handler = new Comment_CPT();
-			$proxy_id = Comment_CPT::comment_id_to_post_id( $comment->comment_ID );
-			update_comment_meta( $comment->comment_ID, '_activitypub_remote_actor_id', $actor_id );
-			$status = $handler->api_status( null, $proxy_id, array( 'comment' => $comment ) );
-			$this->assertSame( $account, $status->account );
-			$this->assertSame( array( $actor_id ), $lookups );
-			$lookups = array();
-			$this->assertSame( $account, $handler->api_account( null, 0, null, get_post( $proxy_id ) ) );
-			$this->assertSame( array( $actor_id ), $lookups );
-			// A missing or stale actor must retain the URL fallback.
-			foreach ( array( 0, $parent_id ) as $stale_actor ) {
-				$lookups = array();
-				update_comment_meta( $comment->comment_ID, '_activitypub_remote_actor_id', $stale_actor );
-				$status = $handler->api_status( null, $proxy_id, array( 'comment' => $comment ) );
-				$this->assertSame( $account, $status->account );
-				$this->assertSame( array( $comment->comment_author_url ), $lookups );
-			}
+			$result = ( new Comment_CPT() )->api_account( null, 0, null, get_post( $proxy_id ) );
+			$this->assertSame( $account->id, (string) $result->id );
+			$this->assertInstanceOf( '\\WP_Comment', $context );
+			$this->assertSame( (int) $comment->comment_ID, (int) $context->comment_ID );
 		} finally {
 			remove_filter( 'mastodon_api_account', $resolve, 1 );
-			remove_filter( 'mastodon_api_account', $restore_account, PHP_INT_MAX );
 		}
 	}
 

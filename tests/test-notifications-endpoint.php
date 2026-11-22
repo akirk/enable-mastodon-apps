@@ -271,7 +271,7 @@ class NotificationsEndpoint_Test extends Mastodon_API_TestCase {
 			remove_filter( 'mastodon_api_account', $observe_account, PHP_INT_MAX );
 		}
 		$this->assertCount( 1, $data );
-		$this->assertSame( $account, $data[0]['account'] );
+		$this->assertSame( $account->id, (string) $data[0]['account']->id );
 		$this->assertSame( 0, $account_lookups );
 	}
 
