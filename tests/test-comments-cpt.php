@@ -144,6 +144,54 @@ class CommentsCPT_Tests extends \WP_UnitTestCase {
 		$this->assertEquals( $posts_count->publish, $new_count->publish );
 	}
 
+	public function test_other_comment_types_are_not_mirrored() {
+		$posts_count = wp_count_posts( Comment_CPT::CPT );
+		$post = $this->factory->post->create_and_get();
+
+		foreach ( array( 'order_note', 'action_log', 'like' ) as $comment_type ) {
+			$comment = $this->factory->comment->create_and_get(
+				array(
+					'comment_post_ID'  => $post->ID,
+					'comment_approved' => '1',
+					'comment_type'     => $comment_type,
+				)
+			);
+			$this->assertNotNull( $comment );
+			$this->assertEmpty( get_comment_meta( $comment->comment_ID, Comment_CPT::META_KEY, true ) );
+		}
+
+		wp_cache_delete( _count_posts_cache_key( Comment_CPT::CPT ), 'counts' );
+		$new_count = wp_count_posts( Comment_CPT::CPT );
+		$this->assertEquals( $posts_count->publish, $new_count->publish );
+	}
+
+	public function test_mirrored_comment_types_filter() {
+		$posts_count = wp_count_posts( Comment_CPT::CPT );
+		$post = $this->factory->post->create_and_get();
+
+		$filter = function ( $comment_types ) {
+			$comment_types[] = 'custom_reply';
+			return $comment_types;
+		};
+		add_filter( 'mastodon_api_mirrored_comment_types', $filter );
+
+		$comment = $this->factory->comment->create_and_get(
+			array(
+				'comment_post_ID'  => $post->ID,
+				'comment_approved' => '1',
+				'comment_type'     => 'custom_reply',
+			)
+		);
+
+		remove_filter( 'mastodon_api_mirrored_comment_types', $filter );
+
+		$this->assertNotEmpty( get_comment_meta( $comment->comment_ID, Comment_CPT::META_KEY, true ) );
+
+		wp_cache_delete( _count_posts_cache_key( Comment_CPT::CPT ), 'counts' );
+		$new_count = wp_count_posts( Comment_CPT::CPT );
+		$this->assertEquals( 1 + $posts_count->publish, $new_count->publish );
+	}
+
 	public function test_upgrade() {
 		remove_all_actions( 'wp_insert_comment' );
 		$original_post = $this->factory->post->create_and_get();
