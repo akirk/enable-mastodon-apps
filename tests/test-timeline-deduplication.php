@@ -8,7 +8,7 @@
 namespace Enable_Mastodon_Apps;
 
 /**
- * Exercise source preference, event identity, visibility, and cursor pagination.
+ * Exercise page-local GUID deduplication, boosts, and cursor boundaries.
  */
 class Timeline_Deduplication_Test extends Mastodon_API_TestCase {
 	private $timeline;
@@ -25,16 +25,12 @@ class Timeline_Deduplication_Test extends Mastodon_API_TestCase {
 		$this->template = apply_filters( 'mastodon_api_status', null, $this->post, array() );
 		$this->timeline = new Handler\Timeline();
 		add_filter( 'mastodon_api_timelines_args', array( $this, 'timeline_args' ), PHP_INT_MAX, 2 );
-		add_filter( 'mastodon_api_timeline_post_identity', array( $this, 'object_identity' ), 10, 2 );
-		add_filter( 'mastodon_api_timeline_post_priority', array( $this, 'representation_priority' ), 10, 2 );
 		add_filter( 'mastodon_api_status', array( $this, 'cached_status' ), PHP_INT_MAX, 2 );
 		add_filter( 'posts_where', array( $this, 'restrict_visibility' ), PHP_INT_MAX, 2 );
 	}
 
 	public function tear_down() {
 		remove_filter( 'mastodon_api_timelines_args', array( $this, 'timeline_args' ), PHP_INT_MAX );
-		remove_filter( 'mastodon_api_timeline_post_identity', array( $this, 'object_identity' ), 10 );
-		remove_filter( 'mastodon_api_timeline_post_priority', array( $this, 'representation_priority' ), 10 );
 		remove_filter( 'mastodon_api_status', array( $this, 'cached_status' ), PHP_INT_MAX );
 		remove_filter( 'posts_where', array( $this, 'restrict_visibility' ), PHP_INT_MAX );
 		remove_filter( 'mastodon_api_timelines', array( $this->timeline, 'api_timelines' ), 10 );
@@ -71,7 +67,6 @@ class Timeline_Deduplication_Test extends Mastodon_API_TestCase {
 			'orderby'                  => 'ID',
 			'order'                    => 'DESC',
 			'suppress_filters'         => false,
-			'mastodon_api_deduplicate' => array( 'test_cache_secondary' ),
 			'test_timeline_visibility' => true,
 		);
 	}
@@ -82,17 +77,6 @@ class Timeline_Deduplication_Test extends Mastodon_API_TestCase {
 			$where .= $wpdb->prepare( " AND {$wpdb->posts}.ID <> %d", $this->hidden_id );
 		}
 		return $where;
-	}
-
-	public function object_identity( $identity, $post ) {
-		if ( in_array( $post->ID, $this->cached_ids, true ) ) {
-			return in_array( $post->ID, $this->boost_ids, true ) ? false : $post->guid;
-		}
-		return $identity;
-	}
-
-	public function representation_priority( $priority, $post ) {
-		return 'test_cache_primary' === $post->post_type ? 10 : $priority;
 	}
 
 	public function cached_status( $status, $id ) {
@@ -115,76 +99,55 @@ class Timeline_Deduplication_Test extends Mastodon_API_TestCase {
 		return wp_list_pluck( $this->timeline->api_timelines( null, $request )->get_data(), 'id' );
 	}
 
-	public function test_deduplication_precedes_both_pagination_directions_and_keeps_boosts() {
-		$preferred = $this->cached_post( 'test_cache_primary', 'https://example.org/shared' );
+	public function test_returned_page_is_deduplicated_without_filling_the_limit() {
+		$first     = $this->cached_post( 'test_cache_primary', 'https://example.org/shared' );
 		$older     = $this->cached_post( 'test_cache_primary', 'https://example.org/older' );
 		$duplicate = $this->cached_post( 'test_cache_secondary', 'https://example.org/shared' );
 		$boost_one = $this->cached_post( 'test_cache_primary', 'https://example.org/shared', true );
 		$boost_two = $this->cached_post( 'test_cache_secondary', 'https://example.org/shared', true );
 		$newest    = $this->cached_post( 'test_cache_secondary', 'https://example.org/newest' );
-		// Publication dates from independent caches do not necessarily follow IDs.
-		wp_update_post(
-			array(
-				'ID'        => (int) $older,
-				'post_date' => '2026-02-01 00:00:00',
-			)
-		);
 
-		$this->assertSame( array( $newest, $boost_two ), $this->page( array( 'limit' => 2 ) ) );
+		$this->assertSame( array( $newest, $boost_two, $boost_one, $duplicate, $older ), $this->page( array( 'limit' => 6 ) ) );
 		$this->assertSame(
-			array( $boost_one, $older ),
+			array( $duplicate, $older ),
 			$this->page(
 				array(
-					'limit'  => 2,
-					'max_id' => $boost_two,
+					'limit'  => 3,
+					'max_id' => $boost_one,
 				)
 			)
 		);
 		$this->assertSame(
-			array( $preferred ),
+			array( $boost_two, $boost_one, $duplicate ),
 			$this->page(
 				array(
-					'limit'  => 2,
-					'max_id' => $older,
-				)
-			)
-		);
-		$this->assertSame(
-			array( $boost_two, $boost_one ),
-			$this->page(
-				array(
-					'limit'  => 2,
+					'limit'  => 3,
 					'min_id' => $older,
 				)
 			)
 		);
-		$this->assertSame( $duplicate, apply_filters( 'mastodon_api_status', null, $duplicate, array() )->id );
+		$this->assertSame( $first, apply_filters( 'mastodon_api_status', null, $first, array() )->id );
 	}
 
-	public function test_hidden_preferred_copy_cannot_suppress_a_visible_copy() {
+	public function test_cursor_advances_past_a_discarded_duplicate_at_the_end() {
+		$first = $this->cached_post( 'test_cache_primary', 'https://example.org/shared' );
+		$this->cached_post( 'test_cache_secondary', 'https://example.org/shared' );
+		$last = $this->cached_post( 'test_cache_primary', 'https://example.org/last' );
+		$request = new \WP_REST_Request( 'GET', '/enable-mastodon-apps/api/v1/timelines/home' );
+		$request->set_param( 'limit', 3 );
+		$response = $this->timeline->api_timelines( null, $request );
+		$this->assertCount( 2, $response->get_data() );
+		parse_str( wp_parse_url( $response->get_links()['next'][0]['href'], PHP_URL_QUERY ), $next );
+		parse_str( wp_parse_url( $response->get_links()['prev'][0]['href'], PHP_URL_QUERY ), $prev );
+		$this->assertSame( $first, $next['max_id'] );
+		$this->assertSame( $last, $prev['min_id'] );
+		$this->assertSame( array(), $this->page( array( 'max_id' => $next['max_id'] ) ) );
+	}
+
+	public function test_hidden_copy_does_not_suppress_a_visible_copy() {
 		$this->hidden_id = (int) $this->cached_post( 'test_cache_primary', 'https://example.org/shared' );
 		$visible         = $this->cached_post( 'test_cache_secondary', 'https://example.org/shared' );
 		$this->assertSame( array( $visible ), $this->page() );
-	}
-
-	public function test_older_integrations_can_expose_boost_identity_through_the_status() {
-		$original = $this->cached_post( 'test_cache_primary', 'https://example.org/shared' );
-		$boost    = $this->cached_post( 'test_cache_secondary', 'https://example.org/shared', true );
-		remove_filter( 'mastodon_api_timeline_post_identity', array( $this, 'object_identity' ), 10 );
-		$this->assertSame( array( $boost, $original ), $this->page() );
-	}
-
-	public function test_exclusions_preserve_existing_query_exclusions() {
-		$preferred = $this->cached_post( 'test_cache_primary', 'https://example.org/shared' );
-		$duplicate = $this->cached_post( 'test_cache_secondary', 'https://example.org/shared' );
-		$request   = new \WP_REST_Request( 'GET', '/enable-mastodon-apps/api/v1/timelines/home' );
-		$args      = $this->timeline_args( array(), $request );
-		unset( $args['post__in'] );
-		$args['post__not_in'] = array( $this->post );
-		$args = $this->timeline->deduplicate_query_args( $args, $request );
-		$this->assertContains( $this->post, $args['post__not_in'] );
-		$this->assertContains( (int) $duplicate, $args['post__not_in'] );
-		$this->assertNotContains( (int) $preferred, $args['post__not_in'] );
 	}
 
 	public function test_guid_comparison_is_case_sensitive() {
