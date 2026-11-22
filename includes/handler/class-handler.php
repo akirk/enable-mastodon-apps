@@ -68,9 +68,10 @@ class Handler {
 	 * @param array    $args   The query arguments for get_posts().
 	 * @param int|null $min_id Optional minimum post ID for pagination.
 	 * @param int|null $max_id Optional maximum post ID for pagination.
+	 * @param bool     $deduplicate Whether to remove duplicate GUIDs from this page.
 	 * @return \WP_REST_Response The statuses as a REST response.
 	 */
-	protected function get_posts( $args, $min_id = null, $max_id = null ): \WP_REST_Response {
+	protected function get_posts( $args, $min_id = null, $max_id = null, $deduplicate = false ): \WP_REST_Response {
 		$posts = array();
 
 		// It's possible that the $args are set to something falsy by a filter.
@@ -101,7 +102,8 @@ class Handler {
 			}
 		}
 
-		$statuses = array();
+		$statuses   = array();
+		$seen_guids = array();
 		foreach ( $posts as $post ) {
 			/**
 			 * Modify the status data.
@@ -138,6 +140,13 @@ class Handler {
 				continue;
 			}
 
+			if ( $deduplicate && $post->guid && ! isset( $status->reblog ) ) {
+				if ( isset( $seen_guids[ $post->guid ] ) ) {
+					continue;
+				}
+				$seen_guids[ $post->guid ] = true;
+			}
+
 			$statuses[ $status->id ] = $status;
 		}
 
@@ -150,9 +159,12 @@ class Handler {
 
 		$response = new \WP_REST_Response( array_values( $statuses ) );
 		if ( ! empty( $statuses ) ) {
+			// Advance past the entire fetched page, including discarded duplicates.
+			$next_id = $deduplicate ? min( wp_list_pluck( $posts, 'ID' ) ) : end( $statuses )->id;
+			$prev_id = $deduplicate ? max( wp_list_pluck( $posts, 'ID' ) ) : reset( $statuses )->id;
 			$req_uri = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
-			$response->add_link( 'next', remove_query_arg( 'min_id', add_query_arg( 'max_id', end( $statuses )->id, home_url( $req_uri ) ) ) );
-			$response->add_link( 'prev', remove_query_arg( 'max_id', add_query_arg( 'min_id', reset( $statuses )->id, home_url( $req_uri ) ) ) );
+			$response->add_link( 'next', remove_query_arg( 'min_id', add_query_arg( 'max_id', $next_id, home_url( $req_uri ) ) ) );
+			$response->add_link( 'prev', remove_query_arg( 'max_id', add_query_arg( 'min_id', $prev_id, home_url( $req_uri ) ) ) );
 		}
 		return $response;
 	}

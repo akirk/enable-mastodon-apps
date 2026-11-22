@@ -55,7 +55,7 @@ class Timeline extends Handler {
 			return array();
 		}
 
-		return $this->get_posts( $args, $request->get_param( 'min_id' ), $request->get_param( 'max_id' ) );
+		return $this->get_posts( $args, $request->get_param( 'min_id' ), $request->get_param( 'max_id' ), true );
 	}
 
 	/**
