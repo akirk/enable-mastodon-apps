@@ -252,7 +252,7 @@ class Comment_CPT {
 		if ( $comment->user_id ) {
 			$account = apply_filters( 'mastodon_api_account', null, $comment->user_id, null, $comment );
 		} else {
-			$account = apply_filters( 'mastodon_api_account', null, $comment->comment_author_url, null, $comment );
+			$account = self::get_remote_comment_account( $comment );
 		}
 		if ( ! $account ) {
 			return $status;
@@ -326,7 +326,7 @@ class Comment_CPT {
 			return $account;
 		}
 
-		$account = apply_filters( 'mastodon_api_account', null, $comment->comment_author_url, $request, null );
+		$account = self::get_remote_comment_account( $comment, $request );
 		if ( $account ) {
 			return $account;
 		}
@@ -353,6 +353,27 @@ class Comment_CPT {
 		);
 
 		return Handler\Account::api_account_ensure_numeric_id( $account, $comment->comment_author_url );
+	}
+
+	/**
+	 * Resolve a remote commenter using ActivityPub's stored actor before its URL.
+	 *
+	 * The actor post ID avoids repeating URL lookups for every comment in a feed.
+	 * Retain URL resolution for older comments, deleted actors, and other protocols.
+	 *
+	 * @param \WP_Comment $comment The remote comment.
+	 * @param object|null $request Optional API request.
+	 * @return Entity\Account|null The remote commenter's account.
+	 */
+	private static function get_remote_comment_account( \WP_Comment $comment, $request = null ) {
+		$actor_id = (int) get_comment_meta( $comment->comment_ID, '_activitypub_remote_actor_id', true );
+		if ( $actor_id && class_exists( '\\Activitypub\\Collection\\Remote_Actors' ) && 'ap_actor' === get_post_type( $actor_id ) ) {
+			$account = apply_filters( 'mastodon_api_account', null, $actor_id, $request, $comment );
+			if ( $account ) {
+				return $account;
+			}
+		}
+		return apply_filters( 'mastodon_api_account', null, $comment->comment_author_url, $request, $comment );
 	}
 
 	public function mastodon_api_notification_type( $type, $post ) {

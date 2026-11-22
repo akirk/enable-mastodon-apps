@@ -159,6 +159,122 @@ class NotificationsEndpoint_Test extends Mastodon_API_TestCase {
 		$this->assertContains( strval( $dm ), $this->notification_status_ids( $data ) );
 	}
 
+	/**
+	 * Older comments remain reachable after the first source query's limit.
+	 */
+	public function test_comment_notifications_paginate_beyond_newest_candidates() {
+		$comment_ids = array();
+		for ( $day = 1; $day <= 8; ++$day ) {
+			$comment_id = self::factory()->comment->create(
+				array(
+					'comment_post_ID'  => $this->post,
+					'comment_content'  => 'Reply ' . $day,
+					'user_id'          => $this->friend,
+					'comment_approved' => 1,
+					'comment_date'     => sprintf( '2023-02-%02d 12:00:00', $day ),
+					'comment_date_gmt' => sprintf( '2023-02-%02d 12:00:00', $day ),
+				)
+			);
+			$comment_ids[] = (string) Comment_CPT::comment_id_to_post_id( $comment_id );
+		}
+		$seen = array();
+		$cursor = null;
+		for ( $page = 0; $page < 5; ++$page ) {
+			$request = $this->api_request( 'GET', '/api/v1/notifications' );
+			$request->set_param( 'limit', 2 );
+			$request->set_param( 'types', array( 'mention' ) );
+			if ( $cursor ) {
+				$request->set_param( 'max_id', $cursor );
+			}
+			$response = $this->dispatch_authenticated( $request );
+			$data = json_decode( wp_json_encode( $response->get_data() ), true );
+			if ( ! $data ) {
+				break;
+			}
+			$seen = array_merge( $seen, $this->notification_status_ids( $data ) );
+			$cursor = end( $data )['id'];
+		}
+		$this->assertSame( array_reverse( $comment_ids ), $seen );
+	}
+
+	/**
+	 * Notification IDs mix date-only and date-plus-status values beyond integer range.
+	 */
+	public function test_notification_cursors_compare_full_id_strings() {
+		$date = '2023-02-01T12:00:00.000+00:00';
+		$older = $this->make_notification( $date, 'mention', '4028030' );
+		$newer = $this->make_notification( $date, 'mention', '4028031' );
+		$follow = $this->make_notification( $date, 'follow' );
+		$this->inject_test_notifications( array( $older, $newer, $follow ) );
+		$request = $this->api_request( 'GET', '/api/v1/notifications' );
+		$request->set_param( 'max_id', $newer['id'] );
+		$data = $this->dispatch_authenticated( $request )->get_data();
+		$this->assertSame( array( $older['id'], $follow['id'] ), array_column( $data, 'id' ) );
+		$request->set_param( 'max_id', null );
+		$request->set_param( 'since_id', $older['id'] );
+		$data = $this->dispatch_authenticated( $request )->get_data();
+		$this->assertSame( array( $newer['id'] ), array_column( $data, 'id' ) );
+	}
+
+	/**
+	 * Mention notifications reuse the account their status handler already resolved.
+	 */
+	public function test_mention_reuses_status_account() {
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $this->post,
+				'user_id'          => $this->friend,
+				'comment_approved' => 1,
+			)
+		);
+		$proxy_id = Comment_CPT::comment_id_to_post_id( $comment_id );
+		$account = new Entity\Account();
+		$account->id = (string) $this->friend;
+		$status = new Entity\Status();
+		$status->id = (string) $proxy_id;
+		$status->account = $account;
+		$status->created_at = new \DateTime();
+		$status->content = 'Mention';
+		$queries = function () use ( $proxy_id ) {
+			return array(
+				array(
+					'post_type' => Comment_CPT::CPT,
+					'post__in'  => array( $proxy_id ),
+				),
+			);
+		};
+		$status_ready = false;
+		$provide_status = function ( $value, $id ) use ( $status, $proxy_id, &$status_ready ) {
+			if ( (int) $id === $proxy_id ) {
+				$status_ready = true;
+				return $status;
+			}
+			return $value;
+		};
+		$account_lookups = 0;
+		$observe_account = function ( $value, $id, $request = null, $post = null ) use ( &$account_lookups, $proxy_id, &$status_ready ) {
+			if ( $status_ready && $post instanceof \WP_Post && (int) $post->ID === $proxy_id ) {
+				++$account_lookups;
+			}
+			return $value;
+		};
+		add_filter( 'mastodon_api_get_notifications_queries', $queries, PHP_INT_MAX );
+		add_filter( 'mastodon_api_status', $provide_status, PHP_INT_MAX, 2 );
+		add_filter( 'mastodon_api_account', $observe_account, PHP_INT_MAX, 4 );
+		try {
+			$request = $this->api_request( 'GET', '/api/v1/notifications' );
+			$request->set_param( 'types', array( 'mention' ) );
+			$data = $this->dispatch_authenticated( $request )->get_data();
+		} finally {
+			remove_filter( 'mastodon_api_get_notifications_queries', $queries, PHP_INT_MAX );
+			remove_filter( 'mastodon_api_status', $provide_status, PHP_INT_MAX );
+			remove_filter( 'mastodon_api_account', $observe_account, PHP_INT_MAX );
+		}
+		$this->assertCount( 1, $data );
+		$this->assertSame( $account, $data[0]['account'] );
+		$this->assertSame( 0, $account_lookups );
+	}
+
 	public function test_comment_creates_a_notification() {
 		$comment_id = self::factory()->comment->create(
 			array(
