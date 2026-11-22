@@ -13,6 +13,40 @@ namespace Enable_Mastodon_Apps;
  * @package
  */
 class CommentsCPT_Tests extends \WP_UnitTestCase {
+	/**
+	 * Protocol integrations receive the original comment when resolving its account.
+	 */
+	public function test_comment_account_filter_receives_original_comment() {
+		$post_id = self::factory()->post->create();
+		$comment = self::factory()->comment->create_and_get(
+			array(
+				'comment_post_ID'    => $post_id,
+				'comment_author_url' => 'https://example.org/@reader',
+				'user_id'            => 0,
+			)
+		);
+		$proxy_id = Comment_CPT::comment_id_to_post_id( $comment->comment_ID );
+		$account = new Entity\Account();
+		$account->id = '123456';
+		$context = null;
+		$resolve = function ( $value, $id, $request = null, $source = null ) use ( $comment, $account, &$context ) {
+			if ( $comment->comment_author_url === $id ) {
+				$context = $source;
+				return $account;
+			}
+			return $value;
+		};
+		add_filter( 'mastodon_api_account', $resolve, 1, 4 );
+		try {
+			$result = ( new Comment_CPT() )->api_account( null, 0, null, get_post( $proxy_id ) );
+			$this->assertSame( $account->id, (string) $result->id );
+			$this->assertInstanceOf( '\\WP_Comment', $context );
+			$this->assertSame( (int) $comment->comment_ID, (int) $context->comment_ID );
+		} finally {
+			remove_filter( 'mastodon_api_account', $resolve, 1 );
+		}
+	}
+
 	public function test_new_comment() {
 		$posts_count = wp_count_posts( Comment_CPT::CPT );
 		$post = $this->factory->post->create_and_get();
