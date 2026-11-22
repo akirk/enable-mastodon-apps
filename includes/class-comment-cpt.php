@@ -326,7 +326,7 @@ class Comment_CPT {
 			return $account;
 		}
 
-		$account = apply_filters( 'mastodon_api_account', null, $comment->comment_author_url, $request, null );
+		$account = apply_filters( 'mastodon_api_account', null, $comment->comment_author_url, $request, $comment );
 		if ( $account ) {
 			return $account;
 		}

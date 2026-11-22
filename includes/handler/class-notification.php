@@ -10,6 +10,7 @@
 namespace Enable_Mastodon_Apps\Handler;
 
 use Enable_Mastodon_Apps\Comment_CPT;
+use Enable_Mastodon_Apps\Mastodon_API;
 use Enable_Mastodon_Apps\Handler\Handler;
 use Enable_Mastodon_Apps\Entity\Notification as Notification_Entity;
 
@@ -116,7 +117,7 @@ class Notification extends Handler {
 	 * @return array
 	 */
 	private function fetch_notifications( object $request ): array {
-		$limit         = $request->get_param( 'limit' ) ? $request->get_param( 'limit' ) : 15;
+		$limit         = $request->get_param( 'limit' ) ? min( intval( $request->get_param( 'limit' ) ), 80 ) : 40;
 		$notifications = array();
 		$types         = $request->get_param( 'types' );
 		$exclude_types = $request->get_param( 'exclude_types' );
@@ -199,6 +200,34 @@ class Notification extends Handler {
 				$args                   = array_merge( $base_args, $args );
 				$args['posts_per_page'] = $limit + 2;
 
+				// Apply the cursor before limiting each source, or older pages keep
+				// re-querying the newest posts and cannot reach earlier notifications.
+				$bounds = array(
+					'column'    => 'post_date',
+					'inclusive' => true,
+				);
+				$before = Mastodon_API::notification_id_to_date( (string) $request->get_param( 'max_id' ) );
+				$after_id = $request->get_param( 'min_id' );
+				if ( ! $after_id ) {
+					$after_id = $request->get_param( 'since_id' );
+				}
+				$after = Mastodon_API::notification_id_to_date( (string) $after_id );
+				if ( $before ) {
+					$bounds['before'] = $before;
+				}
+				if ( $after ) {
+					$bounds['after'] = $after;
+				}
+				if ( $before || $after ) {
+					$args['date_query'] = empty( $args['date_query'] )
+						? array( $bounds )
+						: array(
+							'relation' => 'AND',
+							$args['date_query'],
+							$bounds,
+						);
+				}
+
 				if ( $notification_dismissed_tag ) {
 					$args['tag__not_in'] = array( $notification_dismissed_tag->term_id );
 				}
@@ -230,10 +259,11 @@ class Notification extends Handler {
 						continue;
 					}
 
-					$account = apply_filters( 'mastodon_api_account', null, $post->post_author, null, $post );
-					if ( $status && 'mention' === $type ) {
-						$status->account = $account;
-					}
+					// A mention's actor is already the status author. Boosts and favourites
+					// still need their separate actor rather than the original author.
+					$account = $status && 'mention' === $type
+						? $status->account
+						: apply_filters( 'mastodon_api_account', null, $post->post_author, null, $post );
 
 					$notifications[] = $this->get_notification_array(
 						$type,
@@ -380,7 +410,7 @@ class Notification extends Handler {
 			}
 
 			if ( $max_id ) {
-				if ( $id >= strval( $max_id ) ) {
+				if ( strcmp( $id, strval( $max_id ) ) >= 0 ) {
 					continue;
 				}
 				$max_id = null;
@@ -390,10 +420,10 @@ class Notification extends Handler {
 				$next_min_id = $id;
 			}
 
-			if ( $min_id && strval( $min_id ) >= $id ) {
+			if ( $min_id && strcmp( strval( $min_id ), $id ) >= 0 ) {
 				break;
 			}
-			if ( $since_id && strval( $since_id ) >= $id ) {
+			if ( $since_id && strcmp( strval( $since_id ), $id ) >= 0 ) {
 				break;
 			}
 			if ( $c-- <= 0 ) {
