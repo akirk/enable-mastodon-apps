@@ -264,7 +264,7 @@ class Comment_CPT {
 		$status->visibility = 'public';
 		$status->uri        = get_comment_link( $comment );
 		$status->url        = $status->uri;
-		$status->content    = $comment->comment_content;
+		$status->content    = wp_kses_post( apply_filters( 'comment_text', $comment->comment_content, $comment, array() ) );
 		$status->account    = $account;
 		if ( $comment->comment_parent ) {
 			$parent_post_id = self::comment_id_to_post_id( $comment->comment_parent );
