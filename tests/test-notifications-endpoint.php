@@ -63,6 +63,46 @@ class NotificationsEndpoint_Test extends Mastodon_API_TestCase {
 		);
 	}
 
+	/**
+	 * Followers arriving together retain distinct, stable notification IDs.
+	 */
+	public function test_follow_notification_ids_are_distinct_and_stable() {
+		$handler = new Handler\Notification();
+		$request = new \WP_REST_Request();
+		$first = new Entity\Notification();
+		$first->type = 'follow';
+		$first->created_at = '2026-01-01T12:00:00.000+00:00';
+		$first->account = new Entity\Account();
+		$first->account->id = '123';
+		$second = clone $first;
+		$second->account = clone $first->account;
+		$second->account->id = '456';
+		foreach ( array( 1, 2 ) as $attempt ) {
+			$data = $handler->finalize_notifications( array( $first, $second ), $request )->get_data();
+			$this->assertSame( array( '202601011200000000000456', '202601011200000000000123' ), wp_list_pluck( $data, 'id' ) );
+		}
+	}
+
+	/**
+	 * Dismissal and clearing also cover notifications without a status, per user.
+	 */
+	public function test_dismiss_and_clear_follow_notifications_are_user_scoped() {
+		wp_set_current_user( $this->administrator );
+		$handler = new Handler\Notification();
+		$first = $this->make_notification( '2026-01-01T12:00:00.000+00:00', 'follow', '123' );
+		$second = $this->make_notification( '2026-01-01T12:00:00.000+00:00', 'follow', '456' );
+		$request = new \WP_REST_Request();
+		$request->set_param( 'id', $first['id'] );
+		$handler->notification_dismiss( $request );
+		$data = $handler->finalize_notifications( array( $first, $second ), $request )->get_data();
+		$this->assertSame( array( $second['id'] ), array_column( $data, 'id' ) );
+		$handler->notification_clear( $request );
+		$this->assertSame( array(), $handler->finalize_notifications( array( $first, $second ), $request )->get_data() );
+		wp_set_current_user( $this->friend );
+		$data = $handler->finalize_notifications( array( $first, $second ), $request )->get_data();
+		$this->assertSame( array( $second['id'], $first['id'] ), array_column( $data, 'id' ) );
+	}
+
 	public function test_register_routes() {
 		global $wp_rest_server;
 		$routes = $wp_rest_server->get_routes();

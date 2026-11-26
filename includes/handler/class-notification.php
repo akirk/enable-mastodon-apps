@@ -44,6 +44,7 @@ class Notification extends Handler {
 	 * @return void
 	 */
 	public function notification_clear( object $request ): void {
+		update_user_option( get_current_user_id(), 'ema_notifications_cleared_at', time() );
 
 		$notification_dismissed_tag = apply_filters( 'mastodon_api_notification_dismissed_tag', 'notification-dismissed' );
 		$notifications              = $this->fetch_notifications( $request );
@@ -62,6 +63,11 @@ class Notification extends Handler {
 	 * @return void
 	 */
 	public function notification_dismiss( object $request ): void {
+		$user_id = get_current_user_id();
+		$key = $GLOBALS['wpdb']->get_blog_prefix() . 'ema_dismissed_notifications';
+		$dismissed = (array) get_user_meta( $user_id, $key, true );
+		$dismissed[ (string) $request->get_param( 'id' ) ] = true;
+		update_user_option( $user_id, 'ema_dismissed_notifications', $dismissed );
 		$notification_dismissed_tag = apply_filters( 'mastodon_api_notification_dismissed_tag', 'notification-dismissed' );
 		$notifications              = $this->fetch_notifications( $request );
 		foreach ( $notifications as $notification ) {
@@ -364,6 +370,10 @@ class Notification extends Handler {
 					$date_id .= $notification->status->id;
 				}
 
+				if ( 'follow' === $notification->type && isset( $notification->account ) ) {
+					$date_id .= is_numeric( $notification->account->id ) ? $notification->account->id : Mastodon_API::remap_user_id( $notification->account->id );
+				}
+
 				$notification->id = $date_id;
 
 				if ( isset( $notification->account ) && $notification->account ) {
@@ -399,12 +409,21 @@ class Notification extends Handler {
 			}
 		}
 
+		$user_id = get_current_user_id();
+		$prefix = $GLOBALS['wpdb']->get_blog_prefix();
+		$dismissed = (array) get_user_meta( $user_id, $prefix . 'ema_dismissed_notifications', true );
+		$cleared_at = (int) get_user_meta( $user_id, $prefix . 'ema_notifications_cleared_at', true );
+
 		$ret         = array();
 		$c           = $limit;
 		$next_min_id = false;
 
 		foreach ( $notifications as $notification ) {
 			$id = strval( self::get_notification_value( $notification, 'id' ) );
+			$created_at = self::get_notification_value( $notification, 'created_at' );
+			if ( isset( $dismissed[ $id ] ) || ( $cleared_at && $created_at && strtotime( $created_at ) <= $cleared_at ) ) {
+				continue;
+			}
 			if ( ! $id ) {
 				continue;
 			}
